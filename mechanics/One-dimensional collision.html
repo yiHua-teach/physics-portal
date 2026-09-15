@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>一維彈性碰撞模擬器 (含鏡頭跟隨與質心資訊)</title>
+    <style>
+        * { box-sizing: border-box; font-family: sans-serif; }
+        body { display: flex; flex-direction: column; align-items: center; background: #f0f2f5; margin: 0; padding: 20px; }
+        .container { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 900px; width: 100%; }
+        h2 { text-align: center; margin-top: 0; color: #333; }
+        canvas { background: #1e1e2f; border-radius: 8px; display: block; margin: 10px auto; }
+        .controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px; }
+        .control-group { background: #f8f9fa; padding: 10px 15px; border-radius: 8px; border: 1px solid #e9ecef; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 14px; }
+        input[type="range"], select { width: 100%; padding: 4px; }
+        .btn-group { display: flex; gap: 10px; justify-content: center; margin-bottom: 15px; }
+        button { padding: 8px 20px; font-size: 14px; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; color: white; background: #007bff; }
+        button:hover { background: #0056b3; }
+        button#resetBtn { background: #6c757d; }
+        button#resetBtn:hover { background: #545b62; }
+        .dashboard { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; background: #282c34; color: #fff; padding: 15px; border-radius: 8px; font-family: monospace; }
+        .card { background: #353b45; padding: 10px; border-radius: 6px; }
+        .card h4 { margin: 0 0 8px 0; }
+        .card.m1 h4 { color: #ff6b6b; }
+        .card.m2 h4 { color: #4ecdc4; }
+        .card.system h4 { color: #ffe66d; }
+        p { margin: 4px 0; font-size: 13px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>一維彈性碰撞模擬器</h2>
+    
+    <canvas id="simCanvas" width="840" height="240"></canvas>
+
+    <div class="btn-group">
+        <button id="startBtn">開始 / 暫停</button>
+        <button id="resetBtn">重設狀態</button>
+    </div>
+
+    <div class="controls">
+        <div class="control-group">
+            <label for="cameraSelect">🎥 鏡頭跟隨模式</label>
+            <select id="cameraSelect">
+                <option value="fixed">固定全景 (Fixed)</option>
+                <option value="m1">跟隨 m₁ (紅色球)</option>
+                <option value="m2">跟隨 m₂ (青色球)</option>
+                <option value="cm">跟隨 質心 (CM Reference)</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label for="ratioInput">質量比 (m₁ / m₂): <span id="ratioVal">1.0</span></label>
+            <input type="range" id="ratioInput" min="0.1" max="10" step="0.1" value="1.0">
+        </div>
+        <div class="control-group">
+            <label for="v1Input">m₁ 初速度 (v₁): <span id="v1Val">5</span> m/s</label>
+            <input type="range" id="v1Input" min="-10" max="10" step="0.5" value="5">
+        </div>
+        <div class="control-group">
+            <label for="v2Input">m₂ 初速度 (v₂): <span id="v2Val">0</span> m/s</label>
+            <input type="range" id="v2Input" min="-10" max="10" step="0.5" value="0">
+        </div>
+    </div>
+
+    <div class="dashboard">
+        <div class="card m1">
+            <h4>紅色球體 (m₁)</h4>
+            <p>質量 m₁: <span id="disp_m1">1.00</span> kg</p>
+            <p>速度 v₁: <span id="disp_v1">0.00</span> m/s</p>
+            <p>動量 p₁: <span id="disp_p1">0.00</span> kg·m/s</p>
+            <p>動能 K₁: <span id="disp_k1">0.00</span> J</p>
+        </div>
+        <div class="card m2">
+            <h4>青色球體 (m₂)</h4>
+            <p>質量 m₂: <span id="disp_m2">1.00</span> kg</p>
+            <p>速度 v₂: <span id="disp_v2">0.00</span> m/s</p>
+            <p>動量 p₂: <span id="disp_p2">0.00</span> kg·m/s</p>
+            <p>動能 K₂: <span id="disp_k2">0.00</span> J</p>
+        </div>
+        <div class="card system">
+            <h4>系統與質心 (CM)</h4>
+            <p>質量比 r: <span id="disp_r">1.00</span></p>
+            <p>質心速度 v_cm: <span id="disp_vcm">0.00</span> m/s</p>
+            <p>總動量 P_tot: <span id="disp_ptot">0.00</span> kg·m/s</p>
+            <p>總動能 K_tot: <span id="disp_ktot">0.00</span> J</p>
+        </div>
+    </div>
+</div>
+
+<script>
+const canvas = document.getElementById('simCanvas');
+const ctx = canvas.getContext('2d');
+
+const baseMass = 2; 
+let ratio = 1.0;
+let m1 = baseMass * ratio;
+let m2 = baseMass;
+
+let ball1 = { x: 200, y: 150, radius: 25, vx: 5, color: '#ff6b6b' };
+let ball2 = { x: 600, y: 150, radius: 25, vx: 0, color: '#4ecdc4' };
+
+let isRunning = false;
+let animationFrameId;
+
+const ratioInput = document.getElementById('ratioInput');
+const v1Input = document.getElementById('v1Input');
+const v2Input = document.getElementById('v2Input');
+const cameraSelect = document.getElementById('cameraSelect');
+
+function getCM() {
+    const totalM = m1 + m2;
+    const x_cm = (m1 * ball1.x + m2 * ball2.x) / totalM;
+    const v_cm = (m1 * ball1.vx + m2 * ball2.vx) / totalM;
+    return { x: x_cm, v: v_cm };
+}
+
+function worldToScreen(worldX) {
+    const mode = cameraSelect.value;
+    const cm = getCM();
+    if (mode === 'm1') return worldX - ball1.x + canvas.width / 2;
+    if (mode === 'm2') return worldX - ball2.x + canvas.width / 2;
+    if (mode === 'cm') return worldX - cm.x + canvas.width / 2;
+    return worldX;
+}
+
+function updateBallSizes() {
+    ball1.radius = Math.min(Math.max(20 * Math.cbrt(m1 / baseMass), 15), 40);
+    ball2.radius = Math.min(Math.max(20 * Math.cbrt(m2 / baseMass), 15), 40);
+}
+
+function initData() {
+    ratio = parseFloat(ratioInput.value);
+    m1 = baseMass * ratio;
+    m2 = baseMass;
+
+    ball1.x = 200;
+    ball2.x = 600;
+    ball1.vx = parseFloat(v1Input.value);
+    ball2.vx = parseFloat(v2Input.value);
+
+    updateBallSizes();
+    updateDashboard();
+    draw();
+}
+
+function checkCollision() {
+    const dx = ball2.x - ball1.x;
+    const distance = Math.abs(dx);
+    const minDist = ball1.radius + ball2.radius;
+
+    if (distance <= minDist) {
+        const v1_next = ((m1 - m2) * ball1.vx + 2 * m2 * ball2.vx) / (m1 + m2);
+        const v2_next = ((2 * m1) * ball1.vx + (m2 - m1) * ball2.vx) / (m1 + m2);
+
+        ball1.vx = v1_next;
+        ball2.vx = v2_next;
+
+        const overlap = minDist - distance;
+        ball1.x -= overlap / 2;
+        ball2.x += overlap / 2;
+    }
+
+    if (ball1.x - ball1.radius <= 0) { ball1.x = ball1.radius; ball1.vx *= -1; }
+    if (ball1.x + ball1.radius >= canvas.width) { ball1.x = canvas.width - ball1.radius; ball1.vx *= -1; }
+    if (ball2.x - ball2.radius <= 0) { ball2.x = ball2.radius; ball2.vx *= -1; }
+    if (ball2.x + ball2.radius >= canvas.width) { ball2.x = canvas.width - ball2.radius; ball2.vx *= -1; }
+}
+
+function updatePhysics() {
+    ball1.x += ball1.vx * 0.5;
+    ball2.x += ball2.vx * 0.5;
+    checkCollision();
+}
+
+function updateDashboard() {
+    const cm = getCM();
+    const p1 = m1 * ball1.vx;
+    const p2 = m2 * ball2.vx;
+    const k1 = 0.5 * m1 * Math.pow(ball1.vx, 2);
+    const k2 = 0.5 * m2 * Math.pow(ball2.vx, 2);
+
+    document.getElementById('ratioVal').innerText = ratio.toFixed(1);
+    document.getElementById('v1Val').innerText = parseFloat(v1Input.value).toFixed(1);
+    document.getElementById('v2Val').innerText = parseFloat(v2Input.value).toFixed(1);
+
+    document.getElementById('disp_m1').innerText = m1.toFixed(2);
+    document.getElementById('disp_v1').innerText = ball1.vx.toFixed(2);
+    document.getElementById('disp_p1').innerText = p1.toFixed(2);
+    document.getElementById('disp_k1').innerText = k1.toFixed(2);
+
+    document.getElementById('disp_m2').innerText = m2.toFixed(2);
+    document.getElementById('disp_v2').innerText = ball2.vx.toFixed(2);
+    document.getElementById('disp_p2').innerText = p2.toFixed(2);
+    document.getElementById('disp_k2').innerText = k2.toFixed(2);
+
+    document.getElementById('disp_r').innerText = ratio.toFixed(2);
+    document.getElementById('disp_vcm').innerText = cm.v.toFixed(2);
+    document.getElementById('disp_ptot').innerText = (p1 + p2).toFixed(2);
+    document.getElementById('disp_ktot').innerText = (k1 + k2).toFixed(2);
+}
+
+function drawVector(startX, startY, vx, color) {
+    if (Math.abs(vx) < 0.05) return;
+    const length = vx * 10; 
+    const endX = startX + length;
+
+    ctx.beginPath();
+    ctx.moveTo(startX, startY);
+    ctx.lineTo(endX, startY);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    const headLen = Math.sign(vx) * 6;
+    ctx.beginPath();
+    ctx.moveTo(endX, startY);
+    ctx.lineTo(endX - headLen, startY - 4);
+    ctx.lineTo(endX - headLen, startY + 4);
+    ctx.fillStyle = color;
+    ctx.fill();
+}
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const groundY = 170;
+
+    // 繪製軌道刻度 (世界座標)
+    ctx.beginPath();
+    ctx.moveTo(0, groundY);
+    ctx.lineTo(canvas.width, groundY);
+    ctx.strokeStyle = '#4a4b5d';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+
+    for (let wx = -1000; wx <= 2000; wx += 50) {
+        const sx = worldToScreen(wx);
+        if (sx >= 0 && sx <= canvas.width) {
+            ctx.beginPath();
+            ctx.moveTo(sx, groundY);
+            ctx.lineTo(sx, groundY + 8);
+            ctx.strokeStyle = '#6c757d';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        }
+    }
+
+    // 繪製兩側牆壁 (世界座標 0 與 canvas.width)
+    const leftWallSx = worldToScreen(0);
+    const rightWallSx = worldToScreen(canvas.width);
+
+    ctx.fillStyle = '#495057';
+    ctx.fillRect(leftWallSx - 12, groundY - 120, 12, 120);
+    ctx.fillRect(rightWallSx, groundY - 120, 12, 120);
+
+    // 計算 screen 座標
+    const s1_x = worldToScreen(ball1.x);
+    const s2_x = worldToScreen(ball2.x);
+    const cm = getCM();
+    const cm_sx = worldToScreen(cm.x);
+
+    // 繪製質心 (CM) 標示
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(cm_sx, 30);
+    ctx.lineTo(cm_sx, groundY);
+    ctx.strokeStyle = '#ffe66d';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.beginPath();
+    ctx.arc(cm_sx, groundY, 6, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffe66d';
+    ctx.fill();
+
+    ctx.fillStyle = '#ffe66d';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`CM (v=${cm.v.toFixed(2)})`, cm_sx, 22);
+    drawVector(cm_sx, 32, cm.v, '#ffe66d');
+
+    // 繪製球體 m1
+    ctx.beginPath();
+    ctx.arc(s1_x, groundY - ball1.radius, ball1.radius, 0, Math.PI * 2);
+    ctx.fillStyle = ball1.color;
+    ctx.fill();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 13px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('m₁', s1_x, groundY - ball1.radius + 4);
+    
+    // m1 速度文字與向量
+    ctx.fillStyle = ball1.color;
+    ctx.fillText(`v₁ = ${ball1.vx.toFixed(2)} m/s`, s1_x, groundY - ball1.radius - 25);
+    drawVector(s1_x, groundY - ball1.radius - 15, ball1.vx, ball1.color);
+
+    // 繪製球體 m2
+    ctx.beginPath();
+    ctx.arc(s2_x, groundY - ball2.radius, ball2.radius, 0, Math.PI * 2);
+    ctx.fillStyle = ball2.color;
+    ctx.fill();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText('m₂', s2_x, groundY - ball2.radius + 4);
+
+    // m2 速度文字與向量
+    ctx.fillStyle = ball2.color;
+    ctx.fillText(`v₂ = ${ball2.vx.toFixed(2)} m/s`, s2_x, groundY - ball2.radius - 25);
+    drawVector(s2_x, groundY - ball2.radius - 15, ball2.vx, ball2.color);
+}
+
+function loop() {
+    if (isRunning) {
+        updatePhysics();
+        updateDashboard();
+        draw();
+        animationFrameId = requestAnimationFrame(loop);
+    }
+}
+
+document.getElementById('startBtn').addEventListener('click', () => {
+    isRunning = !isRunning;
+    if (isRunning) loop();
+});
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+    isRunning = false;
+    cancelAnimationFrame(animationFrameId);
+    initData();
+});
+
+[ratioInput, v1Input, v2Input, cameraSelect].forEach(element => {
+    element.addEventListener('input', () => {
+        if (!isRunning) {
+            initData();
+        } else {
+            draw();
+        }
+    });
+});
+
+initData();
+</script>
+</body>
+</html>

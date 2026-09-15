@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>高中物理：爆炸與質心運動模擬 (按壓瞄準版)</title>
+    <style>
+        body { font-family: sans-serif; background: #121212; color: #fff; text-align: center; margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; }
+        .main-container { display: flex; gap: 20px; margin-top: 10px; flex-wrap: wrap; justify-content: center; }
+        canvas { background: #1a1a1a; border: 2px solid #444; border-radius: 8px; cursor: crosshair; touch-action: none; /* 重要：防止行動裝置觸控滾動 */ }
+        .control-panel { background: #252525; border-radius: 8px; padding: 20px; width: 300px; border: 1px solid #444; }
+        .control-group { margin-bottom: 15px; text-align: left; }
+        .control-group label { display: block; font-size: 14px; margin-bottom: 5px; color: #ddd; }
+        input[type="range"] { width: 100%; cursor: pointer; }
+        .toggle-group { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; text-align: left; }
+        .toggle-item { display: flex; align-items: center; gap: 10px; color: #ccc; font-size: 14px; }
+        button { font-size: 15px; padding: 8px; margin-top: 15px; width: 100%; cursor: pointer; background: #007acc; color: white; border: none; border-radius: 4px; }
+        button:hover { background: #005999; }
+        .instruction-box { background: #1a1a1a; padding: 15px; border-radius: 6px; border-left: 4px solid #ffeb3b; text-align: left; margin-bottom: 15px; }
+        .instruction-box h4 { margin: 0 0 10px 0; color: #ffeb3b; }
+        .instruction-box ul { margin: 0; padding-left: 20px; font-size: 14px; color: #ccc; }
+        .instruction-box li { margin-bottom: 5px; }
+    </style>
+</head>
+<body>
+    <h2>高中物理：高空爆炸與質心守恆模擬</h2>
+    
+    <div class="main-container">
+        <canvas id="simCanvas" width="850" height="550"></canvas>
+        
+        <div class="control-panel">
+            <div class="instruction-box">
+                <h4>🎮 互動操作說明：</h4>
+                <ul>
+                    <li><strong>1. 起始發射：</strong> 手指在畫布左下角綠點上<strong>長按</strong>，出現瞄準箭頭（指向手指<strong>反向</strong>），調整角度，<strong>放開</strong>後發射。</li>
+                    <li><strong>2. 空中分裂：</strong> 物體飛行時，在畫布任意處<strong>長按</strong>，模擬會<strong>暫停</strong>並出現瞄準箭頭，調整分裂推力角度（指向手指<strong>反向</strong>），<strong>放開</strong>後分裂。</li>
+                </ul>
+            </div>
+
+            <div class="control-group">
+                <label>質量比 m1 / M: <span id="v_massRatio">33</span>%</label>
+                <input type="range" id="massRatio" min="10" max="90" value="33">
+            </div>
+
+            <hr style="border-color:#444; margin:15px 0;">
+            
+            <div class="toggle-group">
+                <div class="toggle-item"><input type="checkbox" id="showTrails" checked> <label>顯示運動軌跡 (質心黃線/碎片紅藍線)</label></div>
+                <div class="toggle-item"><input type="checkbox" id="showVelocities" checked> <label>顯示速度向量 (v)</label></div>
+            </div>
+
+            <button id="resetBtn">重置系統 (回到發射前)</button>
+        </div>
+    </div>
+
+<script>
+const canvas = document.getElementById('simCanvas');
+const ctx = canvas.getContext('2d');
+
+// --- 物理與模擬基礎設定 ---
+let M = 3.0, m1, m2; 
+let v0 = 35.0, g = 9.8;
+let t = 0, dt = 0.016;
+let t_explode = Infinity;
+
+let v0x, v0y, v0_imp = 12.0; // 分裂時的推力初速大小
+let thetaInit_rad = (60 * Math.PI / 180), thetaImp_rad = (120 * Math.PI / 180); // 預設值
+let dvx1, dvy1, dvx2, dvy2;
+
+let historyCM = [], history1 = [], history2 = [];
+
+// --- 互動狀態機 (全新的邏輯核心) ---
+const STATE = {
+    IDLE: '待命發射',
+    AIMING_LAUNCH: '瞄準發射中',
+    FLYING: '飛行中',
+    AIMING_EXPLOSION: '瞄準分裂中',
+    EXPLODED: '已分裂'
+};
+let currentInteractionState = STATE.IDLE;
+let isPlaying = false; 
+
+// 紀錄手指/滑鼠當前位置 (螢幕座標)
+let pointerPos = { x: 0, y: 0 }; 
+
+// --- 自適應視角設定 ---
+let viewX = 0, viewY = 0, viewW = 80, viewH = 50; // 物理單位 (公尺)
+
+// --- 取得 DOM 元素 ---
+const massRatioInput = document.getElementById('massRatio');
+const massRatioValDisplay = document.getElementById('v_massRatio');
+const resetBtn = document.getElementById('resetBtn');
+const showTrailsCheck = document.getElementById('showTrails');
+const showVelocitiesCheck = document.getElementById('showVelocities');
+
+// --- 初始化 config ---
+function updateMassConfig() {
+    let ratio = massRatioInput.value / 100;
+    m1 = M * ratio; 
+    m2 = M * (1 - ratio);
+    massRatioValDisplay.innerText = massRatioInput.value;
+    
+    // 如果已經瞄準過或分裂過，需要更新 dv 向量
+    dvx1 = v0_imp * Math.cos(thetaImp_rad); 
+    dvy1 = v0_imp * Math.sin(thetaImp_rad);
+    dvx2 = -(m1 / m2) * dvx1; 
+    dvy2 = -(m1 / m2) * dvy1;
+}
+massRatioInput.addEventListener('input', updateMassConfig);
+
+// --- 座標轉換函數 (核心) ---
+
+// 1. World to Screen (物理公尺 -> 畫布像素)
+function w2s(x, y) {
+    return {
+        x: (x - viewX) / viewW * canvas.width,
+        y: canvas.height - (y - viewY) / viewH * canvas.height
+    };
+}
+
+// 2. Screen to World (畫布像素 -> 物理公尺) - 瞄準計算用
+function s2w(sx, sy) {
+    const rect = canvas.getBoundingClientRect();
+    const canvasSx = sx - rect.left; // 確保取得相對於 canvas 的螢幕座標
+    const canvasSy = sy - rect.top;
+    
+    return {
+        x: (canvasSx / canvas.width) * viewW + viewX,
+        y: ((canvas.height - canvasSy) / canvas.height) * viewH + viewY
+    };
+}
+
+// --- 指標事件處理 (觸控與滑鼠通用) ---
+
+// 觸碰開始
+canvas.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    pointerPos = { x: e.clientX, y: e.clientY };
+    const worldP = s2w(e.clientX, e.clientY);
+
+    if (currentInteractionState === STATE.IDLE) {
+        // 檢查是否點擊在發射點附近 (0,0)
+        const launchPointS = w2s(0, 0);
+        const rect = canvas.getBoundingClientRect();
+        const dist = Math.sqrt((e.clientX - rect.left - launchPointS.x)**2 + (e.clientY - rect.top - launchPointS.y)**2);
+        
+        if (dist < 30) { // 30像素的點擊靈敏度
+            currentInteractionState = STATE.AIMING_LAUNCH;
+        }
+    } 
+    else if (currentInteractionState === STATE.FLYING) {
+        // 在飛行中任何地方長按，進入瞄準分裂模式
+        currentInteractionState = STATE.AIMING_EXPLOSION;
+        isPlaying = false; // 自動暫停模擬
+    }
+});
+
+// 觸碰移動 (瞄準中)
+window.addEventListener('pointermove', (e) => {
+    if (currentInteractionState === STATE.AIMING_LAUNCH || currentInteractionState === STATE.AIMING_EXPLOSION) {
+        pointerPos = { x: e.clientX, y: e.clientY };
+    }
+});
+
+// 觸碰結束 (放開)
+window.addEventListener('pointerup', (e) => {
+    if (currentInteractionState === STATE.AIMING_LAUNCH) {
+        // 確定起始角度並發射
+        updateAngleFromPointer('launch');
+        // 計算初速向量
+        v0x = v0 * Math.cos(thetaInit_rad);
+        v0y = v0 * Math.sin(thetaInit_rad);
+        
+        launchSimulation();
+    } 
+    else if (currentInteractionState === STATE.AIMING_EXPLOSION) {
+        // 確定分裂角度並分裂
+        updateAngleFromPointer('explosion');
+        // 計算分裂衝量向量
+        dvx1 = v0_imp * Math.cos(thetaImp_rad); 
+        dvy1 = v0_imp * Math.sin(thetaImp_rad);
+        dvx2 = -(m1 / m2) * dvx1; 
+        dvy2 = -(m1 / m2) * dvy1;
+
+        triggerExplosion();
+    }
+});
+
+// --- 計算瞄準角度 (「指向手指反向」之要求) ---
+function updateAngleFromPointer(type) {
+    const fingerW = s2w(pointerPos.x, pointerPos.y);
+    let centerW;
+    
+    if (type === 'launch') {
+        centerW = { x: 0, y: 0 };
+    } else { // explosion
+        const st = getPositions(t);
+        centerW = { x: st.x_cm, y: st.y_cm };
+    }
+
+    // 手指相對於中心的向量
+    const vecToFinger = { x: fingerW.x - centerW.x, y: fingerW.y - centerW.y };
+    
+    // 我們要的角度是反向向量：由 center 指向 -vecToFinger
+    // 這等同於計算 atan2(-y, -x)
+    const aimingRad = Math.atan2(-vecToFinger.y, -vecToFinger.x);
+    
+    if (type === 'launch') {
+        // 限制發射角度在合理範圍 (例如 5° ~ 85°)
+        thetaInit_rad = Math.max(5 * Math.PI/180, Math.min(85 * Math.PI/180, aimingRad));
+    } else {
+        // 分裂角度不限制 (0~360度)
+        thetaImp_rad = aimingRad;
+    }
+}
+
+// --- 模擬控制函數 ---
+
+function launchSimulation() {
+    currentInteractionState = STATE.FLYING;
+    isPlaying = true;
+    t = 0;
+    let initSt = getPositions(0);
+    historyCM = [{x: initSt.x_cm, y: initSt.y_cm}];
+    history1 = [{x: initSt.x1, y: initSt.y1}];
+    history2 = [{x: initSt.x2, y: initSt.y2}];
+}
+
+function triggerExplosion() {
+    t_explode = t;
+    currentInteractionState = STATE.EXPLODED;
+    // 延續飛行模式，以便 state 計算 divergent paths
+    currentInteractionState = STATE.FLYING; 
+    isPlaying = true; // 繼續模擬
+}
+
+function resetSystem() {
+    t = 0; 
+    t_explode = Infinity;
+    isPlaying = false;
+    currentInteractionState = STATE.IDLE;
+    historyCM = []; history1 = []; history2 = [];
+    viewX = 0; viewY = 0; viewW = 80; viewH = 50; // 重置視角
+}
+resetBtn.addEventListener('click', resetSystem);
+
+// --- 物理軌跡計算核心 ---
+function getPositions(time) {
+    let x_cm = v0x * time;
+    let y_cm = v0y * time - 0.5 * g * time * time;
+    let vx_cm = v0x, vy_cm = v0y - g * time;
+
+    let x1, y1, vx1, vy1, x2, y2, vx2, vy2;
+
+    if (time < t_explode) {
+        x1 = x2 = x_cm; y1 = y2 = y_cm;
+        vx1 = vx2 = vx_cm; vy1 = vy2 = vy_cm;
+    } else {
+        let dt_e = time - t_explode;
+        let x_e = v0x * t_explode;
+        let y_e = v0y * t_explode - 0.5 * g * t_explode * t_explode;
+        let vx_e = v0x, vy_e = v0y - g * t_explode;
+
+        vx1 = vx_e + dvx1; vy1 = (vy_e + dvy1) - g * dt_e;
+        x1 = x_e + (vx_e + dvx1) * dt_e;
+        y1 = y_e + (vy_e + dvy1) * dt_e - 0.5 * g * dt_e * dt_e;
+
+        vx2 = vx_e + dvx2; vy2 = (vy_e + dvy2) - g * dt_e;
+        x2 = x_e + (vx_e + dvx2) * dt_e;
+        y2 = y_e + (vy_e + dvy2) * dt_e - 0.5 * g * dt_e * dt_e;
+    }
+    return { x1, y1, vx1, vy1, x2, y2, vx2, vy2, x_cm, y_cm, vx_cm, vy_cm };
+}
+
+// --- 自適應視角邏輯 (保持原樣) ---
+function updateAdaptiveView(points) {
+    if (points.length === 0) return;
+    let minX = 0, maxX = 10, minY = 0, maxY = 10;
+    points.forEach(p => {
+        if (p.x < minX) minX = p.x; if (p.x > maxX) maxX = p.x;
+        if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y;
+    });
+    let curW = maxX - minX, curH = maxY - minY;
+    let targetW = Math.max(curW * 1.4, 30); // 靈敏度調整
+    let targetH = targetW * (canvas.height / canvas.width);
+    if (targetH < curH * 1.4) { targetH = curH * 1.4; targetW = targetH * (canvas.width / canvas.height); }
+    viewX = minX - (targetW - curW) / 2; viewY = minY - (targetH - curH) / 2;
+    viewW = targetW; viewH = targetH;
+}
+
+// --- 輔助繪圖函數 (向量箭頭) ---
+function drawArrow(w_x, w_y, w_vx, w_vy, color, label, scale) {
+    let p1 = w2s(w_x, w_y);
+    let p2 = w2s(w_x + w_vx * scale, w_y + w_vy * scale);
+    ctx.save(); ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+    // 箭頭端點
+    ctx.beginPath(); ctx.arc(p2.x, p2.y, 3, 0, 2 * Math.PI); ctx.fill();
+    if (label) { ctx.font = "12px sans-serif"; ctx.fillText(label, p2.x + 5, p2.y - 5); }
+    ctx.restore();
+}
+
+// --- 新增：繪製瞄準介面之函數 ---
+function drawAimingInterface() {
+    let centerW, aimingAngleRad, label;
+
+    if (currentInteractionState === STATE.AIMING_LAUNCH) {
+        centerW = { x: 0, y: 0 };
+        // 即時計算當前指向反向的角度用於繪圖
+        const fingerW = s2w(pointerPos.x, pointerPos.y);
+        const vecToFinger = { x: fingerW.x - centerW.x, y: fingerW.y - centerW.y };
+        aimingAngleRad = Math.atan2(-vecToFinger.y, -vecToFinger.x);
+        label = "初始仰角 (θ₀)";
+    } 
+    else if (currentInteractionState === STATE.AIMING_EXPLOSION) {
+        const st = getPositions(t);
+        centerW = { x: st.x_cm, y: st.y_cm };
+        // 即時計算當前指向反向的角度用於繪圖
+        const fingerW = s2w(pointerPos.x, pointerPos.y);
+        const vecToFinger = { x: fingerW.x - centerW.x, y: fingerW.y - centerW.y };
+        aimingAngleRad = Math.atan2(-vecToFinger.y, -vecToFinger.x);
+        label = "分裂角度 (θ_imp)";
+    } 
+    else { return; }
+
+    const centerS = w2s(centerW.x, centerW.y);
+    const rect = canvas.getBoundingClientRect();
+    const fingerCanvasS = { x: pointerPos.x - rect.left, y: pointerPos.y - rect.top };
+
+    // 1. 繪製由物體中心指向手指的虛線（輔助學生理解）
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 1; ctx.setLineDash([5, 5]);
+    ctx.beginPath(); ctx.moveTo(centerS.x, centerS.y); ctx.lineTo(fingerCanvasS.x, fingerCanvasS.y); ctx.stroke();
+    ctx.restore();
+
+    // 2. 繪製由中心指向手指反向的粗瞄準箭頭
+    const arrowLenPixel = 60; // 箭頭螢幕長度
+    const arrowEndS = {
+        x: centerS.x + arrowLenPixel * Math.cos(aimingAngleRad),
+        // 螢幕座標 y 軸向下，物理 y 軸向上，繪圖時需反轉
+        y: centerS.y - arrowLenPixel * Math.sin(aimingAngleRad) 
+    };
+
+    ctx.save();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(centerS.x, centerS.y); ctx.lineTo(arrowEndS.x, arrowEndS.y); ctx.stroke();
+    // 箭頭頭
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(arrowEndS.x, arrowEndS.y, 4, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+
+    // 3. 顯示仰角文字
+    let angleDeg = (aimingAngleRad * 180 / Math.PI);
+    // 修正 atan2 的範圍 [-180, 180] 到顯示習慣 [0, 360]
+    if (angleDeg < 0 && currentInteractionState === STATE.AIMING_EXPLOSION) angleDeg += 360;
+    
+    ctx.save();
+    ctx.fillStyle = '#ffeb3b'; ctx.font = "bold 16px sans-serif";
+    ctx.fillText(`${label}: ${Math.round(angleDeg)}°`, centerS.x + 10, centerS.y - arrowLenPixel - 10);
+    ctx.restore();
+}
+
+// --- 主繪圖循環 (大修復與重構) ---
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // 如果系統重置了，st 會由 0 開始
+    let st = getPositions(t);
+
+    if (isPlaying) {
+        t += dt;
+        historyCM.push({x: st.x_cm, y: st.y_cm});
+        history1.push({x: st.x1, y: st.y1});
+        history2.push({x: st.x2, y: st.y2});
+
+        // 停止條件：質心落地很久
+        if (st.y_cm < -25) isPlaying = false;
+    }
+
+    // 更新視角
+    if (currentInteractionState === STATE.IDLE) {
+        updateAdaptiveView([{x:0,y:0}, {x:5,y:5}]); // 預設發射點視角
+    } else {
+        updateAdaptiveView([st, ...historyCM, ...history1, ...history2]);
+    }
+
+    // A. 繪製地面基準線 (y = 0)
+    let gLeft = w2s(-1000, 0), gRight = w2s(2000, 0);
+    ctx.strokeStyle = '#333'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(gLeft.x, gLeft.y); ctx.lineTo(gRight.x, gRight.y); ctx.stroke();
+
+    // B. 繪製運動軌跡
+    if (showTrailsCheck.checked && historyCM.length > 0) {
+        const renderTrail = (arr, color, dash) => {
+            if (arr.length < 2) return; ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.setLineDash(dash);
+            ctx.beginPath();
+            arr.forEach((p, i) => { let s = w2s(p.x, p.y); if (i === 0) ctx.moveTo(s.x, s.y); else ctx.lineTo(s.x, s.y); });
+            ctx.stroke(); ctx.setLineDash([]);
+        };
+        renderTrail(historyCM, 'rgba(255, 215, 0, 0.5)', [3, 3]); // 質心軌跡 (黃色細虛線)
+        renderTrail(history1, '#ff4d4d', []);      // 碎片1 (紅色實線)
+        renderTrail(history2, '#4da6ff', []);      // 碎片2 (藍色實線)
+    }
+
+    // C. 繪製待命時的「綠色發射點」
+    if (currentInteractionState === STATE.IDLE || currentInteractionState === STATE.AIMING_LAUNCH) {
+        let launchS = w2s(0, 0);
+        ctx.fillStyle = '#4caf50'; ctx.beginPath(); ctx.arc(launchS.x, launchS.y, 8, 0, 2*Math.PI); ctx.fill();
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+    }
+
+    // D. 繪製質心與碎片物體 (只要模擬開始過)
+    if (historyCM.length > 0) {
+        let s1 = w2s(st.x1, st.y1);
+        ctx.fillStyle = '#ff4d4d'; ctx.beginPath(); ctx.arc(s1.x, s1.y, 6, 0, 2 * Math.PI); ctx.fill();
+
+        let s2 = w2s(st.x2, st.y2);
+        ctx.fillStyle = '#4da6ff'; ctx.beginPath(); ctx.arc(s2.x, s2.y, 6 + m2 * 2, 0, 2 * Math.PI); ctx.fill();
+
+        let s_cm = w2s(st.x_cm, st.y_cm);
+        ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(s_cm.x, s_cm.y, 10, 0, 2 * Math.PI); ctx.stroke();
+        
+        // 暫停時繪製亮點
+        if (!isPlaying && currentInteractionState === STATE.AIMING_EXPLOSION) {
+             ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.beginPath(); ctx.arc(s_cm.x, s_cm.y, 4, 0, 2 * Math.PI); ctx.fill();
+        }
+    }
+
+    // E. 繪製向量
+    if (showVelocitiesCheck.checked && historyCM.length > 0) {
+        drawArrow(st.x1, st.y1, st.vx1, st.vy1, '#ff4d4d', '', 0.4);
+        drawArrow(st.x2, st.y2, st.vx2, st.vy2, '#4da6ff', '', 0.4);
+        drawArrow(st.x_cm, st.y_cm, st.vx_cm, st.vy_cm, '#ffd700', 'v_cm', 0.4);
+    }
+
+    // F. 繪製全新的按壓瞄準介面 (這會蓋在最上面)
+    drawAimingInterface();
+
+    requestAnimationFrame(draw);
+}
+
+// --- 啟動模擬系統 ---
+updateMassConfig();
+resetSystem(); // 確保初始狀態正確
+draw();
+</script>
+</body>
+</html>

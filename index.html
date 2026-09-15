@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>物理互動動畫教學大廳</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 20px; }
+        h1 { text-align: center; color: #1a365d; margin-bottom: 30px; font-size: 2.2rem; }
+        .category { margin-bottom: 40px; }
+        .category-title { font-size: 1.6rem; color: #2b6cb0; border-bottom: 2px solid #2b6cb0; padding-bottom: 5px; }
+        
+        /* 卡片網格排版，適合大屏點擊 */
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; margin-top: 15px; }
+        .card { 
+            background: white; border-radius: 12px; padding: 20px; text-decoration: none; color: #333;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.2s, box-shadow 0.2s;
+            display: flex; flex-direction: column; justify-content: space-between; height: 120px;
+        }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 8px 15px rgba(0,0,0,0.15); }
+        .card h3 { margin: 0; font-size: 1.3rem; color: #2d3748; }
+        .card p { margin: 5px 0 0; color: #718096; font-size: 0.95rem; }
+        .btn-tag { align-self: flex-end; background-color: #3182ce; color: white; padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; }
+    </style>
+</head>
+<body>
+
+    <h1>⚡ 物理互動動畫目錄</h1>
+
+    <!-- 力學單元 -->
+    <div class="category">
+        <div class="category-title">📘 一、基礎力學</div>
+        <div class="grid">
+            <a href="mechanics/mass center of explosion .html" class="card" target="_blank">
+                <div>
+                    <h3>質心與爆炸</h3>
+                    <p>展示質心運動與爆炸過程中的動量守恆。</p>
+                </div>
+                <span class="btn-tag">開啟動畫 ↗</span>
+            </a>
+            <a href="mechanics/One-dimensional collision.html" class="card" target="_blank">
+                <div>
+                    <h3>一維碰撞</h3>
+                    <p>展示一維碰撞過程中的動量守恆與能量轉換。</p>
+                </div>
+                <span class="btn-tag">開啟動畫 ↗</span>
+            </a>
+            <!-- 更多力學動畫卡片... -->
+        </div>
+    </div>
+
+    <!-- 電磁學單元 -->
+    <div class="category">
+        <div class="category-title">🧲 二、電磁學</div>
+        <div class="grid">
+            <a href="electromagnetism/circuits.html" class="card" target="_blank">
+                <div>
+                    <h3>載流導線磁場</h3>
+                    <p>展示右手開掌定則與磁力線變化。</p>
+                </div>
+                <span class="btn-tag">開啟動畫 ↗</span>
+            </a>
+        </div>
+    </div>
+
+     <!-- 波動單元 -->
+    <div class="category">
+        <div class="category-title">🌊 三、波動學</div>
+        <div class="grid">
+            <a href="waves/water wave.html" class="card" target="_blank">
+                <div>
+                    <h3>水波動畫</h3>
+                    <p>展示水波的傳播與干涉現象。</p>
+                </div>
+                <span class="btn-tag">開啟動畫 ↗</span>
+            </a>
+            <a href="waves/longitudinal wave.html" class="card" target="_blank">
+                <div>
+                    <h3>縱波動畫</h3>
+                    <p>展示縱波的傳播與干涉現象。</p>
+                </div>
+                <span class="btn-tag">開啟動畫 ↗</span>
+            </a>
+            <a href="waves/transverse wave.html" class="card" target="_blank">
+                <div>
+                    <h3>橫波動畫</h3>
+                    <p>展示橫波的傳播與反射現象。</p>
+                </div>
+                <span class="btn-tag">開啟動畫 ↗</span>
+            </a>
+            <a href="waves/Doppler effect.html" class="card" target="_blank">
+                <div>
+                    <h3>多普勒效應</h3>
+                    <p>都卜勒效應模擬動畫。</p>
+                </div>
+                <span class="btn-tag">開啟動畫 ↗</span>
+            </a>
+            <!-- 更多波動動畫卡片... -->
+        </div>
+    </div>
+
+</body>
+</html>

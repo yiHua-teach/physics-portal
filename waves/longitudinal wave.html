@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>縱波與波前傳播全功能物理模擬器 (Longitudinal Wave & Huygens Simulator)</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif;
+        }
+
+        body {
+            background-color: #0f172a;
+            color: #f8fafc;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 16px;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            color: #38bdf8;
+            margin-bottom: 6px;
+        }
+
+        p.subtitle {
+            font-size: 0.92rem;
+            color: #94a3b8;
+        }
+
+        .main-container {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            width: 100%;
+            max-width: 1050px;
+        }
+
+        .canvas-card {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+            border: 1px solid #334155;
+            position: relative;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: auto;
+            background-color: #090d16;
+            border-radius: 8px;
+            touch-action: auto;
+        }
+
+        .mode-selector {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .mode-btn {
+            background: #334155;
+            color: #94a3b8;
+            border: 1px solid #475569;
+            padding: 8px 14px;
+            border-radius: 20px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.88rem;
+        }
+
+        .mode-btn.active {
+            background: #0284c7;
+            color: white;
+            border-color: #38bdf8;
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.4);
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 14px;
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 18px;
+            border: 1px solid #334155;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .control-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            font-size: 0.88rem;
+            color: #e2e8f0;
+        }
+
+        .value-badge {
+            background: #334155;
+            color: #38bdf8;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.88rem;
+        }
+
+        .zoom-btn-group {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .btn-zoom {
+            background: #334155;
+            color: #f8fafc;
+            border: 1px solid #475569;
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            user-select: none;
+            min-width: 32px;
+            text-align: center;
+        }
+
+        .btn-zoom:active {
+            background: #0284c7;
+            transform: scale(0.95);
+        }
+
+        .btn-zoom-reset {
+            font-size: 0.78rem;
+            padding: 5px 8px;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 7px;
+            border-radius: 4px;
+            background: #475569;
+            outline: none;
+            accent-color: #38bdf8;
+            cursor: pointer;
+        }
+
+        select {
+            background: #334155;
+            color: #f8fafc;
+            border: 1px solid #475569;
+            padding: 7px 10px;
+            border-radius: 6px;
+            outline: none;
+            cursor: pointer;
+            font-size: 0.88rem;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            color: #e2e8f0;
+            cursor: pointer;
+            user-select: none;
+            margin-top: 4px;
+        }
+
+        .checkbox-group input {
+            width: 16px;
+            height: 16px;
+            accent-color: #38bdf8;
+            cursor: pointer;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+            grid-column: span 2;
+        }
+
+        @media (max-width: 640px) {
+            .button-group {
+                grid-column: span 1;
+            }
+        }
+
+        .btn {
+            flex: 1;
+            padding: 10px 14px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.9rem;
+        }
+
+        .btn-primary {
+            background: #0284c7;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #0369a1;
+        }
+
+        .btn-secondary {
+            background: #475569;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: #334155;
+        }
+
+        .info-panel {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            gap: 12px;
+            background: #1e293b;
+            padding: 14px;
+            border-radius: 12px;
+            border: 1px solid #334155;
+        }
+
+        .info-card {
+            background: #0f172a;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border-left: 4px solid #38bdf8;
+        }
+
+        .info-card.green { border-left-color: #4ade80; }
+        .info-card.amber { border-left-color: #fbbf24; }
+        .info-card.purple { border-left-color: #c084fc; }
+
+        .info-title {
+            font-size: 0.78rem;
+            color: #94a3b8;
+            margin-bottom: 2px;
+        }
+
+        .info-value {
+            font-size: 1.05rem;
+            font-weight: bold;
+            color: #f8fafc;
+            font-family: monospace;
+        }
+
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+            margin-top: 10px;
+            font-size: 0.82rem;
+            color: #cbd5e1;
+            justify-content: center;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .color-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>縱波與波前傳播全功能物理模擬器</h1>
+        <p class="subtitle">涵蓋一維縱波、二維點波源、雙波源干涉、縱波反射、折射（斯涅爾定律）與狹縫繞射（惠更斯原理）</p>
+    </header>
+
+    <div class="main-container">
+        <!-- 模式切換按鈕區 -->
+        <div class="mode-selector">
+            <button class="mode-btn active" id="btnMode1D">一維縱波</button>
+            <button class="mode-btn" id="btnMode2D">二維單點波源</button>
+            <button class="mode-btn" id="btnModeInterference">雙波源干涉</button>
+            <button class="mode-btn" id="btnModeReflection">縱波反射</button>
+            <button class="mode-btn" id="btnModeRefraction">縱波折射</button>
+            <button class="mode-btn" id="btnModeDoubleSlit">雙狹縫干涉</button>
+            <button class="mode-btn" id="btnModeSingleSlit">單狹縫繞射 (惠更斯)</button>
+        </div>
+
+        <!-- Canvas 圖表區 -->
+        <div class="canvas-card">
+            <canvas id="waveCanvas" width="920" height="440"></canvas>
+            <div class="legend" id="legendBox">
+                <div class="legend-item"><div class="color-dot" style="background:#ef4444;"></div>追蹤質點 (原地振動)</div>
+                <div class="legend-item"><div class="color-dot" style="background:#38bdf8;"></div>密部中心 / 建設性干涉</div>
+                <div class="legend-item"><div class="color-dot" style="background:#fbbf24;"></div>波長 λ / 惠更斯波前</div>
+                <div class="legend-item" id="legendNodal" style="display:none;"><div class="color-dot" style="background:#f43f5e;"></div>節線 (破壞性干涉)</div>
+            </div>
+        </div>
+
+        <!-- 即時物理量資訊欄 -->
+        <div class="info-panel">
+            <div class="info-card">
+                <div class="info-title" id="titleSpeed">介質波速 (v)</div>
+                <div class="info-value" id="dispSpeed">320 px/s</div>
+            </div>
+            <div class="info-card green">
+                <div class="info-title">振動頻率 (f)</div>
+                <div class="info-value" id="dispFreq">2.0 Hz</div>
+            </div>
+            <div class="info-card amber">
+                <div class="info-title" id="titleLambda">波長 (λ = v / f)</div>
+                <div class="info-value" id="dispLambda">160 px</div>
+            </div>
+            <div class="info-card purple">
+                <div class="info-title" id="titleAmp">單源振幅 (A)</div>
+                <div class="info-value" id="dispAmp">20 px</div>
+            </div>
+        </div>
+
+        <!-- 控制模組區 -->
+        <div class="controls-grid">
+            <!-- 視角縮放區 -->
+            <div class="control-group">
+                <div class="control-label">
+                    <span>視角縮放 (Zoom)</span>
+                    <span class="value-badge" id="valZoom">1.0x</span>
+                </div>
+                <div class="zoom-btn-group">
+                    <button class="btn-zoom" id="btnZoomOut">－</button>
+                    <input type="range" id="sliderZoom" min="0.4" max="2.0" value="1.0" step="0.05">
+                    <button class="btn-zoom" id="btnZoomIn">＋</button>
+                    <button class="btn-zoom btn-zoom-reset" id="btnZoomReset">重置</button>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <div class="control-label">
+                    <span>振幅 (A)</span>
+                    <span class="value-badge" id="valAmp">20 px</span>
+                </div>
+                <input type="range" id="sliderAmp" min="5" max="35" value="20" step="1">
+            </div>
+
+            <div class="control-group">
+                <div class="control-label">
+                    <span>頻率 (f)</span>
+                    <span class="value-badge" id="valFreq">2.0 Hz</span>
+                </div>
+                <input type="range" id="sliderFreq" min="0.5" max="3.5" value="2.0" step="0.1">
+            </div>
+
+            <div class="control-group" id="groupMedium">
+                <div class="control-label">
+                    <span>介質選擇 (決定波速 v)</span>
+                </div>
+                <select id="selectMedium">
+                    <option value="200">空氣 (較慢 - 200 px/s)</option>
+                    <option value="320" selected>水 (中等 - 320 px/s)</option>
+                    <option value="480">金屬 (較快 - 480 px/s)</option>
+                </select>
+            </div>
+
+            <!-- 動態模式專屬控制面板 -->
+            <div class="control-group" id="groupDist" style="display: none;">
+                <div class="control-label">
+                    <span>波源/狹縫間距 (d)</span>
+                    <span class="value-badge" id="valDist">200 px</span>
+                </div>
+                <input type="range" id="sliderDist" min="80" max="360" value="200" step="10">
+            </div>
+
+            <div class="control-group" id="groupAngle" style="display: none;">
+                <div class="control-label">
+                    <span>入射角 (θ₁)</span>
+                    <span class="value-badge" id="valAngle">30°</span>
+                </div>
+                <input type="range" id="sliderAngle" min="0" max="60" value="30" step="5">
+            </div>
+
+            <div class="control-group" id="groupSlitWidth" style="display: none;">
+                <div class="control-label">
+                    <span>狹縫寬度 (w)</span>
+                    <span class="value-badge" id="valSlitWidth">120 px</span>
+                </div>
+                <input type="range" id="sliderSlitWidth" min="40" max="240" value="120" step="10">
+            </div>
+
+            <div class="control-group" id="groupMedium2" style="display: none;">
+                <div class="control-label">
+                    <span>介質二波速 (v₂)</span>
+                    <span class="value-badge" id="valSpeed2">180 px/s</span>
+                </div>
+                <input type="range" id="sliderSpeed2" min="120" max="480" value="180" step="20">
+            </div>
+
+            <div class="control-group">
+                <label class="checkbox-group">
+                    <input type="checkbox" id="chkShowLines" checked>
+                    <span>顯示波前 / 節線 / 法線軌跡</span>
+                </label>
+            </div>
+
+            <div class="button-group">
+                <button class="btn btn-primary" id="btnPause">
+                    <span id="pauseIcon">⏸</span> 暫停 / 播放
+                </button>
+                <button class="btn btn-secondary" id="btnSlow">
+                    <span id="slowModeText">慢動作 (0.25x)</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('waveCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Mode button elements
+        const modeButtons = {
+            '1D': document.getElementById('btnMode1D'),
+            '2D': document.getElementById('btnMode2D'),
+            'Interference': document.getElementById('btnModeInterference'),
+            'Reflection': document.getElementById('btnModeReflection'),
+            'Refraction': document.getElementById('btnModeRefraction'),
+            'DoubleSlit': document.getElementById('btnModeDoubleSlit'),
+            'SingleSlit': document.getElementById('btnModeSingleSlit')
+        };
+
+        // DOM inputs
+        const sliderZoom = document.getElementById('sliderZoom');
+        const btnZoomIn = document.getElementById('btnZoomIn');
+        const btnZoomOut = document.getElementById('btnZoomOut');
+        const btnZoomReset = document.getElementById('btnZoomReset');
+        const sliderAmp = document.getElementById('sliderAmp');
+        const sliderFreq = document.getElementById('sliderFreq');
+        const selectMedium = document.getElementById('selectMedium');
+        const sliderDist = document.getElementById('sliderDist');
+        const sliderAngle = document.getElementById('sliderAngle');
+        const sliderSlitWidth = document.getElementById('sliderSlitWidth');
+        const sliderSpeed2 = document.getElementById('sliderSpeed2');
+        const chkShowLines = document.getElementById('chkShowLines');
+
+        // Control group containers
+        const groupDist = document.getElementById('groupDist');
+        const groupAngle = document.getElementById('groupAngle');
+        const groupSlitWidth = document.getElementById('groupSlitWidth');
+        const groupMedium2 = document.getElementById('groupMedium2');
+        const groupMedium = document.getElementById('groupMedium');
+        const legendNodal = document.getElementById('legendNodal');
+
+        // Display value badges
+        const valZoom = document.getElementById('valZoom');
+        const valAmp = document.getElementById('valAmp');
+        const valFreq = document.getElementById('valFreq');
+        const valDist = document.getElementById('valDist');
+        const valAngle = document.getElementById('valAngle');
+        const valSlitWidth = document.getElementById('valSlitWidth');
+        const valSpeed2 = document.getElementById('valSpeed2');
+
+        const dispSpeed = document.getElementById('dispSpeed');
+        const dispFreq = document.getElementById('dispFreq');
+        const dispLambda = document.getElementById('dispLambda');
+        const dispAmp = document.getElementById('dispAmp');
+        const titleSpeed = document.getElementById('titleSpeed');
+        const titleLambda = document.getElementById('titleLambda');
+
+        const btnPause = document.getElementById('btnPause');
+        const btnSlow = document.getElementById('btnSlow');
+
+        // Simulation parameters
+        let currentMode = '1D'; 
+        let zoomLevel = parseFloat(sliderZoom.value);
+        let A = parseFloat(sliderAmp.value);       
+        let f = parseFloat(sliderFreq.value);      
+        let v1 = parseFloat(selectMedium.value);    
+        let v2 = parseFloat(sliderSpeed2.value);
+        let sourceDist = parseFloat(sliderDist.value); 
+        let incidentAngleDeg = parseFloat(sliderAngle.value);
+        let slitWidth = parseFloat(sliderSlitWidth.value);
+
+        let isRunning = true;
+        let timeScale = 1.0;
+        let lastTimestamp = 0;
+        let simTime = 0; 
+
+        // 1D Particles Setup
+        const numCols = 100;
+        const numRows = 7;
+        const paddingLeft = 60;
+        const paddingRight = 60;
+        const waveWidth = canvas.width - paddingLeft - paddingRight;
+        const trackedParticleIndex = 30;
+
+        // 2D Grid Setup
+        let gridParticles2D = [];
+        function initGridParticles() {
+            gridParticles2D = [];
+            const step = 16; 
+            for (let x = -250; x <= canvas.width + 250; x += step) {
+                for (let y = -180; y <= canvas.height + 180; y += step) {
+                    gridParticles2D.push({
+                        x0: x,
+                        y0: y,
+                        isTracked: (Math.abs(x - canvas.width / 2) < step / 2 && Math.abs(y - (canvas.height / 2 + 70)) < step / 2)
+                    });
+                }
+            }
+        }
+        initGridParticles();
+
+        Object.keys(modeButtons).forEach(modeKey => {
+            modeButtons[modeKey].addEventListener('click', () => {
+                currentMode = modeKey;
+                updateModeUI();
+            });
+        });
+
+        function updateModeUI() {
+            Object.keys(modeButtons).forEach(m => {
+                modeButtons[m].classList.toggle('active', m === currentMode);
+            });
+
+            groupDist.style.display = (currentMode === 'Interference' || currentMode === 'DoubleSlit') ? 'flex' : 'none';
+            groupAngle.style.display = (currentMode === 'Reflection' || currentMode === 'Refraction') ? 'flex' : 'none';
+            groupSlitWidth.style.display = (currentMode === 'SingleSlit' || currentMode === 'DoubleSlit') ? 'flex' : 'none';
+            groupMedium2.style.display = (currentMode === 'Refraction') ? 'flex' : 'none';
+            legendNodal.style.display = (currentMode === 'Interference' || currentMode === 'DoubleSlit' || currentMode === 'SingleSlit') ? 'flex' : 'none';
+
+            if (currentMode === 'Refraction') {
+                titleSpeed.textContent = '介質一 / 介質二波速';
+                titleLambda.textContent = 'λ₁ / λ₂';
+            } else {
+                titleSpeed.textContent = '介質波速 (v)';
+                titleLambda.textContent = '波長 (λ = v / f)';
+            }
+            updateMetrics();
+        }
+
+        function updateMetrics() {
+            valZoom.textContent = `${zoomLevel.toFixed(2)}x`;
+            valAmp.textContent = `${A} px`;
+            valFreq.textContent = `${f.toFixed(1)} Hz`;
+            valDist.textContent = `${sourceDist} px`;
+            valAngle.textContent = `${incidentAngleDeg}°`;
+            valSlitWidth.textContent = `${slitWidth} px`;
+            valSpeed2.textContent = `${v2} px/s`;
+            
+            const lambda1 = v1 / f;
+            const lambda2 = v2 / f;
+
+            if (currentMode === 'Refraction') {
+                dispSpeed.textContent = `${v1} / ${v2} px/s`;
+                dispLambda.textContent = `${lambda1.toFixed(0)} / ${lambda2.toFixed(0)} px`;
+            } else {
+                dispSpeed.textContent = `${v1} px/s`;
+                dispLambda.textContent = `${lambda1.toFixed(1)} px`;
+            }
+            dispFreq.textContent = `${f.toFixed(1)} Hz`;
+            dispAmp.textContent = `${A} px`;
+        }
+
+        function setZoom(newZoom) {
+            zoomLevel = Math.min(Math.max(0.4, newZoom), 2.0);
+            sliderZoom.value = zoomLevel;
+            updateMetrics();
+        }
+
+        sliderZoom.addEventListener('input', (e) => setZoom(parseFloat(e.target.value)));
+        btnZoomIn.addEventListener('click', () => setZoom(zoomLevel + 0.1));
+        btnZoomOut.addEventListener('click', () => setZoom(zoomLevel - 0.1));
+        btnZoomReset.addEventListener('click', () => setZoom(1.0));
+
+        sliderAmp.addEventListener('input', (e) => { A = parseFloat(e.target.value); updateMetrics(); });
+        sliderFreq.addEventListener('input', (e) => { f = parseFloat(e.target.value); updateMetrics(); });
+        selectMedium.addEventListener('change', (e) => { v1 = parseFloat(e.target.value); updateMetrics(); });
+        sliderSpeed2.addEventListener('input', (e) => { v2 = parseFloat(e.target.value); updateMetrics(); });
+        sliderDist.addEventListener('input', (e) => { sourceDist = parseFloat(e.target.value); updateMetrics(); });
+        sliderAngle.addEventListener('input', (e) => { incidentAngleDeg = parseFloat(e.target.value); updateMetrics(); });
+        sliderSlitWidth.addEventListener('input', (e) => { slitWidth = parseFloat(e.target.value); updateMetrics(); });
+
+        btnPause.addEventListener('click', () => {
+            isRunning = !isRunning;
+            btnPause.innerHTML = isRunning ? '<span>⏸</span> 暫停' : '<span>▶</span> 繼續';
+        });
+
+        btnSlow.addEventListener('click', () => {
+            if (timeScale === 1.0) {
+                timeScale = 0.25;
+                btnSlow.style.background = '#0284c7';
+                document.getElementById('slowModeText').textContent = '正常速度 (1.0x)';
+            } else {
+                timeScale = 1.0;
+                btnSlow.style.background = '#475569';
+                document.getElementById('slowModeText').textContent = '慢動作 (0.25x)';
+            }
+        });
+
+        function draw1DWave(lambda, k, omega) {
+            const topRegionY = 50;
+            const rowSpacing = 16;
+            const graphBaseY = 290;
+            const graphHeight = 70;
+
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '13px sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('一維微觀縱波質點陣列 (1D Particle Displacement)', paddingLeft, topRegionY - 15);
+            ctx.fillText('質點位移-平衡位置對照圖 (Displacement x - x₀)', paddingLeft, graphBaseY - graphHeight - 20);
+
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(paddingLeft, graphBaseY);
+            ctx.lineTo(canvas.width - paddingRight, graphBaseY);
+            ctx.stroke();
+
+            const particlePositions = [];
+            for (let i = 0; i < numCols; i++) {
+                const x0 = paddingLeft + (i / (numCols - 1)) * waveWidth;
+                const displacement = A * Math.sin(k * x0 - omega * simTime);
+                const currentX = x0 + displacement;
+                particlePositions.push({ x0: x0, x: currentX, disp: displacement });
+            }
+
+            ctx.beginPath();
+            ctx.strokeStyle = '#4ade80';
+            ctx.lineWidth = 2.5;
+            for (let i = 0; i < particlePositions.length; i++) {
+                const p = particlePositions[i];
+                if (i === 0) ctx.moveTo(p.x0, graphBaseY - p.disp);
+                else ctx.lineTo(p.x0, graphBaseY - p.disp);
+            }
+            ctx.stroke();
+
+            for (let i = 0; i < particlePositions.length; i++) {
+                const p = particlePositions[i];
+                const isTracked = (i === trackedParticleIndex);
+
+                for (let r = 0; r < numRows; r++) {
+                    const y = topRegionY + r * rowSpacing;
+                    ctx.beginPath();
+                    ctx.arc(p.x, y, isTracked ? 5.5 : 3.5, 0, Math.PI * 2);
+                    ctx.fillStyle = isTracked ? '#ef4444' : '#94a3b8';
+                    ctx.fill();
+
+                    if (isTracked && r === Math.floor(numRows / 2)) {
+                        ctx.save();
+                        ctx.strokeStyle = 'rgba(239, 68, 68, 0.5)';
+                        ctx.setLineDash([3, 3]);
+                        ctx.beginPath();
+                        ctx.moveTo(p.x0, topRegionY - 5);
+                        ctx.lineTo(p.x0, graphBaseY + graphHeight + 10);
+                        ctx.stroke();
+                        ctx.restore();
+                    }
+                }
+            }
+        }
+
+        function draw2DWave(lambda, k, omega) {
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '13px sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('二維點波源聲波擴散 (2D Radial Wave)', 40, 30);
+
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 8, 0, Math.PI * 2);
+            ctx.fillStyle = '#38bdf8';
+            ctx.fill();
+
+            gridParticles2D.forEach(p => {
+                const dx = p.x0 - centerX;
+                const dy = p.y0 - centerY;
+                const r0 = Math.sqrt(dx * dx + dy * dy);
+                if (r0 < 10) return;
+
+                const angle = Math.atan2(dy, dx);
+                const dr = A * Math.sin(k * r0 - omega * simTime);
+
+                const currentX = p.x0 + dr * Math.cos(angle);
+                const currentY = p.y0 + dr * Math.sin(angle);
+
+                ctx.beginPath();
+                ctx.arc(currentX, currentY, p.isTracked ? 6 : 2.5, 0, Math.PI * 2);
+                ctx.fillStyle = p.isTracked ? '#ef4444' : 'rgba(148, 163, 184, 0.7)';
+                ctx.fill();
+            });
+        }
+
+        function drawInterferenceWave(lambda, k, omega) {
+            const centerY = canvas.height / 2;
+            const s1 = { x: canvas.width / 2 - sourceDist / 2, y: centerY };
+            const s2 = { x: canvas.width / 2 + sourceDist / 2, y: centerY };
+
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '13px sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('二維雙聲波源干涉與疊加現象 (Double-Source Interference)', 40, 30);
+
+            [s1, s2].forEach((s, idx) => {
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, 7, 0, Math.PI * 2);
+                ctx.fillStyle = '#38bdf8';
+                ctx.fill();
+            });
+
+            gridParticles2D.forEach(p => {
+                const dx1 = p.x0 - s1.x; const dy1 = p.y0 - s1.y;
+                const r1 = Math.sqrt(dx1 * dx1 + dy1 * dy1);
+                const dx2 = p.x0 - s2.x; const dy2 = p.y0 - s2.y;
+                const r2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
+
+                if (r1 < 8 || r2 < 8) return;
+
+                const disp1 = A * Math.sin(k * r1 - omega * simTime);
+                const disp2 = A * Math.sin(k * r2 - omega * simTime);
+
+                const phaseDiff = k * (r1 - r2);
+                const combinedAmp = Math.abs(2 * Math.cos(phaseDiff / 2));
+
+                const vecX = disp1 * (dx1 / r1) + disp2 * (dx2 / r2);
+                const vecY = disp1 * (dy1 / r1) + disp2 * (dy2 / r2);
+
+                ctx.beginPath();
+                ctx.arc(p.x0 + vecX, p.y0 + vecY, p.isTracked ? 6 : 2.5, 0, Math.PI * 2);
+                if (p.isTracked) ctx.fillStyle = '#ef4444';
+                else if (combinedAmp > 1.4) ctx.fillStyle = '#38bdf8';
+                else if (combinedAmp < 0.4) ctx.fillStyle = '#f43f5e';
+                else ctx.fillStyle = 'rgba(148, 163, 184, 0.4)';
+                ctx.fill();
+            });
+        }
+
+        function drawReflectionWave(lambda, k, omega) {
+            const wallX = canvas.width * 0.7;
+            const angleRad = (incidentAngleDeg * Math.PI) / 180;
+
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '13px sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('縱波與波前平面反射 (Longitudinal Reflection: i = r)', 40, 30);
+
+            // 繪製反射障礙牆面
+            ctx.strokeStyle = '#94a3b8';
+            ctx.lineWidth = 6;
+            ctx.beginPath();
+            ctx.moveTo(wallX, 0);
+            ctx.lineTo(wallX, canvas.height);
+            ctx.stroke();
+
+            // 實線牆斜面陰影
+            ctx.fillStyle = 'rgba(148, 163, 184, 0.15)';
+            ctx.fillRect(wallX, 0, canvas.width - wallX, canvas.height);
+
+            const source = { x: 120, y: canvas.height / 2 };
+            const imageSource = { x: wallX + (wallX - source.x), y: source.y }; // 鏡像波源
+
+            ctx.beginPath();
+            ctx.arc(source.x, source.y, 8, 0, Math.PI * 2);
+            ctx.fillStyle = '#38bdf8';
+            ctx.fill();
+            ctx.fillText('聲波源 (S)', source.x - 20, source.y - 14);
+
+            gridParticles2D.forEach(p => {
+                if (p.x0 >= wallX) return;
+
+                const dx1 = p.x0 - source.x; const dy1 = p.y0 - source.y;
+                const r1 = Math.sqrt(dx1 * dx1 + dy1 * dy1);
+
+                const dx2 = p.x0 - imageSource.x; const dy2 = p.y0 - imageSource.y;
+                const r2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
+
+                const dispInc = A * Math.sin(k * r1 - omega * simTime);
+                const dispRef = (r2 > 0) ? A * Math.sin(k * r2 - omega * simTime) : 0;
+
+                const vecX = dispInc * (dx1 / r1) + dispRef * (dx2 / r2);
+                const vecY = dispInc * (dy1 / r1) + dispRef * (dy2 / r2);
+
+                ctx.beginPath();
+                ctx.arc(p.x0 + vecX, p.y0 + vecY, p.isTracked ? 6 : 2.5, 0, Math.PI * 2);
+                ctx.fillStyle = p.isTracked ? '#ef4444' : 'rgba(148, 163, 184, 0.6)';
+                ctx.fill();
+            });
+
+            // 繪製入射與反射波前光線
+            if (chkShowLines.checked) {
+                ctx.save();
+                ctx.strokeStyle = '#fbbf24';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]);
+
+                // 法線
+                const normY = canvas.height / 2;
+                ctx.strokeStyle = '#94a3b8';
+                ctx.beginPath();
+                ctx.moveTo(100, normY);
+                ctx.lineTo(wallX, normY);
+                ctx.stroke();
+
+                // 入射波前線
+                const phase = (v1 * simTime) % lambda;
+                ctx.strokeStyle = 'rgba(56, 189, 248, 0.5)';
+                for (let r = phase; r < wallX + 200; r += lambda) {
+                    ctx.beginPath();
+                    ctx.arc(source.x, source.y, r, -Math.PI / 3, Math.PI / 3);
+                    ctx.stroke();
+
+                    // 反射球面波前 (來自鏡像波源)
+                    ctx.beginPath();
+                    ctx.arc(imageSource.x, imageSource.y, r, Math.PI - Math.PI / 3, Math.PI + Math.PI / 3);
+                    ctx.stroke();
+                }
+                ctx.restore();
+            }
+        }
+
+        function drawRefractionWave(lambda1, k1, omega) {
+            const boundaryX = canvas.width / 2;
+            const lambda2 = v2 / f;
+            const k2 = (2 * Math.PI) / lambda2;
+
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '13px sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText(`縱波介質折射 (Refraction: v₁=${v1} px/s, v₂=${v2} px/s, 斯涅爾定律 sinθ₁/sinθ₂ = v₁/v₂)`, 40, 30);
+
+            // 兩介質背景
+            ctx.fillStyle = 'rgba(14, 116, 144, 0.15)';
+            ctx.fillRect(0, 0, boundaryX, canvas.height);
+            ctx.fillStyle = 'rgba(99, 102, 241, 0.15)';
+            ctx.fillRect(boundaryX, 0, canvas.width - boundaryX, canvas.height);
+
+            // 分界線
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(boundaryX, 0);
+            ctx.lineTo(boundaryX, canvas.height);
+            ctx.stroke();
+
+            ctx.fillStyle = '#38bdf8';
+            ctx.fillText('介質 1 (v₁)', boundaryX - 90, 50);
+            ctx.fillStyle = '#818cf8';
+            ctx.fillText('介質 2 (v₂)', boundaryX + 20, 50);
+
+            // 平面波傳播角度計算
+            const theta1 = (incidentAngleDeg * Math.PI) / 180;
+            const sinTheta2 = Math.min(1.0, (v2 / v1) * Math.sin(theta1));
+            const theta2 = Math.asin(sinTheta2);
+
+            const k1x = k1 * Math.cos(theta1);
+            const k1y = k1 * Math.sin(theta1);
+            const k2x = k2 * Math.cos(theta2);
+            const k2y = k2 * Math.sin(theta2);
+
+            gridParticles2D.forEach(p => {
+                let disp = 0;
+                let dirX = 0;
+                let dirY = 0;
+
+                if (p.x0 < boundaryX) {
+                    const phase = k1x * (p.x0 - boundaryX) + k1y * p.y0 - omega * simTime;
+                    disp = A * Math.sin(phase);
+                    dirX = Math.cos(theta1);
+                    dirY = Math.sin(theta1);
+                } else {
+                    const phase = k2x * (p.x0 - boundaryX) + k1y * p.y0 - omega * simTime; // 邊界相位匹配
+                    disp = A * Math.sin(phase);
+                    dirX = Math.cos(theta2);
+                    dirY = Math.sin(theta2);
+                }
+
+                ctx.beginPath();
+                ctx.arc(p.x0 + disp * dirX, p.y0 + disp * dirY, p.isTracked ? 6 : 2.5, 0, Math.PI * 2);
+                ctx.fillStyle = p.isTracked ? '#ef4444' : (p.x0 < boundaryX ? 'rgba(56, 189, 248, 0.6)' : 'rgba(129, 140, 248, 0.6)');
+                ctx.fill();
+            });
+
+            // 繪製入射波前與折射波前線
+            if (chkShowLines.checked) {
+                ctx.save();
+                ctx.strokeStyle = '#fbbf24';
+                ctx.lineWidth = 1.5;
+
+                // 法線
+                ctx.setLineDash([4, 4]);
+                ctx.beginPath();
+                ctx.moveTo(boundaryX - 100, canvas.height / 2);
+                ctx.lineTo(boundaryX + 100, canvas.height / 2);
+                ctx.stroke();
+
+                ctx.restore();
+            }
+        }
+
+        function drawDoubleSlitWave(lambda, k, omega) {
+            const barrierX = 280;
+            const slit1Y = canvas.height / 2 - sourceDist / 2;
+            const slit2Y = canvas.height / 2 + sourceDist / 2;
+
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '13px sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('雙狹縫縱波干涉 (Double-Slit Interference & Huygens Wavelets)', 40, 30);
+
+            // 繪製狹縫擋板
+            ctx.fillStyle = '#475569';
+            ctx.fillRect(barrierX - 6, 0, 12, slit1Y - slitWidth / 2);
+            ctx.fillRect(barrierX - 6, slit1Y + slitWidth / 2, 12, (slit2Y - slitWidth / 2) - (slit1Y + slitWidth / 2));
+            ctx.fillRect(barrierX - 6, slit2Y + slitWidth / 2, 12, canvas.height - (slit2Y + slitWidth / 2));
+
+            // 每條狹縫內放 5 個惠更斯點波源
+            const subSources = [];
+            const numSub = 5;
+            for (let i = 0; i < numSub; i++) {
+                const off = (i / (numSub - 1) - 0.5) * (slitWidth * 0.7);
+                subSources.push({ x: barrierX, y: slit1Y + off });
+                subSources.push({ x: barrierX, y: slit2Y + off });
+            }
+
+            gridParticles2D.forEach(p => {
+                if (p.x0 < barrierX) {
+                    // 擋板左側：平面入射波
+                    const disp = A * Math.sin(k * p.x0 - omega * simTime);
+                    ctx.beginPath();
+                    ctx.arc(p.x0 + disp, p.y0, 2.5, 0, Math.PI * 2);
+                    ctx.fillStyle = 'rgba(56, 189, 248, 0.5)';
+                    ctx.fill();
+                } else {
+                    // 擋板右側：無數惠更斯子波疊加
+                    let netX = 0;
+                    let netY = 0;
+                    let ampSum = 0;
+
+                    subSources.forEach(s => {
+                        const dx = p.x0 - s.x;
+                        const dy = p.y0 - s.y;
+                        const r = Math.sqrt(dx * dx + dy * dy);
+                        if (r < 4) return;
+
+                        const disp = (A / Math.sqrt(r * 0.15 + 1)) * Math.sin(k * r - omega * simTime);
+                        netX += disp * (dx / r);
+                        netY += disp * (dy / r);
+                        ampSum += disp;
+                    });
+
+                    ctx.beginPath();
+                    ctx.arc(p.x0 + netX, p.y0 + netY, p.isTracked ? 6 : 2.5, 0, Math.PI * 2);
+                    if (p.isTracked) ctx.fillStyle = '#ef4444';
+                    else if (Math.abs(ampSum) > A * 1.5) ctx.fillStyle = '#38bdf8';
+                    else if (Math.abs(ampSum) < A * 0.3) ctx.fillStyle = '#f43f5e';
+                    else ctx.fillStyle = 'rgba(148, 163, 184, 0.4)';
+                    ctx.fill();
+                }
+            });
+        }
+
+        function drawSingleSlitWave(lambda, k, omega) {
+            const barrierX = 260;
+            const centerY = canvas.height / 2;
+
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '13px sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('單狹縫繞射與惠更斯原理 (Single-Slit Diffraction: Huygens Wavelets)', 40, 30);
+
+            // 繪製單狹縫擋板
+            ctx.fillStyle = '#475569';
+            ctx.fillRect(barrierX - 6, 0, 12, centerY - slitWidth / 2);
+            ctx.fillRect(barrierX - 6, centerY + slitWidth / 2, 12, canvas.height - (centerY + slitWidth / 2));
+
+            // 在單狹縫內分佈 11 個惠更斯連續點子波源
+            const numHuygens = 11;
+            const huygensSources = [];
+            for (let i = 0; i < numHuygens; i++) {
+                const yPos = centerY - slitWidth / 2 + (i / (numHuygens - 1)) * slitWidth;
+                huygensSources.push({ x: barrierX, y: yPos });
+            }
+
+            // 標示惠更斯點波源
+            if (chkShowLines.checked) {
+                huygensSources.forEach(s => {
+                    ctx.beginPath();
+                    ctx.arc(s.x, s.y, 3, 0, Math.PI * 2);
+                    ctx.fillStyle = '#fbbf24';
+                    ctx.fill();
+                });
+            }
+
+            gridParticles2D.forEach(p => {
+                if (p.x0 < barrierX) {
+                    const disp = A * Math.sin(k * p.x0 - omega * simTime);
+                    ctx.beginPath();
+                    ctx.arc(p.x0 + disp, p.y0, 2.5, 0, Math.PI * 2);
+                    ctx.fillStyle = 'rgba(56, 189, 248, 0.5)';
+                    ctx.fill();
+                } else {
+                    let netX = 0;
+                    let netY = 0;
+                    let totalAmp = 0;
+
+                    huygensSources.forEach(s => {
+                        const dx = p.x0 - s.x;
+                        const dy = p.y0 - s.y;
+                        const r = Math.sqrt(dx * dx + dy * dy);
+                        if (r < 2) return;
+
+                        const disp = (A / (numHuygens * 0.4)) * Math.sin(k * r - omega * simTime);
+                        netX += disp * (dx / r);
+                        netY += disp * (dy / r);
+                        totalAmp += disp;
+                    });
+
+                    ctx.beginPath();
+                    ctx.arc(p.x0 + netX, p.y0 + netY, p.isTracked ? 6 : 2.5, 0, Math.PI * 2);
+                    if (p.isTracked) ctx.fillStyle = '#ef4444';
+                    else ctx.fillStyle = `rgba(56, 189, 248, ${Math.min(1.0, Math.abs(totalAmp) / A + 0.2)})`;
+                    ctx.fill();
+                }
+            });
+        }
+
+        function draw(timestamp) {
+            if (!lastTimestamp) lastTimestamp = timestamp;
+            const dt = (timestamp - lastTimestamp) / 1000;
+            lastTimestamp = timestamp;
+
+            if (isRunning) {
+                simTime += dt * timeScale;
+            }
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            ctx.save();
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            ctx.translate(centerX, centerY);
+            ctx.scale(zoomLevel, zoomLevel);
+            ctx.translate(-centerX, -centerY);
+
+            const lambda = v1 / f;
+            const k = (2 * Math.PI) / lambda;
+            const omega = 2 * Math.PI * f;
+
+            switch (currentMode) {
+                case '1D': draw1DWave(lambda, k, omega); break;
+                case '2D': draw2DWave(lambda, k, omega); break;
+                case 'Interference': drawInterferenceWave(lambda, k, omega); break;
+                case 'Reflection': drawReflectionWave(lambda, k, omega); break;
+                case 'Refraction': drawRefractionWave(lambda, k, omega); break;
+                case 'DoubleSlit': drawDoubleSlitWave(lambda, k, omega); break;
+                case 'SingleSlit': drawSingleSlitWave(lambda, k, omega); break;
+            }
+
+            ctx.restore();
+
+            updateMetrics();
+            requestAnimationFrame(draw);
+        }
+
+        // Initialize simulation
+        updateModeUI();
+        requestAnimationFrame(draw);
+    </script>
+</body>
+</html>

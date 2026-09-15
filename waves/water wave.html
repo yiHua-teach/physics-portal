@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>水波槽實驗模型 - 連續繪製修正版</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: #0d0d11;
+            color: #eee;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .toolbar {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 680px;
+        }
+        button, select {
+            background: #222530;
+            color: #4da6ff;
+            border: 1px solid #445;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+        button:hover { background: #333848; color: #fff; }
+        button.active { background: #0066cc; color: #fff; border-color: #0088ff; }
+        .canvas-container {
+            position: relative;
+            width: 640px;
+            height: 480px;
+            border: 2px solid #334;
+            box-shadow: 0 0 25px rgba(0, 162, 255, 0.2);
+            border-radius: 4px;
+            touch-action: none; /* 防止手機捲動頁面中斷劃線 */
+        }
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+        }
+        #annotationCanvas {
+            pointer-events: none;
+            z-index: 2;
+        }
+        .info {
+            margin-top: 10px;
+            font-size: 13px;
+            color: #889;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="toolbar">
+        <button id="modeWave" class="active" onclick="setMode('wave')">🌊 波源</button>
+        <button id="modeObstacle" onclick="setMode('obstacle')">🧱 畫障礙物</button>
+        <button id="modeShallow" onclick="setMode('shallow')">🏝️ 畫淺水區</button>
+        <button id="modeDeep" onclick="setMode('deep')">🌊 畫深水區</button>
+        <button onclick="applyPreset('doubleSlit')">✨ 預設：雙縫干涉</button>
+        <button onclick="applyPreset('refraction')">✨ 預設：折射斜面</button>
+        <button onclick="clearMap()">🧹 清除障礙與水深</button>
+    </div>
+
+    <div class="toolbar">
+        <button id="btnPause" onclick="togglePause()">⏸️ 暫停模擬</button>
+        <button id="penSolid" onclick="setPen('solid')">✏️ 實線畫筆</button>
+        <button id="penDashed" onclick="setPen('dashed')">➖ 虛線畫筆</button>
+        <button onclick="clearAnnotation()">🧽 清除畫筆標註</button>
+    </div>
+
+    <div class="canvas-container">
+        <canvas id="waveCanvas" width="640" height="480"></canvas>
+        <canvas id="annotationCanvas" width="640" height="480"></canvas>
+    </div>
+
+    <div class="info" id="statusText">目前模式：波源點擊（進行物理模擬中）</div>
+
+    <script>
+        const waveCanvas = document.getElementById('waveCanvas');
+        const waveCtx = waveCanvas.getContext('2d');
+        const annoCanvas = document.getElementById('annotationCanvas');
+        const annoCtx = annoCanvas.getContext('2d');
+
+        const width = 320;
+        const height = 240;
+
+        let buffer1 = new Float32Array(width * height);
+        let buffer2 = new Float32Array(width * height);
+        let speedMap = new Float32Array(width * height).fill(0.45);
+        let obstacleMap = new Uint8Array(width * height);
+
+        const damping = 0.985;
+        const imgData = waveCtx.createImageData(width, height);
+        const data = imgData.data;
+
+        let isPaused = false;
+        let currentMode = 'wave';
+        let penMode = 'solid';
+        let isDrawing = false;
+        
+        // 記錄上一幀格點座標（用於 Bresenham 連續補線）
+        let lastGridX = null;
+        let lastGridY = null;
+        let lastAnnoX = null;
+        let lastAnnoY = null;
+
+        function updateWave() {
+            if (isPaused) return;
+
+            for (let y = 1; y < height - 1; y++) {
+                for (let x = 1; x < width - 1; x++) {
+                    const i = y * width + x;
+
+                    if (obstacleMap[i] === 1) {
+                        buffer2[i] = 0;
+                        continue;
+                    }
+
+                    const cSq = speedMap[i];
+                    const laplacian = buffer1[i - 1] + buffer1[i + 1] + buffer1[i - width] + buffer1[i + width] - 4 * buffer1[i];
+
+                    buffer2[i] = (2 * buffer1[i] - buffer2[i] + laplacian * cSq) * damping;
+                }
+            }
+
+            let temp = buffer1;
+            buffer1 = buffer2;
+            buffer2 = temp;
+        }
+
+        // 渲染波槽（大幅調亮深淺水區背景，增加波紋對比度）
+function renderWave() {
+    let p = 0;
+    for (let i = 0; i < buffer1.length; i++) {
+        if (obstacleMap[i] === 1) {
+            // 障礙物：對比明顯的深石灰色
+            data[p] = 70; data[p + 1] = 80; data[p + 2] = 95; data[p + 3] = 255;
+        } else {
+            const v = buffer1[i];
+            const c = Math.max(-255, Math.min(255, v));
+            const isShallow = speedMap[i] < 0.3;
+
+            // 調高 RGB 基底數值，整體視覺更加明亮：
+            // 淺水區：明亮粉青綠色 (Light Cyan-Green)
+            // 深水區：明亮水藍色 (Light Ocean-Blue)
+            const baseR = isShallow ? 140 : 50;
+            const baseG = isShallow ? 200 : 130;
+            const baseB = isShallow ? 190 : 200;
+
+            // 水波起伏強度微調（波峰變亮、波谷變暗）
+            data[p]     = Math.min(255, Math.max(0, baseR + c * 1.2));
+            data[p + 1] = Math.min(255, Math.max(0, baseG + c * 1.5));
+            data[p + 2] = Math.min(255, Math.max(0, baseB + c * 1.8));
+            data[p + 3] = 255;
+        }
+        p += 4;
+    }
+
+    const offscreen = document.createElement('canvas');
+    offscreen.width = width;
+    offscreen.height = height;
+    offscreen.getContext('2d').putImageData(imgData, 0, 0);
+
+    waveCtx.imageSmoothingEnabled = true;
+    waveCtx.drawImage(offscreen, 0, 0, waveCanvas.width, waveCanvas.height);
+}
+
+        function loop() {
+            updateWave();
+            renderWave();
+            requestAnimationFrame(loop);
+        }
+
+        function drop(x, y, radius, strength) {
+            for (let dy = -radius; dy <= radius; dy++) {
+                for (let dx = -radius; dx <= radius; dx++) {
+                    const nx = x + dx, ny = y + dy;
+                    if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                        if (dx * dx + dy * dy <= radius * radius) {
+                            buffer1[ny * width + nx] = strength;
+                        }
+                    }
+                }
+            }
+        }
+
+        function editMap(x, y, radius, type) {
+            for (let dy = -radius; dy <= radius; dy++) {
+                for (let dx = -radius; dx <= radius; dx++) {
+                    const nx = x + dx, ny = y + dy;
+                    if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                        const i = ny * width + nx;
+                        if (type === 'obstacle') obstacleMap[i] = 1;
+                        else if (type === 'clear') { obstacleMap[i] = 0; speedMap[i] = 0.45; }
+                        else if (type === 'shallow') { obstacleMap[i] = 0; speedMap[i] = 0.12; }
+                        else if (type === 'deep') { obstacleMap[i] = 0; speedMap[i] = 0.45; }
+                    }
+                }
+            }
+        }
+
+        // 直線補點演算法：避免手指快速劃過時產生間斷
+        function drawLineInterpolated(x0, y0, x1, y1, callback) {
+            const dx = Math.abs(x1 - x0);
+            const dy = Math.abs(y1 - y0);
+            const sx = (x0 < x1) ? 1 : -1;
+            const sy = (y0 < y1) ? 1 : -1;
+            let err = dx - dy;
+
+            while (true) {
+                callback(x0, y0);
+                if (x0 === x1 && y0 === y1) break;
+                const e2 = 2 * err;
+                if (e2 > -dy) { err -= dy; x0 += sx; }
+                if (e2 < dx) { err += dx; y0 += sy; }
+            }
+        }
+
+        function setMode(mode) {
+            currentMode = mode;
+            document.querySelectorAll('.toolbar button').forEach(b => b.classList.remove('active'));
+            if(mode === 'wave') document.getElementById('modeWave').classList.add('active');
+            if(mode === 'obstacle') document.getElementById('modeObstacle').classList.add('active');
+            if(mode === 'shallow') document.getElementById('modeShallow').classList.add('active');
+            if(mode === 'deep') document.getElementById('modeDeep').classList.add('active');
+            updateStatus();
+        }
+
+        function togglePause() {
+            isPaused = !isPaused;
+            document.getElementById('btnPause').innerHTML = isPaused ? "▶️ 繼續模擬" : "⏸️ 暫停模擬";
+            annoCanvas.style.pointerEvents = isPaused ? "auto" : "none";
+            updateStatus();
+        }
+
+        function setPen(type) {
+            penMode = type;
+            if (!isPaused) togglePause();
+        }
+
+        function updateStatus() {
+            const txt = document.getElementById('statusText');
+            if (isPaused) {
+                txt.innerText = `目前模式：【已暫停】教學畫筆模式 (${penMode === 'solid' ? '實線' : '虛線'}) - 請在畫面上直接繪圖標註`;
+                txt.style.color = '#ffaa00';
+            } else {
+                txt.innerText = `目前模式：【模擬中】` + (currentMode === 'wave' ? '點擊/拖曳產生波紋' : '劃過編輯地圖');
+                txt.style.color = '#889';
+            }
+        }
+
+        // 執行座標插值補全繪製
+        function applyPointerAction(currX, currY) {
+            const action = (x, y) => {
+                if (currentMode === 'wave') drop(x, y, 2, 200);
+                else if (currentMode === 'obstacle') editMap(x, y, 3, 'obstacle');
+                else if (currentMode === 'shallow') editMap(x, y, 7, 'shallow');
+                else if (currentMode === 'deep') editMap(x, y, 7, 'deep');
+            };
+
+            if (lastGridX !== null && lastGridY !== null) {
+                drawLineInterpolated(lastGridX, lastGridY, currX, currY, action);
+            } else {
+                action(currX, currY);
+            }
+            lastGridX = currX;
+            lastGridY = currY;
+        }
+
+        function getGridCoords(e) {
+            const rect = waveCanvas.getBoundingClientRect();
+            const scaleX = width / rect.width;
+            const scaleY = height / rect.height;
+            const x = Math.floor((e.clientX - rect.left) * scaleX);
+            const y = Math.floor((e.clientY - rect.top) * scaleY);
+            return { x: Math.max(0, Math.min(width - 1, x)), y: Math.max(0, Math.min(height - 1, y)) };
+        }
+
+        // 物理水波槽 Pointer 事件（鎖定 PointerCapture 確保拖曳不中斷）
+        waveCanvas.addEventListener('pointerdown', (e) => {
+            if (isPaused) return;
+            waveCanvas.setPointerCapture(e.pointerId);
+            isDrawing = true;
+            const coords = getGridCoords(e);
+            lastGridX = null;
+            lastGridY = null;
+            applyPointerAction(coords.x, coords.y);
+        });
+
+        waveCanvas.addEventListener('pointermove', (e) => {
+            if (!isDrawing || isPaused) return;
+            const coords = getGridCoords(e);
+            applyPointerAction(coords.x, coords.y);
+        });
+
+        const stopDrawingWave = (e) => {
+            if (isDrawing) {
+                isDrawing = false;
+                lastGridX = null;
+                lastGridY = null;
+                try { waveCanvas.releasePointerCapture(e.pointerId); } catch(err){}
+            }
+        };
+        waveCanvas.addEventListener('pointerup', stopDrawingWave);
+        waveCanvas.addEventListener('pointercancel', stopDrawingWave);
+
+        // 教師畫筆標註層 Pointer 事件
+        annoCanvas.addEventListener('pointerdown', (e) => {
+            annoCanvas.setPointerCapture(e.pointerId);
+            isDrawing = true;
+            const rect = annoCanvas.getBoundingClientRect();
+            lastAnnoX = e.clientX - rect.left;
+            lastAnnoY = e.clientY - rect.top;
+        });
+
+        annoCanvas.addEventListener('pointermove', (e) => {
+            if (!isDrawing || !isPaused) return;
+            const rect = annoCanvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            annoCtx.beginPath();
+            annoCtx.strokeStyle = '#ff3366';
+            annoCtx.lineWidth = 3;
+            annoCtx.lineCap = 'round';
+            annoCtx.setLineDash(penMode === 'dashed' ? [8, 6] : []);
+            annoCtx.moveTo(lastAnnoX, lastAnnoY);
+            annoCtx.lineTo(x, y);
+            annoCtx.stroke();
+
+            lastAnnoX = x;
+            lastAnnoY = y;
+        });
+
+        const stopDrawingAnno = (e) => {
+            if (isDrawing) {
+                isDrawing = false;
+                try { annoCanvas.releasePointerCapture(e.pointerId); } catch(err){}
+            }
+        };
+        annoCanvas.addEventListener('pointerup', stopDrawingAnno);
+        annoCanvas.addEventListener('pointercancel', stopDrawingAnno);
+
+        function clearAnnotation() {
+            annoCtx.clearRect(0, 0, annoCanvas.width, annoCanvas.height);
+        }
+
+        function clearMap() {
+            obstacleMap.fill(0);
+            speedMap.fill(0.45);
+            buffer1.fill(0);
+            buffer2.fill(0);
+        }
+
+        function applyPreset(type) {
+            clearMap();
+            if (type === 'doubleSlit') {
+                const wallX = 100;
+                for (let y = 0; y < height; y++) {
+                    if ((y >= 20 && y <= 100) || (y >= 115 && y <= 125) || (y >= 140 && y <= 220)) {
+                        for (let dx = -2; dx <= 2; dx++) {
+                            obstacleMap[y * width + (wallX + dx)] = 1;
+                        }
+                    }
+                }
+            } else if (type === 'refraction') {
+                for (let y = 0; y < height; y++) {
+                    for (let x = 0; x < width; x++) {
+                        if (x * 0.6 + y > 160) {
+                            speedMap[y * width + x] = 0.12;
+                        }
+                    }
+                }
+            }
+        }
+
+        loop();
+    </script>
+</body>
+</html>

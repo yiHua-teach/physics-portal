@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>繩波物理模擬器 (教學進階版)</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: Arial, sans-serif; background: #1a1a1a; color: #fff; padding: 15px; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        h1 { text-align: center; margin-bottom: 15px; font-size: 24px; color: #4da6ff; }
+        
+        .control-panel {
+            background: #2a2a2a; padding: 15px; border-radius: 8px;
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px; margin-bottom: 12px;
+        }
+        .control-group { display: flex; flex-direction: column; gap: 5px; }
+        label { font-size: 13px; color: #ccc; }
+        input[type=range], select { width: 100%; padding: 6px; background: #333; color: #fff; border: 1px solid #555; border-radius: 4px; }
+        
+        .checkbox-group { display: flex; align-items: center; gap: 8px; margin-top: 18px; cursor: pointer; }
+        .checkbox-group input { width: 16px; height: 16px; cursor: pointer; }
+
+        .action-bar {
+            display: flex; gap: 10px; margin-bottom: 15px; justify-content: center; align-items: center; flex-wrap: wrap;
+        }
+        .btn {
+            padding: 8px 18px; font-size: 14px; font-weight: bold; border: none; border-radius: 4px;
+            cursor: pointer; transition: background 0.2s; color: #fff;
+        }
+        .btn-pause { background: #ff9800; }
+        .btn-pause:hover { background: #e68a00; }
+        .btn-slow { background: #9c27b0; }
+        .btn-slow:hover { background: #7b1fa2; }
+        .btn-reset { background: #f44336; }
+        .btn-reset:hover { background: #d32f2f; }
+        .btn-pulse { background: #2196F3; }
+        .btn-pulse:hover { background: #1976D2; }
+        
+        canvas { background: #050505; border: 2px solid #444; border-radius: 8px; display: block; width: 100%; height: 380px; }
+        
+        .dashboard {
+            background: #222; padding: 10px 15px; border-radius: 8px; margin-top: 12px;
+            display: flex; justify-content: space-around; flex-wrap: wrap; gap: 10px;
+            font-family: monospace; font-size: 14px; border-left: 4px solid #4da6ff;
+        }
+        .metric { color: #00ffcc; }
+        .legend { margin-top: 8px; text-align: center; font-size: 12px; color: #aaa; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>繩波物理模擬器 (Wave on a String Simulator)</h1>
+    
+    <div class="control-panel">
+        <div class="control-group">
+            <label for="scenario">選擇情境：</label>
+            <select id="scenario">
+                <option value="infinite">1. 長直線 (無反射)</option>
+                <option value="fixed">2. 一端封閉 (固定端反射)</option>
+                <option value="free">3. 一端開放 (自由端反射)</option>
+                <option value="media">4. 不同的繩子 (介面透射與反射)</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label for="waveType">波源形式：</label>
+            <select id="waveType">
+                <option value="continuous">連續正弦波</option>
+                <option value="pulse">脈波模式 (Pulse)</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label>頻率 (f): <span id="val-f">1.5</span> Hz</label>
+            <input type="range" id="freq" min="0.2" max="3.0" step="0.1" value="1.5">
+        </div>
+        <div class="control-group">
+            <label>震幅 (A): <span id="val-A">40</span> px</label>
+            <input type="range" id="amp" min="10" max="80" step="5" value="40">
+        </div>
+        <div class="control-group">
+            <label>繩子張力 (T): <span id="val-T">100</span> N</label>
+            <input type="range" id="tension" min="20" max="250" step="10" value="100">
+        </div>
+        <div class="control-group">
+            <label>線密度 (μ1): <span id="val-mu1">1.0</span> kg/m</label>
+            <input type="range" id="mu1" min="0.2" max="3.0" step="0.1" value="1.0">
+        </div>
+        <div class="control-group" id="mu2-group" style="display: none;">
+            <label>繩子2線密度 (μ2): <span id="val-mu2">3.0</span> kg/m</label>
+            <input type="range" id="mu2" min="0.2" max="5.0" step="0.1" value="3.0">
+        </div>
+        <div class="control-group">
+            <label class="checkbox-group">
+                <input type="checkbox" id="chk-showVel">
+                <span>顯示質點速度 ($v_y$)</span>
+            </label>
+        </div>
+    </div>
+
+    <div class="action-bar">
+        <button id="btn-pause" class="btn btn-pause">暫停</button>
+        <button id="btn-slow" class="btn btn-slow">慢動作</button>
+        <button id="btn-reset" class="btn btn-reset">重置 (含碼錶)</button>
+        <button id="btn-pulse" class="btn btn-pulse">手動發射脈波</button>
+    </div>
+
+    <canvas id="waveCanvas"></canvas>
+
+    <div class="legend">
+        🟡 介質標記點 ｜ 🔴 質點震動速度向量 ($v_y$) ｜ 網格每格 $50\text{ px}$
+    </div>
+
+    <div class="dashboard">
+        <div>頻率 f = <span class="metric" id="disp-f">1.50</span> Hz</div>
+        <div>震幅 A = <span class="metric" id="disp-A">40</span> px</div>
+        <div>波速 v1 = <span class="metric" id="disp-v1">10.00</span> px/s</div>
+        <div>波長 λ1 = <span class="metric" id="disp-l1">6.67</span> px</div>
+        <div id="disp-media-info" style="display:none;">
+            | 波速 v2 = <span class="metric" id="disp-v2">5.77</span> px/s | 波長 λ2 = <span class="metric" id="disp-l2">3.85</span> px
+        </div>
+    </div>
+</div>
+
+<script>
+const canvas = document.getElementById('waveCanvas');
+const ctx = canvas.getContext('2d');
+
+function resizeCanvas() {
+    canvas.width = canvas.clientWidth;
+    canvas.height = canvas.clientHeight;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+const inputs = {
+    scenario: document.getElementById('scenario'),
+    waveType: document.getElementById('waveType'),
+    freq: document.getElementById('freq'),
+    amp: document.getElementById('amp'),
+    tension: document.getElementById('tension'),
+    mu1: document.getElementById('mu1'),
+    mu2: document.getElementById('mu2'),
+    showVel: document.getElementById('chk-showVel')
+};
+
+const btnPause = document.getElementById('btn-pause');
+const btnSlow = document.getElementById('btn-slow');
+const btnReset = document.getElementById('btn-reset');
+const btnPulse = document.getElementById('btn-pulse');
+
+let t = 0;
+let isPaused = false;
+let isSlowMotion = false;
+let pulseTimes = [0]; // 紀錄所有已發射脈波的時間點
+const dt = 0.016; // 模擬基礎時間步長 (~60fps)
+
+function updateLabels() {
+    document.getElementById('val-f').innerText = inputs.freq.value;
+    document.getElementById('val-A').innerText = inputs.amp.value;
+    document.getElementById('val-T').innerText = inputs.tension.value;
+    document.getElementById('val-mu1').innerText = inputs.mu1.value;
+    document.getElementById('val-mu2').innerText = inputs.mu2.value;
+    
+    document.getElementById('mu2-group').style.display = 
+        inputs.scenario.value === 'media' ? 'flex' : 'none';
+    document.getElementById('disp-media-info').style.display = 
+        inputs.scenario.value === 'media' ? 'inline' : 'none';
+}
+
+Object.values(inputs).forEach(input => input.addEventListener('input', updateLabels));
+
+btnPause.addEventListener('click', () => {
+    isPaused = !isPaused;
+    btnPause.innerText = isPaused ? '繼續' : '暫停';
+    btnPause.style.background = isPaused ? '#4CAF50' : '#ff9800';
+});
+
+btnSlow.addEventListener('click', () => {
+    isSlowMotion = !isSlowMotion;
+    btnSlow.innerText = isSlowMotion ? '正常速度' : '慢動作';
+    btnSlow.style.background = isSlowMotion ? '#e91e63' : '#9c27b0';
+});
+
+btnReset.addEventListener('click', () => {
+    t = 0;
+    pulseTimes = inputs.waveType.value === 'pulse' ? [0] : [];
+});
+
+btnPulse.addEventListener('click', () => {
+    pulseTimes.push(t);
+});
+
+inputs.waveType.addEventListener('change', () => {
+    if (inputs.waveType.value === 'pulse') {
+        pulseTimes = [t];
+    } else {
+        pulseTimes = [];
+    }
+});
+
+// 計算波源位移函數 (支援多重脈波干涉與疊加)
+function getSourceDisplacement(tau, f, A) {
+    if (tau < 0) return 0;
+    const type = inputs.waveType.value;
+    
+    if (type === 'continuous') {
+        const omega = 2 * Math.PI * f;
+        return A * Math.sin(omega * tau);
+    } else {
+        // 多個高斯脈波 (Gaussian Pulses) 的疊加
+        const sigma = 0.15 / f;
+        const tc = 3 * sigma;
+        let sumY = 0;
+
+        for (let i = 0; i < pulseTimes.length; i++) {
+            const pTime = pulseTimes[i];
+            const pTau = tau - pTime;
+            if (pTau >= 0 && pTau <= 6 * sigma) {
+                sumY += A * Math.exp(-Math.pow((pTau - tc) / sigma, 2));
+            }
+        }
+        return sumY;
+    }
+}
+
+// 計算繩上任意點 x 在時間 timeEval 的總位移 (含反射與透射疊加)
+function getDisplacement(x, timeEval, config) {
+    const { mode, f, A, v1, v2, startX, L } = config;
+    const dist = x - startX;
+
+    if (mode === 'media') {
+        const midX = startX + L / 2;
+        const midL = L / 2;
+        const R = (v2 - v1) / (v1 + v2);   // 反射係數
+        const Tr = (2 * v2) / (v1 + v2);  // 透射係數
+
+        if (x <= midX) {
+            let yIn = getSourceDisplacement(timeEval - dist / v1, f, A);
+            const distRef = 2 * midL - dist;
+            let yRef = R * getSourceDisplacement(timeEval - distRef / v1, f, A);
+            return yIn + yRef;
+        } else {
+            const dist2 = x - midX;
+            const arrivalTime = (midL / v1) + (dist2 / v2);
+            return Tr * getSourceDisplacement(timeEval - arrivalTime, f, A);
+        }
+    } else {
+        let yIn = getSourceDisplacement(timeEval - dist / v1, f, A);
+        if (mode === 'infinite') {
+            const damp = Math.max(0, 1 - Math.pow(dist / L, 4));
+            return yIn * damp;
+        } else if (mode === 'fixed') {
+            const distRef = 2 * L - dist;
+            let yRef = -getSourceDisplacement(timeEval - distRef / v1, f, A);
+            return yIn + yRef;
+        } else if (mode === 'free') {
+            const distRef = 2 * L - dist;
+            let yRef = getSourceDisplacement(timeEval - distRef / v1, f, A);
+            return yIn + yRef;
+        }
+    }
+    return 0;
+}
+
+// 繪製背景方格與距離標記
+function drawGrid() {
+    const gridSize = 50;
+    ctx.strokeStyle = '#222';
+    ctx.lineWidth = 1;
+    ctx.font = '10px monospace';
+    ctx.fillStyle = '#555';
+    ctx.textAlign = 'center';
+
+    // 垂直線與 X 軸座標
+    for (let x = 0; x <= canvas.width; x += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+        if (x > 0 && x % 100 === 0) {
+            ctx.fillText(`${x}px`, x, canvas.height - 6);
+        }
+    }
+
+    // 水平線
+    for (let y = 0; y <= canvas.height; y += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+    }
+}
+
+// 繪製左上角碼錶
+function drawStopwatch() {
+    ctx.fillStyle = 'rgba(20, 20, 20, 0.85)';
+    ctx.strokeStyle = '#555';
+    ctx.lineWidth = 1;
+    ctx.fillRect(15, 15, 145, 38);
+    ctx.strokeRect(15, 15, 145, 38);
+
+    ctx.fillStyle = '#00ffcc';
+    ctx.font = 'bold 16px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText(`⏱️ t = ${t.toFixed(2)} s`, 25, 40);
+}
+
+function animate() {
+    if (!isPaused) {
+        const timeScale = isSlowMotion ? 0.25 : 1.0;
+        t += dt * timeScale;
+    }
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // 1. 繪製背景方格
+    drawGrid();
+
+    const mode = inputs.scenario.value;
+    const f = parseFloat(inputs.freq.value);
+    const A = parseFloat(inputs.amp.value);
+    const T = parseFloat(inputs.tension.value);
+    const mu1 = parseFloat(inputs.mu1.value);
+    const mu2 = parseFloat(inputs.mu2.value);
+    
+    const scale = 15;
+    const v1 = Math.sqrt(T / mu1) * scale;
+    const l1 = v1 / f;
+    const v2 = Math.sqrt(T / mu2) * scale;
+    const l2 = v2 / f;
+
+    // Dashboard 更新
+    document.getElementById('disp-f').innerText = f.toFixed(2);
+    document.getElementById('disp-A').innerText = A.toFixed(0);
+    document.getElementById('disp-v1').innerText = (v1/scale).toFixed(2);
+    document.getElementById('disp-l1').innerText = (l1/scale).toFixed(2);
+    if(mode === 'media') {
+        document.getElementById('disp-v2').innerText = (v2/scale).toFixed(2);
+        document.getElementById('disp-l2').innerText = (l2/scale).toFixed(2);
+    }
+
+    const centerY = canvas.height / 2;
+    const L = canvas.width - 60;
+    const startX = 30;
+    const endX = startX + L;
+
+    const config = { mode, f, A, v1, v2, startX, L };
+
+    // 平衡線
+    ctx.beginPath();
+    ctx.strokeStyle = '#444';
+    ctx.setLineDash([5, 5]);
+    ctx.moveTo(startX, centerY);
+    ctx.lineTo(endX, centerY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // 2. 繪製繩子主體 (粗細隨線密度 μ 改變)
+    if (mode === 'media') {
+        const midX = startX + L / 2;
+
+        // 繩段 1 (左)
+        ctx.beginPath();
+        ctx.lineWidth = Math.max(2, Math.sqrt(mu1) * 3.5);
+        ctx.strokeStyle = '#00e676';
+        for (let x = startX; x <= midX; x += 2) {
+            const y = getDisplacement(x, t, config);
+            const drawY = centerY - y;
+            if (x === startX) ctx.moveTo(x, drawY);
+            else ctx.lineTo(x, drawY);
+        }
+        ctx.stroke();
+
+        // 繩段 2 (右)
+        ctx.beginPath();
+        ctx.lineWidth = Math.max(2, Math.sqrt(mu2) * 3.5);
+        ctx.strokeStyle = '#00b0ff';
+        for (let x = midX; x <= endX; x += 2) {
+            const y = getDisplacement(x, t, config);
+            const drawY = centerY - y;
+            if (x === midX) ctx.moveTo(x, drawY);
+            else ctx.lineTo(x, drawY);
+        }
+        ctx.stroke();
+
+    } else {
+        ctx.beginPath();
+        ctx.lineWidth = Math.max(2, Math.sqrt(mu1) * 3.5);
+        ctx.strokeStyle = '#00b0ff';
+        for (let x = startX; x <= endX; x += 2) {
+            const y = getDisplacement(x, t, config);
+            const drawY = centerY - y;
+            if (x === startX) ctx.moveTo(x, drawY);
+            else ctx.lineTo(x, drawY);
+        }
+        ctx.stroke();
+    }
+
+    // 繪製介面/邊界物
+    if (mode === 'media') {
+        const midX = startX + L / 2;
+        ctx.fillStyle = '#ff9800';
+        ctx.beginPath();
+        ctx.arc(midX, centerY - getDisplacement(midX, t, config), 6, 0, Math.PI * 2);
+        ctx.fill();
+    } else if (mode === 'fixed') {
+        ctx.fillStyle = '#888';
+        ctx.fillRect(endX, centerY - 50, 10, 100);
+    } else if (mode === 'free') {
+        ctx.strokeStyle = '#888';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(endX, centerY - 60); ctx.lineTo(endX, centerY + 60);
+        ctx.stroke();
+        
+        const ringY = centerY - getDisplacement(endX, t, config);
+        ctx.fillStyle = '#ffd700';
+        ctx.beginPath();
+        ctx.arc(endX, ringY, 7, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // 繪製左側波源點
+    const sourceY = centerY - getDisplacement(startX, t, config);
+    ctx.fillStyle = '#ff5252';
+    ctx.beginPath();
+    ctx.arc(startX, sourceY, 8, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 3. 標記質點與速度向量 (可手動切換開關)
+    const particleRatios = [0.2, 0.4, 0.6, 0.8];
+    particleRatios.forEach(ratio => {
+        const px = startX + L * ratio;
+        const py = getDisplacement(px, t, config);
+        const drawY = centerY - py;
+
+        // 畫介質點
+        ctx.fillStyle = '#ffea00';
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(px, drawY, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // 依據開關顯示質點速度 (vy)
+        if (inputs.showVel.checked) {
+            const h = 0.001;
+            const yPrev = getDisplacement(px, t - h, config);
+            const yNext = getDisplacement(px, t + h, config);
+            const vy = (yNext - yPrev) / (2 * h); // px/s (正值表示向上震動)
+
+            const vecScale = 0.4;
+            const vecLen = vy * vecScale;
+            const arrowEndY = drawY - vecLen;
+
+            // 速度箭頭
+            ctx.strokeStyle = '#ff3d00';
+            ctx.fillStyle = '#ff3d00';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.moveTo(px, drawY);
+            ctx.lineTo(px, arrowEndY);
+            ctx.stroke();
+
+            if (Math.abs(vecLen) > 3) {
+                const dir = vecLen > 0 ? -1 : 1;
+                ctx.beginPath();
+                ctx.moveTo(px, arrowEndY);
+                ctx.lineTo(px - 4, arrowEndY - dir * 6);
+                ctx.lineTo(px + 4, arrowEndY - dir * 6);
+                ctx.closePath();
+                ctx.fill();
+            }
+
+            // 速度數值標示
+            ctx.font = '12px monospace';
+            ctx.fillStyle = '#ff6e40';
+            ctx.textAlign = 'center';
+            const labelY = drawY + (vecLen >= 0 ? 22 : -12);
+            ctx.fillText(`v=${vy.toFixed(1)}`, px, labelY);
+        }
+    });
+
+    // 4. 繪製左上角碼錶
+    drawStopwatch();
+
+    requestAnimationFrame(animate);
+}
+
+animate();
+</script>
+</body>
+</html>
