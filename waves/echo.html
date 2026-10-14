@@ -1,0 +1,1414 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>回聲與聲納原理與計算 | 互動式聲學物理實驗室</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <!-- MathJax for formula rendering -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js" async></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        physics: {
+                            dark: '#0B0F19',
+                            card: '#161F30',
+                            accent: '#00F0FF',
+                            echo: '#FF3366',
+                            wall: '#FFD700',
+                            ray: '#00FF66'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Noto Sans TC', 'Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #070A12;
+            color: #E2E8F0;
+            font-family: 'Noto Sans TC', sans-serif;
+            overflow-x: hidden;
+        }
+
+        .glass-panel {
+            background: rgba(22, 31, 48, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        .glass-button {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            transition: all 0.2s ease-in-out;
+            touch-action: manipulation;
+        }
+
+        .glass-button:hover {
+            background: rgba(0, 240, 255, 0.15);
+            border-color: rgba(0, 240, 255, 0.4);
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.2);
+        }
+
+        .glass-button.active {
+            background: rgba(0, 240, 255, 0.25);
+            border-color: #00F0FF;
+            color: #00F0FF;
+            box-shadow: 0 0 18px rgba(0, 240, 255, 0.35);
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(11, 15, 25, 0.8);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 240, 255, 0.5);
+        }
+
+        /* Canvas cursors */
+        canvas.cursor-source { cursor: crosshair; }
+        canvas.cursor-freehand { cursor: crosshair; }
+        canvas.cursor-line { cursor: crosshair; }
+
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 0.8; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.03); }
+        }
+
+        .pulse-badge {
+            animation: pulse-glow 2s infinite;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between select-none">
+
+    <header class="glass-panel sticky top-0 z-50 px-4 py-3 border-b border-gray-800">
+        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-cyan-500/30">
+                    <i class="fa-solid fa-satellite-dish"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg md:text-xl font-black bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 via-sky-200 to-indigo-300">
+                        回聲與聲納原理與計算實驗室
+                    </h1>
+                    <p class="text-xs text-gray-400 hidden sm:block">Echo & Sonar Physics Lab — 圓形波前、聲波反射定律與距離計算</p>
+                </div>
+            </div>
+
+            <!-- Header Quick Status -->
+            <div class="flex items-center gap-2 sm:gap-4 text-xs font-mono">
+                <div class="bg-gray-900/80 px-3 py-1.5 rounded-lg border border-cyan-500/30 flex items-center gap-2">
+                    <span class="text-gray-400">當前介面聲速 \(v\):</span>
+                    <span id="headerSoundSpeed" class="text-cyan-400 font-bold text-sm">340 m/s</span>
+                </div>
+                <div class="bg-gray-900/80 px-3 py-1.5 rounded-lg border border-pink-500/30 flex items-center gap-2">
+                    <span class="text-gray-400">往返時間 \(t\):</span>
+                    <span id="headerTimer" class="text-pink-400 font-bold text-sm">0.000 s</span>
+                </div>
+                <button id="soundToggleBtn" onclick="toggleAudio()" class="glass-button p-2 rounded-lg text-gray-300 hover:text-cyan-400" title="開啟/關閉聲波音效">
+                    <i id="soundIcon" class="fa-solid fa-volume-high text-sm"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto w-full px-2 sm:px-4 py-4 flex-grow grid grid-cols-1 lg:grid-cols-12 gap-4">
+        
+        <!-- Left Column: Tool Options & Presets (3 cols) -->
+        <section class="lg:col-span-3 flex flex-col gap-4 order-2 lg:order-1">
+            
+            <!-- Presets Panel -->
+            <div class="glass-panel p-4 rounded-2xl">
+                <h2 class="text-sm font-bold text-amber-400 mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-clapperboard"></i> 經典教學預設情境
+                </h2>
+                <div class="flex flex-col gap-2">
+                    <button onclick="loadPreset('valley')" class="glass-button p-2.5 rounded-xl text-xs text-left flex items-center justify-between group">
+                        <span class="font-medium text-gray-200 group-hover:text-cyan-300">🏔️ 山谷對壁喊話 (空氣 340m/s)</span>
+                        <i class="fa-solid fa-chevron-right text-gray-500 text-xs"></i>
+                    </button>
+                    <button onclick="loadPreset('sonar')" class="glass-button p-2.5 rounded-xl text-xs text-left flex items-center justify-between group">
+                        <span class="font-medium text-gray-200 group-hover:text-cyan-300">🚢 探測船海底聲納 (海水 1500m/s)</span>
+                        <i class="fa-solid fa-chevron-right text-gray-500 text-xs"></i>
+                    </button>
+                    <button onclick="loadPreset('refraction')" class="glass-button p-2.5 rounded-xl text-xs text-left flex items-center justify-between group">
+                        <span class="font-medium text-cyan-300 group-hover:text-cyan-200">🌊 空氣穿越水面 (反射與透射折射)</span>
+                        <i class="fa-solid fa-chevron-right text-cyan-500 text-xs"></i>
+                    </button>
+                    <button onclick="loadPreset('moving')" class="glass-button p-2.5 rounded-xl text-xs text-left flex items-center justify-between group">
+                        <span class="font-medium text-emerald-300 group-hover:text-emerald-200">🚤 動態探測船 (聲源與接收器右移)</span>
+                        <i class="fa-solid fa-chevron-right text-emerald-500 text-xs"></i>
+                    </button>
+                    <button onclick="loadPreset('double')" class="glass-button p-2.5 rounded-xl text-xs text-left flex items-center justify-between group">
+                        <span class="font-medium text-gray-200 group-hover:text-cyan-300">峽谷雙重障礙壁 (雙重回聲)</span>
+                        <i class="fa-solid fa-chevron-right text-gray-500 text-xs"></i>
+                    </button>
+                    <button onclick="loadPreset('cave')" class="glass-button p-2.5 rounded-xl text-xs text-left flex items-center justify-between group">
+                        <span class="font-medium text-gray-200 group-hover:text-cyan-300">🦇 蝙蝠超聲波洞穴定位</span>
+                        <i class="fa-solid fa-chevron-right text-gray-500 text-xs"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Physics Controls Slider -->
+            <div class="glass-panel p-4 rounded-2xl space-y-4">
+                <h2 class="text-sm font-bold text-emerald-400 flex items-center gap-2">
+                    <i class="fa-solid fa-sliders"></i> 介面與物理參數設定
+                </h2>
+
+                <!-- Sound Speed Slider -->
+                <div>
+                    <div class="flex justify-between items-center text-xs mb-1">
+                        <label class="text-gray-300 font-medium">介面聲速 \(v\) (m/s)</label>
+                        <span id="speedVal" class="font-mono text-cyan-400 font-bold">340 m/s</span>
+                    </div>
+                    <input id="speedSlider" type="range" min="100" max="1500" step="10" value="340" oninput="updateSoundSpeed(this.value)" class="w-full accent-cyan-400 cursor-pointer">
+                    <div class="flex justify-between text-[10px] text-gray-500 mt-1 font-mono">
+                        <span>空氣 (340)</span>
+                        <span>淡水 (1480)</span>
+                        <span>海水 (1500)</span>
+                    </div>
+                </div>
+
+                <!-- Simulation Speed -->
+                <div>
+                    <div class="flex justify-between items-center text-xs mb-1">
+                        <label class="text-gray-300 font-medium">模擬速率 (慢動作)</label>
+                        <span id="simSpeedVal" class="font-mono text-amber-400 font-bold">0.5x</span>
+                    </div>
+                    <input id="simSpeedSlider" type="range" min="0.05" max="2.0" step="0.05" value="0.5" oninput="updateSimSpeed(this.value)" class="w-full accent-amber-400 cursor-pointer">
+                </div>
+
+                <!-- Display Toggles -->
+                <div class="pt-2 border-t border-gray-800 space-y-2">
+                    <label class="flex items-center justify-between text-xs text-gray-300 cursor-pointer hover:text-white">
+                        <span><i class="fa-solid fa-wifi text-cyan-400 mr-1.5"></i> 顯示圓形波前 (Wavefronts)</span>
+                        <input id="toggleWavefronts" type="checkbox" checked onchange="draw()" class="rounded bg-gray-800 border-gray-700 text-cyan-400 focus:ring-0">
+                    </label>
+                    <label class="flex items-center justify-between text-xs text-gray-300 cursor-pointer hover:text-white">
+                        <span><i class="fa-solid fa-arrow-trend-up text-emerald-400 mr-1.5"></i> 顯示行進方向射線與箭頭</span>
+                        <input id="toggleRays" type="checkbox" checked onchange="draw()" class="rounded bg-gray-800 border-gray-700 text-emerald-400 focus:ring-0">
+                    </label>
+                    <label class="flex items-center justify-between text-xs text-gray-300 cursor-pointer hover:text-white">
+                        <span><i class="fa-solid fa-compass-drafting text-purple-400 mr-1.5"></i> 顯示反射法線與角度</span>
+                        <input id="toggleNormals" type="checkbox" checked onchange="draw()" class="rounded bg-gray-800 border-gray-700 text-purple-400 focus:ring-0">
+                    </label>
+                    <label class="flex items-center justify-between text-xs text-gray-300 cursor-pointer hover:text-white">
+                        <span><i class="fa-solid fa-border-all text-gray-400 mr-1.5"></i> 顯示距離網格與刻度</span>
+                        <input id="toggleGrid" type="checkbox" checked onchange="draw()" class="rounded bg-gray-800 border-gray-700 text-gray-400 focus:ring-0">
+                    </label>
+                </div>
+            </div>
+        </section>
+
+        <!-- Center Column: Canvas Visualizer (6 cols) -->
+        <section class="lg:col-span-6 flex flex-col gap-3 order-1 lg:order-2">
+            
+            <!-- Tool Mode Switcher -->
+            <div class="glass-panel p-3 rounded-2xl flex flex-wrap items-center justify-between gap-2">
+                <div class="text-xs font-bold text-cyan-400 flex items-center gap-1.5">
+                    <i class="fa-solid fa-toolbox"></i> 繪圖與工具箱:
+                </div>
+                <div class="flex items-center gap-1.5 flex-wrap">
+                    <button id="toolSource" onclick="setTool('source')" class="glass-button active px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5">
+                        <i class="fa-solid fa-bullseye text-cyan-400"></i> 發射波源
+                    </button>
+                    <button id="toolFreehand" onclick="setTool('freehand')" class="glass-button px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5">
+                        <i class="fa-solid fa-pen-nib text-amber-400"></i> 自由繪畫
+                    </button>
+                    <button id="toolLine" onclick="setTool('line')" class="glass-button px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5">
+                        <i class="fa-solid fa-ruler-combined text-amber-400"></i> 直線牆
+                    </button>
+                    <button id="toolClear" onclick="clearCanvasWalls()" class="glass-button px-2.5 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1 text-rose-400 hover:text-rose-300">
+                        <i class="fa-solid fa-trash-can"></i> 清除
+                    </button>
+                </div>
+            </div>
+
+            <div class="glass-panel p-3 rounded-2xl flex flex-col relative overflow-hidden">
+                
+                <!-- Canvas Header Bar Overlay -->
+                <div class="flex items-center justify-between mb-2 px-1">
+                    <div class="flex items-center gap-2 text-xs">
+                        <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+                        <span class="font-bold text-gray-200">2D 聲波傳播與反射模擬區</span>
+                        <span id="modeBadge" class="px-2 py-0.5 rounded text-[10px] bg-cyan-950 text-cyan-300 border border-cyan-800 font-mono">山谷模式</span>
+                    </div>
+
+                    <!-- Canvas Quick Controls -->
+                    <div class="flex items-center gap-1.5">
+                        <button id="playPauseBtn" onclick="togglePulseAnimation()" class="px-3 py-1 bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 rounded-lg text-xs font-bold transition flex items-center gap-1">
+                            <i class="fa-solid fa-play"></i> 發射波脈衝
+                        </button>
+                        <button onclick="resetPulse()" class="px-2 py-1 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-xs transition" title="重設脈衝">
+                            <i class="fa-solid fa-rotate-left"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Simulation Canvas Container -->
+                <div id="canvasParent" class="relative w-full aspect-[4/3] bg-physics-dark rounded-xl border border-gray-800 overflow-hidden shadow-inner">
+                    <canvas id="simCanvas" class="w-full h-full block cursor-source"></canvas>
+
+                    <!-- Real-time HUD Canvas Overlay -->
+                    <div class="absolute top-3 left-3 pointer-events-none bg-gray-900/80 backdrop-blur border border-gray-700/60 p-2.5 rounded-xl font-mono text-xs space-y-1 shadow-lg">
+                        <div class="text-cyan-400 font-bold flex items-center justify-between gap-3">
+                            <span>脈衝時間 \(t\):</span>
+                            <span id="hudTimer" class="text-white">0.000 s</span>
+                        </div>
+                        <div class="text-emerald-400 flex items-center justify-between gap-3">
+                            <span>單程距離 \(d\):</span>
+                            <span id="hudDistance" class="text-white">0.0 m</span>
+                        </div>
+                        <div class="text-amber-400 flex items-center justify-between gap-3">
+                            <span>往返路徑 \(2d\):</span>
+                            <span id="hudRoundTrip" class="text-white">0.0 m</span>
+                        </div>
+                    </div>
+
+                    <!-- Interactive Guidance overlay when idle -->
+                    <div id="canvasInstruction" class="absolute bottom-3 left-1/2 -translate-x-1/2 pointer-events-none bg-gray-900/90 border border-cyan-500/30 px-3 py-1.5 rounded-full text-[11px] text-cyan-200 flex items-center gap-2 shadow-xl">
+                        <i class="fa-solid fa-hand-pointer text-cyan-400 animate-bounce"></i>
+                        <span>點擊放置波源或畫障礙牆（畫面外框不反射，聲波穿透邊界）</span>
+                    </div>
+                </div>
+
+                <!-- Canvas Bottom Scale & Info -->
+                <div class="flex items-center justify-between mt-2 px-2 text-[11px] text-gray-400 font-mono">
+                    <div class="flex items-center gap-2">
+                        <span>比例尺: </span>
+                        <div class="w-16 h-1.5 bg-cyan-400/40 rounded border-x border-cyan-400 relative flex items-center justify-center">
+                            <span id="scaleLabel" class="text-[9px] text-cyan-300 -top-3.5 absolute">50m</span>
+                        </div>
+                    </div>
+                    <div>
+                        <span>反射定律: <strong class="text-emerald-400">入射角 \(\theta_i\) = 反射角 \(\theta_r\)</strong></span>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Sonar Signal Trace Oscilloscope -->
+            <div class="glass-panel p-3 rounded-2xl">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-xs font-bold text-pink-400 flex items-center gap-1.5">
+                        <i class="fa-solid fa-wave-square"></i> 聲波接收器訊號時間圖 (含多重反射與距離/介面衰減)
+                    </h3>
+                    <span class="text-[10px] text-amber-300 font-mono"><i class="fa-solid fa-chart-line"></i> 振幅隨距離與反射衰減 (Decay)</span>
+                </div>
+                <div class="w-full h-24 bg-gray-950 rounded-xl border border-gray-800 relative overflow-hidden">
+                    <canvas id="scopeCanvas" class="w-full h-full block"></canvas>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- Right Column: Educational Calculations & Quiz Mode (3 cols) -->
+        <section class="lg:col-span-3 flex flex-col gap-4 order-3">
+            
+            <!-- Real-time Formula Calculation Breakdown Card -->
+            <div class="glass-panel p-4 rounded-2xl border-l-4 border-l-cyan-400">
+                <h2 class="text-sm font-bold text-cyan-400 mb-2 flex items-center justify-between">
+                    <span><i class="fa-solid fa-calculator"></i> 聲納與回聲計算式</span>
+                    <span class="text-[10px] bg-cyan-500/20 text-cyan-300 px-2 py-0.5 rounded-full font-mono">即時計算</span>
+                </h2>
+
+                <!-- Formula Display -->
+                <div class="bg-gray-900/90 p-3 rounded-xl border border-cyan-500/20 text-center my-2">
+                    <div class="text-lg font-black text-cyan-300 font-mono">
+                        \(d = \frac{v \times t}{2}\)
+                    </div>
+                    <div class="text-[10px] text-gray-400 mt-1">
+                        距離 = (介面聲速 × 往返總時間) / 2
+                    </div>
+                </div>
+
+                <!-- Step-by-Step Substitution -->
+                <div class="space-y-2 text-xs font-mono pt-1">
+                    <div class="flex justify-between items-center bg-gray-900/50 p-2 rounded-lg border border-gray-800">
+                        <span class="text-gray-400">① 當前介面聲速 (\(v\)):</span>
+                        <span id="calcSpeed" class="text-cyan-400 font-bold">340 m/s</span>
+                    </div>
+                    <div class="flex justify-between items-center bg-gray-900/50 p-2 rounded-lg border border-gray-800">
+                        <span class="text-gray-400">② 探測來回時間 (\(t\)):</span>
+                        <span id="calcTime" class="text-pink-400 font-bold">0.000 s</span>
+                    </div>
+                    <div class="flex justify-between items-center bg-gray-900/50 p-2 rounded-lg border border-gray-800">
+                        <span class="text-gray-400">③ 聲波來回總路徑 (\(S\)):</span>
+                        <span id="calcTotalPath" class="text-amber-400 font-bold">0.0 m</span>
+                    </div>
+                    <div class="flex justify-between items-center bg-cyan-950/60 p-2.5 rounded-lg border border-cyan-500/40">
+                        <span class="text-cyan-200 font-bold">④ 障礙物距離 (\(d\)):</span>
+                        <span id="calcFinalDistance" class="text-cyan-300 text-sm font-black">0.0 m</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quiz Section -->
+            <div class="glass-panel p-4 rounded-2xl">
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-sm font-bold text-amber-400 flex items-center gap-2">
+                        <i class="fa-solid fa-graduation-cap"></i> 隨堂計算挑戰與解題
+                    </h2>
+                    <span id="quizBadge" class="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded font-mono">題目 1 / 3</span>
+                </div>
+
+                <!-- Quiz Card -->
+                <div id="quizContainer" class="bg-gray-900/70 p-3 rounded-xl border border-gray-800 space-y-3">
+                    <p id="quizQuestionText" class="text-xs text-gray-200 leading-relaxed">
+                        小明在山谷中對著峭壁大喊，經過 <strong class="text-pink-400">1.2 秒</strong> 後聽到回聲。已知當時空氣聲速為 <strong class="text-cyan-400">340 m/s</strong>，請問小明距離對面峭壁多少公尺？
+                    </p>
+
+                    <!-- Answer Input Field -->
+                    <div class="flex gap-2">
+                        <div class="relative flex-grow">
+                            <input id="quizInput" type="number" placeholder="請輸入答案" class="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-400 font-mono">
+                            <span class="absolute right-2.5 top-1.5 text-xs text-gray-500">m</span>
+                        </div>
+                        <button onclick="checkQuizAnswer()" class="bg-amber-500 hover:bg-amber-400 text-gray-950 font-bold px-3 py-1.5 rounded-lg text-xs transition">
+                            提交
+                        </button>
+                    </div>
+
+                    <!-- Quiz Feedback Banner -->
+                    <div id="quizFeedback" class="hidden p-2 rounded-lg text-xs font-mono"></div>
+
+                    <!-- Quiz Steps Breakdown -->
+                    <div id="quizSolution" class="hidden text-[11px] text-gray-300 bg-gray-950/80 p-2.5 rounded-lg border border-cyan-500/30 space-y-1">
+                        <p class="font-bold text-cyan-400">解析步驟：</p>
+                        <p id="quizSolutionText">代入公式：\(d = \frac{v \times t}{2} = \frac{340 \times 1.2}{2} = 204\text{ 公尺}\)</p>
+                    </div>
+
+                    <!-- Next Question button -->
+                    <div class="flex justify-between items-center pt-1">
+                        <button onclick="loadQuizInSim()" class="text-[11px] text-cyan-400 hover:underline flex items-center gap-1">
+                            <i class="fa-solid fa-play-circle"></i> 在模擬器載入此題情境
+                        </button>
+                        <button onclick="nextQuizQuestion()" class="text-[11px] text-amber-400 hover:underline font-bold">
+                            下一題 <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Physics Principles Summary -->
+            <div class="glass-panel p-4 rounded-2xl">
+                <h2 class="text-sm font-bold text-purple-400 mb-2 flex items-center gap-2">
+                    <i class="fa-solid fa-book-open"></i> 回聲與聲納核心物理觀念
+                </h2>
+                <ul class="text-[11px] text-gray-300 space-y-1.5 list-disc pl-4 leading-relaxed">
+                    <li><strong class="text-cyan-300">回聲辨識條件:</strong> 人耳分辨聲音時間差需在 \(0.1\text{ 秒}\) 以上，常溫空氣下障礙物距離需至少 \(17\text{ 公尺}\)。</li>
+                    <li><strong class="text-emerald-300">反射定律:</strong> 聲波視為波線時，在障礙物平面的反射遵守 <span class="text-emerald-400">入射角 = 反射角</span>。</li>
+                    <li><strong class="text-pink-300">聲納 (Sonar):</strong> 發射高頻超聲波，透過測量往返反射時間來計算海底深度或水中物體距離。</li>
+                </ul>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="glass-panel mt-4 px-4 py-3 border-t border-gray-800 text-center text-xs text-gray-500">
+        回聲與聲納物理互動教學系統 — 適用於國高中自然與物理科教學演示與自主學習
+    </footer>
+
+    <script>
+        // DOM Elements & Canvas Contexts
+        let canvas = null;
+        let ctx = null;
+        let scopeCanvas = null;
+        let scopeCtx = null;
+
+        // Physics & Engine Parameters
+        let soundSpeed = 340; // m/s
+        let simSpeed = 0.5;   // Slow motion factor
+        let metersPerPixel = 0.5; // 1 px = 0.5 meters
+        let currentTool = 'source'; // 'source', 'freehand', 'line'
+        let audioEnabled = true;
+        let isDrawing = false;
+        let lineStart = null;
+        let tempLineEnd = null;
+        let lastTimestamp = performance.now();
+
+        // Audio Context
+        let audioCtx = null;
+
+        // Special Scenario Parameters
+        let waterBoundary = null; // { y: pixelY, vAir: 340, vWater: 1500 }
+        let sourceMoveSpeed = 0; // m/s (moving right)
+        let initialSourcePos = { x: 150, y: 300 };
+
+        // Scene Entities
+        let soundSource = { x: 150, y: 300 };
+        let walls = []; // Custom obstacle segments: [{x1, y1, x2, y2}]
+
+        // Multiple Echoes Return Data Structure
+        let detectedEchoes = []; // Array of { time, distance, amplitude, bounces }
+
+        // Wave Pulse Simulation State
+        let pulse = {
+            active: false,
+            simTime: 0,
+            maxSimTime: 2.5,
+            rays: [],
+            primaryEchoTime: 0,
+            primaryEchoDist: 0,
+            triggeredEchoes: new Set()
+        };
+
+        // Quiz Questions Data
+        const quizQuestions = [
+            {
+                text: '小明在山谷中對著峭壁大喊，經過 <strong class="text-pink-400">1.2 秒</strong> 後聽到回聲。已知當時空氣聲速為 <strong class="text-cyan-400">340 m/s</strong>，請問小明距離對面峭壁多少公尺？',
+                speed: 340,
+                time: 1.2,
+                answer: 204,
+                solution: '代入公式：\\(d = \\frac{v \\times t}{2} = \\frac{340 \\times 1.2}{2} = 204\\text{ 公尺}\\)'
+            },
+            {
+                text: '研究船使用聲納向海底垂直發射超聲波，經過 <strong class="text-pink-400">0.4 秒</strong> 接收到回聲。已知海水中的聲速為 <strong class="text-cyan-400">1500 m/s</strong>，請問海底深度為多少公尺？',
+                speed: 1500,
+                time: 0.4,
+                answer: 300,
+                solution: '代入公式：\\(d = \\frac{v \\times t}{2} = \\frac{1500 \\times 0.4}{2} = 300\\text{ 公尺}\\)'
+            },
+            {
+                text: '蝙蝠在洞穴中發射超聲波脈衝，經 <strong class="text-pink-400">0.2 秒</strong> 後接收到前方障礙物回傳的訊號。若聲速為 <strong class="text-cyan-400">340 m/s</strong>，障礙物距離蝙蝠多少公尺？',
+                speed: 340,
+                time: 0.2,
+                answer: 34,
+                solution: '代入公式：\\(d = \\frac{v \\times t}{2} = \\frac{340 \\times 0.2}{2} = 34\\text{ 公尺}\\)'
+            }
+        ];
+        let currentQuizIdx = 0;
+
+        function resizeCanvas() {
+            if (!canvas || !canvas.parentElement) return;
+            const parent = canvas.parentElement;
+            canvas.width = parent.clientWidth;
+            canvas.height = parent.clientHeight;
+
+            if (scopeCanvas && scopeCanvas.parentElement) {
+                scopeCanvas.width = scopeCanvas.parentElement.clientWidth;
+                scopeCanvas.height = scopeCanvas.parentElement.clientHeight;
+            }
+            computePulseRays();
+            draw();
+        }
+
+        function getCanvasPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return {
+                x: clientX - rect.left,
+                y: clientY - rect.top
+            };
+        }
+
+        function playPing(freq = 800, volume = 0.2) {
+            if (!audioEnabled) return;
+            try {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(freq * 0.4, audioCtx.currentTime + 0.15);
+
+                gain.gain.setValueAtTime(volume, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.18);
+
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.2);
+            } catch (err) {
+                console.warn('Audio playback error:', err);
+            }
+        }
+
+        function toggleAudio() {
+            audioEnabled = !audioEnabled;
+            const icon = document.getElementById('soundIcon');
+            if (audioEnabled) {
+                icon.className = 'fa-solid fa-volume-high text-sm';
+            } else {
+                icon.className = 'fa-solid fa-volume-xmark text-sm text-gray-500';
+            }
+        }
+
+        function setTool(tool) {
+            currentTool = tool;
+            ['toolSource', 'toolFreehand', 'toolLine'].forEach(id => {
+                const btn = document.getElementById(id);
+                if (btn) btn.classList.remove('active');
+            });
+
+            if (tool === 'source') {
+                document.getElementById('toolSource').classList.add('active');
+                canvas.className = 'w-full h-full block cursor-source';
+            } else if (tool === 'freehand') {
+                document.getElementById('toolFreehand').classList.add('active');
+                canvas.className = 'w-full h-full block cursor-freehand';
+            } else if (tool === 'line') {
+                document.getElementById('toolLine').classList.add('active');
+                canvas.className = 'w-full h-full block cursor-line';
+            }
+        }
+
+        function clearCanvasWalls() {
+            walls = [];
+            waterBoundary = null;
+            sourceMoveSpeed = 0;
+            resetPulse();
+        }
+
+        function handlePointerStart(pos) {
+            if (currentTool === 'source') {
+                initialSourcePos = { x: pos.x, y: pos.y };
+                soundSource = { ...initialSourcePos };
+                resetPulse();
+            } else if (currentTool === 'line' || currentTool === 'freehand') {
+                isDrawing = true;
+                lineStart = { x: pos.x, y: pos.y };
+                tempLineEnd = { x: pos.x, y: pos.y };
+            }
+        }
+
+        function handlePointerMove(pos) {
+            if (!isDrawing) return;
+
+            if (currentTool === 'line') {
+                tempLineEnd = { x: pos.x, y: pos.y };
+                draw();
+            } else if (currentTool === 'freehand') {
+                walls.push({
+                    x1: lineStart.x,
+                    y1: lineStart.y,
+                    x2: pos.x,
+                    y2: pos.y
+                });
+                lineStart = { x: pos.x, y: pos.y };
+                computePulseRays();
+                draw();
+            }
+        }
+
+        function handlePointerEnd() {
+            if (isDrawing && currentTool === 'line' && lineStart && tempLineEnd) {
+                const len = Math.hypot(tempLineEnd.x - lineStart.x, tempLineEnd.y - lineStart.y);
+                if (len > 5) {
+                    walls.push({
+                        x1: lineStart.x,
+                        y1: lineStart.y,
+                        x2: tempLineEnd.x,
+                        y2: tempLineEnd.y
+                    });
+                    computePulseRays();
+                }
+            }
+            isDrawing = false;
+            lineStart = null;
+            tempLineEnd = null;
+            draw();
+        }
+
+        function raySegmentIntersection(origin, dir, segment) {
+            const x1 = segment.x1, y1 = segment.y1, x2 = segment.x2, y2 = segment.y2;
+            const x3 = origin.x, y3 = origin.y, x4 = origin.x + dir.x, y4 = origin.y + dir.y;
+
+            const denom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+            if (Math.abs(denom) < 1e-6) return null;
+
+            const t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / denom;
+            const u = -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / denom;
+
+            if (t >= 0 && t <= 1 && u > 1e-4) {
+                const hitX = x1 + t * (x2 - x1);
+                const hitY = y1 + t * (y2 - y1);
+
+                let nx = -(y2 - y1);
+                let ny = x2 - x1;
+                const len = Math.hypot(nx, ny);
+                if (len === 0) return null;
+                nx /= len;
+                ny /= len;
+
+                if (dir.x * nx + dir.y * ny > 0) {
+                    nx = -nx;
+                    ny = -ny;
+                }
+
+                return {
+                    point: { x: hitX, y: hitY },
+                    dist: u,
+                    normal: { x: nx, y: ny }
+                };
+            }
+            return null;
+        }
+
+        function traceRay(origin, angle, numBounces = 2, currentSpeed = soundSpeed) {
+            let currentOrigin = { ...origin };
+            let currentDir = { x: Math.cos(angle), y: Math.sin(angle) };
+            let segments = [];
+            let totalLengthPx = 0;
+
+            for (let bounce = 0; bounce <= numBounces; bounce++) {
+                let closestHit = null;
+                let hitType = 'wall';
+
+                for (let wall of walls) {
+                    const hit = raySegmentIntersection(currentOrigin, currentDir, wall);
+                    if (hit && (!closestHit || hit.dist < closestHit.dist)) {
+                        closestHit = hit;
+                        hitType = 'wall';
+                    }
+                }
+
+                if (waterBoundary) {
+                    const waterWall = { x1: -500, y1: waterBoundary.y, x2: 2000, y2: waterBoundary.y };
+                    const hitWater = raySegmentIntersection(currentOrigin, currentDir, waterWall);
+                    if (hitWater && hitWater.dist > 1e-3 && (!closestHit || hitWater.dist < closestHit.dist)) {
+                        closestHit = hitWater;
+                        hitType = 'water';
+                    }
+                }
+
+                if (closestHit) {
+                    const segLen = closestHit.dist;
+                    segments.push({
+                        start: { ...currentOrigin },
+                        end: { ...closestHit.point },
+                        dir: { ...currentDir },
+                        normal: { ...closestHit.normal },
+                        startDistPx: totalLengthPx,
+                        endDistPx: totalLengthPx + segLen,
+                        lengthPx: segLen,
+                        isObstacleReflection: true,
+                        speed: currentSpeed
+                    });
+
+                    totalLengthPx += segLen;
+
+                    if (hitType === 'wall') {
+                        const dot = currentDir.x * closestHit.normal.x + currentDir.y * closestHit.normal.y;
+                        const reflX = currentDir.x - 2 * dot * closestHit.normal.x;
+                        const reflY = currentDir.y - 2 * dot * closestHit.normal.y;
+
+                        currentOrigin = { ...closestHit.point };
+                        currentDir = { x: reflX, y: reflY };
+                    } else if (hitType === 'water') {
+                        const v1 = currentOrigin.y < waterBoundary.y ? waterBoundary.vAir : waterBoundary.vWater;
+                        const v2 = currentOrigin.y < waterBoundary.y ? waterBoundary.vWater : waterBoundary.vAir;
+
+                        const cosI = -(closestHit.normal.x * currentDir.x + closestHit.normal.y * currentDir.y);
+                        const sinI2 = (v2 / v1) * (v2 / v1) * (1 - cosI * cosI);
+
+                        if (sinI2 <= 1.0) {
+                            const cosT = Math.sqrt(1.0 - sinI2);
+                            const refrX = (v2 / v1) * currentDir.x + ((v2 / v1) * cosI - cosT) * closestHit.normal.x;
+                            const refrY = (v2 / v1) * currentDir.y + ((v2 / v1) * cosI - cosT) * closestHit.normal.y;
+                            currentOrigin = { ...closestHit.point };
+                            currentDir = { x: refrX, y: refrY };
+                            currentSpeed = v2;
+                        } else {
+                            const dot = currentDir.x * closestHit.normal.x + currentDir.y * closestHit.normal.y;
+                            currentDir.x = currentDir.x - 2 * dot * closestHit.normal.x;
+                            currentDir.y = currentDir.y - 2 * dot * closestHit.normal.y;
+                            currentOrigin = { ...closestHit.point };
+                        }
+                    }
+                } else {
+                    const openSpaceLen = 2000;
+                    segments.push({
+                        start: { ...currentOrigin },
+                        end: { x: currentOrigin.x + currentDir.x * openSpaceLen, y: currentOrigin.y + currentDir.y * openSpaceLen },
+                        dir: { ...currentDir },
+                        normal: null,
+                        startDistPx: totalLengthPx,
+                        endDistPx: totalLengthPx + openSpaceLen,
+                        lengthPx: openSpaceLen,
+                        isObstacleReflection: false,
+                        speed: currentSpeed
+                    });
+                    totalLengthPx += openSpaceLen;
+                    break;
+                }
+            }
+
+            return {
+                angle: angle,
+                segments: segments,
+                totalLengthPx: totalLengthPx
+            };
+        }
+
+        function computePulseRays() {
+            const numRays = 60;
+            pulse.rays = [];
+            detectedEchoes = [];
+
+            let minReturnTime = Infinity;
+
+            for (let i = 0; i < numRays; i++) {
+                const angle = (i * 2 * Math.PI) / numRays;
+                const rayPath = traceRay(initialSourcePos, angle, 3);
+                pulse.rays.push(rayPath);
+
+                for (let sIdx = 1; sIdx < rayPath.segments.length; sIdx++) {
+                    const seg = rayPath.segments[sIdx];
+                    const targetReceiver = { x: soundSource.x, y: soundSource.y };
+                    const rx = targetReceiver.x - seg.start.x;
+                    const ry = targetReceiver.y - seg.start.y;
+                    const proj = rx * seg.dir.x + ry * seg.dir.y;
+
+                    if (proj > 0 && proj <= seg.lengthPx) {
+                        const closestPt = { x: seg.start.x + seg.dir.x * proj, y: seg.start.y + seg.dir.y * proj };
+                        const distToReceiver = Math.hypot(targetReceiver.x - closestPt.x, targetReceiver.y - closestPt.y);
+
+                        if (distToReceiver < 35) {
+                            let totalTime = 0;
+                            let totalDistM = 0;
+
+                            for (let k = 0; k < sIdx; k++) {
+                                const lenM = rayPath.segments[k].lengthPx * metersPerPixel;
+                                totalDistM += lenM;
+                                totalTime += lenM / rayPath.segments[k].speed;
+                            }
+
+                            const finalSegLenM = proj * metersPerPixel;
+                            totalDistM += finalSegLenM;
+                            totalTime += finalSegLenM / seg.speed;
+
+                            const bounceCount = sIdx;
+                            const reflectionCoeff = Math.pow(0.75, bounceCount);
+                            const distanceLoss = 1.0 / (1.0 + 0.003 * totalDistM);
+                            const amplitude = Math.max(0.1, reflectionCoeff * distanceLoss);
+
+                            const isDuplicate = detectedEchoes.some(e => Math.abs(e.time - totalTime) < 0.06);
+                            if (!isDuplicate && totalTime > 0.05) {
+                                detectedEchoes.push({
+                                    time: totalTime,
+                                    distance: totalDistM / 2,
+                                    amplitude: amplitude,
+                                    bounces: bounceCount
+                                });
+                            }
+
+                            if (totalTime < minReturnTime) {
+                                minReturnTime = totalTime;
+                            }
+                        }
+                    }
+                }
+            }
+
+            detectedEchoes.sort((a, b) => a.time - b.time);
+
+            pulse.primaryEchoTime = minReturnTime < Infinity ? minReturnTime : (detectedEchoes.length > 0 ? detectedEchoes[0].time : 0);
+            pulse.primaryEchoDist = pulse.primaryEchoTime > 0 ? (detectedEchoes.length > 0 ? detectedEchoes[0].distance : 0) : 0;
+        }
+
+        function drawGrid() {
+            if (!document.getElementById('toggleGrid').checked) return;
+            ctx.save();
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+            ctx.lineWidth = 1;
+            const gridSize = 40;
+            for (let x = 0; x < canvas.width; x += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            for (let y = 0; y < canvas.height; y += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+            ctx.restore();
+        }
+
+        function drawWaterBoundary() {
+            if (!waterBoundary) return;
+
+            ctx.save();
+            ctx.fillStyle = 'rgba(0, 150, 255, 0.12)';
+            ctx.fillRect(0, waterBoundary.y, canvas.width, canvas.height - waterBoundary.y);
+
+            ctx.strokeStyle = '#00F0FF';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([8, 4]);
+            ctx.beginPath();
+            ctx.moveTo(0, waterBoundary.y);
+            ctx.lineTo(canvas.width, waterBoundary.y);
+            ctx.stroke();
+
+            ctx.fillStyle = '#38BDF8';
+            ctx.font = 'bold 11px sans-serif';
+            ctx.fillText('☁️ 空氣介面 (v = 340 m/s)', 15, waterBoundary.y - 10);
+            ctx.fillStyle = '#00F0FF';
+            ctx.fillText('🌊 水體介面 (v = 1500 m/s) — 發生波折射與透射', 15, waterBoundary.y + 20);
+
+            ctx.restore();
+        }
+
+        function drawWalls() {
+            ctx.save();
+            ctx.strokeStyle = '#FFD700';
+            ctx.lineWidth = 4;
+            ctx.lineCap = 'round';
+            ctx.shadowColor = '#FFD700';
+            ctx.shadowBlur = 8;
+
+            for (let wall of walls) {
+                ctx.beginPath();
+                ctx.moveTo(wall.x1, wall.y1);
+                ctx.lineTo(wall.x2, wall.y2);
+                ctx.stroke();
+            }
+
+            if (isDrawing && currentTool === 'line' && lineStart && tempLineEnd) {
+                ctx.strokeStyle = '#00F0FF';
+                ctx.setLineDash([6, 6]);
+                ctx.beginPath();
+                ctx.moveTo(lineStart.x, lineStart.y);
+                ctx.lineTo(tempLineEnd.x, tempLineEnd.y);
+                ctx.stroke();
+            }
+
+            ctx.restore();
+        }
+
+        function drawArrowHead(x, y, angle, color) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(angle);
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(-7, -4);
+            ctx.lineTo(-7, 4);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+        }
+
+        function drawRaysAndArrows() {
+            if (!document.getElementById('toggleRays').checked) return;
+            ctx.save();
+            const currentDistPx = (soundSpeed * pulse.simTime) / metersPerPixel;
+
+            pulse.rays.forEach(ray => {
+                let accumulatedPx = 0;
+                for (let seg of ray.segments) {
+                    if (currentDistPx <= accumulatedPx) break;
+
+                    const drawLen = Math.min(seg.lengthPx, currentDistPx - accumulatedPx);
+                    const endX = seg.start.x + seg.dir.x * drawLen;
+                    const endY = seg.start.y + seg.dir.y * drawLen;
+
+                    ctx.strokeStyle = seg.isObstacleReflection ? 'rgba(0, 255, 102, 0.4)' : 'rgba(0, 240, 255, 0.25)';
+                    ctx.lineWidth = 1.2;
+                    ctx.beginPath();
+                    ctx.moveTo(seg.start.x, seg.start.y);
+                    ctx.lineTo(endX, endY);
+                    ctx.stroke();
+
+                    if (drawLen > 30) {
+                        const midX = seg.start.x + seg.dir.x * (drawLen * 0.5);
+                        const midY = seg.start.y + seg.dir.y * (drawLen * 0.5);
+                        const angle = Math.atan2(seg.dir.y, seg.dir.x);
+                        drawArrowHead(midX, midY, angle, seg.isObstacleReflection ? '#00FF66' : '#00F0FF');
+                    }
+
+                    accumulatedPx += seg.lengthPx;
+                }
+            });
+            ctx.restore();
+        }
+
+        function drawWavefrontArcs() {
+            if (!document.getElementById('toggleWavefronts').checked) return;
+            ctx.save();
+            const currentRadiusPx = (soundSpeed * pulse.simTime) / metersPerPixel;
+            if (currentRadiusPx <= 0) {
+                ctx.restore();
+                return;
+            }
+
+            ctx.strokeStyle = '#00F0FF';
+            ctx.lineWidth = 2.5;
+            ctx.shadowColor = '#00F0FF';
+            ctx.shadowBlur = 10;
+
+            ctx.beginPath();
+            ctx.arc(initialSourcePos.x, initialSourcePos.y, currentRadiusPx, 0, Math.PI * 2);
+            ctx.stroke();
+
+            for (let rOffset = 25; rOffset < 100; rOffset += 25) {
+                const r = currentRadiusPx - rOffset;
+                if (r > 0) {
+                    ctx.strokeStyle = `rgba(0, 240, 255, ${0.6 - rOffset / 150})`;
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    ctx.arc(initialSourcePos.x, initialSourcePos.y, r, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+            }
+
+            pulse.rays.forEach(ray => {
+                ray.segments.forEach(seg => {
+                    if (seg.isObstacleReflection && currentRadiusPx > seg.startDistPx) {
+                        const reflRadius = (currentRadiusPx - seg.startDistPx);
+                        ctx.strokeStyle = 'rgba(255, 51, 102, 0.35)';
+                        ctx.lineWidth = 1.2;
+                        ctx.beginPath();
+                        ctx.arc(seg.start.x, seg.start.y, reflRadius, 0, Math.PI * 2);
+                        ctx.stroke();
+                    }
+                });
+            });
+
+            ctx.restore();
+        }
+
+        function drawNormalsAndAngles() {
+            if (!document.getElementById('toggleNormals').checked) return;
+            ctx.save();
+            const currentDistPx = (soundSpeed * pulse.simTime) / metersPerPixel;
+
+            pulse.rays.forEach(ray => {
+                ray.segments.forEach(seg => {
+                    if (seg.normal && currentDistPx >= seg.startDistPx) {
+                        const normLen = 30;
+                        ctx.strokeStyle = '#A855F7';
+                        ctx.lineWidth = 1.5;
+                        ctx.setLineDash([3, 3]);
+                        ctx.beginPath();
+                        ctx.moveTo(seg.start.x - seg.normal.x * normLen, seg.start.y - seg.normal.y * normLen);
+                        ctx.lineTo(seg.start.x + seg.normal.x * normLen, seg.start.y + seg.normal.y * normLen);
+                        ctx.stroke();
+
+                        const incidentAngleRad = Math.acos(Math.abs(seg.dir.x * seg.normal.x + seg.dir.y * seg.normal.y));
+                        const incidentDeg = Math.round((incidentAngleRad * 180) / Math.PI);
+
+                        ctx.fillStyle = '#C084FC';
+                        ctx.font = '10px monospace';
+                        ctx.fillText(`θi=θr=${incidentDeg}°`, seg.start.x + 8, seg.start.y - 8);
+                    }
+                });
+            });
+
+            ctx.restore();
+        }
+
+        function drawSource() {
+            ctx.save();
+
+            if (sourceMoveSpeed > 0) {
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.setLineDash([3, 3]);
+                ctx.beginPath();
+                ctx.arc(initialSourcePos.x, initialSourcePos.y, 6, 0, Math.PI * 2);
+                ctx.stroke();
+
+                drawArrowHead(soundSource.x + 25, soundSource.y, 0, '#10B981');
+                ctx.fillStyle = '#10B981';
+                ctx.font = '10px monospace';
+                ctx.fillText(`v = ${sourceMoveSpeed} m/s 👉`, soundSource.x - 30, soundSource.y + 25);
+            }
+
+            ctx.shadowColor = '#00F0FF';
+            ctx.shadowBlur = 15;
+            ctx.fillStyle = '#00F0FF';
+            ctx.beginPath();
+            ctx.arc(soundSource.x, soundSource.y, 8, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(soundSource.x, soundSource.y, 14, 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.fillStyle = '#E2E8F0';
+            ctx.font = 'bold 11px sans-serif';
+            ctx.fillText('聲源 / 接收器', soundSource.x - 35, soundSource.y - 20);
+            ctx.restore();
+        }
+
+        function drawOscilloscope() {
+            if (!scopeCtx) return;
+            const w = scopeCanvas.width;
+            const h = scopeCanvas.height;
+
+            scopeCtx.clearRect(0, 0, w, h);
+
+            scopeCtx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+            scopeCtx.lineWidth = 1;
+            for (let x = 0; x < w; x += 30) {
+                scopeCtx.beginPath();
+                scopeCtx.moveTo(x, 0);
+                scopeCtx.lineTo(x, h);
+                scopeCtx.stroke();
+            }
+
+            const centerY = h * 0.7;
+            scopeCtx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+            scopeCtx.beginPath();
+            scopeCtx.moveTo(0, centerY);
+            scopeCtx.lineTo(w, centerY);
+            scopeCtx.stroke();
+
+            scopeCtx.strokeStyle = '#00F0FF';
+            scopeCtx.lineWidth = 2;
+            scopeCtx.beginPath();
+            scopeCtx.moveTo(10, centerY);
+            scopeCtx.lineTo(15, centerY - 42);
+            scopeCtx.lineTo(20, centerY + 28);
+            scopeCtx.lineTo(25, centerY);
+            scopeCtx.stroke();
+
+            scopeCtx.fillStyle = '#00F0FF';
+            scopeCtx.font = '10px monospace';
+            scopeCtx.fillText('Tx (發射)', 8, centerY - 45);
+
+            detectedEchoes.forEach((echo, idx) => {
+                const echoX = 20 + (echo.time / pulse.maxSimTime) * (w - 40);
+
+                if (echoX < w) {
+                    const spikeHeight = 36 * echo.amplitude;
+
+                    scopeCtx.strokeStyle = idx === 0 ? '#FF3366' : '#F43F5E';
+                    scopeCtx.lineWidth = 1.8;
+                    scopeCtx.beginPath();
+                    scopeCtx.moveTo(echoX - 5, centerY);
+                    scopeCtx.lineTo(echoX, centerY - spikeHeight);
+                    scopeCtx.lineTo(echoX + 5, centerY + (spikeHeight * 0.6));
+                    scopeCtx.lineTo(echoX + 10, centerY);
+                    scopeCtx.stroke();
+
+                    scopeCtx.fillStyle = idx === 0 ? '#FF3366' : '#FDA4AF';
+                    scopeCtx.font = '9px monospace';
+                    scopeCtx.fillText(`Rx${idx + 1} (${echo.time.toFixed(2)}s)`, echoX - 18, centerY - spikeHeight - 5);
+                }
+            });
+
+            const curX = 20 + (pulse.simTime / pulse.maxSimTime) * (w - 40);
+            if (curX <= w) {
+                scopeCtx.strokeStyle = '#FFD700';
+                scopeCtx.lineWidth = 1.5;
+                scopeCtx.beginPath();
+                scopeCtx.moveTo(curX, 0);
+                scopeCtx.lineTo(curX, h);
+                scopeCtx.stroke();
+            }
+        }
+
+        function draw() {
+            if (!ctx) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            drawGrid();
+            drawWaterBoundary();
+            drawNormalsAndAngles();
+            drawRaysAndArrows();
+            drawWavefrontArcs();
+            drawWalls();
+            drawSource();
+
+            drawOscilloscope();
+        }
+
+        function togglePulseAnimation() {
+            if (pulse.active) {
+                pulse.active = false;
+                document.getElementById('playPauseBtn').innerHTML = '<i class="fa-solid fa-play"></i> 發射波脈衝';
+            } else {
+                firePulse();
+            }
+        }
+
+        function firePulse() {
+            pulse.simTime = 0;
+            pulse.active = true;
+            pulse.triggeredEchoes = new Set();
+            soundSource = { ...initialSourcePos };
+            playPing(880, 0.3);
+            computePulseRays();
+            document.getElementById('playPauseBtn').innerHTML = '<i class="fa-solid fa-pause"></i> 暫停脈衝';
+        }
+
+        function resetPulse() {
+            pulse.simTime = 0;
+            pulse.active = false;
+            pulse.triggeredEchoes = new Set();
+            soundSource = { ...initialSourcePos };
+            computePulseRays();
+            updateCalculationsUI();
+            document.getElementById('playPauseBtn').innerHTML = '<i class="fa-solid fa-play"></i> 發射波脈衝';
+        }
+
+        function updateSoundSpeed(val) {
+            soundSpeed = parseFloat(val);
+            document.getElementById('speedVal').innerText = `${soundSpeed} m/s`;
+            document.getElementById('headerSoundSpeed').innerText = `${soundSpeed} m/s`;
+            computePulseRays();
+            updateCalculationsUI();
+            draw();
+        }
+
+        function updateSimSpeed(val) {
+            simSpeed = parseFloat(val);
+            document.getElementById('simSpeedVal').innerText = `${simSpeed}x`;
+        }
+
+        function updateCalculationsUI() {
+            const timeVal = pulse.primaryEchoTime;
+            const distVal = pulse.primaryEchoDist;
+            const roundTripVal = distVal * 2;
+
+            document.getElementById('headerTimer').innerText = `${timeVal.toFixed(3)} s`;
+            document.getElementById('hudTimer').innerText = `${timeVal.toFixed(3)} s`;
+            document.getElementById('hudDistance').innerText = `${distVal.toFixed(1)} m`;
+            document.getElementById('hudRoundTrip').innerText = `${roundTripVal.toFixed(1)} m`;
+
+            document.getElementById('calcSpeed').innerText = `${soundSpeed} m/s`;
+            document.getElementById('calcTime').innerText = `${timeVal.toFixed(3)} s`;
+            document.getElementById('calcTotalPath').innerText = `${roundTripVal.toFixed(1)} m`;
+            document.getElementById('calcFinalDistance').innerText = `${distVal.toFixed(1)} m`;
+        }
+
+        function loadPreset(name) {
+            walls = [];
+            waterBoundary = null;
+            sourceMoveSpeed = 0;
+
+            if (name === 'valley') {
+                soundSpeed = 340;
+                document.getElementById('speedSlider').value = 340;
+                document.getElementById('speedVal').innerText = '340 m/s';
+                document.getElementById('modeBadge').innerText = '山谷喊話模式';
+
+                initialSourcePos = { x: 150, y: 220 };
+                soundSource = { ...initialSourcePos };
+                walls.push({ x1: 500, y1: 50, x2: 500, y2: 400 });
+
+            } else if (name === 'sonar') {
+                soundSpeed = 1500;
+                document.getElementById('speedSlider').value = 1500;
+                document.getElementById('speedVal').innerText = '1500 m/s';
+                document.getElementById('modeBadge').innerText = '海底聲納測深模式';
+
+                initialSourcePos = { x: 300, y: 60 };
+                soundSource = { ...initialSourcePos };
+                walls.push({ x1: 60, y1: 360, x2: 540, y2: 390 });
+
+            } else if (name === 'refraction') {
+                soundSpeed = 340;
+                document.getElementById('speedSlider').value = 340;
+                document.getElementById('speedVal').innerText = '340 m/s (空氣)';
+                document.getElementById('modeBadge').innerText = '空氣-水面折射與透射';
+
+                waterBoundary = { y: 200, vAir: 340, vWater: 1500 };
+                initialSourcePos = { x: 220, y: 80 };
+                soundSource = { ...initialSourcePos };
+
+                walls.push({ x1: 100, y1: 380, x2: 550, y2: 380 });
+
+            } else if (name === 'moving') {
+                soundSpeed = 340;
+                document.getElementById('speedSlider').value = 340;
+                document.getElementById('speedVal').innerText = '340 m/s';
+                document.getElementById('modeBadge').innerText = '動態移動波源測距';
+
+                sourceMoveSpeed = 60;
+                initialSourcePos = { x: 100, y: 220 };
+                soundSource = { ...initialSourcePos };
+
+                walls.push({ x1: 520, y1: 50, x2: 520, y2: 400 });
+
+            } else if (name === 'double') {
+                soundSpeed = 340;
+                document.getElementById('speedSlider').value = 340;
+                document.getElementById('speedVal').innerText = '340 m/s';
+                document.getElementById('modeBadge').innerText = '峽谷雙重障礙壁';
+
+                initialSourcePos = { x: 300, y: 220 };
+                soundSource = { ...initialSourcePos };
+                walls.push({ x1: 100, y1: 50, x2: 100, y2: 400 });
+                walls.push({ x1: 500, y1: 50, x2: 500, y2: 400 });
+
+            } else if (name === 'cave') {
+                soundSpeed = 340;
+                document.getElementById('speedSlider').value = 340;
+                document.getElementById('speedVal').innerText = '340 m/s';
+                document.getElementById('modeBadge').innerText = '蝙蝠洞穴測距';
+
+                initialSourcePos = { x: 120, y: 220 };
+                soundSource = { ...initialSourcePos };
+                walls.push({ x1: 420, y1: 120, x2: 500, y2: 220 });
+                walls.push({ x1: 500, y1: 220, x2: 420, y2: 320 });
+            }
+
+            firePulse();
+        }
+
+        function renderQuiz() {
+            const q = quizQuestions[currentQuizIdx];
+            document.getElementById('quizBadge').innerText = `題目 ${currentQuizIdx + 1} / ${quizQuestions.length}`;
+            document.getElementById('quizQuestionText').innerHTML = q.text;
+            document.getElementById('quizInput').value = '';
+            document.getElementById('quizFeedback').className = 'hidden p-2 rounded-lg text-xs font-mono';
+            document.getElementById('quizSolution').className = 'hidden text-[11px] text-gray-300 bg-gray-950/80 p-2.5 rounded-lg border border-cyan-500/30 space-y-1';
+            document.getElementById('quizSolutionText').innerHTML = q.solution;
+
+            if (window.MathJax) {
+                window.MathJax.typesetPromise();
+            }
+        }
+
+        function checkQuizAnswer() {
+            const userAns = parseFloat(document.getElementById('quizInput').value);
+            const q = quizQuestions[currentQuizIdx];
+            const feedback = document.getElementById('quizFeedback');
+            const solution = document.getElementById('quizSolution');
+
+            feedback.classList.remove('hidden');
+            solution.classList.remove('hidden');
+
+            if (Math.abs(userAns - q.answer) < 1.0) {
+                feedback.className = 'p-2 rounded-lg text-xs font-mono bg-emerald-950/80 text-emerald-300 border border-emerald-500/40';
+                feedback.innerHTML = '<i class="fa-solid fa-circle-check"></i> 答對了！非常優秀！';
+                playPing(1000, 0.4);
+            } else {
+                feedback.className = 'p-2 rounded-lg text-xs font-mono bg-rose-950/80 text-rose-300 border border-rose-500/40';
+                feedback.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> 答案不正確喔，正確答案是 ${q.answer} 公尺。`;
+                playPing(300, 0.3);
+            }
+        }
+
+        function nextQuizQuestion() {
+            currentQuizIdx = (currentQuizIdx + 1) % quizQuestions.length;
+            renderQuiz();
+        }
+
+        function loadQuizInSim() {
+            const q = quizQuestions[currentQuizIdx];
+            walls = [];
+            waterBoundary = null;
+            sourceMoveSpeed = 0;
+
+            soundSpeed = q.speed;
+            document.getElementById('speedSlider').value = q.speed;
+            document.getElementById('speedVal').innerText = `${q.speed} m/s`;
+
+            initialSourcePos = { x: 150, y: 220 };
+            soundSource = { ...initialSourcePos };
+
+            const targetDistM = q.answer;
+            const wallPx = initialSourcePos.x + (targetDistM / metersPerPixel);
+            walls.push({ x1: wallPx, y1: 50, x2: wallPx, y2: 400 });
+
+            firePulse();
+        }
+
+        function animate(timestamp) {
+            const dt = (timestamp - lastTimestamp) / 1000;
+            lastTimestamp = timestamp;
+
+            if (pulse.active) {
+                pulse.simTime += dt * simSpeed;
+
+                if (sourceMoveSpeed > 0) {
+                    const distMovedPx = (sourceMoveSpeed * pulse.simTime) / metersPerPixel;
+                    soundSource.x = initialSourcePos.x + distMovedPx;
+                }
+
+                detectedEchoes.forEach((echo, idx) => {
+                    if (pulse.simTime >= echo.time && !pulse.triggeredEchoes.has(idx)) {
+                        playPing(750 - idx * 100, 0.2);
+                        pulse.triggeredEchoes.add(idx);
+                    }
+                });
+
+                if (pulse.simTime >= pulse.maxSimTime) {
+                    pulse.simTime = pulse.maxSimTime;
+                    pulse.active = false;
+                    document.getElementById('playPauseBtn').innerHTML = '<i class="fa-solid fa-play"></i> 發射波脈衝';
+                }
+
+                updateCalculationsUI();
+            }
+
+            draw();
+            requestAnimationFrame(animate);
+        }
+
+        window.onload = function() {
+            canvas = document.getElementById('simCanvas');
+            ctx = canvas.getContext('2d');
+            scopeCanvas = document.getElementById('scopeCanvas');
+            scopeCtx = scopeCanvas.getContext('2d');
+
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+
+            canvas.addEventListener('mousedown', (e) => handlePointerStart(getCanvasPos(e)));
+            canvas.addEventListener('mousemove', (e) => handlePointerMove(getCanvasPos(e)));
+            window.addEventListener('mouseup', handlePointerEnd);
+
+            canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                handlePointerStart(getCanvasPos(e));
+            }, { passive: false });
+
+            canvas.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                handlePointerMove(getCanvasPos(e));
+            }, { passive: false });
+
+            window.addEventListener('touchend', handlePointerEnd);
+
+            loadPreset('valley');
+            renderQuiz();
+            lastTimestamp = performance.now();
+            requestAnimationFrame(animate);
+        };
+    </script>
+</body>
+</html>

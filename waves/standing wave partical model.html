@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管樂器空氣柱駐波與諧音物理模擬器 (Wind Instrument Acoustics Simulator)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'PingFang TC', 'Microsoft JhengHei', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: #0f172a;
+            color: #f8fafc;
+        }
+
+        .canvas-container {
+            position: relative;
+            width: 100%;
+            background: #090d16;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.6);
+            touch-action: none;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: auto;
+            cursor: crosshair;
+        }
+
+        .mode-btn {
+            background: #1e293b;
+            color: #94a3b8;
+            border: 1px solid #334155;
+            padding: 8px 18px;
+            border-radius: 20px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.92rem;
+        }
+
+        .mode-btn.active {
+            background: #0284c7;
+            color: #ffffff;
+            border-color: #38bdf8;
+            box-shadow: 0 0 14px rgba(56, 189, 248, 0.4);
+        }
+
+        .value-badge {
+            background: #334155;
+            color: #38bdf8;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 0.85rem;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #334155;
+            outline: none;
+            accent-color: #38bdf8;
+            cursor: pointer;
+        }
+
+        select {
+            background: #1e293b;
+            color: #f8fafc;
+            border: 1px solid #334155;
+            padding: 8px 12px;
+            border-radius: 6px;
+            outline: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.88rem;
+            color: #e2e8f0;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .checkbox-group input {
+            width: 16px;
+            height: 16px;
+            accent-color: #38bdf8;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center p-4 md:p-6">
+
+    <header class="text-center mb-6 max-w-4xl">
+        <h1 class="text-2xl md:text-3xl font-bold text-sky-400 mb-2">管樂器空氣柱駐波與諧音物理模擬器</h1>
+        <p class="text-slate-400 text-sm md:text-base">可拖曳追蹤空氣質點、分開觀察位移駐波與壓力波軌跡，並探索時間對位移 $s(t)$ 的動態變化</p>
+    </header>
+
+    <div class="w-full max-w-5xl flex flex-col gap-5">
+
+        <!-- 管型選擇模式區 -->
+        <div class="flex justify-center gap-3 flex-wrap">
+            <button class="mode-btn active" id="btnOpenPipe">兩端開口管 (Open Pipe)</button>
+            <button class="mode-btn" id="btnClosedPipe">一端封閉管 (Closed Pipe)</button>
+        </div>
+
+        <!-- Canvas 畫布卡片 -->
+        <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700 shadow-xl">
+            <div class="canvas-container mb-3">
+                <canvas id="pipeCanvas" width="960" height="700"></canvas>
+            </div>
+
+            <div class="flex flex-wrap justify-between items-center gap-3 text-xs text-slate-300 px-2">
+                <div class="flex items-center gap-2">
+                    <span class="inline-block w-3 h-3 rounded-full bg-rose-500 animate-pulse"></span> 追蹤質點 (可滑鼠/觸控拖曳移動位置)
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="inline-block w-3 h-3 rounded-full bg-sky-400"></span> 位移駐波 $s(x,t)$
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="inline-block w-3 h-3 rounded-full bg-amber-400"></span> 壓力波 $\Delta P(x,t)$
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="font-bold text-emerald-400">N: 節點 (Node)</span> | 
+                    <span class="font-bold text-sky-400">A: 波腹 (Antinode)</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 即時物理數據卡片欄 -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div class="bg-slate-800/80 p-3.5 rounded-xl border border-slate-700 border-l-4 border-l-sky-400">
+                <div class="text-xs text-slate-400 mb-1">諧音模式 (Harmonic)</div>
+                <div class="text-base md:text-lg font-bold text-slate-100" id="dispHarmonicName">基頻 (第 1 諧音)</div>
+            </div>
+            <div class="bg-slate-800/80 p-3.5 rounded-xl border border-slate-700 border-l-4 border-l-emerald-400">
+                <div class="text-xs text-slate-400 mb-1">聲波頻率 (Frequency)</div>
+                <div class="text-base md:text-lg font-bold text-emerald-400 font-mono" id="dispFreq">343.0 Hz</div>
+            </div>
+            <div class="bg-slate-800/80 p-3.5 rounded-xl border border-slate-700 border-l-4 border-l-amber-400">
+                <div class="text-xs text-slate-400 mb-1">追蹤點位置 (x / L)</div>
+                <div class="text-base md:text-lg font-bold text-amber-400 font-mono" id="dispTrackedX">x = 0.35 L</div>
+            </div>
+            <div class="bg-slate-800/80 p-3.5 rounded-xl border border-slate-700 border-l-4 border-l-purple-400">
+                <div class="text-xs text-slate-400 mb-1">聲速與管長 (v & L)</div>
+                <div class="text-base md:text-lg font-bold text-purple-300 font-mono" id="dispSpeedLen">343 m/s | 0.50 m</div>
+            </div>
+        </div>
+
+        <!-- 控制模組區 -->
+        <div class="bg-slate-800/80 p-5 rounded-2xl border border-slate-700 shadow-xl grid grid-cols-1 md:grid-cols-3 gap-5">
+            
+            <div class="flex flex-col gap-2">
+                <label class="text-sm font-semibold text-slate-200 flex justify-between">
+                    <span>諧音階數 (Harmonic)</span>
+                </label>
+                <select id="harmonicSelector" class="w-full">
+                    <option value="1">基頻 / 第 1 諧音 (n = 1)</option>
+                    <option value="2">第 2 諧音 (n = 2)</option>
+                    <option value="3">第 3 諧音 (n = 3)</option>
+                    <option value="4">第 4 諧音 (n = 4)</option>
+                    <option value="5">第 5 諧音 (n = 5)</option>
+                    <option value="6">第 6 諧音 (n = 6)</option>
+                </select>
+            </div>
+
+            <div class="flex flex-col gap-2">
+                <div class="text-sm font-semibold text-slate-200 flex justify-between">
+                    <span>空氣管長度 (L)</span>
+                    <span class="value-badge" id="valTubeLength">0.50 m</span>
+                </div>
+                <input type="range" id="sliderLength" min="0.20" max="2.00" value="0.50" step="0.05">
+            </div>
+
+            <div class="flex flex-col gap-2">
+                <div class="text-sm font-semibold text-slate-200 flex justify-between">
+                    <span>聲波傳播速度 (v)</span>
+                    <span class="value-badge" id="valSoundSpeed">343 m/s</span>
+                </div>
+                <input type="range" id="sliderSpeed" min="300" max="380" value="343" step="1">
+            </div>
+
+            <div class="flex flex-col gap-2">
+                <div class="text-sm font-semibold text-slate-200 flex justify-between">
+                    <span>振動振幅 (A)</span>
+                    <span class="value-badge" id="valAmp">20 px</span>
+                </div>
+                <input type="range" id="sliderAmp" min="5" max="35" value="20" step="1">
+            </div>
+
+            <div class="flex flex-col gap-2">
+                <div class="text-sm font-semibold text-slate-200 flex justify-between">
+                    <span>視覺慢動作 (Visual Slow-Mo)</span>
+                    <span class="value-badge" id="valAnimSpeed">0.005x (慢動作)</span>
+                </div>
+                <input type="range" id="sliderAnimSpeed" min="0.001" max="0.02" value="0.005" step="0.001">
+            </div>
+
+            <div class="flex flex-col gap-2">
+                <div class="text-sm font-semibold text-slate-200 flex justify-between">
+                    <span>歷史殘影流動衰減</span>
+                    <span class="value-badge" id="valTrailLength">標準 (30 幀)</span>
+                </div>
+                <input type="range" id="sliderTrail" min="10" max="60" value="30" step="5">
+            </div>
+
+            <div class="flex flex-col justify-end gap-2 md:col-span-2">
+                <label class="checkbox-group">
+                    <input type="checkbox" id="chkShowGuides" checked>
+                    <span>顯示節點 (N) 與波腹 (A) 垂直對應虛線 (Align Guides)</span>
+                </label>
+                <label class="checkbox-group">
+                    <input type="checkbox" id="chkShowTrails" checked>
+                    <span>保留波型變化歷史軌跡/包絡線 (Motion Trail Envelope)</span>
+                </label>
+            </div>
+
+            <div class="md:col-span-3 flex gap-3 mt-2">
+                <button class="flex-1 bg-sky-600 hover:bg-sky-500 text-white font-semibold py-2.5 px-4 rounded-xl transition duration-200 flex justify-center items-center gap-2 shadow-lg" id="btnPause">
+                    <span id="pauseIcon">⏸</span> <span id="pauseText">暫停動畫</span>
+                </button>
+                <button class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2.5 px-4 rounded-xl transition duration-200 flex justify-center items-center gap-2 shadow-lg" id="btnAudio">
+                    🔊 播放真實諧音聲音 (Audio Synth)
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // Canvas & Context Setup
+        const canvas = document.getElementById('pipeCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // DOM Elements
+        const btnOpenPipe = document.getElementById('btnOpenPipe');
+        const btnClosedPipe = document.getElementById('btnClosedPipe');
+        const harmonicSelector = document.getElementById('harmonicSelector');
+        const sliderLength = document.getElementById('sliderLength');
+        const sliderSpeed = document.getElementById('sliderSpeed');
+        const sliderAmp = document.getElementById('sliderAmp');
+        const sliderAnimSpeed = document.getElementById('sliderAnimSpeed');
+        const sliderTrail = document.getElementById('sliderTrail');
+        const chkShowGuides = document.getElementById('chkShowGuides');
+        const chkShowTrails = document.getElementById('chkShowTrails');
+        const btnPause = document.getElementById('btnPause');
+        const btnAudio = document.getElementById('btnAudio');
+
+        // Badges & Displays
+        const valTubeLength = document.getElementById('valTubeLength');
+        const valSoundSpeed = document.getElementById('valSoundSpeed');
+        const valAmp = document.getElementById('valAmp');
+        const valAnimSpeed = document.getElementById('valAnimSpeed');
+        const valTrailLength = document.getElementById('valTrailLength');
+        const dispHarmonicName = document.getElementById('dispHarmonicName');
+        const dispFreq = document.getElementById('dispFreq');
+        const dispTrackedX = document.getElementById('dispTrackedX');
+        const dispSpeedLen = document.getElementById('dispSpeedLen');
+
+        // Simulation State
+        let pipeType = 'open'; // 'open' or 'closed'
+        let harmonicOrder = 1; // 1, 2, 3, 4, 5, 6
+        let tubeLength = parseFloat(sliderLength.value); // meters
+        let soundSpeed = parseFloat(sliderSpeed.value); // m/s
+        let ampPx = parseFloat(sliderAmp.value);
+        let animSpeed = parseFloat(sliderAnimSpeed.value); // Visual slow-motion scale
+        let trailMax = parseInt(sliderTrail.value);
+        let isRunning = true;
+        let simTime = 0;
+        let lastTimestamp = 0;
+
+        // Tracked particle state
+        let trackedXNorm = 0.35; // Position along pipe (0.0 to 1.0)
+        let isDraggingParticle = false;
+
+        // Wave history trails buffer for ghosting effect
+        let dispWaveHistory = [];
+        let pressWaveHistory = [];
+
+        // Time history for tracked particle displacement chart
+        let trackedParticleTimeHistory = []; // Array of { t: simTime, disp: float }
+        const maxTimeHistoryWindow = 6.0; // Seconds to show on dynamic time axis
+
+        // Audio State (Web Audio API)
+        let audioCtx = null;
+        let oscillator = null;
+        let gainNode = null;
+        let isAudioPlaying = false;
+
+        function updateHarmonicOptions() {
+            harmonicSelector.innerHTML = '';
+            if (pipeType === 'open') {
+                for (let i = 1; i <= 6; i++) {
+                    const opt = document.createElement('option');
+                    opt.value = i;
+                    opt.textContent = i === 1 ? `基頻 / 第 1 諧音 (n = 1)` : `第 ${i} 諧音 (n = ${i})`;
+                    harmonicSelector.appendChild(opt);
+                }
+            } else {
+                const oddHarmonics = [1, 3, 5, 7, 9, 11];
+                oddHarmonics.forEach((h, index) => {
+                    const opt = document.createElement('option');
+                    opt.value = h;
+                    opt.textContent = index === 0 ? `基頻 / 第 1 諧音 (m = 1)` : `第 ${h} 諧音 (m = ${h})`;
+                    harmonicSelector.appendChild(opt);
+                });
+            }
+            harmonicOrder = parseInt(harmonicSelector.value);
+            resetHistoryBuffers();
+        }
+
+        function calculateFrequency() {
+            if (pipeType === 'open') {
+                return (harmonicOrder * soundSpeed) / (2 * tubeLength);
+            } else {
+                return (harmonicOrder * soundSpeed) / (4 * tubeLength);
+            }
+        }
+
+        function calculateWavelength() {
+            if (pipeType === 'open') {
+                return (2 * tubeLength) / harmonicOrder;
+            } else {
+                return (4 * tubeLength) / harmonicOrder;
+            }
+        }
+
+        function resetHistoryBuffers() {
+            dispWaveHistory = [];
+            pressWaveHistory = [];
+            trackedParticleTimeHistory = [];
+        }
+
+        function updateUI() {
+            valTubeLength.textContent = `${tubeLength.toFixed(2)} m`;
+            valSoundSpeed.textContent = `${soundSpeed} m/s`;
+            valAmp.textContent = `${ampPx} px`;
+            valAnimSpeed.textContent = `${animSpeed.toFixed(3)}x (慢動作)`;
+            valTrailLength.textContent = `${trailMax} 幀`;
+
+            const freq = calculateFrequency();
+            const lambda = calculateWavelength();
+
+            dispHarmonicName.textContent = `第 ${harmonicOrder} 諧音 (${pipeType === 'open' ? '兩端開口' : '一端封閉'})`;
+            dispFreq.textContent = `${freq.toFixed(1)} Hz`;
+            dispTrackedX.textContent = `x = ${(trackedXNorm * tubeLength).toFixed(2)} m (${(trackedXNorm * 100).toFixed(0)}% L)`;
+            dispSpeedLen.textContent = `${soundSpeed} m/s | ${tubeLength.toFixed(2)} m`;
+
+            if (isAudioPlaying && oscillator) {
+                oscillator.frequency.setTargetAtTime(freq, audioCtx.currentTime, 0.05);
+            }
+        }
+
+        // Mouse / Touch Interaction for Dragging Tracked Particle
+        function getCanvasCoords(e) {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            return {
+                x: (clientX - rect.left) * scaleX,
+                y: (clientY - rect.top) * scaleY
+            };
+        }
+
+        function handlePointerDown(e) {
+            const pos = getCanvasCoords(e);
+            const pipeX = 90;
+            const pipeWidth = canvas.width - 180;
+            const pipeY = 50;
+            const pipeHeight = 120;
+
+            // Check if touch/click is within or near the pipe section
+            if (pos.x >= pipeX - 20 && pos.x <= pipeX + pipeWidth + 20 && pos.y >= pipeY - 20 && pos.y <= pipeY + pipeHeight + 30) {
+                isDraggingParticle = true;
+                updateTrackedPosFromCanvas(pos.x, pipeX, pipeWidth);
+            }
+        }
+
+        function handlePointerMove(e) {
+            if (!isDraggingParticle) return;
+            const pos = getCanvasCoords(e);
+            const pipeX = 90;
+            const pipeWidth = canvas.width - 180;
+            updateTrackedPosFromCanvas(pos.x, pipeX, pipeWidth);
+        }
+
+        function handlePointerUp() {
+            isDraggingParticle = false;
+        }
+
+        function updateTrackedPosFromCanvas(mouseX, pipeX, pipeWidth) {
+            let norm = (mouseX - pipeX) / pipeWidth;
+            norm = Math.max(0, Math.min(1, norm)); // Clamp 0..1
+            if (Math.abs(norm - trackedXNorm) > 0.001) {
+                trackedXNorm = norm;
+                trackedParticleTimeHistory = []; // Clear graph buffer on position shift
+                updateUI();
+            }
+        }
+
+        canvas.addEventListener('mousedown', handlePointerDown);
+        canvas.addEventListener('mousemove', handlePointerMove);
+        window.addEventListener('mouseup', handlePointerUp);
+
+        canvas.addEventListener('touchstart', (e) => { handlePointerDown(e); e.preventDefault(); }, { passive: false });
+        canvas.addEventListener('touchmove', (e) => { handlePointerMove(e); e.preventDefault(); }, { passive: false });
+        window.addEventListener('touchend', handlePointerUp);
+
+        // Audio Synthesis
+        function toggleAudio() {
+            if (!isAudioPlaying) {
+                if (!audioCtx) {
+                    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                    audioCtx = new AudioContextClass();
+                }
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+
+                oscillator = audioCtx.createOscillator();
+                gainNode = audioCtx.createGain();
+
+                const freq = calculateFrequency();
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(freq, audioCtx.currentTime);
+
+                gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+                gainNode.gain.linearRampToValueAtTime(0.15, audioCtx.currentTime + 0.1);
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                oscillator.start();
+
+                isAudioPlaying = true;
+                btnAudio.classList.remove('bg-emerald-600', 'hover:bg-emerald-500');
+                btnAudio.classList.add('bg-rose-600', 'hover:bg-rose-500');
+                btnAudio.innerHTML = '🔇 關閉聲音 (Stop Audio)';
+            } else {
+                if (gainNode) {
+                    gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.08);
+                    setTimeout(() => {
+                        if (oscillator) {
+                            oscillator.stop();
+                            oscillator.disconnect();
+                        }
+                        isAudioPlaying = false;
+                        btnAudio.classList.remove('bg-rose-600', 'hover:bg-rose-500');
+                        btnAudio.classList.add('bg-emerald-600', 'hover:bg-emerald-500');
+                        btnAudio.innerHTML = '🔊 播放真實諧音聲音 (Audio Synth)';
+                    }, 100);
+                }
+            }
+        }
+
+        btnOpenPipe.addEventListener('click', () => {
+            pipeType = 'open';
+            btnOpenPipe.classList.add('active');
+            btnClosedPipe.classList.remove('active');
+            updateHarmonicOptions();
+            updateUI();
+        });
+
+        btnClosedPipe.addEventListener('click', () => {
+            pipeType = 'closed';
+            btnClosedPipe.classList.add('active');
+            btnOpenPipe.classList.remove('active');
+            updateHarmonicOptions();
+            updateUI();
+        });
+
+        harmonicSelector.addEventListener('change', (e) => {
+            harmonicOrder = parseInt(e.target.value);
+            resetHistoryBuffers();
+            updateUI();
+        });
+
+        sliderLength.addEventListener('input', (e) => {
+            tubeLength = parseFloat(e.target.value);
+            resetHistoryBuffers();
+            updateUI();
+        });
+
+        sliderSpeed.addEventListener('input', (e) => {
+            soundSpeed = parseFloat(e.target.value);
+            resetHistoryBuffers();
+            updateUI();
+        });
+
+        sliderAmp.addEventListener('input', (e) => {
+            ampPx = parseFloat(e.target.value);
+            resetHistoryBuffers();
+            updateUI();
+        });
+
+        sliderAnimSpeed.addEventListener('input', (e) => {
+            animSpeed = parseFloat(e.target.value);
+            updateUI();
+        });
+
+        sliderTrail.addEventListener('input', (e) => {
+            trailMax = parseInt(e.target.value);
+            updateUI();
+        });
+
+        btnPause.addEventListener('click', () => {
+            isRunning = !isRunning;
+            document.getElementById('pauseIcon').textContent = isRunning ? '⏸' : '▶';
+            document.getElementById('pauseText').textContent = isRunning ? '暫停動畫' : '繼續播放';
+        });
+
+        btnAudio.addEventListener('click', toggleAudio);
+
+        function getDisplacementSpatialFactor(normX) {
+            if (pipeType === 'open') {
+                return Math.cos(harmonicOrder * Math.PI * normX);
+            } else {
+                return Math.cos((harmonicOrder * Math.PI * normX) / 2);
+            }
+        }
+
+        function getPressureSpatialFactor(normX) {
+            if (pipeType === 'open') {
+                return Math.sin(harmonicOrder * Math.PI * normX);
+            } else {
+                return Math.sin((harmonicOrder * Math.PI * normX) / 2);
+            }
+        }
+
+        function draw(timestamp) {
+            if (!lastTimestamp) lastTimestamp = timestamp;
+            const dt = (timestamp - lastTimestamp) / 1000;
+            lastTimestamp = timestamp;
+
+            const freq = calculateFrequency();
+            const visualFreq = freq * animSpeed;
+            const omega = 2 * Math.PI * visualFreq;
+
+            if (isRunning) {
+                simTime += dt;
+            }
+
+            const timeFactor = Math.cos(omega * simTime);
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Pipe dimensions
+            const pipeX = 90;
+            const pipeY = 45;
+            const pipeWidth = canvas.width - 180;
+            const pipeHeight = 110;
+            const pipeRight = pipeX + pipeWidth;
+
+            // Section Center Y coordinates
+            const dispGraphY = 250;
+            const pressGraphY = 410;
+            const timeChartY = 590;
+            const graphAmp = 42;
+
+            // 1. Draw Pipe Body & Particles
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(pipeX, pipeY, pipeWidth, pipeHeight);
+
+            // Pipe Wall Borders
+            ctx.strokeStyle = '#94a3b8';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(pipeX, pipeY);
+            ctx.lineTo(pipeRight, pipeY);
+            ctx.moveTo(pipeX, pipeY + pipeHeight);
+            ctx.lineTo(pipeRight, pipeY + pipeHeight);
+            ctx.stroke();
+
+            // Right Boundary
+            if (pipeType === 'closed') {
+                ctx.fillStyle = '#475569';
+                ctx.fillRect(pipeRight, pipeY - 4, 12, pipeHeight + 8);
+                ctx.strokeStyle = '#cbd5e1';
+                ctx.beginPath();
+                ctx.moveTo(pipeRight, pipeY - 4);
+                ctx.lineTo(pipeRight, pipeY + pipeHeight + 4);
+                ctx.stroke();
+            } else {
+                ctx.strokeStyle = '#38bdf8';
+                ctx.setLineDash([4, 4]);
+                ctx.beginPath();
+                ctx.moveTo(pipeRight, pipeY);
+                ctx.lineTo(pipeRight, pipeY + pipeHeight);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+
+            // Left Boundary (Always Open)
+            ctx.strokeStyle = '#38bdf8';
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath();
+            ctx.moveTo(pipeX, pipeY);
+            ctx.lineTo(pipeX, pipeY + pipeHeight);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Air Particles Simulation
+            const cols = 75;
+            const rows = 7;
+            const trackedColIndex = Math.round(trackedXNorm * cols);
+
+            for (let c = 0; c <= cols; c++) {
+                const normX = c / cols;
+                const x0 = pipeX + normX * pipeWidth;
+                const sFactor = getDisplacementSpatialFactor(normX);
+                const displacement = ampPx * sFactor * timeFactor;
+                const currentX = x0 + displacement;
+
+                const isTrackedCol = (c === trackedColIndex);
+
+                for (let r = 0; r < rows; r++) {
+                    const y = pipeY + 14 + (r / (rows - 1)) * (pipeHeight - 28);
+                    const isTrackedParticle = isTrackedCol && (r === Math.floor(rows / 2));
+
+                    if (isTrackedParticle) continue; // Draw tracked particle on top later
+
+                    ctx.beginPath();
+                    ctx.arc(currentX, y, 3, 0, Math.PI * 2);
+                    ctx.fillStyle = 'rgba(148, 163, 184, 0.7)';
+                    ctx.fill();
+                }
+            }
+
+            // Draggable Tracked Particle Render
+            const trackedSpatialFactor = getDisplacementSpatialFactor(trackedXNorm);
+            const trackedDisp = ampPx * trackedSpatialFactor * timeFactor;
+            const trackedX0 = pipeX + trackedXNorm * pipeWidth;
+            const trackedCurrentX = trackedX0 + trackedDisp;
+            const trackedY = pipeY + pipeHeight / 2;
+
+            // Draw Draggable Target Line & Marker
+            ctx.save();
+            ctx.strokeStyle = '#f43f5e';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([3, 3]);
+            ctx.beginPath();
+            ctx.moveTo(trackedX0, pipeY - 12);
+            ctx.lineTo(trackedX0, pressGraphY + graphAmp + 15);
+            ctx.stroke();
+            ctx.restore();
+
+            // Tracked Red Particle Blob
+            ctx.beginPath();
+            ctx.arc(trackedCurrentX, trackedY, 8, 0, Math.PI * 2);
+            ctx.fillStyle = '#ef4444';
+            ctx.shadowColor = '#f43f5e';
+            ctx.shadowBlur = 10;
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Handle indicator above pipe for easy dragging
+            ctx.fillStyle = '#ef4444';
+            ctx.beginPath();
+            ctx.moveTo(trackedX0 - 7, pipeY - 14);
+            ctx.lineTo(trackedX0 + 7, pipeY - 14);
+            ctx.lineTo(trackedX0, pipeY - 6);
+            ctx.closePath();
+            ctx.fill();
+
+            // Store current tracked particle displacement into dynamic time history
+            if (isRunning) {
+                trackedParticleTimeHistory.push({
+                    t: simTime,
+                    disp: trackedDisp
+                });
+                // Prune history buffer older than max window length
+                while (trackedParticleTimeHistory.length > 0 && (simTime - trackedParticleTimeHistory[0].t) > maxTimeHistoryWindow) {
+                    trackedParticleTimeHistory.shift();
+                }
+            }
+
+            // 2. Draw Nodes & Antinodes Vertical Guide Lines across pipe & graph panels
+            if (chkShowGuides.checked) {
+                ctx.save();
+                ctx.font = 'bold 12px sans-serif';
+                ctx.textAlign = 'center';
+
+                if (pipeType === 'open') {
+                    // Displacement Antinodes (A) at x = k * L / n
+                    for (let k = 0; k <= harmonicOrder; k++) {
+                        const normX = k / harmonicOrder;
+                        const x = pipeX + normX * pipeWidth;
+
+                        ctx.strokeStyle = 'rgba(56, 189, 248, 0.25)';
+                        ctx.setLineDash([4, 4]);
+                        ctx.beginPath();
+                        ctx.moveTo(x, pipeY);
+                        ctx.lineTo(x, pressGraphY + graphAmp + 15);
+                        ctx.stroke();
+
+                        ctx.fillStyle = '#38bdf8';
+                        ctx.fillText('A', x, pipeY - 18);
+                    }
+                    // Displacement Nodes (N) at x = (2k + 1) * L / (2n)
+                    for (let k = 0; k < harmonicOrder; k++) {
+                        const normX = (2 * k + 1) / (2 * harmonicOrder);
+                        const x = pipeX + normX * pipeWidth;
+
+                        ctx.strokeStyle = 'rgba(52, 211, 153, 0.25)';
+                        ctx.setLineDash([4, 4]);
+                        ctx.beginPath();
+                        ctx.moveTo(x, pipeY);
+                        ctx.lineTo(x, pressGraphY + graphAmp + 15);
+                        ctx.stroke();
+
+                        ctx.fillStyle = '#34d399';
+                        ctx.fillText('N', x, pipeY - 18);
+                    }
+                } else {
+                    // Closed pipe (Odd harmonics m = harmonicOrder)
+                    for (let k = 0; 2 * k <= harmonicOrder; k++) {
+                        const normX = (2 * k) / harmonicOrder;
+                        const x = pipeX + normX * pipeWidth;
+
+                        ctx.strokeStyle = 'rgba(56, 189, 248, 0.25)';
+                        ctx.setLineDash([4, 4]);
+                        ctx.beginPath();
+                        ctx.moveTo(x, pipeY);
+                        ctx.lineTo(x, pressGraphY + graphAmp + 15);
+                        ctx.stroke();
+
+                        ctx.fillStyle = '#38bdf8';
+                        ctx.fillText('A', x, pipeY - 18);
+                    }
+                    for (let k = 0; 2 * k + 1 <= harmonicOrder; k++) {
+                        const normX = (2 * k + 1) / harmonicOrder;
+                        const x = pipeX + normX * pipeWidth;
+
+                        ctx.strokeStyle = 'rgba(52, 211, 153, 0.25)';
+                        ctx.setLineDash([4, 4]);
+                        ctx.beginPath();
+                        ctx.moveTo(x, pipeY);
+                        ctx.lineTo(x, pressGraphY + graphAmp + 15);
+                        ctx.stroke();
+
+                        ctx.fillStyle = '#34d399';
+                        ctx.fillText('N', x, pipeY - 18);
+                    }
+                }
+                ctx.restore();
+            }
+
+            // 3. Section: Displacement Wave Graph s(x,t)
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '13px sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('位移駐波圖 s(x,t) [Displacement Wave]', pipeX, dispGraphY - graphAmp - 12);
+
+            // Baseline
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(pipeX, dispGraphY);
+            ctx.lineTo(pipeRight, dispGraphY);
+            ctx.stroke();
+
+            // Compute current displacement curve
+            const currentDispPoints = [];
+            for (let px = 0; px <= pipeWidth; px++) {
+                const normX = px / pipeWidth;
+                const env = getDisplacementSpatialFactor(normX);
+                const val = env * timeFactor;
+                currentDispPoints.push(val);
+            }
+
+            if (isRunning) {
+                dispWaveHistory.push([...currentDispPoints]);
+                if (dispWaveHistory.length > trailMax) dispWaveHistory.shift();
+            }
+
+            // Draw Faint Motion Trails / Wave Envelope (Ghosting)
+            if (chkShowTrails.checked) {
+                for (let h = 0; h < dispWaveHistory.length; h++) {
+                    const alpha = ((h + 1) / dispWaveHistory.length) * 0.28;
+                    const points = dispWaveHistory[h];
+                    ctx.beginPath();
+                    ctx.strokeStyle = `rgba(56, 189, 248, ${alpha})`;
+                    ctx.lineWidth = 1.2;
+                    for (let px = 0; px <= pipeWidth; px++) {
+                        const y = dispGraphY - points[px] * graphAmp;
+                        if (px === 0) ctx.moveTo(pipeX + px, y);
+                        else ctx.lineTo(pipeX + px, y);
+                    }
+                    ctx.stroke();
+                }
+            }
+
+            // Draw Main Displacement Active Wave Line
+            ctx.beginPath();
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 2.5;
+            for (let px = 0; px <= pipeWidth; px++) {
+                const y = dispGraphY - currentDispPoints[px] * graphAmp;
+                if (px === 0) ctx.moveTo(pipeX + px, y);
+                else ctx.lineTo(pipeX + px, y);
+            }
+            ctx.stroke();
+
+            // 4. Section: Pressure Wave Graph ΔP(x,t)
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '13px sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('壓力波/密度變化圖 ΔP(x,t) [Pressure Wave]', pipeX, pressGraphY - graphAmp - 12);
+
+            // Baseline
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(pipeX, pressGraphY);
+            ctx.lineTo(pipeRight, pressGraphY);
+            ctx.stroke();
+
+            // Compute current pressure curve
+            const currentPressPoints = [];
+            for (let px = 0; px <= pipeWidth; px++) {
+                const normX = px / pipeWidth;
+                const env = getPressureSpatialFactor(normX);
+                const val = env * timeFactor;
+                currentPressPoints.push(val);
+            }
+
+            if (isRunning) {
+                pressWaveHistory.push([...currentPressPoints]);
+                if (pressWaveHistory.length > trailMax) pressWaveHistory.shift();
+            }
+
+            // Draw Faint Motion Trails for Pressure
+            if (chkShowTrails.checked) {
+                for (let h = 0; h < pressWaveHistory.length; h++) {
+                    const alpha = ((h + 1) / pressWaveHistory.length) * 0.28;
+                    const points = pressWaveHistory[h];
+                    ctx.beginPath();
+                    ctx.strokeStyle = `rgba(251, 191, 36, ${alpha})`;
+                    ctx.lineWidth = 1.2;
+                    for (let px = 0; px <= pipeWidth; px++) {
+                        const y = pressGraphY - points[px] * graphAmp;
+                        if (px === 0) ctx.moveTo(pipeX + px, y);
+                        else ctx.lineTo(pipeX + px, y);
+                    }
+                    ctx.stroke();
+                }
+            }
+
+            // Draw Main Pressure Wave Line
+            ctx.beginPath();
+            ctx.strokeStyle = '#fbbf24';
+            ctx.lineWidth = 2.5;
+            for (let px = 0; px <= pipeWidth; px++) {
+                const y = pressGraphY - currentPressPoints[px] * graphAmp;
+                if (px === 0) ctx.moveTo(pipeX + px, y);
+                else ctx.lineTo(pipeX + px, y);
+            }
+            ctx.stroke();
+
+            // 5. Section: Tracked Particle Displacement vs Time Graph s(t)
+            ctx.fillStyle = '#e2e8f0';
+            ctx.font = 'bold 13px sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText(`追蹤質點動態位移-時間圖 s(t)  [位置 x = ${(trackedXNorm * tubeLength).toFixed(2)}m]`, pipeX, timeChartY - graphAmp - 12);
+
+            // Time Chart Box Background
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.8)';
+            ctx.fillRect(pipeX, timeChartY - graphAmp, pipeWidth, graphAmp * 2);
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(pipeX, timeChartY - graphAmp, pipeWidth, graphAmp * 2);
+
+            // Time Axis Center Baseline
+            ctx.beginPath();
+            ctx.moveTo(pipeX, timeChartY);
+            ctx.lineTo(pipeRight, timeChartY);
+            ctx.stroke();
+
+            // Render Dynamic Rolling Line Chart for s(t)
+            if (trackedParticleTimeHistory.length > 1) {
+                const latestTime = simTime;
+                const startTime = Math.max(0, latestTime - maxTimeHistoryWindow);
+
+                ctx.beginPath();
+                ctx.strokeStyle = '#f43f5e';
+                ctx.lineWidth = 2.2;
+
+                for (let i = 0; i < trackedParticleTimeHistory.length; i++) {
+                    const pt = trackedParticleTimeHistory[i];
+                    if (pt.t < startTime) continue;
+
+                    const timeProgress = (pt.t - startTime) / maxTimeHistoryWindow; // 0.0 to 1.0
+                    const chartX = pipeX + timeProgress * pipeWidth;
+                    const chartY = timeChartY - (pt.disp / ampPx) * (graphAmp * 0.85);
+
+                    if (i === 0 || chartX === pipeX) ctx.moveTo(chartX, chartY);
+                    else ctx.lineTo(chartX, chartY);
+                }
+                ctx.stroke();
+
+                // Draw Current Real-Time Dot on Graph
+                const currentPt = trackedParticleTimeHistory[trackedParticleTimeHistory.length - 1];
+                const ptX = pipeRight;
+                const ptY = timeChartY - (currentPt.disp / ampPx) * (graphAmp * 0.85);
+
+                ctx.beginPath();
+                ctx.arc(ptX, ptY, 5, 0, Math.PI * 2);
+                ctx.fillStyle = '#ef4444';
+                ctx.fill();
+            }
+
+            // Time Axis Labels
+            ctx.fillStyle = '#64748b';
+            ctx.font = '10px monospace';
+            ctx.textAlign = 'right';
+            ctx.fillText(`時間 (t = ${simTime.toFixed(1)}s)`, pipeRight, timeChartY + graphAmp + 14);
+            ctx.textAlign = 'left';
+            ctx.fillText(`-$${maxTimeHistoryWindow}s`, pipeX, timeChartY + graphAmp + 14);
+
+            requestAnimationFrame(draw);
+        }
+
+        updateHarmonicOptions();
+        updateUI();
+        requestAnimationFrame(draw);
+
+    </script>
+</body>
+</html>
