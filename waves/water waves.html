@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>水波槽實驗模型 - 相對強度圖與開關切換版</title>
+    <title>水波槽實驗模型 - 邊界無反射與波源參數化版</title>
     <style>
         body {
             margin: 0;
@@ -24,14 +24,15 @@
             margin-bottom: 8px;
             flex-wrap: wrap;
             justify-content: center;
-            max-width: 820px;
+            max-width: 860px;
         }
         .sub-toolbar {
             background: #181a24;
-            padding: 6px 12px;
+            padding: 8px 14px;
             border-radius: 6px;
             border: 1px solid #2a2d3d;
             margin-bottom: 10px;
+            align-items: center;
         }
         button {
             background: #222530;
@@ -45,7 +46,29 @@
         }
         button:hover { background: #333848; color: #fff; }
         button.active { background: #0066cc; color: #fff; border-color: #0088ff; }
-        
+
+        .ctrl-group {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            color: #ccc;
+            background: #11131c;
+            padding: 3px 8px;
+            border-radius: 4px;
+            border: 1px solid #333748;
+        }
+        .ctrl-group input[type=range] {
+            width: 80px;
+            cursor: pointer;
+            accent-color: #0088ff;
+        }
+        .ctrl-val {
+            color: #ffcc00;
+            font-weight: bold;
+            min-width: 32px;
+        }
+
         .main-display {
             display: flex;
             gap: 12px;
@@ -128,21 +151,33 @@
 
     <!-- 波源與邊界細部設定列 -->
     <div class="toolbar sub-toolbar" id="waveSubToolbar">
-        <span style="font-size: 13px; color: #aaa; align-self: center;">波源：</span>
+        <span style="font-size: 13px; color: #aaa;">波源：</span>
         <button id="srcSingle" class="active" onclick="setWaveType('single')">🔴 單點</button>
         <button id="srcLine" onclick="setWaveType('line')">➖ 線波源</button>
         <button id="srcDouble" onclick="setWaveType('double')">👯 雙點</button>
         
-        <span style="font-size: 13px; color: #aaa; align-self: center; margin-left: 8px;">方式：</span>
+        <span style="font-size: 13px; color: #aaa; margin-left: 4px;">方式：</span>
         <button id="emitPulse" class="active" onclick="setWaveEmitMode('pulse')">⚡ 脈衝</button>
         <button id="emitContinuous" onclick="setWaveEmitMode('continuous')">🌊 連續波</button>
 
-        <span style="font-size: 13px; color: #aaa; align-self: center; margin-left: 8px;">邊界：</span>
-        <button id="boundReflect" onclick="setBoundaryMode('reflect')">🧱 反射邊界</button>
-        <button id="boundAbsorb" class="active" onclick="setBoundaryMode('absorb')">🧽 吸收邊界(無反射)</button>
+        <span style="font-size: 13px; color: #aaa; margin-left: 4px;">邊界：</span>
+        <button id="boundReflect" onclick="setBoundaryMode('reflect')">🧱 反射</button>
+        <button id="boundAbsorb" class="active" onclick="setBoundaryMode('absorb')">🧽 無反射吸收</button>
 
-        <span style="font-size: 13px; color: #aaa; align-self: center; margin-left: 8px;">偵測：</span>
-        <button id="btnToggleGraph" class="active" onclick="toggleGraph()">📊 強度圖：開啟</button>
+        <!-- 動態參數控制項 -->
+        <span class="ctrl-group">
+            <label>頻率:</label>
+            <input type="range" id="sliderFreq" min="0.5" max="2.0" step="0.1" value="1.0" oninput="updateParams()">
+            <span class="ctrl-val" id="valFreq">1.0x</span>
+        </span>
+
+        <span class="ctrl-group" id="groupDist">
+            <label>雙點間距:</label>
+            <input type="range" id="sliderDist" min="0.5" max="4.0" step="0.1" value="2.0" oninput="updateParams()">
+            <span class="ctrl-val" id="valDist">2.0 λ</span>
+        </span>
+
+        <button id="btnToggleGraph" class="active" onclick="toggleGraph()" style="margin-left: 4px;">📊 強度圖</button>
     </div>
 
     <!-- 教學標註工具列 -->
@@ -166,7 +201,7 @@
         </div>
     </div>
 
-    <div class="info" id="statusText">目前模式：【波源】單點波源 / 單次脈衝 / 吸收邊界</div>
+    <div class="info" id="statusText">目前模式：【波源】單點波源 / 單次脈衝 / 無反射吸收邊界</div>
 
     <script>
         const waveCanvas = document.getElementById('waveCanvas');
@@ -185,20 +220,22 @@
         let buffer2 = new Float32Array(width * height);
         let speedMap = new Float32Array(width * height).fill(0.45);
         let obstacleMap = new Uint8Array(width * height);
-        
-        // 用於儲存強度包絡線 (Intensity Envelope)
         let intensityEnvelope = new Float32Array(height);
 
-        const damping = 0.992; 
+        const damping = 0.993; 
         const imgData = waveCtx.createImageData(width, height);
         const data = imgData.data;
 
         let isPaused = false;
-        let showGraph = true;            // 控制右側強度圖與偵測線顯示/隱藏
+        let showGraph = true;            
         let currentMode = 'wave';       
         let waveType = 'single';         
         let waveEmitMode = 'pulse';      
         let boundaryMode = 'absorb';    
+
+        // 波源動態參數
+        let freqScale = 1.0;
+        let doubleDistLambda = 2.0;
         
         let penMode = 'solid';
         let isDrawing = false;
@@ -206,14 +243,27 @@
         let waveTime = 0;
 
         let lastGridX = null, lastGridY = null;
-        let lastAnnoX = null, lastAnnoY = null;
+
+        // 計算目前設定下的網格波長 λ (Grid Units)
+        function getWavelengthGrid() {
+            const c = Math.sqrt(0.45); // 波速
+            const omega = 0.25 * freqScale;
+            return (c * 2 * Math.PI) / omega; // 預設約 16.85 格
+        }
+
+        function updateParams() {
+            freqScale = parseFloat(document.getElementById('sliderFreq').value);
+            doubleDistLambda = parseFloat(document.getElementById('sliderDist').value);
+            document.getElementById('valFreq').innerText = freqScale.toFixed(1) + 'x';
+            document.getElementById('valDist').innerText = doubleDistLambda.toFixed(1) + ' λ';
+        }
 
         function updateWave() {
             if (isPaused) return;
 
             // 連續週期波注入
             if (isDrawing && currentMode === 'wave' && waveEmitMode === 'continuous' && activePointerGrid) {
-                waveTime += 0.35;
+                waveTime += 0.25 * freqScale;
                 const val = Math.sin(waveTime) * 250;
                 triggerWaveSource(activePointerGrid.x, activePointerGrid.y, val);
             }
@@ -232,12 +282,15 @@
 
                     let nextVal = (2 * buffer1[i] - buffer2[i] + laplacian * cSq) * damping;
 
-                    // 吸收邊界
+                    // 無反射邊界（零回波 Smooth Cubic Sponge Layer）
                     if (boundaryMode === 'absorb') {
+                        const margin = 42;
                         const distEdge = Math.min(x, width - 1 - x, y, height - 1 - y);
-                        if (distEdge < 25) {
-                            const dampRatio = distEdge / 25;
-                            nextVal *= (0.82 + 0.18 * dampRatio);
+                        if (distEdge < margin) {
+                            const ratio = (margin - distEdge) / margin; // 0 at margin, 1 at edge
+                            // 漸進式阻尼曲線，完全避免阻抗不匹配產生的反射
+                            const dampFactor = 1.0 - 0.22 * Math.pow(ratio, 2.2);
+                            nextVal *= dampFactor;
                         }
                     }
 
@@ -245,11 +298,23 @@
                 }
             }
 
+            // 最外圍邊緣強制衰減
+            if (boundaryMode === 'absorb') {
+                for (let x = 0; x < width; x++) {
+                    buffer2[x] *= 0.5;
+                    buffer2[(height - 1) * width + x] *= 0.5;
+                }
+                for (let y = 0; y < height; y++) {
+                    buffer2[y * width] *= 0.5;
+                    buffer2[y * width + (width - 1)] *= 0.5;
+                }
+            }
+
             let temp = buffer1;
             buffer1 = buffer2;
             buffer2 = temp;
 
-            // 更新右側偵測線上的強度包絡線 (包絡平滑化)
+            // 更新右側強度包絡線
             if (showGraph) {
                 for (let y = 0; y < height; y++) {
                     const absVal = Math.abs(buffer1[y * width + detectX]);
@@ -288,7 +353,7 @@
             waveCtx.imageSmoothingEnabled = true;
             waveCtx.drawImage(offscreen, 0, 0, waveCanvas.width, waveCanvas.height);
 
-            // 若開關開啟，在水波槽畫面上繪製黃色虛線偵測軸
+            // 繪製黃色虛線偵測軸
             if (showGraph) {
                 waveCtx.beginPath();
                 waveCtx.strokeStyle = 'rgba(255, 204, 0, 0.5)';
@@ -302,7 +367,6 @@
             }
         }
 
-        // 渲染右側【相對強度】位置圖表
         function renderGraph() {
             if (!showGraph) return;
 
@@ -312,18 +376,13 @@
             graphCtx.fillStyle = '#090a0f';
             graphCtx.fillRect(0, 0, gw, gh);
 
-            // 1. 搜尋目前偵測線上最大的強度值 (用於相對強度歸一化)
             let maxEnv = 0;
             for (let y = 0; y < height; y++) {
-                if (intensityEnvelope[y] > maxEnv) {
-                    maxEnv = intensityEnvelope[y];
-                }
+                if (intensityEnvelope[y] > maxEnv) maxEnv = intensityEnvelope[y];
             }
-
-            // 設定底限門檻（微小背景雜訊不放大誇大）
             const scaleFactor = Math.max(maxEnv, 2.0);
 
-            // 2. 繪製 0%, 50%, 100% 座標參考虛線
+            // 參考虛線
             graphCtx.strokeStyle = '#1a1d29';
             graphCtx.lineWidth = 1;
             const refXs = [15, 15 + 110 * 0.5, 15 + 110];
@@ -336,7 +395,7 @@
             });
             graphCtx.setLineDash([]);
 
-            // 3. 繪製藍色即時波形 (相對震幅 % )
+            // 藍色即時波形
             graphCtx.beginPath();
             graphCtx.strokeStyle = 'rgba(0, 162, 255, 0.6)';
             graphCtx.lineWidth = 1.2;
@@ -351,7 +410,7 @@
             }
             graphCtx.stroke();
 
-            // 4. 繪製黃色相對強度包絡線 ( relative I / I_max )
+            // 黃色相對強度包絡線
             graphCtx.beginPath();
             graphCtx.strokeStyle = '#ffcc00';
             graphCtx.lineWidth = 2.2;
@@ -365,7 +424,7 @@
             }
             graphCtx.stroke();
 
-            // 5. 標註 0 與 1.0 (100%) 刻度文字
+            // 文字標註
             graphCtx.fillStyle = '#667';
             graphCtx.font = '10px sans-serif';
             graphCtx.fillText('0', 12, gh - 6);
@@ -401,22 +460,25 @@
                     dropPoint(x, y + dy, 1, strength * 0.7);
                 }
             } else if (waveType === 'double') {
-                const dist = 18;
-                dropPoint(x, y - dist, 2, strength);
-                dropPoint(x, y + dist, 2, strength);
+                const lambdaGrid = getWavelengthGrid();
+                const halfDist = Math.round((doubleDistLambda * lambdaGrid) / 2);
+                dropPoint(x, y - halfDist, 2, strength);
+                dropPoint(x, y + halfDist, 2, strength);
             }
         }
 
-        function editMap(x, y, radius, type) {
+        // 圓形蓋印地圖編輯 (圓滑地圖筆觸)
+        function applyCircularStamp(cx, cy, radius, type) {
             for (let dy = -radius; dy <= radius; dy++) {
                 for (let dx = -radius; dx <= radius; dx++) {
-                    const nx = x + dx, ny = y + dy;
-                    if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
-                        const i = ny * width + nx;
-                        if (type === 'obstacle') obstacleMap[i] = 1;
-                        else if (type === 'clear') { obstacleMap[i] = 0; speedMap[i] = 0.45; }
-                        else if (type === 'shallow') { obstacleMap[i] = 0; speedMap[i] = 0.12; }
-                        else if (type === 'deep') { obstacleMap[i] = 0; speedMap[i] = 0.45; }
+                    if (dx * dx + dy * dy <= radius * radius) {
+                        const nx = cx + dx, ny = cy + dy;
+                        if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                            const i = ny * width + nx;
+                            if (type === 'obstacle') obstacleMap[i] = 1;
+                            else if (type === 'shallow') { obstacleMap[i] = 0; speedMap[i] = 0.12; }
+                            else if (type === 'deep') { obstacleMap[i] = 0; speedMap[i] = 0.45; }
+                        }
                     }
                 }
             }
@@ -438,16 +500,14 @@
             }
         }
 
-        // 強度圖與偵測線顯示開關
         function toggleGraph() {
             showGraph = !showGraph;
             graphBox.style.display = showGraph ? 'flex' : 'none';
             const btn = document.getElementById('btnToggleGraph');
             btn.classList.toggle('active', showGraph);
-            btn.innerText = showGraph ? '📊 強度圖：開啟' : '📊 強度圖：關閉';
+            btn.innerText = showGraph ? '📊 強度圖' : '📊 強度圖(關)';
         }
 
-        // 僅清除水波波動
         function clearWavesOnly() {
             buffer1.fill(0);
             buffer2.fill(0);
@@ -455,7 +515,6 @@
             waveTime = 0;
         }
 
-        // 重置地圖與水波
         function clearMap() {
             clearWavesOnly();
             obstacleMap.fill(0);
@@ -464,13 +523,21 @@
 
         function setMode(mode) {
             currentMode = mode;
-            document.querySelectorAll('.toolbar button').forEach(b => b.classList.remove('active'));
+            if (isPaused) togglePause(); // 切換模式時自動解除暫停
+
+            document.querySelectorAll('.toolbar button').forEach(b => {
+                if (['modeWave', 'modeObstacle', 'modeShallow', 'modeDeep'].includes(b.id)) {
+                    b.classList.remove('active');
+                }
+            });
+
             if(mode === 'wave') document.getElementById('modeWave').classList.add('active');
             if(mode === 'obstacle') document.getElementById('modeObstacle').classList.add('active');
             if(mode === 'shallow') document.getElementById('modeShallow').classList.add('active');
             if(mode === 'deep') document.getElementById('modeDeep').classList.add('active');
             
             document.getElementById('waveSubToolbar').style.display = (mode === 'wave') ? 'flex' : 'none';
+            document.getElementById('groupDist').style.display = (mode === 'wave' && waveType === 'double') ? 'inline-flex' : 'none';
             updateStatus();
         }
 
@@ -479,6 +546,7 @@
             document.getElementById('srcSingle').classList.toggle('active', type === 'single');
             document.getElementById('srcLine').classList.toggle('active', type === 'line');
             document.getElementById('srcDouble').classList.toggle('active', type === 'double');
+            document.getElementById('groupDist').style.display = (type === 'double') ? 'inline-flex' : 'none';
             updateStatus();
         }
 
@@ -517,8 +585,8 @@
                 if (currentMode === 'wave') {
                     const typeName = waveType === 'single' ? '單點波源' : (waveType === 'line' ? '線波源' : '雙點波源');
                     const emitName = waveEmitMode === 'pulse' ? '單次脈衝' : '連續週期波';
-                    const boundName = boundaryMode === 'reflect' ? '反射邊界' : '吸收邊界(無反射)';
-                    txt.innerText = `目前模式：【波源】${typeName} / ${emitName} / ${boundName}`;
+                    const boundName = boundaryMode === 'reflect' ? '反射邊界' : '無反射吸收邊界';
+                    txt.innerText = `目前模式：【波源】${typeName} / ${emitName} / ${boundName} (頻率:${freqScale.toFixed(1)}x)`;
                 } else {
                     txt.innerText = `目前模式：【編輯地圖】劃過畫面可修改區域`;
                 }
@@ -530,12 +598,15 @@
             if (currentMode === 'wave') {
                 if (waveEmitMode === 'pulse') {
                     triggerWaveSource(currX, currY, 350);
+                } else if (waveEmitMode === 'continuous') {
+                    waveTime = Math.PI / 2;
+                    triggerWaveSource(currX, currY, 250);
                 }
             } else {
                 const action = (x, y) => {
-                    if (currentMode === 'obstacle') editMap(x, y, 3, 'obstacle');
-                    else if (currentMode === 'shallow') editMap(x, y, 7, 'shallow');
-                    else if (currentMode === 'deep') editMap(x, y, 7, 'deep');
+                    if (currentMode === 'obstacle') applyCircularStamp(x, y, 3, 'obstacle');
+                    else if (currentMode === 'shallow') applyCircularStamp(x, y, 7, 'shallow');
+                    else if (currentMode === 'deep') applyCircularStamp(x, y, 7, 'deep');
                 };
 
                 if (lastGridX !== null && lastGridY !== null) {
@@ -572,7 +643,9 @@
             if (!isDrawing || isPaused) return;
             const coords = getGridCoords(e);
             activePointerGrid = coords;
-            applyPointerAction(coords.x, coords.y);
+            if (currentMode !== 'wave') {
+                applyPointerAction(coords.x, coords.y);
+            }
         });
 
         const stopDrawingWave = (e) => {
@@ -586,37 +659,45 @@
         waveCanvas.addEventListener('pointerup', stopDrawingWave);
         waveCanvas.addEventListener('pointercancel', stopDrawingWave);
 
-        // 教師畫筆事件
+        // 教師畫筆平滑事件 (二次貝茲曲線中點運算)
+        let strokePoints = [];
+
         annoCanvas.addEventListener('pointerdown', (e) => {
             annoCanvas.setPointerCapture(e.pointerId);
             isDrawing = true;
             const rect = annoCanvas.getBoundingClientRect();
-            lastAnnoX = e.clientX - rect.left;
-            lastAnnoY = e.clientY - rect.top;
+            strokePoints = [{ x: e.clientX - rect.left, y: e.clientY - rect.top }];
         });
 
         annoCanvas.addEventListener('pointermove', (e) => {
             if (!isDrawing || !isPaused) return;
             const rect = annoCanvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
+            strokePoints.push({ x: e.clientX - rect.left, y: e.clientY - rect.top });
 
-            annoCtx.beginPath();
-            annoCtx.strokeStyle = '#ff3366';
-            annoCtx.lineWidth = 3;
-            annoCtx.lineCap = 'round';
-            annoCtx.setLineDash(penMode === 'dashed' ? [8, 6] : []);
-            annoCtx.moveTo(lastAnnoX, lastAnnoY);
-            annoCtx.lineTo(x, y);
-            annoCtx.stroke();
+            if (strokePoints.length >= 3) {
+                const p1 = strokePoints[strokePoints.length - 3];
+                const p2 = strokePoints[strokePoints.length - 2];
+                const p3 = strokePoints[strokePoints.length - 1];
 
-            lastAnnoX = x;
-            lastAnnoY = y;
+                const mid1 = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+                const mid2 = { x: (p2.x + p3.x) / 2, y: (p2.y + p3.y) / 2 };
+
+                annoCtx.beginPath();
+                annoCtx.strokeStyle = '#ff3366';
+                annoCtx.lineWidth = 3;
+                annoCtx.lineCap = 'round';
+                annoCtx.lineJoin = 'round';
+                annoCtx.setLineDash(penMode === 'dashed' ? [8, 6] : []);
+                annoCtx.moveTo(mid1.x, mid1.y);
+                annoCtx.quadraticCurveTo(p2.x, p2.y, mid2.x, mid2.y);
+                annoCtx.stroke();
+            }
         });
 
         const stopDrawingAnno = (e) => {
             if (isDrawing) {
                 isDrawing = false;
+                strokePoints = [];
                 try { annoCanvas.releasePointerCapture(e.pointerId); } catch(err){}
             }
         };
