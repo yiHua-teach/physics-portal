@@ -1,0 +1,1451 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>樂音三要素 - 互動理化實驗室 AcousticLab</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        cyber: {
+                            bg: '#0a0e17',
+                            card: '#121826',
+                            border: '#1f293d',
+                            pitch: '#00f0ff',
+                            loudness: '#ff0055',
+                            timbre: '#a855f7',
+                            accent: '#3b82f6'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Noto Sans TC', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0a0e17;
+            color: #e2e8f0;
+            overflow-x: hidden;
+        }
+
+        /* Glowing Effects */
+        .glow-pitch { filter: drop-shadow(0 0 12px rgba(0, 240, 255, 0.6)); }
+        .glow-loudness { filter: drop-shadow(0 0 12px rgba(ff, 0, 85, 0.6)); }
+        .glow-timbre { filter: drop-shadow(0 0 12px rgba(168, 85, 247, 0.6)); }
+        .glow-box-pitch { box-shadow: 0 0 20px rgba(0, 240, 255, 0.15); border-color: rgba(0, 240, 255, 0.4); }
+        .glow-box-loudness { box-shadow: 0 0 20px rgba(255, 0, 85, 0.15); border-color: rgba(255, 0, 85, 0.4); }
+        .glow-box-timbre { box-shadow: 0 0 20px rgba(168, 85, 247, 0.15); border-color: rgba(168, 85, 247, 0.4); }
+
+        /* Custom Range Slider Styling */
+        input[type=range] {
+            -webkit-appearance: none;
+            background: #1e293b;
+            border-radius: 8px;
+            height: 10px;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 24px;
+            width: 24px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .slider-pitch::-webkit-slider-thumb { background: #00f0ff; box-shadow: 0 0 10px #00f0ff; }
+        .slider-loudness::-webkit-slider-thumb { background: #ff0055; box-shadow: 0 0 10px #ff0055; }
+
+        /* Custom CRT Screen Grid */
+        .crt-grid {
+            background-size: 40px 40px;
+            background-image: 
+                linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+        }
+
+        /* Glassmorphism Panel */
+        .glass-panel {
+            background: rgba(18, 24, 38, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col font-sans select-none">
+
+    <!-- Header Bar -->
+    <header class="glass-panel sticky top-0 z-50 px-6 py-3 border-b border-cyber-border flex justify-between items-center">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-cyan-500/30">
+                <i class="fa-solid font-bold fa-wave-square text-xl"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-black tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400">
+                    AcousticLab 樂音三要素實驗室
+                </h1>
+                <p class="text-xs text-slate-400">國中理化沉浸式互動聲波教學系統</p>
+            </div>
+        </div>
+
+        <!-- Mode Selectors & Master Controls -->
+        <div class="flex items-center gap-4">
+            <button id="masterAudioBtn" class="px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white shadow-lg shadow-emerald-500/20 transition-all active:scale-95">
+                <i class="fa-solid fa-power-off"></i>
+                <span id="audioBtnText">啟動音訊引擎</span>
+            </button>
+            <div class="h-6 w-px bg-slate-700"></div>
+            <div class="flex bg-slate-900/80 p-1 rounded-xl border border-slate-800 flex-wrap gap-1">
+                <button id="tabExplore" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-blue-600 text-white shadow">
+                    <i class="fa-solid fa-flask-vial mr-1"></i> 三要素探索
+                </button>
+                <button id="tabSoundLab" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition-all">
+                    <i class="fa-solid fa-wave-square mr-1"></i> 畫波與泛音合成
+                </button>
+                <button id="tabHearingTest" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition-all">
+                    <i class="fa-solid fa-ear-listen mr-1"></i> 聽力極限 (10-21kHz)
+                </button>
+                <button id="tabGame" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition-all">
+                    <i class="fa-solid fa-gamepad mr-1"></i> 聽音辨波大挑戰
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="flex-1 max-w-[1600px] w-full mx-auto p-4 md:p-6 flex flex-col gap-6">
+
+        <div id="pageExplore" class="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full">
+            <!-- Left Visualizer Display (7 cols on LG) -->
+            <section class="lg:col-span-7 flex flex-col gap-4">
+                
+                <!-- Main Waveform Canvas Card -->
+                <div class="glass-panel rounded-2xl p-4 flex flex-col gap-3 relative overflow-hidden crt-grid border border-slate-800">
+                    
+                    <!-- HUD Readouts -->
+                    <div class="flex justify-between items-center text-xs font-mono px-2">
+                        <div class="flex items-center gap-4">
+                            <span class="text-cyan-400 flex items-center gap-1">
+                                <i class="fa-solid fa-stopwatch"></i> 頻率 (f): <strong id="hudFreq" class="text-base text-white">440</strong> Hz
+                            </span>
+                            <span class="text-rose-400 flex items-center gap-1">
+                                <i class="fa-solid fa-arrows-up-down"></i> 振幅 (A): <strong id="hudAmp" class="text-base text-white">50</strong> %
+                            </span>
+                            <span class="text-purple-400 flex items-center gap-1">
+                                <i class="fa-solid fa-music"></i> 音色: <strong id="hudShape" class="text-base text-white">正弦波 (Sine)</strong>
+                            </span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span id="waveStatusTag" class="px-2 py-0.5 rounded bg-cyan-950/80 border border-cyan-500/30 text-cyan-400 text-[10px]">
+                                REAL-TIME SIGNAL
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Oscilloscope Main Canvas -->
+                    <div class="relative w-full h-64 md:h-80 bg-slate-950/90 rounded-xl overflow-hidden border border-slate-800 shadow-inner">
+                        <canvas id="oscCanvas" class="w-full h-full block"></canvas>
+                        
+                        <!-- Physics Formula Annotations Layer -->
+                        <div class="absolute bottom-3 left-4 text-[11px] font-mono text-slate-400 bg-slate-900/80 px-3 py-1.5 rounded-lg border border-slate-800 flex gap-4">
+                            <span>波長 &lambda; = v / f</span>
+                            <span class="text-slate-600">|</span>
+                            <span>週期 T = 1 / f</span>
+                        </div>
+                    </div>
+
+                    <!-- Air Particle Longitudinal Wave Simulation (Physical Insight) -->
+                    <div class="flex flex-col gap-1.5">
+                        <div class="flex justify-between items-center px-1">
+                            <span class="text-xs font-bold text-slate-300 flex items-center gap-2">
+                                <i class="fa-solid fa-wind text-blue-400"></i> 空氣介質疏密波模擬 (縱波直觀視圖)
+                            </span>
+                            <span class="text-[11px] text-slate-500">紅點為空氣分子，觀察密部與疏部週期變化</span>
+                        </div>
+                        <div class="w-full h-16 bg-slate-950 rounded-xl border border-slate-800 overflow-hidden relative">
+                            <canvas id="particleCanvas" class="w-full h-full block"></canvas>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Physics Summary Quick Reference Cards -->
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="glass-panel p-3 rounded-xl border-l-4 border-cyan-400 flex flex-col justify-between">
+                        <span class="text-xs text-slate-400 font-bold">音調 (Pitch)</span>
+                        <p class="text-sm font-bold text-cyan-300 mt-1">由「頻率 f」決定</p>
+                        <span class="text-[11px] text-slate-500 mt-0.5">頻率高 &rarr; 波形密集 &rarr; 聲音尖銳</span>
+                    </div>
+                    <div class="glass-panel p-3 rounded-xl border-l-4 border-rose-500 flex flex-col justify-between">
+                        <span class="text-xs text-slate-400 font-bold">響度 (Loudness)</span>
+                        <p class="text-sm font-bold text-rose-400 mt-1">由「振幅 A」決定</p>
+                        <span class="text-[11px] text-slate-500 mt-0.5">振幅大 &rarr; 波幅較高 &rarr; 能量較強</span>
+                    </div>
+                    <div class="glass-panel p-3 rounded-xl border-l-4 border-purple-500 flex flex-col justify-between">
+                        <span class="text-xs text-slate-400 font-bold">音色 (Timbre)</span>
+                        <p class="text-sm font-bold text-purple-300 mt-1">由「波形 Shape」決定</p>
+                        <span class="text-[11px] text-slate-500 mt-0.5">發聲體結構 &rarr; 泛音疊加波形特徵</span>
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- Right Interactive Control Panel (5 cols on LG) -->
+            <section id="explorePanel" class="lg:col-span-5 flex flex-col gap-5">
+                
+                <!-- 1. 音調 (Pitch) Card -->
+                <div class="glass-panel p-5 rounded-2xl border border-slate-800 glow-box-pitch transition-all flex flex-col gap-4">
+                    <div class="flex justify-between items-center border-b border-slate-800/80 pb-3">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-8 h-8 rounded-lg bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold">
+                                1
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-cyan-300 text-base">音調 (Pitch)</h3>
+                                <p class="text-[11px] text-slate-400">控制聲波頻率，決定聲音的高低</p>
+                            </div>
+                        </div>
+                        <span class="font-mono text-lg font-bold text-cyan-400"><span id="freqVal">440</span> <span class="text-xs text-slate-400">Hz</span></span>
+                    </div>
+
+                    <!-- Frequency Slider -->
+                    <div class="flex flex-col gap-2">
+                        <div class="flex justify-between text-xs text-slate-400">
+                            <span>低音 (100 Hz)</span>
+                            <span class="text-cyan-400 font-mono">261Hz (Do) / 440Hz (La)</span>
+                            <span>高音 (1200 Hz)</span>
+                        </div>
+                        <input type="range" id="freqSlider" min="100" max="1200" value="440" step="1" class="slider-pitch w-full">
+                    </div>
+
+                    <!-- Piano Quick Keys Preset -->
+                    <div class="flex flex-col gap-1.5">
+                        <span class="text-[11px] text-slate-400 font-bold">八度琴鍵速選（固定音高觀測）：</span>
+                        <div class="grid grid-cols-7 gap-1.5">
+                            <button class="piano-key py-2 rounded bg-slate-800 hover:bg-cyan-600 text-xs font-mono font-bold transition text-slate-200" data-freq="261.63">C4</button>
+                            <button class="piano-key py-2 rounded bg-slate-800 hover:bg-cyan-600 text-xs font-mono font-bold transition text-slate-200" data-freq="293.66">D4</button>
+                            <button class="piano-key py-2 rounded bg-slate-800 hover:bg-cyan-600 text-xs font-mono font-bold transition text-slate-200" data-freq="329.63">E4</button>
+                            <button class="piano-key py-2 rounded bg-slate-800 hover:bg-cyan-600 text-xs font-mono font-bold transition text-slate-200" data-freq="349.23">F4</button>
+                            <button class="piano-key py-2 rounded bg-slate-800 hover:bg-cyan-600 text-xs font-mono font-bold transition text-slate-200" data-freq="392.00">G4</button>
+                            <button class="piano-key py-2 rounded bg-slate-800 hover:bg-cyan-600 text-xs font-mono font-bold transition text-slate-200" data-freq="440.00">A4</button>
+                            <button class="piano-key py-2 rounded bg-slate-800 hover:bg-cyan-600 text-xs font-mono font-bold transition text-slate-200" data-freq="493.88">B4</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. 響度 (Loudness) Card -->
+                <div class="glass-panel p-5 rounded-2xl border border-slate-800 glow-box-loudness transition-all flex flex-col gap-4">
+                    <div class="flex justify-between items-center border-b border-slate-800/80 pb-3">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-8 h-8 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center font-bold">
+                                2
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-rose-300 text-base">響度 (Loudness)</h3>
+                                <p class="text-[11px] text-slate-400">控制發聲體振幅與聲音能量，決定音量大小</p>
+                            </div>
+                        </div>
+                        <span class="font-mono text-lg font-bold text-rose-400"><span id="ampVal">50</span> <span class="text-xs text-slate-400">%</span></span>
+                    </div>
+
+                    <!-- Amplitude Slider -->
+                    <div class="flex flex-col gap-2">
+                        <div class="flex justify-between text-xs text-slate-400">
+                            <span>小聲 (靜音)</span>
+                            <span class="text-rose-400 font-mono">約 60 dB</span>
+                            <span>大聲 (強振幅)</span>
+                        </div>
+                        <input type="range" id="ampSlider" min="0" max="100" value="50" step="1" class="slider-loudness w-full">
+                    </div>
+
+                    <!-- Speaker Visual Feedback Bar -->
+                    <div class="flex items-center gap-3 bg-slate-900/60 p-2.5 rounded-xl border border-slate-800">
+                        <i id="speakerIcon" class="fa-solid fa-volume-high text-rose-400 text-lg w-6 text-center"></i>
+                        <div class="flex-1 bg-slate-800 h-3 rounded-full overflow-hidden">
+                            <div id="volumeMeter" class="bg-gradient-to-r from-rose-500 to-pink-500 h-full w-1/2 transition-all duration-75"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. 音色 (Timbre) Card -->
+                <div class="glass-panel p-5 rounded-2xl border border-slate-800 glow-box-timbre transition-all flex flex-col gap-4">
+                    <div class="flex justify-between items-center border-b border-slate-800/80 pb-3">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-8 h-8 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold">
+                                3
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-purple-300 text-base">音色 (Timbre)</h3>
+                                <p class="text-[11px] text-slate-400">波形特徵，由基音與不同比例泛音疊加而成</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Waveform Selector Grid -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        <button class="wave-type-btn p-2.5 rounded-xl border border-purple-500 bg-purple-950/40 text-purple-300 text-xs font-bold flex flex-col items-center gap-1 transition" data-type="sine">
+                            <i class="fa-solid fa-wave-square text-lg"></i>
+                            正弦波 (單音)
+                        </button>
+                        <button class="wave-type-btn p-2.5 rounded-xl border border-slate-800 bg-slate-900/60 text-slate-400 text-xs font-bold flex flex-col items-center gap-1 hover:border-purple-500/50 transition" data-type="square">
+                            <i class="fa-solid fa-bolt text-lg"></i>
+                            方波 (電子音)
+                        </button>
+                        <button class="wave-type-btn p-2.5 rounded-xl border border-slate-800 bg-slate-900/60 text-slate-400 text-xs font-bold flex flex-col items-center gap-1 hover:border-purple-500/50 transition" data-type="sawtooth">
+                            <i class="fa-solid fa-chart-line text-lg"></i>
+                            鋸齒波 (弦樂)
+                        </button>
+                        <button class="wave-type-btn p-2.5 rounded-xl border border-slate-800 bg-slate-900/60 text-slate-400 text-xs font-bold flex flex-col items-center gap-1 hover:border-purple-500/50 transition" data-type="triangle">
+                            <i class="fa-solid fa-play -rotate-90 text-lg"></i>
+                            三角波 (長笛類)
+                        </button>
+                    </div>
+                </div>
+
+            </section>
+        </div>
+
+        <div id="pageSoundLab" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-6 w-full">
+            
+            <!-- Left: Draw Waveform & Pitch Controls -->
+            <div class="lg:col-span-6 glass-panel p-5 rounded-2xl border border-purple-500/30 flex flex-col gap-5">
+                <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-pen-ruler text-purple-400 text-xl"></i>
+                        <div>
+                            <h3 class="font-bold text-purple-300 text-base">自由畫波與音高控制 (Draw & Pitch)</h3>
+                            <p class="text-xs text-slate-400">滑鼠或手指繪製一個週期，或選擇樂器音色預設並調整發聲音高</p>
+                        </div>
+                    </div>
+                    <button id="resetDrawBtn" class="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-mono text-slate-300 transition">
+                        <i class="fa-solid fa-rotate-left mr-1"></i> 重設正弦波
+                    </button>
+                </div>
+
+                <!-- Canvas Drawing Area -->
+                <div class="relative w-full h-52 bg-slate-950 rounded-xl border border-purple-500/40 overflow-hidden cursor-crosshair">
+                    <canvas id="drawCanvas" class="w-full h-full block touch-none"></canvas>
+                    <div class="absolute top-2 left-3 text-[10px] font-mono text-slate-500 pointer-events-none">
+                        拖曳劃出一個完整週期波 [0 ~ 2&pi;]
+                    </div>
+                </div>
+
+                <!-- Pitch / Frequency Control for Synthesizer -->
+                <div class="bg-slate-900/90 p-3.5 rounded-xl border border-cyan-500/30 flex flex-col gap-3">
+                    <div class="flex justify-between items-center text-xs">
+                        <span class="font-bold text-cyan-400 flex items-center gap-1.5">
+                            <i class="fa-solid fa-music"></i> 音色發聲音高 (Pitch Frequency)
+                        </span>
+                        <span class="font-mono text-sm font-bold text-cyan-300"><span id="synthFreqVal">440</span> Hz</span>
+                    </div>
+                    <input type="range" id="synthFreqSlider" min="100" max="1600" value="440" step="1" class="slider-pitch w-full">
+                    
+                    <div class="grid grid-cols-7 gap-1">
+                        <button class="synth-piano-key py-1.5 rounded bg-slate-800 hover:bg-cyan-600 text-[11px] font-mono font-bold transition text-slate-200" data-freq="261.63">C4</button>
+                        <button class="synth-piano-key py-1.5 rounded bg-slate-800 hover:bg-cyan-600 text-[11px] font-mono font-bold transition text-slate-200" data-freq="293.66">D4</button>
+                        <button class="synth-piano-key py-1.5 rounded bg-slate-800 hover:bg-cyan-600 text-[11px] font-mono font-bold transition text-slate-200" data-freq="329.63">E4</button>
+                        <button class="synth-piano-key py-1.5 rounded bg-slate-800 hover:bg-cyan-600 text-[11px] font-mono font-bold transition text-slate-200" data-freq="349.23">F4</button>
+                        <button class="synth-piano-key py-1.5 rounded bg-slate-800 hover:bg-cyan-600 text-[11px] font-mono font-bold transition text-slate-200" data-freq="392.00">G4</button>
+                        <button class="synth-piano-key py-1.5 rounded bg-slate-800 hover:bg-cyan-600 text-[11px] font-mono font-bold transition text-slate-200" data-freq="440.00">A4</button>
+                        <button class="synth-piano-key py-1.5 rounded bg-slate-800 hover:bg-cyan-600 text-[11px] font-mono font-bold transition text-slate-200" data-freq="493.88">B4</button>
+                    </div>
+                </div>
+
+                <!-- Instrument Presets -->
+                <div class="flex flex-col gap-2">
+                    <span class="text-xs text-purple-300 font-bold">樂器與傳統波形快捷預設 (Instrument Timbre Presets)：</span>
+                    <div class="grid grid-cols-3 gap-2 text-xs">
+                        <button class="draw-preset-btn py-2 rounded-xl bg-slate-800 hover:bg-purple-600 font-bold transition text-slate-200 flex items-center justify-center gap-1.5" data-preset="sine">
+                            <i class="fa-solid fa-wave-square text-cyan-400"></i> 純正弦波
+                        </button>
+                        <button class="draw-preset-btn py-2 rounded-xl bg-slate-800 hover:bg-purple-600 font-bold transition text-slate-200 flex items-center justify-center gap-1.5" data-preset="flute">
+                            <i class="fa-solid fa-wind text-teal-400"></i> 長笛 (Flute)
+                        </button>
+                        <button class="draw-preset-btn py-2 rounded-xl bg-slate-800 hover:bg-purple-600 font-bold transition text-slate-200 flex items-center justify-center gap-1.5" data-preset="violin">
+                            <i class="fa-solid fa-violin text-amber-400"></i> 小提琴 (Violin)
+                        </button>
+                        <button class="draw-preset-btn py-2 rounded-xl bg-slate-800 hover:bg-purple-600 font-bold transition text-slate-200 flex items-center justify-center gap-1.5" data-preset="clarinet">
+                            <i class="fa-solid fa-play -rotate-90 text-indigo-400"></i> 單簧管 (Clarinet)
+                        </button>
+                        <button class="draw-preset-btn py-2 rounded-xl bg-slate-800 hover:bg-purple-600 font-bold transition text-slate-200 flex items-center justify-center gap-1.5" data-preset="piano">
+                            <i class="fa-solid fa-keyboard text-emerald-400"></i> 鋼琴 (Piano)
+                        </button>
+                        <button class="draw-preset-btn py-2 rounded-xl bg-slate-800 hover:bg-purple-600 font-bold transition text-slate-200 flex items-center justify-center gap-1.5" data-preset="square">
+                            <i class="fa-solid fa-bolt text-rose-400"></i> 電子方波
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Fourier Harmonics Synthesizer Sliders -->
+            <div class="lg:col-span-6 glass-panel p-5 rounded-2xl border border-cyan-500/30 flex flex-col gap-4">
+                <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-sliders text-cyan-400 text-xl"></i>
+                        <div>
+                            <h3 class="font-bold text-cyan-300 text-base">傅立葉泛音比例合成 (Fourier Synthesizer)</h3>
+                            <p class="text-xs text-slate-400">設定基音 ($f$) 與各階泛音 ($2f, 3f \dots$) 強度，疊加出獨特樂器音色</p>
+                        </div>
+                    </div>
+                    <button id="clearHarmonicsBtn" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 transition">
+                        僅留基音
+                    </button>
+                </div>
+
+                <!-- Interactive Harmonic Sliders Container -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[380px] overflow-y-auto pr-1">
+                    
+                    <!-- Harmonic 1 (Fundamental) -->
+                    <div class="bg-slate-950/80 p-2.5 rounded-xl border border-cyan-500/40 flex flex-col gap-1.5">
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="font-bold text-cyan-400">基音 $f_1$ (1st Harmonic)</span>
+                            <span id="hVal1" class="font-mono text-white text-xs">100%</span>
+                        </div>
+                        <input type="range" class="harmonic-slider slider-pitch w-full" data-index="0" min="0" max="100" value="100">
+                    </div>
+
+                    <!-- Harmonic 2 -->
+                    <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800 flex flex-col gap-1.5">
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="font-bold text-purple-400">2 階泛音 $2f_1$ (2nd)</span>
+                            <span id="hVal2" class="font-mono text-white text-xs">0%</span>
+                        </div>
+                        <input type="range" class="harmonic-slider slider-pitch w-full" data-index="1" min="0" max="100" value="0">
+                    </div>
+
+                    <!-- Harmonic 3 -->
+                    <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800 flex flex-col gap-1.5">
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="font-bold text-purple-400">3 階泛音 $3f_1$ (3rd)</span>
+                            <span id="hVal3" class="font-mono text-white text-xs">0%</span>
+                        </div>
+                        <input type="range" class="harmonic-slider slider-pitch w-full" data-index="2" min="0" max="100" value="0">
+                    </div>
+
+                    <!-- Harmonic 4 -->
+                    <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800 flex flex-col gap-1.5">
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="font-bold text-purple-400">4 階泛音 $4f_1$ (4th)</span>
+                            <span id="hVal4" class="font-mono text-white text-xs">0%</span>
+                        </div>
+                        <input type="range" class="harmonic-slider slider-pitch w-full" data-index="3" min="0" max="100" value="0">
+                    </div>
+
+                    <!-- Harmonic 5 -->
+                    <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800 flex flex-col gap-1.5">
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="font-bold text-purple-400">5 階泛音 $5f_1$ (5th)</span>
+                            <span id="hVal5" class="font-mono text-white text-xs">0%</span>
+                        </div>
+                        <input type="range" class="harmonic-slider slider-pitch w-full" data-index="4" min="0" max="100" value="0">
+                    </div>
+
+                    <!-- Harmonic 6 -->
+                    <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800 flex flex-col gap-1.5">
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="font-bold text-purple-400">6 階泛音 $6f_1$ (6th)</span>
+                            <span id="hVal6" class="font-mono text-white text-xs">0%</span>
+                        </div>
+                        <input type="range" class="harmonic-slider slider-pitch w-full" data-index="5" min="0" max="100" value="0">
+                    </div>
+
+                    <!-- Harmonic 7 -->
+                    <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800 flex flex-col gap-1.5">
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="font-bold text-purple-400">7 階泛音 $7f_1$ (7th)</span>
+                            <span id="hVal7" class="font-mono text-white text-xs">0%</span>
+                        </div>
+                        <input type="range" class="harmonic-slider slider-pitch w-full" data-index="6" min="0" max="100" value="0">
+                    </div>
+
+                    <!-- Harmonic 8 -->
+                    <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800 flex flex-col gap-1.5">
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="font-bold text-purple-400">8 階泛音 $8f_1$ (8th)</span>
+                            <span id="hVal8" class="font-mono text-white text-xs">0%</span>
+                        </div>
+                        <input type="range" class="harmonic-slider slider-pitch w-full" data-index="7" min="0" max="100" value="0">
+                    </div>
+
+                </div>
+
+                <!-- Instant Audio Trigger -->
+                <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800 flex items-center justify-between mt-auto">
+                    <span class="text-xs text-slate-400">調整泛音拉桿時會即時計算疊加波形並更新聲音引擎</span>
+                    <button id="playSynthBtn" class="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-400 hover:to-indigo-500 text-white font-bold text-xs shadow-lg flex items-center gap-2 transition active:scale-95">
+                        <i class="fa-solid fa-volume-high"></i> 試聽合成音色
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+        <div id="pageHearingTest" class="hidden glass-panel p-6 rounded-2xl border border-emerald-500/30 flex flex-col gap-6 w-full">
+            
+            <div class="flex justify-between items-center border-b border-slate-800 pb-4">
+                <div>
+                    <h2 class="text-xl font-black text-emerald-400 flex items-center gap-2">
+                        <i class="fa-solid fa-ear-listen"></i> 人類聽力極限全頻率測試 (10 Hz - 21,000 Hz)
+                    </h2>
+                    <p class="text-xs text-slate-400 mt-1">探索次聲波（Infrasound）、人耳可聽域與超聲波（Ultrasound）的物理邊界</p>
+                </div>
+                <div class="flex items-center gap-2 bg-amber-950/60 border border-amber-500/40 px-3 py-1.5 rounded-xl text-amber-300 text-xs">
+                    <i class="fa-solid fa-triangle-exclamation text-amber-400"></i>
+                    <span>安全提醒：請維持適當音量，切勿長時間聆聽高分貝高頻聲！</span>
+                </div>
+            </div>
+
+            <!-- Big Frequency Display & Enhanced Position Bar Slider -->
+            <div class="bg-slate-950/90 p-6 rounded-2xl border border-emerald-500/40 flex flex-col items-center gap-6">
+                
+                <div class="flex flex-col items-center">
+                    <span id="extremeFreqDisplay" class="font-mono text-5xl md:text-6xl font-black text-emerald-400 tracking-wider">
+                        1,000 <span class="text-xl text-slate-400">Hz</span>
+                    </span>
+                    <span id="frequencyCategoryTag" class="mt-2 px-3 py-1 rounded-full bg-emerald-950 border border-emerald-500/30 text-emerald-300 text-xs font-bold">
+                        人體敏感聽覺區 (Standard Audible Range)
+                    </span>
+                </div>
+
+                <!-- Real-time Position Visualizer & Extended Slider Track -->
+                <div class="w-full max-w-4xl flex flex-col gap-3">
+                    
+                    <div class="relative w-full pt-2 pb-1">
+                        <!-- Background Glow Track Fill -->
+                        <div class="absolute top-1/2 left-0 right-0 h-3 -translate-y-1/2 bg-slate-800 rounded-full overflow-hidden border border-slate-700/80">
+                            <div id="freqTrackFill" class="h-full bg-gradient-to-r from-teal-500 via-emerald-400 to-cyan-300 w-[20%] transition-all duration-75"></div>
+                        </div>
+
+                        <!-- Main Interactive Range Slider with Prominent Thumb Marker -->
+                        <input type="range" id="extremeFreqSlider" min="10" max="21000" value="1000" step="10" 
+                            class="relative z-10 w-full h-3 bg-transparent appearance-none cursor-pointer accent-emerald-400 focus:outline-none">
+                    </div>
+
+                    <!-- Dynamic Scale Scale Readouts -->
+                    <div class="flex justify-between text-[11px] font-mono text-slate-400 px-1">
+                        <span>10 Hz (次聲)</span>
+                        <span>200 Hz</span>
+                        <span>1,000 Hz</span>
+                        <span>5,000 Hz</span>
+                        <span>12,000 Hz</span>
+                        <span>21,000 Hz (超聲)</span>
+                    </div>
+                </div>
+
+                <!-- Sweep Test Control -->
+                <div class="flex items-center gap-4">
+                    <button id="sweepTestBtn" class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-bold text-sm shadow-lg flex items-center gap-2 transition active:scale-95">
+                        <i class="fa-solid fa-play"></i> 自動全頻率掃描 (2x 慢速對比聽覺)
+                    </button>
+                    <button id="stopSweepBtn" class="hidden px-6 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-sm shadow-lg flex items-center gap-2 transition">
+                        <i class="fa-solid fa-stop"></i> 停止掃描
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- Frequency Spectrum Quick Reference Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+                <button class="freq-preset-card p-3 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-emerald-500/50 flex flex-col text-left transition" data-freq="15">
+                    <span class="text-xs text-emerald-400 font-bold">15 Hz - 次聲波</span>
+                    <span class="text-[11px] text-slate-400 mt-1">人耳聽不見，僅能感覺物理震動（大象、地震）</span>
+                </button>
+                <button class="freq-preset-card p-3 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-emerald-500/50 flex flex-col text-left transition" data-freq="60">
+                    <span class="text-xs text-cyan-400 font-bold">60 Hz - 重低音</span>
+                    <span class="text-[11px] text-slate-400 mt-1">沉重的低頻共鳴，音響低音喇叭頻段</span>
+                </button>
+                <button class="freq-preset-card p-3 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-emerald-500/50 flex flex-col text-left transition" data-freq="440">
+                    <span class="text-xs text-blue-400 font-bold">440 Hz - 標準音 A4</span>
+                    <span class="text-[11px] text-slate-400 mt-1">樂隊調音標準，人聲與日常言語核心頻率</span>
+                </button>
+                <button class="freq-preset-card p-3 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-emerald-500/50 flex flex-col text-left transition" data-freq="14000">
+                    <span class="text-xs text-purple-400 font-bold">14,000 Hz - 成人極限</span>
+                    <span class="text-[11px] text-slate-400 mt-1">許多成年人聽力受損或老化後退化的上限</span>
+                </button>
+                <button class="freq-preset-card p-3 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-emerald-500/50 flex flex-col text-left transition" data-freq="17500">
+                    <span class="text-xs text-rose-400 font-bold">17,500 Hz - 青少年蚊音</span>
+                    <span class="text-[11px] text-slate-400 mt-1">年輕聽覺細胞專屬，高頻蚊音測試</span>
+                </button>
+            </div>
+
+        </div>
+
+        <div id="pageGame" class="hidden glass-panel p-6 rounded-2xl border border-amber-500/30 flex flex-col gap-6 w-full">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-4">
+                <div>
+                    <h2 class="text-xl font-black text-amber-400 flex items-center gap-2">
+                        <i class="fa-solid fa-bullseye"></i> 聽音辨波大挑戰 (Match the Target Wave)
+                    </h2>
+                    <p class="text-xs text-slate-400 mt-1">請聽目標發聲體的聲音或觀察虛線目標波形，調整下方頻率與振幅拉桿，使你的綠色聲波與目標完全重疊！</p>
+                </div>
+                <div class="flex items-center gap-4">
+                    <button id="playTargetBtn" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-2 shadow">
+                        <i class="fa-solid fa-volume-high"></i> 播放目標聲音
+                    </button>
+                    <button id="nextLevelBtn" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs">
+                        下一題
+                    </button>
+                </div>
+            </div>
+
+            <!-- Challenge Oscilloscope Window -->
+            <div class="relative w-full h-72 bg-slate-950 rounded-xl border border-slate-800 overflow-hidden">
+                <canvas id="gameCanvas" class="w-full h-full block"></canvas>
+                <div id="matchScoreBadge" class="absolute top-4 right-4 bg-slate-900/90 border border-amber-500/40 px-4 py-2 rounded-xl font-mono text-amber-400 font-bold text-sm">
+                    波形重疊率: <span id="matchPercent" class="text-lg text-white">0</span> %
+                </div>
+            </div>
+
+            <!-- Challenge Slider Controls -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-900/50 p-4 rounded-xl border border-slate-800">
+                <div class="flex flex-col gap-2">
+                    <label class="text-xs font-bold text-cyan-400 flex justify-between">
+                        <span>調整頻率 (音調)</span>
+                        <span id="gameFreqText" class="font-mono">440 Hz</span>
+                    </label>
+                    <input type="range" id="gameFreqSlider" min="100" max="1000" value="300" class="slider-pitch">
+                </div>
+                <div class="flex flex-col gap-2">
+                    <label class="text-xs font-bold text-rose-400 flex justify-between">
+                        <span>調整振幅 (響度)</span>
+                        <span id="gameAmpText" class="font-mono">50 %</span>
+                    </label>
+                    <input type="range" id="gameAmpSlider" min="10" max="100" value="30" class="slider-loudness">
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        let audioCtx = null;
+        let oscillator = null;
+        let gainNode = null;
+        let analyser = null;
+        let isAudioPlaying = false;
+
+        // Custom Drawn Wave Variables
+        let customPeriodicWave = null;
+
+        // Current Signal Parameters
+        let currentFreq = 440;
+        let currentAmp = 50; // 0 - 100
+        let currentWaveType = 'sine';
+
+        // Challenge Game States
+        let targetFreq = 520;
+        let targetAmp = 70;
+        let activeTab = 'explore';
+
+        // Canvas Elements
+        const oscCanvas = document.getElementById('oscCanvas');
+        const oscCtx = oscCanvas ? oscCanvas.getContext('2d') : null;
+        const particleCanvas = document.getElementById('particleCanvas');
+        const particleCtx = particleCanvas ? particleCanvas.getContext('2d') : null;
+        const gameCanvas = document.getElementById('gameCanvas');
+        const gameCtx = gameCanvas ? gameCanvas.getContext('2d') : null;
+        const drawCanvas = document.getElementById('drawCanvas');
+        const drawCtx = drawCanvas ? drawCanvas.getContext('2d') : null;
+
+        let synthFreq = 440;
+        let harmonicAmplitudes = [1.0, 0, 0, 0, 0, 0, 0, 0]; // 8 harmonics ratios (0.0 ~ 1.0)
+
+        // Particle System Array for Longitudinal Air Wave
+        const NUM_PARTICLES = 120;
+        let particles = [];
+
+        // Custom Draw Wave Points (128 samples across 1 period)
+        const DRAW_SAMPLES = 128;
+        let drawPoints = new Float32Array(DRAW_SAMPLES);
+        let isDrawing = false;
+        let prevDrawX = null;
+        let prevDrawY = null;
+
+        function resizeCanvases() {
+            const list = [
+                { canvas: oscCanvas, parent: oscCanvas?.parentElement },
+                { canvas: particleCanvas, parent: particleCanvas?.parentElement },
+                { canvas: gameCanvas, parent: gameCanvas?.parentElement },
+                { canvas: drawCanvas, parent: drawCanvas?.parentElement }
+            ];
+
+            list.forEach(({ canvas, parent }) => {
+                if (canvas && parent) {
+                    const rect = parent.getBoundingClientRect();
+                    if (rect.width > 0 && rect.height > 0) {
+                        canvas.width = rect.width;
+                        canvas.height = rect.height;
+                    }
+                }
+            });
+
+            initParticles();
+            renderDrawCanvas();
+        }
+
+        function initParticles() {
+            if (!particleCanvas) return;
+            particles = [];
+            const w = particleCanvas.width || 600;
+            const h = particleCanvas.height || 64;
+
+            for (let i = 0; i < NUM_PARTICLES; i++) {
+                particles.push({
+                    baseX: (i / NUM_PARTICLES) * w,
+                    x: (i / NUM_PARTICLES) * w,
+                    y: Math.random() * (h - 12) + 6,
+                    color: (i % 12 === 0) ? '#ff0055' : '#00f0ff',
+                    size: (i % 12 === 0) ? 3.5 : 2
+                });
+            }
+        }
+
+        function initAudio() {
+            if (audioCtx) {
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+                return;
+            }
+
+            try {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContextClass();
+
+                oscillator = audioCtx.createOscillator();
+                gainNode = audioCtx.createGain();
+                analyser = audioCtx.createAnalyser();
+
+                applyWaveformToAudioNode();
+                oscillator.frequency.setValueAtTime(currentFreq, audioCtx.currentTime);
+                gainNode.gain.setValueAtTime((currentAmp / 100) * 0.25, audioCtx.currentTime);
+
+                oscillator.connect(gainNode);
+                gainNode.connect(analyser);
+                analyser.connect(audioCtx.destination);
+
+                oscillator.start();
+                isAudioPlaying = true;
+                updateAudioButtonUI(true);
+            } catch (err) {
+                console.error("Audio Initialization Failed:", err);
+            }
+        }
+
+        function applyWaveformToAudioNode() {
+            if (!oscillator || !audioCtx) return;
+            try {
+                if (currentWaveType === 'custom') {
+                    if (customPeriodicWave) {
+                        oscillator.setPeriodicWave(customPeriodicWave);
+                    }
+                } else {
+                    oscillator.type = currentWaveType;
+                }
+            } catch (e) {
+                console.warn("Error setting audio waveform type:", e);
+            }
+        }
+
+        function toggleAudio() {
+            if (!audioCtx) {
+                initAudio();
+            } else if (audioCtx.state === 'running') {
+                audioCtx.suspend();
+                isAudioPlaying = false;
+                updateAudioButtonUI(false);
+            } else if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+                isAudioPlaying = true;
+                updateAudioButtonUI(true);
+            }
+        }
+
+        function updateAudioButtonUI(playing) {
+            const btn = document.getElementById('masterAudioBtn');
+            const text = document.getElementById('audioBtnText');
+            if (!btn || !text) return;
+
+            if (playing) {
+                text.textContent = '暫停聲音';
+                btn.className = 'px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-400 hover:to-red-500 text-white shadow-lg shadow-rose-500/20 transition-all active:scale-95';
+            } else {
+                text.textContent = '啟動音訊引擎';
+                btn.className = 'px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white shadow-lg shadow-emerald-500/20 transition-all active:scale-95';
+            }
+        }
+
+        function renderOscilloscope() {
+            requestAnimationFrame(renderOscilloscope);
+
+            if (activeTab === 'explore') {
+                if (!oscCanvas) return;
+                const w = oscCanvas.width;
+                const h = oscCanvas.height;
+                if (w === 0 || h === 0) return;
+
+                const centerY = h / 2;
+                oscCtx.clearRect(0, 0, w, h);
+
+                // CRT Background Grid
+                oscCtx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+                oscCtx.lineWidth = 1;
+                for (let x = 0; x < w; x += 40) {
+                    oscCtx.beginPath(); oscCtx.moveTo(x, 0); oscCtx.lineTo(x, h); oscCtx.stroke();
+                }
+                for (let y = 0; y < h; y += 40) {
+                    oscCtx.beginPath(); oscCtx.moveTo(0, y); oscCtx.lineTo(w, y); oscCtx.stroke();
+                }
+
+                // Zero Axis Line
+                oscCtx.strokeStyle = 'rgba(0, 240, 255, 0.25)';
+                oscCtx.beginPath(); oscCtx.moveTo(0, centerY); oscCtx.lineTo(w, centerY); oscCtx.stroke();
+
+                // Signal Color Mapping
+                let waveColor = '#00f0ff';
+                if (currentWaveType === 'square') waveColor = '#38bdf8';
+                else if (currentWaveType === 'sawtooth') waveColor = '#a855f7';
+                else if (currentWaveType === 'triangle') waveColor = '#f43f5e';
+                else if (currentWaveType === 'custom') waveColor = '#c084fc';
+
+                oscCtx.beginPath();
+                oscCtx.lineWidth = 3;
+                oscCtx.strokeStyle = waveColor;
+                oscCtx.shadowBlur = 12;
+                oscCtx.shadowColor = waveColor;
+
+                const ampPix = (currentAmp / 100) * (h * 0.38);
+                const wavelength = Math.max(12, (1000 / Math.max(40, currentFreq)) * 35);
+                const time = Date.now() * 0.005;
+
+                for (let x = 0; x < w; x++) {
+                    const phase = (x / wavelength) * Math.PI * 2 + time;
+                    let val = 0;
+
+                    if (currentWaveType === 'sine') {
+                        val = Math.sin(phase);
+                    } else if (currentWaveType === 'square') {
+                        val = Math.sin(phase) >= 0 ? 0.85 : -0.85;
+                    } else if (currentWaveType === 'sawtooth') {
+                        val = 2 * ((phase / (2 * Math.PI)) - Math.floor(0.5 + phase / (2 * Math.PI)));
+                    } else if (currentWaveType === 'triangle') {
+                        val = 2 * Math.abs(2 * ((phase / (2 * Math.PI)) - Math.floor(0.5 + phase / (2 * Math.PI)))) - 1;
+                    } else if (currentWaveType === 'custom' && drawPoints.length === DRAW_SAMPLES) {
+                        const normPos = ((phase % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+                        const sampleIdx = Math.floor((normPos / (2 * Math.PI)) * DRAW_SAMPLES) % DRAW_SAMPLES;
+                        val = drawPoints[sampleIdx];
+                    }
+
+                    const y = centerY - val * ampPix;
+                    if (x === 0) oscCtx.moveTo(x, y);
+                    else oscCtx.lineTo(x, y);
+                }
+                oscCtx.stroke();
+                oscCtx.shadowBlur = 0;
+
+                // Render Air Particle Compression Wave
+                renderParticles(time, wavelength);
+            }
+        }
+
+        function renderParticles(time, wavelength) {
+            if (!particleCanvas) return;
+            const pw = particleCanvas.width;
+            const ph = particleCanvas.height;
+            if (pw === 0 || ph === 0) return;
+
+            particleCtx.clearRect(0, 0, pw, ph);
+            const maxDisp = (currentAmp / 100) * 16;
+
+            particles.forEach(p => {
+                const phase = (p.baseX / wavelength) * Math.PI * 2 - time;
+                const disp = Math.sin(phase) * maxDisp;
+                p.x = p.baseX + disp;
+
+                particleCtx.fillStyle = p.color;
+                particleCtx.beginPath();
+                particleCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                particleCtx.fill();
+            });
+        }
+
+        function renderGameCanvas() {
+            if (activeTab !== 'game') return;
+            requestAnimationFrame(renderGameCanvas);
+
+            if (!gameCanvas) return;
+            const w = gameCanvas.width;
+            const h = gameCanvas.height;
+            if (w === 0 || h === 0) return;
+            const centerY = h / 2;
+
+            gameCtx.clearRect(0, 0, w, h);
+
+            // Target Wave (Amber Dashed Line)
+            const targetWavelength = Math.max(15, (1000 / targetFreq) * 35);
+            const targetAmpPix = (targetAmp / 100) * (h * 0.35);
+
+            gameCtx.beginPath();
+            gameCtx.lineWidth = 2.5;
+            gameCtx.strokeStyle = '#fbbf24';
+            gameCtx.setLineDash([6, 6]);
+            for (let x = 0; x < w; x++) {
+                const y = centerY - Math.sin((x / targetWavelength) * Math.PI * 2) * targetAmpPix;
+                if (x === 0) gameCtx.moveTo(x, y);
+                else gameCtx.lineTo(x, y);
+            }
+            gameCtx.stroke();
+            gameCtx.setLineDash([]);
+
+            // Student User Wave (Emerald Green Solid Line)
+            const gameFreq = parseFloat(document.getElementById('gameFreqSlider').value);
+            const gameAmp = parseFloat(document.getElementById('gameAmpSlider').value);
+            const userWavelength = Math.max(15, (1000 / gameFreq) * 35);
+            const userAmpPix = (gameAmp / 100) * (h * 0.35);
+
+            gameCtx.beginPath();
+            gameCtx.lineWidth = 3;
+            gameCtx.strokeStyle = '#10b981';
+            gameCtx.shadowBlur = 10;
+            gameCtx.shadowColor = '#10b981';
+
+            for (let x = 0; x < w; x++) {
+                const y = centerY - Math.sin((x / userWavelength) * Math.PI * 2) * userAmpPix;
+                if (x === 0) gameCtx.moveTo(x, y);
+                else gameCtx.lineTo(x, y);
+            }
+            gameCtx.stroke();
+            gameCtx.shadowBlur = 0;
+
+            // Match Percentage Calculation
+            const freqDiff = Math.abs(gameFreq - targetFreq) / targetFreq;
+            const ampDiff = Math.abs(gameAmp - targetAmp) / targetAmp;
+            const match = Math.max(0, Math.min(100, Math.round((1 - (freqDiff * 0.6 + ampDiff * 0.4)) * 100)));
+
+            const matchEl = document.getElementById('matchPercent');
+            if (matchEl) matchEl.textContent = match;
+        }
+
+        function resetDrawPointsToSine() {
+            for (let i = 0; i < DRAW_SAMPLES; i++) {
+                drawPoints[i] = Math.sin((i / DRAW_SAMPLES) * Math.PI * 2);
+            }
+            renderDrawCanvas();
+            updateCustomWaveFromDraw();
+        }
+
+        function updateCustomWaveFromDraw() {
+            // Discrete Fourier Transform (DFT) to synthesize PeriodicWave for Web Audio API
+            const numHarmonics = 32;
+            const real = new Float32Array(numHarmonics);
+            const imag = new Float32Array(numHarmonics);
+
+            real[0] = 0;
+            imag[0] = 0;
+
+            for (let n = 1; n < numHarmonics; n++) {
+                let a = 0;
+                let b = 0;
+                for (let i = 0; i < DRAW_SAMPLES; i++) {
+                    const angle = (2 * Math.PI * n * i) / DRAW_SAMPLES;
+                    a += drawPoints[i] * Math.cos(angle);
+                    b += drawPoints[i] * Math.sin(angle);
+                }
+                real[n] = (2 / DRAW_SAMPLES) * a;
+                imag[n] = (2 / DRAW_SAMPLES) * b;
+            }
+
+            if (audioCtx) {
+                try {
+                    customPeriodicWave = audioCtx.createPeriodicWave(real, imag);
+                    if (currentWaveType === 'custom' && oscillator) {
+                        oscillator.setPeriodicWave(customPeriodicWave);
+                    }
+                } catch (e) {
+                    console.warn("PeriodicWave synthesis error:", e);
+                }
+            }
+
+            // Sync harmonic amplitude sliders with drawn wave DFT coefficients
+            for (let i = 0; i < 8; i++) {
+                const idx = i + 1;
+                const mag = Math.sqrt(real[idx] * real[idx] + imag[idx] * imag[idx]);
+                harmonicAmplitudes[i] = Math.min(1.0, mag);
+                
+                const slider = document.querySelector(`.harmonic-slider[data-index="${i}"]`);
+                const valLabel = document.getElementById(`hVal${i+1}`);
+                if (slider) slider.value = Math.round(harmonicAmplitudes[i] * 100);
+                if (valLabel) valLabel.textContent = `${Math.round(harmonicAmplitudes[i] * 100)}%`;
+            }
+        }
+
+        function updateWaveformFromHarmonicSliders() {
+            for (let i = 0; i < DRAW_SAMPLES; i++) {
+                const theta = (i / DRAW_SAMPLES) * Math.PI * 2;
+                let sampleVal = 0;
+                for (let h = 0; h < 8; h++) {
+                    const hFreqMultiplier = h + 1;
+                    sampleVal += harmonicAmplitudes[h] * Math.sin(theta * hFreqMultiplier);
+                }
+                drawPoints[i] = sampleVal;
+            }
+
+            // Normalize peak height within [-1.0, 1.0]
+            let maxAmp = 0;
+            for (let i = 0; i < DRAW_SAMPLES; i++) {
+                if (Math.abs(drawPoints[i]) > maxAmp) maxAmp = Math.abs(drawPoints[i]);
+            }
+            if (maxAmp > 1.0) {
+                for (let i = 0; i < DRAW_SAMPLES; i++) drawPoints[i] /= maxAmp;
+            }
+
+            renderDrawCanvas();
+
+            // Synthesize Audio PeriodicWave directly from slider harmonics
+            const real = new Float32Array(32);
+            const imag = new Float32Array(32);
+            for (let h = 0; h < 8; h++) {
+                imag[h + 1] = harmonicAmplitudes[h];
+            }
+
+            if (audioCtx) {
+                try {
+                    customPeriodicWave = audioCtx.createPeriodicWave(real, imag);
+                    currentWaveType = 'custom';
+                    document.getElementById('hudShape').textContent = '傅立葉泛音合成 (Fourier)';
+                    applyWaveformToAudioNode();
+                } catch (e) {
+                    console.warn("Error creating PeriodicWave from sliders:", e);
+                }
+            }
+        }
+
+        function renderDrawCanvas() {
+            if (!drawCanvas) return;
+            const w = drawCanvas.width;
+            const h = drawCanvas.height;
+            if (w === 0 || h === 0) return;
+            const centerY = h / 2;
+
+            drawCtx.clearRect(0, 0, w, h);
+
+            // Center zero axis line
+            drawCtx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+            drawCtx.lineWidth = 1;
+            drawCtx.beginPath();
+            drawCtx.moveTo(0, centerY);
+            drawCtx.lineTo(w, centerY);
+            drawCtx.stroke();
+
+            // Draw user curve
+            drawCtx.beginPath();
+            drawCtx.lineWidth = 3;
+            drawCtx.strokeStyle = '#a855f7';
+            drawCtx.shadowBlur = 10;
+            drawCtx.shadowColor = '#a855f7';
+
+            for (let i = 0; i < DRAW_SAMPLES; i++) {
+                const x = (i / (DRAW_SAMPLES - 1)) * w;
+                const y = centerY - drawPoints[i] * (h * 0.4);
+                if (i === 0) drawCtx.moveTo(x, y);
+                else drawCtx.lineTo(x, y);
+            }
+            drawCtx.stroke();
+            drawCtx.shadowBlur = 0;
+        }
+
+        // Pointer & Touch Continuous Stroke Event Handlers
+        function startDrawingPointer(e) {
+            isDrawing = true;
+            prevDrawX = null;
+            prevDrawY = null;
+            handleDrawPointer(e);
+        }
+
+        function stopDrawingPointer() {
+            isDrawing = false;
+            prevDrawX = null;
+            prevDrawY = null;
+        }
+
+        function handleDrawPointer(e) {
+            if (!isDrawing || !drawCanvas) return;
+            const rect = drawCanvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+            const x = Math.max(0, Math.min(rect.width, clientX - rect.left));
+            const y = Math.max(0, Math.min(rect.height, clientY - rect.top));
+
+            const normX = x / rect.width;
+            const normY = (rect.height / 2 - y) / (rect.height * 0.4);
+
+            if (prevDrawX !== null && prevDrawY !== null) {
+                // Linear Interpolation between stroke points
+                const steps = Math.max(1, Math.abs(normX - prevDrawX) * DRAW_SAMPLES * 2);
+                for (let i = 0; i <= steps; i++) {
+                    const t = i / steps;
+                    const interpX = prevDrawX + (normX - prevDrawX) * t;
+                    const interpY = prevDrawY + (normY - prevDrawY) * t;
+                    const idx = Math.floor(interpX * (DRAW_SAMPLES - 1));
+                    if (idx >= 0 && idx < DRAW_SAMPLES) {
+                        drawPoints[idx] = Math.max(-1, Math.min(1, interpY));
+                    }
+                }
+            } else {
+                const idx = Math.floor(normX * (DRAW_SAMPLES - 1));
+                if (idx >= 0 && idx < DRAW_SAMPLES) {
+                    drawPoints[idx] = Math.max(-1, Math.min(1, normY));
+                }
+            }
+
+            prevDrawX = normX;
+            prevDrawY = normY;
+
+            renderDrawCanvas();
+            updateCustomWaveFromDraw();
+
+            if (currentWaveType !== 'custom') {
+                currentWaveType = 'custom';
+                document.getElementById('hudShape').textContent = '自訂手繪波 (Custom)';
+                applyWaveformToAudioNode();
+            }
+        }
+
+        drawCanvas.addEventListener('mousedown', startDrawingPointer);
+        drawCanvas.addEventListener('mousemove', handleDrawPointer);
+        window.addEventListener('mouseup', stopDrawingPointer);
+
+        drawCanvas.addEventListener('touchstart', (e) => { startDrawingPointer(e); e.preventDefault(); }, { passive: false });
+        drawCanvas.addEventListener('touchmove', (e) => { handleDrawPointer(e); e.preventDefault(); }, { passive: false });
+        window.addEventListener('touchend', stopDrawingPointer);
+
+        const extremeFreqSlider = document.getElementById('extremeFreqSlider');
+        const extremeFreqDisplay = document.getElementById('extremeFreqDisplay');
+        const frequencyCategoryTag = document.getElementById('frequencyCategoryTag');
+        const freqTrackFill = document.getElementById('freqTrackFill');
+
+        function updateExtremeFrequency(freq) {
+            if (extremeFreqDisplay) {
+                extremeFreqDisplay.innerHTML = `${Number(freq).toLocaleString()} <span class="text-xl text-slate-400">Hz</span>`;
+            }
+
+            // Calculate percentage position across 10 - 21000 Hz scale for track fill
+            const percent = Math.max(0, Math.min(100, ((freq - 10) / (21000 - 10)) * 100));
+            if (freqTrackFill) {
+                freqTrackFill.style.width = `${percent}%`;
+            }
+
+            if (frequencyCategoryTag) {
+                if (freq < 20) {
+                    frequencyCategoryTag.textContent = '次聲波區 (Infrasound) - 人耳聽不到，僅能感受震動';
+                    frequencyCategoryTag.className = 'mt-2 px-3 py-1 rounded-full bg-rose-950 border border-rose-500/30 text-rose-300 text-xs font-bold';
+                } else if (freq <= 250) {
+                    frequencyCategoryTag.textContent = '低頻音域 (Bass / Low Frequency)';
+                    frequencyCategoryTag.className = 'mt-2 px-3 py-1 rounded-full bg-cyan-950 border border-cyan-500/30 text-cyan-300 text-xs font-bold';
+                } else if (freq <= 4000) {
+                    frequencyCategoryTag.textContent = '人體敏感聽覺區 (Standard Musical & Vocal Range)';
+                    frequencyCategoryTag.className = 'mt-2 px-3 py-1 rounded-full bg-emerald-950 border border-emerald-500/30 text-emerald-300 text-xs font-bold';
+                } else if (freq <= 15000) {
+                    frequencyCategoryTag.textContent = '高頻音域 (High Frequency / Treble)';
+                    frequencyCategoryTag.className = 'mt-2 px-3 py-1 rounded-full bg-purple-950 border border-purple-500/30 text-purple-300 text-xs font-bold';
+                } else if (freq <= 20000) {
+                    frequencyCategoryTag.textContent = '青少年極限高頻區 (Youth Hearing Limit / Mosquito Tone)';
+                    frequencyCategoryTag.className = 'mt-2 px-3 py-1 rounded-full bg-amber-950 border border-amber-500/30 text-amber-300 text-xs font-bold';
+                } else {
+                    frequencyCategoryTag.textContent = '超聲波區 (Ultrasound) - 超越人類聽覺極限 (>20,000 Hz)';
+                    frequencyCategoryTag.className = 'mt-2 px-3 py-1 rounded-full bg-rose-950 border border-rose-500/30 text-rose-300 text-xs font-bold';
+                }
+            }
+
+            // Sync with audio engine
+            currentFreq = freq;
+            const mainSlider = document.getElementById('freqSlider');
+            if (mainSlider) mainSlider.value = Math.min(1200, freq);
+            document.getElementById('freqVal').textContent = freq;
+            document.getElementById('hudFreq').textContent = freq;
+
+            if (oscillator && audioCtx) {
+                oscillator.frequency.setValueAtTime(currentFreq, audioCtx.currentTime);
+            }
+        }
+
+        extremeFreqSlider?.addEventListener('input', (e) => {
+            updateExtremeFrequency(parseFloat(e.target.value));
+        });
+
+        document.querySelectorAll('.freq-preset-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const freq = parseFloat(card.dataset.freq);
+                if (extremeFreqSlider) extremeFreqSlider.value = freq;
+                updateExtremeFrequency(freq);
+            });
+        });
+
+        let sweepInterval = null;
+        const sweepTestBtn = document.getElementById('sweepTestBtn');
+        const stopSweepBtn = document.getElementById('stopSweepBtn');
+
+        sweepTestBtn?.addEventListener('click', () => {
+            if (!isAudioPlaying) initAudio();
+
+            sweepTestBtn.classList.add('hidden');
+            stopSweepBtn.classList.remove('hidden');
+
+            let currentSweep = 20;
+            // Changed multiplier step from 0.03 to 0.015 (2x slower sweep rate)
+            sweepInterval = setInterval(() => {
+                currentSweep += Math.max(1, Math.ceil(currentSweep * 0.015));
+                if (currentSweep > 20000) {
+                    currentSweep = 20000;
+                    clearInterval(sweepInterval);
+                    stopSweepBtn.classList.add('hidden');
+                    sweepTestBtn.classList.remove('hidden');
+                }
+                if (extremeFreqSlider) extremeFreqSlider.value = currentSweep;
+                updateExtremeFrequency(currentSweep);
+            }, 100);
+        });
+
+        stopSweepBtn?.addEventListener('click', () => {
+            if (sweepInterval) clearInterval(sweepInterval);
+            stopSweepBtn.classList.add('hidden');
+            sweepTestBtn.classList.remove('hidden');
+        });
+
+        function switchTab(target) {
+            activeTab = target;
+
+            const allTabs = [tabExplore, tabSoundLab, tabHearingTest, tabGame];
+            const allPages = [pageExplore, pageSoundLab, pageHearingTest, pageGame];
+
+            allTabs.forEach(t => {
+                t?.classList.remove('bg-blue-600', 'text-white');
+                t?.classList.add('text-slate-400');
+            });
+
+            allPages.forEach(p => p?.classList.add('hidden'));
+
+            if (target === 'explore') {
+                tabExplore?.classList.add('bg-blue-600', 'text-white');
+                pageExplore?.classList.remove('hidden');
+            } else if (target === 'soundLab') {
+                tabSoundLab?.classList.add('bg-blue-600', 'text-white');
+                pageSoundLab?.classList.remove('hidden');
+            } else if (target === 'hearingTest') {
+                tabHearingTest?.classList.add('bg-blue-600', 'text-white');
+                pageHearingTest?.classList.remove('hidden');
+            } else if (target === 'game') {
+                tabGame?.classList.add('bg-blue-600', 'text-white');
+                pageGame?.classList.remove('hidden');
+            }
+
+            // Trigger canvas resize after unhiding page
+            setTimeout(() => {
+                resizeCanvases();
+                if (target === 'soundLab') {
+                    renderDrawCanvas();
+                } else if (target === 'game') {
+                    renderGameCanvas();
+                }
+            }, 50);
+        }
+
+        tabExplore?.addEventListener('click', () => switchTab('explore'));
+        tabSoundLab?.addEventListener('click', () => switchTab('soundLab'));
+        tabHearingTest?.addEventListener('click', () => switchTab('hearingTest'));
+        tabGame?.addEventListener('click', () => switchTab('game'));
+
+        function setupControls() {
+            document.getElementById('masterAudioBtn')?.addEventListener('click', toggleAudio);
+
+            // Synthesizer Pitch Frequency Slider & Keys
+            const synthFreqSlider = document.getElementById('synthFreqSlider');
+            synthFreqSlider?.addEventListener('input', (e) => {
+                synthFreq = parseFloat(e.target.value);
+                document.getElementById('synthFreqVal').textContent = synthFreq;
+                currentFreq = synthFreq;
+                document.getElementById('freqSlider').value = Math.min(1200, synthFreq);
+                document.getElementById('freqVal').textContent = synthFreq;
+                document.getElementById('hudFreq').textContent = synthFreq;
+                if (oscillator && audioCtx) {
+                    oscillator.frequency.setValueAtTime(synthFreq, audioCtx.currentTime);
+                }
+            });
+
+            document.querySelectorAll('.synth-piano-key').forEach(key => {
+                key.addEventListener('click', () => {
+                    const freq = parseFloat(key.dataset.freq);
+                    synthFreq = freq;
+                    if (synthFreqSlider) synthFreqSlider.value = freq;
+                    document.getElementById('synthFreqVal').textContent = Math.round(freq);
+                    currentFreq = freq;
+                    document.getElementById('freqVal').textContent = Math.round(freq);
+                    document.getElementById('hudFreq').textContent = Math.round(freq);
+                    if (oscillator && audioCtx) {
+                        oscillator.frequency.setValueAtTime(synthFreq, audioCtx.currentTime);
+                    }
+                });
+            });
+
+            // Harmonic Sliders Event Listeners
+            document.querySelectorAll('.harmonic-slider').forEach(slider => {
+                slider.addEventListener('input', (e) => {
+                    const idx = parseInt(e.target.dataset.index);
+                    const val = parseFloat(e.target.value) / 100;
+                    harmonicAmplitudes[idx] = val;
+                    const label = document.getElementById(`hVal${idx+1}`);
+                    if (label) label.textContent = `${Math.round(val * 100)}%`;
+
+                    updateWaveformFromHarmonicSliders();
+                });
+            });
+
+            document.getElementById('clearHarmonicsBtn')?.addEventListener('click', () => {
+                harmonicAmplitudes = [1.0, 0, 0, 0, 0, 0, 0, 0];
+                for (let i = 0; i < 8; i++) {
+                    const slider = document.querySelector(`.harmonic-slider[data-index="${i}"]`);
+                    const valLabel = document.getElementById(`hVal${i+1}`);
+                    if (slider) slider.value = i === 0 ? 100 : 0;
+                    if (valLabel) valLabel.textContent = i === 0 ? '100%' : '0%';
+                }
+                updateWaveformFromHarmonicSliders();
+            });
+
+            document.getElementById('playSynthBtn')?.addEventListener('click', () => {
+                if (!audioCtx) initAudio();
+                if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+            });
+
+            const freqSlider = document.getElementById('freqSlider');
+            freqSlider?.addEventListener('input', (e) => {
+                currentFreq = parseFloat(e.target.value);
+                document.getElementById('freqVal').textContent = currentFreq;
+                document.getElementById('hudFreq').textContent = currentFreq;
+                if (oscillator && audioCtx) {
+                    oscillator.frequency.setValueAtTime(currentFreq, audioCtx.currentTime);
+                }
+            });
+
+            const ampSlider = document.getElementById('ampSlider');
+            ampSlider?.addEventListener('input', (e) => {
+                currentAmp = parseFloat(e.target.value);
+                document.getElementById('ampVal').textContent = currentAmp;
+                document.getElementById('hudAmp').textContent = currentAmp;
+                document.getElementById('volumeMeter').style.width = `${currentAmp}%`;
+                if (gainNode && audioCtx) {
+                    gainNode.gain.setValueAtTime((currentAmp / 100) * 0.25, audioCtx.currentTime);
+                }
+            });
+
+            document.querySelectorAll('.piano-key').forEach(key => {
+                key.addEventListener('click', () => {
+                    const freq = parseFloat(key.dataset.freq);
+                    currentFreq = freq;
+                    if (freqSlider) freqSlider.value = freq;
+                    document.getElementById('freqVal').textContent = Math.round(freq);
+                    document.getElementById('hudFreq').textContent = Math.round(freq);
+                    if (oscillator && audioCtx) {
+                        oscillator.frequency.setValueAtTime(currentFreq, audioCtx.currentTime);
+                    }
+                });
+            });
+
+            document.querySelectorAll('.wave-type-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.wave-type-btn').forEach(b => {
+                        b.classList.remove('border-purple-500', 'bg-purple-950/40', 'text-purple-300');
+                        b.classList.add('border-slate-800', 'bg-slate-900/60', 'text-slate-400');
+                    });
+                    btn.classList.remove('border-slate-800', 'bg-slate-900/60', 'text-slate-400');
+                    btn.classList.add('border-purple-500', 'bg-purple-950/40', 'text-purple-300');
+
+                    currentWaveType = btn.dataset.type;
+                    const labels = { sine: '正弦波 (Sine)', square: '方波 (Square)', sawtooth: '鋸齒波 (Sawtooth)', triangle: '三角波 (Triangle)' };
+                    document.getElementById('hudShape').textContent = labels[currentWaveType] || currentWaveType;
+
+                    applyWaveformToAudioNode();
+                });
+            });
+
+            document.getElementById('gameFreqSlider')?.addEventListener('input', (e) => {
+                document.getElementById('gameFreqText').textContent = `${e.target.value} Hz`;
+            });
+            document.getElementById('gameAmpSlider')?.addEventListener('input', (e) => {
+                document.getElementById('gameAmpText').textContent = `${e.target.value} %`;
+            });
+
+            document.getElementById('playTargetBtn')?.addEventListener('click', () => {
+                if (!audioCtx) initAudio();
+                if (oscillator && audioCtx) {
+                    oscillator.frequency.setValueAtTime(targetFreq, audioCtx.currentTime);
+                    gainNode.gain.setValueAtTime((targetAmp / 100) * 0.25, audioCtx.currentTime);
+                    setTimeout(() => {
+                        oscillator.frequency.setValueAtTime(currentFreq, audioCtx.currentTime);
+                        gainNode.gain.setValueAtTime((currentAmp / 100) * 0.25, audioCtx.currentTime);
+                    }, 1500);
+                }
+            });
+
+            document.getElementById('nextLevelBtn')?.addEventListener('click', () => {
+                targetFreq = Math.floor(Math.random() * 600 + 200);
+                targetAmp = Math.floor(Math.random() * 60 + 25);
+            });
+
+            // Preset Instrument Configurations
+            document.querySelectorAll('.draw-preset-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const preset = btn.dataset.preset;
+                    if (preset === 'sine') {
+                        harmonicAmplitudes = [1.0, 0, 0, 0, 0, 0, 0, 0];
+                    } else if (preset === 'flute') {
+                        harmonicAmplitudes = [1.0, 0.45, 0.12, 0.05, 0, 0, 0, 0];
+                    } else if (preset === 'violin') {
+                        harmonicAmplitudes = [1.0, 0.85, 0.65, 0.5, 0.4, 0.3, 0.2, 0.1];
+                    } else if (preset === 'clarinet') {
+                        harmonicAmplitudes = [1.0, 0.05, 0.75, 0.05, 0.5, 0.05, 0.25, 0.05];
+                    } else if (preset === 'piano') {
+                        harmonicAmplitudes = [1.0, 0.6, 0.35, 0.2, 0.1, 0.05, 0.02, 0.01];
+                    } else if (preset === 'square') {
+                        harmonicAmplitudes = [1.0, 0, 0.33, 0, 0.2, 0, 0.14, 0];
+                    }
+
+                    for (let i = 0; i < 8; i++) {
+                        const slider = document.querySelector(`.harmonic-slider[data-index="${i}"]`);
+                        const valLabel = document.getElementById(`hVal${i+1}`);
+                        if (slider) slider.value = Math.round(harmonicAmplitudes[i] * 100);
+                        if (valLabel) valLabel.textContent = `${Math.round(harmonicAmplitudes[i] * 100)}%`;
+                    }
+
+                    updateWaveformFromHarmonicSliders();
+                });
+            });
+
+            document.getElementById('resetDrawBtn')?.addEventListener('click', resetDrawPointsToSine);
+
+            window.addEventListener('resize', resizeCanvases);
+        }
+
+        window.onload = function() {
+            resizeCanvases();
+            resetDrawPointsToSine();
+            setupControls();
+            renderOscilloscope();
+            updateExtremeFrequency(1000);
+        };
+    </script>
+</body>
+</html>
