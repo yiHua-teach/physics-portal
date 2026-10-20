@@ -1,0 +1,1155 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>光速測量歷史與原理 - 物理互動教學系統</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- MathJax 用於數學公式渲染 -->
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" id="MathJax-script" async></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=JetBrains+Mono:wght@400;600;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Noto Sans TC', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        cyber: {
+                            bg: '#080d1a',
+                            card: '#11192e',
+                            border: '#1e2d4d',
+                            accent: '#3b82f6',
+                            glow: '#60a5fa',
+                            laser: '#fae842',
+                            cyan: '#06b6d4',
+                            emerald: '#10b981'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #080d1a;
+            color: #f1f5f9;
+            font-family: 'Noto Sans TC', sans-serif;
+            user-select: none;
+        }
+        input[type=range] {
+            -webkit-appearance: none;
+            background: #1e293b;
+            border-radius: 8px;
+            height: 8px;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            box-shadow: 0 0 10px #60a5fa;
+            transition: all 0.2s ease;
+        }
+        input[type=range]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            background: #60a5fa;
+        }
+        .glow-box {
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.12);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- 頂部 Header -->
+    <header class="bg-cyber-card border-b border-cyber-border sticky top-0 z-50 px-4 py-3 shadow-2xl">
+        <div class="max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 via-indigo-600 to-cyan-400 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-blue-500/30">
+                    ⚡
+                </div>
+                <div>
+                    <h1 class="text-xl font-black bg-gradient-to-r from-blue-400 via-cyan-300 to-yellow-200 bg-clip-text text-transparent tracking-wide">
+                        光速測量歷史與原理互動探索
+                    </h1>
+                    <p class="text-xs text-slate-400">國中/高中物理實驗精準幾何與動態模擬教學</p>
+                </div>
+            </div>
+
+            <!-- Tab 頁籤按鈕 -->
+            <nav class="flex flex-wrap bg-slate-950/80 p-1.5 rounded-xl border border-cyber-border text-sm font-medium gap-1">
+                <button onclick="switchTab(1)" id="tab-btn-1" class="tab-btn px-3 py-2 rounded-lg transition-all flex items-center gap-2 bg-blue-600 text-white shadow-md">
+                    <span>1. 伽利略山頭燈籠</span>
+                </button>
+                <button onclick="switchTab(2)" id="tab-btn-2" class="tab-btn px-3 py-2 rounded-lg transition-all flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-800">
+                    <span>2. 羅默木衛一食</span>
+                </button>
+                <button onclick="switchTab(3)" id="tab-btn-3" class="tab-btn px-3 py-2 rounded-lg transition-all flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-800">
+                    <span>3. 菲佐齒輪法</span>
+                </button>
+                <button onclick="switchTab(4)" id="tab-btn-4" class="tab-btn px-3 py-2 rounded-lg transition-all flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-800">
+                    <span>4. 邁克爾遜八面鏡</span>
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- 主要區域 -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 flex flex-col gap-6">
+
+        <!-- ==================== TAB 1: 伽利略山頭燈籠實驗 ==================== -->
+        <section id="tab-1" class="tab-content flex flex-col gap-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- 左側動畫 Canvas (2欄) -->
+                <div class="lg:col-span-2 bg-cyber-card border border-cyber-border rounded-2xl p-4 flex flex-col gap-4 glow-box">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-blue-500 animate-pulse"></span>
+                            <h2 class="font-bold text-lg text-blue-300">山頭燈籠實驗模擬（地面人工測量極限）</h2>
+                        </div>
+                        <span class="text-xs bg-slate-800 text-slate-300 px-2.5 py-1 rounded-full border border-slate-700">17 世紀失敗嘗試</span>
+                    </div>
+
+                    <div class="relative w-full aspect-[16/9] bg-slate-950 rounded-xl overflow-hidden border border-slate-800">
+                        <canvas id="canvas-tab1" class="w-full h-full block"></canvas>
+                        <div id="galileo-status" class="absolute top-4 left-4 bg-slate-900/90 border border-slate-700 backdrop-blur text-xs px-3 py-2 rounded-lg text-slate-200">
+                            準備就緒，請點擊「開啟燈籠 A」
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap items-center justify-between gap-4 bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+                        <button id="btn-galileo-start" onclick="startGalileoExp()" class="px-5 py-2.5 bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-400 hover:to-amber-500 text-slate-950 font-bold rounded-xl transition shadow-lg shadow-yellow-500/20 active:scale-95 flex items-center gap-2">
+                            <span>💡 開啟燈籠 A（發射光束）</span>
+                        </button>
+
+                        <div class="flex flex-wrap items-center gap-6 text-sm">
+                            <div class="flex items-center gap-2">
+                                <span class="text-slate-400">山頭距離 ($d$):</span>
+                                <input type="range" id="galileo-dist" min="1" max="10" step="0.5" value="2.5" oninput="updateGalileoParams()" class="w-24">
+                                <span id="galileo-dist-val" class="font-mono text-cyan-400 font-bold">2.5 km</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-slate-400">助手反應時間 ($t_{\text{反應}}$):</span>
+                                <input type="range" id="galileo-react" min="0.10" max="0.50" step="0.02" value="0.20" oninput="updateGalileoParams()" class="w-24">
+                                <span id="galileo-react-val" class="font-mono text-yellow-400 font-bold">0.20 秒</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 右側數據與分析 -->
+                <div class="bg-cyber-card border border-cyber-border rounded-2xl p-5 flex flex-col gap-5 justify-between">
+                    <div>
+                        <h3 class="font-bold text-base border-b border-slate-700 pb-3 text-slate-200 flex items-center gap-2">
+                            <span>⏱️ 時間數量級分析</span>
+                        </h3>
+
+                        <div class="mt-4 space-y-4">
+                            <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-800">
+                                <div class="text-xs text-slate-400 mb-1">光往返真實傳播時間 ($t_{\text{光}} = \frac{2d}{c}$)</div>
+                                <div id="galileo-light-time" class="text-xl font-mono text-cyan-400 font-bold">0.0000167 秒</div>
+                                <div class="text-[11px] text-slate-500 mt-1">（光速 $c \approx 300,000 \text{ km/s}$，往返 $5\text{ km}$）</div>
+                            </div>
+
+                            <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-800">
+                                <div class="text-xs text-slate-400 mb-1">助手生理反應時間 ($t_{\text{反應}}$)</div>
+                                <div id="galileo-reaction-time" class="text-xl font-mono text-yellow-400 font-bold">0.2000000 秒</div>
+                                <div class="text-[11px] text-slate-500 mt-1">（眼睛接收光 $\rightarrow$ 大腦傳導 $\rightarrow$ 手部揭燈）</div>
+                            </div>
+
+                            <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-800">
+                                <div class="text-xs text-slate-400 mb-1">測得總時間 ($T_{\text{總}} = t_{\text{光}} + t_{\text{反應}}$)</div>
+                                <div id="galileo-total-time" class="text-2xl font-mono text-red-400 font-bold">0.2000167 秒</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-950 p-3 rounded-xl border border-slate-800">
+                        <div class="text-xs text-slate-400 mb-2 flex justify-between">
+                            <span>測量時間佔比比較</span>
+                            <span class="text-red-400 font-bold">生理反應時間佔 99.99%</span>
+                        </div>
+                        <div class="h-4 w-full bg-slate-800 rounded-full overflow-hidden flex">
+                            <div id="bar-light" class="h-full bg-cyan-400" style="width: 1%;"></div>
+                            <div id="bar-react" class="h-full bg-yellow-500" style="width: 99%;"></div>
+                        </div>
+                        <div class="flex justify-between text-[10px] font-mono mt-1.5">
+                            <span class="text-cyan-400">■ 光飛行時間 (極微小)</span>
+                            <span class="text-yellow-400">■ 人體反應時間 (極巨大)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 物理重點整理 -->
+            <div class="bg-cyber-card border border-cyber-border rounded-2xl p-5">
+                <h3 class="font-bold text-blue-400 text-lg mb-2 flex items-center gap-2">
+                    📚 物理重點整理：伽利略實驗的失敗與啟示
+                </h3>
+                <div class="text-sm text-slate-300 leading-relaxed grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-slate-900/50 p-3.5 rounded-xl border border-slate-800">
+                        <p class="font-semibold text-cyan-300 mb-1">1. 基本公式：$v = \frac{2d}{t}$</p>
+                        <p>理想狀態下，若山頭距離為 $d$，光往返距離為 $2d$。若能精確測出時間 $t$，即可求得光速。但在地面距離（數公里）下，$t_{\text{光}}$ 僅約數十微秒，完全被人類 0.2 秒的生理反應時間掩蓋。</p>
+                    </div>
+                    <div class="bg-slate-900/50 p-3.5 rounded-xl border border-slate-800">
+                        <p class="font-semibold text-yellow-300 mb-1">2. 實驗給後人的兩條突破路線</p>
+                        <p>伽利略實驗證明了光速即便有限，也必定極快。要測量光速，必須：<br>
+                        • **路線 A**：將距離 $d$ 大幅拉長至天體等級（羅默木衛一食）。<br>
+                        • **路線 B**：用極高速的機械裝置取代人的反應時間（菲佐齒輪、邁克爾遜八面鏡）。</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 2: 羅默木衛一食實驗 ==================== -->
+        <section id="tab-2" class="tab-content hidden flex-col gap-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- 左側 Canvas -->
+                <div class="lg:col-span-2 bg-cyber-card border border-cyber-border rounded-2xl p-4 flex flex-col gap-4 glow-box">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-cyan-400 animate-pulse"></span>
+                            <h2 class="font-bold text-lg text-cyan-300">羅默天文觀測：木衛一（Io）影食法</h2>
+                        </div>
+                        <span class="text-xs bg-slate-800 text-slate-300 px-2.5 py-1 rounded-full border border-slate-700">1676 年 天文尺度突破</span>
+                    </div>
+
+                    <div class="relative w-full aspect-[16/9] bg-slate-950 rounded-xl overflow-hidden border border-slate-800">
+                        <canvas id="canvas-tab2" class="w-full h-full block"></canvas>
+                    </div>
+
+                    <div class="flex flex-wrap items-center justify-between gap-4 bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+                        <div class="flex items-center gap-3">
+                            <button onclick="setEarthPos('A')" id="btn-pos-a" class="px-4 py-2 rounded-xl text-xs font-bold transition bg-cyan-600 text-white shadow-md">
+                                地球位置 A (近木星端 - 衝)
+                            </button>
+                            <button onclick="setEarthPos('B')" id="btn-pos-b" class="px-4 py-2 rounded-xl text-xs font-bold transition bg-slate-800 text-slate-300 hover:bg-slate-700">
+                                地球位置 B (遠木星端 - 合)
+                            </button>
+                        </div>
+
+                        <div class="flex items-center gap-4 text-xs">
+                            <button onclick="toggleRomeroAnim()" id="btn-romer-play" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl border border-slate-700 font-bold">
+                                ⏯️ 播放/暫停動態軌道
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 右側數據與計算 -->
+                <div class="bg-cyber-card border border-cyber-border rounded-2xl p-5 flex flex-col justify-between">
+                    <div>
+                        <h3 class="font-bold text-base border-b border-slate-700 pb-3 text-slate-200">
+                            🌌 天文尺度數據與計算
+                        </h3>
+
+                        <div class="mt-4 space-y-4 text-sm">
+                            <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-800">
+                                <div class="text-xs text-slate-400 mb-1">木衛一公轉週期（真值）</div>
+                                <div class="text-lg font-mono text-slate-200 font-bold">約 42.5 小時 (153,000 秒)</div>
+                            </div>
+
+                            <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-800">
+                                <div class="text-xs text-slate-400 mb-1">地球軌道直徑 ($2\,\text{AU}$)</div>
+                                <div class="text-lg font-mono text-cyan-400 font-bold">約 $3.0 \times 10^8\text{ km}$</div>
+                            </div>
+
+                            <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-800">
+                                <div class="text-xs text-slate-400 mb-1">累積影食延遲時間 ($\Delta t$)</div>
+                                <div class="text-2xl font-mono text-yellow-400 font-bold">約 $1000\text{ 秒}$ ($\approx 16.6\text{ 分}$)</div>
+                            </div>
+
+                            <div class="bg-slate-900/80 p-3 rounded-xl border border-cyan-500/30 bg-cyan-950/20">
+                                <div class="text-xs text-cyan-300 mb-1">推算光速 $c = \frac{2\,\text{AU}}{\Delta t}$</div>
+                                <div class="text-xl font-mono text-cyan-300 font-bold">$\approx 220,000 \sim 300,000\text{ km/s}$</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-xs text-slate-400">
+                        💡 <strong class="text-slate-200">關鍵觀念：</strong> 當地球從位置 A 移動到位置 B 時，木衛一影食信號必須**額外多穿過地球軌道直徑**，導致觀測到的影食發生時間比預測晚了 1000 秒。
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-cyber-card border border-cyber-border rounded-2xl p-5">
+                <h3 class="font-bold text-cyan-400 text-lg mb-2 flex items-center gap-2">
+                    📚 物理重點整理：羅默影食法原理
+                </h3>
+                <div class="text-sm text-slate-300 leading-relaxed grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-slate-900/50 p-3.5 rounded-xl border border-slate-800">
+                        <p class="font-semibold text-cyan-300 mb-1">1. 天球天然鐘擺</p>
+                        <p>木衛一（Io）繞木星運轉極規律，每次進入木星陰影（影食）的時間固定。羅默原先想利用它作為精準的天球時鐘。</p>
+                    </div>
+                    <div class="bg-slate-900/50 p-3.5 rounded-xl border border-slate-800">
+                        <p class="font-semibold text-yellow-300 mb-1">2. 光速有限的世紀首證</p>
+                        <p>羅默發現當地球遠離木星時，影食發生的時間會逐次累積延後。他指出這是因為「光線傳播需要時間」，開創了光速有限性的歷史新頁。</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 3: 菲佐齒輪法實驗 ==================== -->
+        <section id="tab-3" class="tab-content hidden flex-col gap-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- 左側主 Canvas -->
+                <div class="lg:col-span-2 bg-cyber-card border border-cyber-border rounded-2xl p-4 flex flex-col gap-4 glow-box">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-yellow-400 animate-pulse"></span>
+                            <h2 class="font-bold text-lg text-yellow-300">菲佐旋轉齒輪法 (1849) —— 精確幾何光路</h2>
+                        </div>
+                        <span class="text-xs bg-slate-800 text-slate-300 px-2.5 py-1 rounded-full border border-slate-700">地面機械測量里程碑</span>
+                    </div>
+
+                    <div class="relative w-full aspect-[16/10] bg-slate-950 rounded-xl overflow-hidden border border-slate-800">
+                        <canvas id="canvas-tab3" class="w-full h-full block"></canvas>
+                    </div>
+
+                    <!-- 控制選項 -->
+                    <div class="flex flex-col gap-3 bg-slate-900/60 p-4 rounded-xl border border-slate-800">
+                        <div class="flex flex-wrap items-center justify-between gap-4">
+                            <div class="flex items-center gap-3 flex-1 min-w-[240px]">
+                                <span class="text-xs font-bold text-slate-300 whitespace-nowrap">齒輪轉速 (RPM):</span>
+                                <input type="range" id="fizeau-rpm" min="0" max="2000" step="1" value="0" oninput="updateFizeauRPM()" class="w-full">
+                                <span id="fizeau-rpm-val" class="font-mono text-yellow-400 font-bold text-sm w-20">0 RPM</span>
+                            </div>
+
+                            <div class="flex items-center gap-3">
+                                <label class="flex items-center gap-2 cursor-pointer bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700">
+                                    <input type="checkbox" id="fizeau-slowmo" onchange="toggleFizeauSlowMo()" class="w-4 h-4 accent-yellow-400">
+                                    <span class="text-xs font-bold text-yellow-300">🐢 慢動作光子追蹤</span>
+                                </label>
+                                <button onclick="triggerFizeauPulse()" class="px-3 py-1.5 bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-bold rounded-lg text-xs transition">
+                                    ⚡ 發射單光子脈衝
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 關鍵預設按鈕 -->
+                        <div class="flex flex-wrap gap-2 pt-2 border-t border-slate-800 text-xs">
+                            <span class="text-slate-400 self-center">快速情境:</span>
+                            <button onclick="setFizeauPreset(0)" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-300">0 RPM (靜止/穿過同齒隙)</button>
+                            <button onclick="setFizeauPreset(724)" class="px-2.5 py-1 bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-500/40 rounded text-yellow-300 font-bold">724 RPM (1st 暗點 ⭐ 撞下一個齒)</button>
+                            <button onclick="setFizeauPreset(1448)" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-300">1448 RPM (1st 亮點 穿下一個隙)</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 右側接目鏡視野與數據 -->
+                <div class="bg-cyber-card border border-cyber-border rounded-2xl p-5 flex flex-col justify-between">
+                    <div>
+                        <h3 class="font-bold text-base border-b border-slate-700 pb-3 text-slate-200 flex items-center gap-2">
+                            <span>🔭 正下方觀測點 / 接目鏡視野</span>
+                        </h3>
+
+                        <div class="flex justify-center my-4">
+                            <div class="relative w-36 h-36 rounded-full bg-slate-950 border-4 border-slate-700 flex items-center justify-center overflow-hidden shadow-inner">
+                                <div class="absolute w-full h-[1px] bg-yellow-500/30"></div>
+                                <div class="absolute h-full w-[1px] bg-yellow-500/30"></div>
+                                <div class="absolute w-24 h-24 rounded-full border border-yellow-500/20"></div>
+                                <div id="fizeau-eyepiece-dot" class="w-10 h-10 rounded-full bg-yellow-300 shadow-[0_0_25px_#fde047] transition-all duration-100"></div>
+                            </div>
+                        </div>
+
+                        <div id="fizeau-status-text" class="text-center font-bold text-sm text-yellow-300 mb-4">
+                            視野狀況：極為明亮
+                        </div>
+
+                        <div class="space-y-2 text-xs bg-slate-900/80 p-3 rounded-xl border border-slate-800 font-mono">
+                            <div class="flex justify-between">
+                                <span class="text-slate-400">單程距離 ($d$):</span>
+                                <span class="text-slate-200">8.63 km (往返 $2d = 17.26\text{ km}$)</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-slate-400">齒輪齒數 ($N$):</span>
+                                <span class="text-slate-200">720 齒 (共 1440 齒牙/齒隙)</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-slate-400">光飛行時間 ($t_{\text{光}}$):</span>
+                                <span class="text-cyan-400 font-bold">$\approx 0.0000575\text{ 秒}$</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-slate-400">轉過半齒距時間:</span>
+                                <span class="text-yellow-400 font-bold">$t_{\text{齒}} = \frac{1}{2N f}$</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-xs text-slate-300">
+                        ⚙️ <strong class="text-yellow-400">準確幾何說明：</strong><br>
+                        1. 左側光源平射穿過半透鏡，打在**齒輪上端缺角**（圓心在下方）。<br>
+                        2. 光束飛至 8.63km 平面鏡折回。<br>
+                        3. 折回光通過齒輪缺角打在半透鏡上，**經半透鏡反射 $90^\circ$ 垂直向下**射入觀測點/接目鏡。
+                    </div>
+                </div>
+            </div>
+
+            <!-- 物理講義與公式推導 -->
+            <div class="bg-cyber-card border border-cyber-border rounded-2xl p-5">
+                <h3 class="font-bold text-yellow-400 text-lg mb-2 flex items-center gap-2">
+                    📚 菲佐齒輪法：公式推導與物理講義
+                </h3>
+                <div class="text-sm text-slate-300 leading-relaxed grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-slate-900/50 p-3.5 rounded-xl border border-slate-800">
+                        <p class="font-semibold text-yellow-300 mb-1">1. 第一次暗點條件推導</p>
+                        <p>齒輪共有 $N$ 個齒牙與 $N$ 個齒隙（共 $2N$ 等分）。齒輪轉過半個齒距（即轉過 1 個齒牙）所需的角度為 $\theta = \frac{\pi}{N}$ 弧度。</p>
+                        <p class="mt-2 font-mono text-cyan-300">光往返時間 $t = \frac{2d}{c}$，齒輪轉速頻率 $f$ (RPS)。<br>
+                        轉過半齒距時間 $t = \frac{1}{2N f}$。<br>
+                        令兩時間相等：$\frac{2d}{c} = \frac{1}{2N f} \implies f = \frac{c}{4Nd}$</p>
+                    </div>
+                    <div class="bg-slate-900/50 p-3.5 rounded-xl border border-slate-800">
+                        <p class="font-semibold text-cyan-300 mb-1">2. 數值代入與第一次亮點</p>
+                        <p>代入菲佐歷史數據：$d = 8633\text{ m}$，$N = 720$ 齒。<br>
+                        算得 $f \approx 12.07\text{ Hz}$，即每分鐘轉速 $\text{RPM} = 12.07 \times 60 \approx \mathbf{724\text{ RPM}}$。</p>
+                        <p class="mt-2 text-slate-400">當轉速倍增至 $1448\text{ RPM}$ 時，光往返時間內齒輪剛好轉過 1 個完整齒距，光由下一個缺角穿出，視野重新變亮！</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 4: 邁克爾遜八面鏡法 ==================== -->
+        <section id="tab-4" class="tab-content hidden flex-col gap-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- 左側主 Canvas -->
+                <div class="lg:col-span-2 bg-cyber-card border border-cyber-border rounded-2xl p-4 flex flex-col gap-4 glow-box">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-cyan-400 animate-pulse"></span>
+                            <h2 class="font-bold text-lg text-cyan-300">邁克爾遜旋轉八面鏡法 (1926) —— 角反射器與垂直下射幾何</h2>
+                        </div>
+                        <span class="text-xs bg-slate-800 text-slate-300 px-2.5 py-1 rounded-full border border-slate-700">諾貝爾物理學獎成就</span>
+                    </div>
+
+                    <div class="relative w-full aspect-[16/10] bg-slate-950 rounded-xl overflow-hidden border border-slate-800">
+                        <canvas id="canvas-tab4" class="w-full h-full block"></canvas>
+                    </div>
+
+                    <div class="flex flex-col gap-3 bg-slate-900/60 p-4 rounded-xl border border-slate-800">
+                        <div class="flex flex-wrap items-center justify-between gap-4">
+                            <div class="flex items-center gap-3 flex-1 min-w-[240px]">
+                                <span class="text-xs font-bold text-slate-300 whitespace-nowrap">八面鏡轉速 ($f$, Hz):</span>
+                                <input type="range" id="mich-hz" min="0" max="800" step="1" value="0" oninput="updateMichHZ()" class="w-full">
+                                <span id="mich-hz-val" class="font-mono text-cyan-400 font-bold text-sm w-20">0 Hz</span>
+                            </div>
+
+                            <div class="flex items-center gap-3">
+                                <label class="flex items-center gap-2 cursor-pointer bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700">
+                                    <input type="checkbox" id="mich-slowmo" onchange="toggleMichSlowMo()" class="w-4 h-4 accent-cyan-400">
+                                    <span class="text-xs font-bold text-cyan-300">🐢 慢動作光束追蹤</span>
+                                </label>
+                                <button onclick="triggerMichPulse()" class="px-3 py-1.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold rounded-lg text-xs transition">
+                                    ⚡ 發射單光子脈衝
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap gap-2 pt-2 border-t border-slate-800 text-xs">
+                            <span class="text-slate-400 self-center">快速情境:</span>
+                            <button onclick="setMichPreset(0)" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-300">0 Hz (靜止精準對齊)</button>
+                            <button onclick="setMichPreset(264)" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 rounded text-red-300">264 Hz (轉 1/16 圈 - 嚴重偏轉無訊號)</button>
+                            <button onclick="setMichPreset(528)" class="px-2.5 py-1 bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/40 rounded text-cyan-300 font-bold">528 Hz (完美關鍵轉速 ⭐ 剛好轉 1/8 圈)</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 右側望遠鏡視野 -->
+                <div class="bg-cyber-card border border-cyber-border rounded-2xl p-5 flex flex-col justify-between">
+                    <div>
+                        <h3 class="font-bold text-base border-b border-slate-700 pb-3 text-slate-200">
+                            🔭 正下方望遠鏡十字準星視野
+                        </h3>
+
+                        <div class="flex justify-center my-4">
+                            <div class="relative w-36 h-36 rounded-full bg-slate-950 border-4 border-slate-700 flex items-center justify-center overflow-hidden shadow-inner">
+                                <div class="absolute w-full h-[1px] bg-cyan-500/50"></div>
+                                <div class="absolute h-full w-[1px] bg-cyan-500/50"></div>
+                                <div class="absolute w-20 h-20 rounded-full border border-cyan-500/20"></div>
+                                <div class="absolute w-4 h-4 rounded-full border border-yellow-400/50"></div>
+                                <div id="mich-eyepiece-dot" class="absolute w-5 h-5 rounded-full bg-yellow-300 shadow-[0_0_18px_#fde047] transition-all duration-75"></div>
+                            </div>
+                        </div>
+
+                        <div id="mich-status-text" class="text-center font-bold text-sm text-cyan-300 mb-4">
+                            視野狀況：光點完美對準十字中心
+                        </div>
+
+                        <div class="space-y-2 text-xs bg-slate-900/80 p-3 rounded-xl border border-slate-800 font-mono">
+                            <div class="flex justify-between">
+                                <span class="text-slate-400">山頭距離 ($L$):</span>
+                                <span class="text-slate-200">35.37 km (往返 $2L = 70.74\text{ km}$)</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-slate-400">八面鏡相鄰角:</span>
+                                <span class="text-slate-200">$45^\circ = \frac{1}{8}\text{ 圈}$</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-slate-400">關鍵頻率公式:</span>
+                                <span class="text-cyan-400 font-bold">$f = \frac{c}{16L}$</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-slate-400">目標關鍵轉速:</span>
+                                <span class="text-yellow-400 font-bold">528 Hz (約 31,680 RPM)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-xs text-slate-300">
+                        💎 <strong class="text-cyan-400">精準光路說明：</strong><br>
+                        1. 正上方光源垂直向下射向八面鏡**上端鏡面**，反射為水平右射。<br>
+                        2. 光束抵達 35.37km 外**角反射器**，兩次 $90^\circ$ 反射平行向下平移後折回。<br>
+                        3. 返航光束打在八面鏡**下端鏡面**，反射**垂直向下**進入正下方的望遠鏡。
+                    </div>
+                </div>
+            </div>
+
+            <!-- 高中物理講義與推導 -->
+            <div class="bg-cyber-card border border-cyber-border rounded-2xl p-5">
+                <h3 class="font-bold text-cyan-400 text-lg mb-2 flex items-center gap-2">
+                    📚 邁克爾遜八面鏡法：精準公式推導與原理
+                </h3>
+                <div class="text-sm text-slate-300 leading-relaxed grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-slate-900/50 p-3.5 rounded-xl border border-slate-800">
+                        <p class="font-semibold text-cyan-300 mb-1">1. 關鍵轉速公式推導 ($f = \frac{c}{16L}$)</p>
+                        <p>八面鏡相鄰兩鏡面夾角為 $\theta = \frac{360^\circ}{8} = 45^\circ = \frac{\pi}{4}\text{ rad}$。</p>
+                        <p class="mt-2 font-mono text-cyan-300">光往返 35.37km 時間為 $t = \frac{2L}{c}$。<br>
+                        八面鏡轉過 $1/8$ 圈時間為 $t = \frac{1}{8f}$。<br>
+                        令兩時間相等：$\frac{2L}{c} = \frac{1}{8f} \implies f = \frac{c}{16L}$</p>
+                    </div>
+                    <div class="bg-slate-900/50 p-3.5 rounded-xl border border-slate-800">
+                        <p class="font-semibold text-yellow-300 mb-1">2. 角度偏轉與高靈敏度</p>
+                        <p>若八面鏡轉速不符合 $f = \frac{c}{16L}$，當光折回時，接收鏡面角度偏差 $\Delta \theta$。根據平面鏡反射定律，**反射光線將產生 $2\Delta\theta$ 的倍角偏轉**。</p>
+                        <p class="mt-2 text-slate-400">這使得觀測者只要看望遠鏡中光點是否偏離十字準星，就能極度精準地鎖定轉速 $f$，從而計算出高精度的光速！</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-cyber-card border-t border-cyber-border py-4 px-6 text-center text-xs text-slate-500 mt-auto">
+        國中/高中物理教學互動系統 · 光速測量歷史與原理
+    </footer>
+
+    <!-- JavaScript 邏輯與 Canvas 繪圖引擎 -->
+    <script>
+        const C_REAL = 299792.458; // 光速 km/s
+
+        let currentTab = 1;
+        function switchTab(tabIndex) {
+            currentTab = tabIndex;
+            document.querySelectorAll('.tab-content').forEach((el, idx) => {
+                if (idx + 1 === tabIndex) {
+                    el.classList.remove('hidden');
+                    el.classList.add('flex');
+                } else {
+                    el.classList.add('hidden');
+                    el.classList.remove('flex');
+                }
+            });
+
+            document.querySelectorAll('.tab-btn').forEach((btn, idx) => {
+                if (idx + 1 === tabIndex) {
+                    btn.className = "tab-btn px-3 py-2 rounded-lg transition-all flex items-center gap-2 bg-blue-600 text-white shadow-md";
+                } else {
+                    btn.className = "tab-btn px-3 py-2 rounded-lg transition-all flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-800";
+                }
+            });
+            resizeAllCanvases();
+        }
+
+        function resizeAllCanvases() {
+            const canvases = ['canvas-tab1', 'canvas-tab2', 'canvas-tab3', 'canvas-tab4'];
+            canvases.forEach(id => {
+                const cvs = document.getElementById(id);
+                if (cvs && cvs.parentElement) {
+                    const rect = cvs.parentElement.getBoundingClientRect();
+                    cvs.width = rect.width;
+                    cvs.height = rect.height;
+                }
+            });
+        }
+        window.addEventListener('resize', resizeAllCanvases);
+
+        // =========================================================================
+        // TAB 1: 伽利略山頭燈籠實驗
+        // =========================================================================
+        let galileoState = 'IDLE'; 
+        let galileoProgress = 0;
+        let galileoDist = 2.5; 
+        let galileoReact = 0.20; 
+
+        function updateGalileoParams() {
+            galileoDist = parseFloat(document.getElementById('galileo-dist').value);
+            galileoReact = parseFloat(document.getElementById('galileo-react').value);
+            document.getElementById('galileo-dist-val').innerText = galileoDist.toFixed(1) + ' km';
+            document.getElementById('galileo-react-val').innerText = galileoReact.toFixed(2) + ' 秒';
+
+            const lightTime = (galileoDist * 2) / C_REAL;
+            const totalTime = lightTime + galileoReact;
+
+            document.getElementById('galileo-light-time').innerText = lightTime.toFixed(7) + ' 秒';
+            document.getElementById('galileo-reaction-time').innerText = galileoReact.toFixed(7) + ' 秒';
+            document.getElementById('galileo-total-time').innerText = totalTime.toFixed(7) + ' 秒';
+        }
+
+        function startGalileoExp() {
+            if (galileoState !== 'IDLE' && galileoState !== 'DONE') return;
+            galileoState = 'LIGHT_A_TO_B';
+            galileoProgress = 0;
+            document.getElementById('galileo-status').innerText = '光束高速傳播中 (A ➔ B)...';
+        }
+
+        function drawGalileo(ctx, w, h) {
+            ctx.clearRect(0, 0, w, h);
+            ctx.fillStyle = '#030712'; ctx.fillRect(0, 0, w, h);
+
+            // 山頭
+            ctx.fillStyle = '#1e293b';
+            ctx.beginPath();
+            ctx.moveTo(0, h); ctx.lineTo(0, h * 0.7);
+            ctx.quadraticCurveTo(w * 0.2, h * 0.55, w * 0.35, h * 0.75);
+            ctx.quadraticCurveTo(w * 0.6, h * 0.9, w * 0.8, h * 0.6);
+            ctx.lineTo(w, h * 0.6); ctx.lineTo(w, h);
+            ctx.fill();
+
+            const posA = { x: w * 0.15, y: h * 0.62 };
+            const posB = { x: w * 0.82, y: h * 0.60 };
+
+            // 畫人物簡影
+            ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.arc(posA.x - 12, posA.y - 25, 6, 0, Math.PI * 2); ctx.stroke();
+            ctx.beginPath(); ctx.arc(posB.x + 12, posB.y - 25, 6, 0, Math.PI * 2); ctx.stroke();
+
+            // 燈籠
+            const lanternAOpen = galileoState !== 'IDLE';
+            ctx.fillStyle = lanternAOpen ? '#fae842' : '#475569';
+            ctx.fillRect(posA.x - 4, posA.y - 20, 8, 12);
+
+            const lanternBOpen = (galileoState === 'LIGHT_B_TO_A' || galileoState === 'DONE');
+            ctx.fillStyle = lanternBOpen ? '#fae842' : '#475569';
+            ctx.fillRect(posB.x - 4, posB.y - 20, 8, 12);
+
+            if (galileoState === 'LIGHT_A_TO_B') {
+                galileoProgress += 0.06;
+                let curX = posA.x + (posB.x - posA.x) * galileoProgress;
+                ctx.strokeStyle = '#fae842'; ctx.lineWidth = 3;
+                ctx.beginPath(); ctx.moveTo(posA.x, posA.y - 14); ctx.lineTo(curX, posB.y - 14); ctx.stroke();
+                if (galileoProgress >= 1) {
+                    galileoState = 'ASSISTANT_REACTING';
+                    galileoProgress = 0;
+                    document.getElementById('galileo-status').innerText = '光抵達！助手神經反應處理中...';
+                }
+            } else if (galileoState === 'ASSISTANT_REACTING') {
+                galileoProgress += 0.02 / (galileoReact * 2);
+                ctx.fillStyle = '#ef4444'; ctx.fillRect(posB.x - 15, posB.y - 40, 30, 5);
+                ctx.fillStyle = '#22c55e'; ctx.fillRect(posB.x - 15, posB.y - 40, 30 * Math.min(1, galileoProgress), 5);
+                if (galileoProgress >= 1) {
+                    galileoState = 'LIGHT_B_TO_A';
+                    galileoProgress = 0;
+                    document.getElementById('galileo-status').innerText = '助手開啟燈籠 B，光束返航 (B ➔ A)...';
+                }
+            } else if (galileoState === 'LIGHT_B_TO_A') {
+                galileoProgress += 0.06;
+                let curX = posB.x + (posA.x - posB.x) * galileoProgress;
+                ctx.strokeStyle = '#fae842'; ctx.lineWidth = 3;
+                ctx.beginPath(); ctx.moveTo(posB.x, posB.y - 14); ctx.lineTo(curX, posA.y - 14); ctx.stroke();
+                if (galileoProgress >= 1) {
+                    galileoState = 'DONE';
+                    document.getElementById('galileo-status').innerText = '測量結束！總耗時幾乎全部為生理反應時間誤差。';
+                }
+            }
+
+            ctx.fillStyle = '#cbd5e1'; ctx.font = '12px Noto Sans TC';
+            ctx.fillText('山頭 A (伽利略)', posA.x - 30, posA.y + 20);
+            ctx.fillText('山頭 B (助手)', posB.x - 20, posB.y + 20);
+        }
+
+        // =========================================================================
+        // TAB 2: 羅默木衛一食實驗
+        // =========================================================================
+        let earthPos = 'A'; 
+        let romerAnimPlaying = true;
+        let ioAngle = 0;
+
+        function setEarthPos(pos) {
+            earthPos = pos;
+            document.getElementById('btn-pos-a').className = pos === 'A' ? 
+                "px-4 py-2 rounded-xl text-xs font-bold transition bg-cyan-600 text-white shadow-md" : 
+                "px-4 py-2 rounded-xl text-xs font-bold transition bg-slate-800 text-slate-300 hover:bg-slate-700";
+            document.getElementById('btn-pos-b').className = pos === 'B' ? 
+                "px-4 py-2 rounded-xl text-xs font-bold transition bg-cyan-600 text-white shadow-md" : 
+                "px-4 py-2 rounded-xl text-xs font-bold transition bg-slate-800 text-slate-300 hover:bg-slate-700";
+        }
+
+        function toggleRomeroAnim() { romerAnimPlaying = !romerAnimPlaying; }
+
+        function drawRomer(ctx, w, h) {
+            ctx.clearRect(0, 0, w, h);
+            ctx.fillStyle = '#030712'; ctx.fillRect(0, 0, w, h);
+
+            const cx = w * 0.35, cy = h * 0.5;
+            const rEarth = w * 0.18, rJup = w * 0.42;
+
+            // 軌道
+            ctx.strokeStyle = '#334155'; ctx.setLineDash([4, 4]);
+            ctx.beginPath(); ctx.arc(cx, cy, rEarth, 0, Math.PI * 2); ctx.stroke();
+            ctx.beginPath(); ctx.arc(cx, cy, rJup, 0, Math.PI * 2); ctx.stroke();
+            ctx.setLineDash([]);
+
+            // 太陽
+            ctx.fillStyle = '#f59e0b'; ctx.beginPath(); ctx.arc(cx, cy, 20, 0, Math.PI * 2); ctx.fill();
+
+            // 地球 A/B
+            const eA = { x: cx + rEarth, y: cy };
+            const eB = { x: cx - rEarth, y: cy };
+            const curE = earthPos === 'A' ? eA : eB;
+
+            ctx.fillStyle = '#38bdf8';
+            ctx.beginPath(); ctx.arc(curE.x, curE.y, 8, 0, Math.PI * 2); ctx.fill();
+
+            ctx.fillStyle = earthPos === 'A' ? '#38bdf8' : '#64748b';
+            ctx.fillText('地球 A (近)', eA.x - 20, eA.y + 20);
+            ctx.fillStyle = earthPos === 'B' ? '#38bdf8' : '#64748b';
+            ctx.fillText('地球 B (遠)', eB.x - 20, eB.y + 20);
+
+            // 木星
+            const jPos = { x: cx + rJup, y: cy };
+            ctx.fillStyle = '#ea580c'; ctx.beginPath(); ctx.arc(jPos.x, jPos.y, 18, 0, Math.PI * 2); ctx.fill();
+
+            // 木星陰影錐
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+            ctx.beginPath();
+            ctx.moveTo(jPos.x, jPos.y - 18);
+            ctx.lineTo(w, jPos.y - 30); ctx.lineTo(w, jPos.y + 30);
+            ctx.lineTo(jPos.x, jPos.y + 18);
+            ctx.fill();
+
+            // 木衛一
+            if (romerAnimPlaying) ioAngle += 0.025;
+            const ioR = 34;
+            const ioX = jPos.x + Math.cos(ioAngle) * ioR;
+            const ioY = jPos.y + Math.sin(ioAngle) * ioR;
+            const inShadow = (ioX > jPos.x && Math.abs(ioY - jPos.y) < 18);
+
+            ctx.fillStyle = inShadow ? '#475569' : '#fde047';
+            ctx.beginPath(); ctx.arc(ioX, ioY, 4, 0, Math.PI * 2); ctx.fill();
+
+            if (!inShadow) {
+                ctx.strokeStyle = 'rgba(250, 232, 66, 0.4)'; ctx.lineWidth = 1.5;
+                ctx.beginPath(); ctx.moveTo(ioX, ioY); ctx.lineTo(curE.x, curE.y); ctx.stroke();
+            }
+        }
+
+        // =========================================================================
+        // TAB 3: 菲佐齒輪法實驗 (完全依據使用者修正幾何)
+        // =========================================================================
+        let fizeauRPM = 0;
+        let fizeauSlowMo = false;
+        let fizeauGearAngle = 0;
+        let fizeauPulses = [];
+
+        function updateFizeauRPM() {
+            fizeauRPM = parseInt(document.getElementById('fizeau-rpm').value);
+            document.getElementById('fizeau-rpm-val').innerText = fizeauRPM + ' RPM';
+            updateFizeauEyepiece();
+        }
+
+        function toggleFizeauSlowMo() {
+            fizeauSlowMo = document.getElementById('fizeau-slowmo').checked;
+            fizeauPulses = [];
+        }
+
+        function setFizeauPreset(rpm) {
+            document.getElementById('fizeau-rpm').value = rpm;
+            updateFizeauRPM();
+        }
+
+        function triggerFizeauPulse() {
+            fizeauPulses.push({ x: 60, stage: 'GO', blocked: false });
+        }
+
+        function updateFizeauEyepiece() {
+            const dot = document.getElementById('fizeau-eyepiece-dot');
+            const statusText = document.getElementById('fizeau-status-text');
+
+            const darkTarget = 724;
+            const phase = (fizeauRPM / darkTarget) * Math.PI;
+            const brightness = Math.pow(Math.cos(phase / 2), 2);
+
+            dot.style.opacity = brightness.toFixed(2);
+            dot.style.transform = `scale(${0.2 + brightness * 0.8})`;
+
+            if (brightness < 0.12) {
+                statusText.innerText = '視野狀況：第一次完全暗點 (光返航打在下一個齒尖！)';
+                statusText.className = 'text-center font-bold text-sm text-red-400 mb-4';
+            } else if (brightness > 0.88) {
+                statusText.innerText = '視野狀況：極為明亮 (光順利穿過缺角)';
+                statusText.className = 'text-center font-bold text-sm text-yellow-300 mb-4';
+            } else {
+                statusText.innerText = '視野狀況：部分光線被齒尖切割遮蔽';
+                statusText.className = 'text-center font-bold text-sm text-amber-400 mb-4';
+            }
+        }
+
+        function drawFizeau(ctx, w, h) {
+            ctx.clearRect(0, 0, w, h);
+            ctx.fillStyle = '#030712'; ctx.fillRect(0, 0, w, h);
+
+            // 幾何座標設定 (依據使用者修正要求)
+            // 1. 左側光源: (60, 110)
+            // 2. 45度半透鏡: (190, 110)
+            // 3. 齒輪: 圓心 (340, 195), 上端缺角/齒隙在 y = 110 (圓心在光線下方)
+            // 4. 遠處平面鏡: (720, 110)
+            // 5. 正下方觀測點/接目鏡: (190, 250) (位於半透鏡正下方)
+
+            const lightSrc = { x: 60, y: 110 };
+            const mirrorPos = { x: 190, y: 110 };
+            const gearCenter = { x: 340, y: 195 };
+            const gearRadius = 85; // 上端正好在 y = 110
+            const distantMirror = { x: 720, y: 110 };
+            const eyepiecePos = { x: 190, y: 250 };
+
+            // 計算亮暗強度 (0 RPM -> 1.0, 724 RPM -> 0.0)
+            const darkTarget = 724;
+            const phase = (fizeauRPM / darkTarget) * Math.PI;
+            const brightness = Math.pow(Math.cos(phase / 2), 2);
+
+            // 繪製背景結構標示與組件
+            // A. 光源 (左側)
+            ctx.fillStyle = '#facc15'; ctx.beginPath(); ctx.arc(lightSrc.x, lightSrc.y, 8, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#94a3b8'; ctx.font = '11px Noto Sans TC'; ctx.fillText('光源 (左側)', lightSrc.x - 15, lightSrc.y - 15);
+
+            // B. 45度半透鏡 (斜角 \)
+            ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.moveTo(mirrorPos.x - 14, mirrorPos.y - 14); ctx.lineTo(mirrorPos.x + 14, mirrorPos.y + 14); ctx.stroke();
+            ctx.fillStyle = '#38bdf8'; ctx.fillText('45°半透鏡', mirrorPos.x - 22, mirrorPos.y - 20);
+
+            // C. 遠處 8.63 km 平面鏡
+            ctx.fillStyle = '#64748b'; ctx.fillRect(distantMirror.x, distantMirror.y - 20, 6, 40);
+            ctx.fillStyle = '#cbd5e1'; ctx.fillText('遠處平面鏡 (8.63km)', distantMirror.x - 45, distantMirror.y - 28);
+
+            // D. 正下方觀測點 / 接目鏡
+            ctx.fillStyle = '#3b82f6'; ctx.fillRect(eyepiecePos.x - 12, eyepiecePos.y, 24, 16);
+            ctx.fillStyle = '#60a5fa'; ctx.fillText('觀測點 / 接目鏡', eyepiecePos.x - 35, eyepiecePos.y + 32);
+
+            // E. 旋轉齒輪 (圓心在光束下方，光束穿過齒輪上端缺角)
+            fizeauGearAngle += (fizeauRPM / 60) * 0.05;
+
+            ctx.save();
+            ctx.translate(gearCenter.x, gearCenter.y);
+            ctx.rotate(fizeauGearAngle);
+
+            // 齒輪盤體
+            ctx.fillStyle = '#334155'; ctx.beginPath(); ctx.arc(0, 0, gearRadius - 12, 0, Math.PI * 2); ctx.fill();
+            ctx.strokeStyle = '#475569'; ctx.lineWidth = 2; ctx.stroke();
+
+            // 畫 16 個齒牙與齒隙
+            const numTeeth = 16;
+            ctx.fillStyle = '#94a3b8';
+            for (let i = 0; i < numTeeth; i++) {
+                const angle = (i / numTeeth) * Math.PI * 2;
+                ctx.save();
+                ctx.rotate(angle);
+                ctx.fillRect(-6, -gearRadius, 12, 14);
+                ctx.restore();
+            }
+            ctx.restore();
+
+            // 齒輪圓心標誌與標籤
+            ctx.fillStyle = '#64748b'; ctx.beginPath(); ctx.arc(gearCenter.x, gearCenter.y, 4, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#cbd5e1'; ctx.fillText('齒輪圓心 (位在光束下方)', gearCenter.x - 60, gearCenter.y + 20);
+            ctx.fillText('光束穿過上端缺角 ➔', gearCenter.x - 65, lightSrc.y - 12);
+
+            // 光路繪製
+            if (!fizeauSlowMo) {
+                // 1. 去程光線：光源 ➔ 穿過半透鏡 ➔ 穿過齒輪上端 ➔ 達遠處鏡
+                ctx.strokeStyle = 'rgba(250, 232, 66, 0.85)'; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.moveTo(lightSrc.x, lightSrc.y); ctx.lineTo(distantMirror.x, distantMirror.y); ctx.stroke();
+
+                // 2. 返航光線：遠處鏡 ➔ 齒輪上端 (根據轉速決定是否被阻擋) ➔ 半透鏡 ➔ 反射 90度 垂直向下 ➔ 觀測點
+                if (brightness > 0.05) {
+                    // 遠處鏡返航至半透鏡
+                    ctx.strokeStyle = `rgba(250, 232, 66, ${brightness})`;
+                    ctx.beginPath(); ctx.moveTo(distantMirror.x, distantMirror.y); ctx.lineTo(mirrorPos.x, mirrorPos.y); ctx.stroke();
+
+                    // 半透鏡反射 90 度向下至接目鏡
+                    ctx.beginPath(); ctx.moveTo(mirrorPos.x, mirrorPos.y); ctx.lineTo(eyepiecePos.x, eyepiecePos.y); ctx.stroke();
+                } else {
+                    // 完全暗點：光在返航經過齒輪上端時被下一個齒尖擋住
+                    ctx.strokeStyle = 'rgba(250, 232, 66, 0.85)';
+                    ctx.beginPath(); ctx.moveTo(distantMirror.x, distantMirror.y); ctx.lineTo(gearCenter.x, lightSrc.y); ctx.stroke();
+
+                    // 在齒輪交會處標示紅點碰撞
+                    ctx.fillStyle = '#ef4444'; ctx.beginPath(); ctx.arc(gearCenter.x, lightSrc.y, 5, 0, Math.PI * 2); ctx.fill();
+                }
+            } else {
+                // 慢動作脈衝模式
+                if (Math.random() < 0.05) {
+                    fizeauPulses.push({ x: lightSrc.x, stage: 'GO', blocked: false });
+                }
+
+                for (let i = fizeauPulses.length - 1; i >= 0; i--) {
+                    let p = fizeauPulses[i];
+                    if (p.stage === 'GO') {
+                        p.x += 5;
+                        if (p.x >= distantMirror.x) p.stage = 'RETURN';
+                    } else if (p.stage === 'RETURN') {
+                        p.x -= 5;
+                        if (p.x <= gearCenter.x && !p.checked) {
+                            p.checked = true;
+                            if (Math.random() > brightness) p.blocked = true;
+                        }
+                        if (p.x <= mirrorPos.x) p.stage = 'DOWN';
+                    }
+
+                    if (!p.blocked) {
+                        ctx.fillStyle = '#fae842';
+                        let drawX = p.x, drawY = lightSrc.y;
+                        if (p.stage === 'DOWN') {
+                            drawX = mirrorPos.x;
+                            drawY = mirrorPos.y + (mirrorPos.x - p.x);
+                        }
+                        ctx.beginPath(); ctx.arc(drawX, drawY, 3.5, 0, Math.PI * 2); ctx.fill();
+                        if (drawY >= eyepiecePos.y) fizeauPulses.splice(i, 1);
+                    } else if (p.x <= gearCenter.x) {
+                        ctx.fillStyle = '#ef4444';
+                        ctx.beginPath(); ctx.arc(gearCenter.x, lightSrc.y, 4, 0, Math.PI * 2); ctx.fill();
+                        fizeauPulses.splice(i, 1);
+                    }
+                }
+            }
+        }
+
+        // =========================================================================
+        // TAB 4: 邁克爾遜八面鏡法 (完全依據使用者修正幾何)
+        // =========================================================================
+        let michHZ = 0;
+        let michSlowMo = false;
+        let michOctagonAngle = 0;
+        let michPulses = [];
+
+        function updateMichHZ() {
+            michHZ = parseInt(document.getElementById('mich-hz').value);
+            document.getElementById('mich-hz-val').innerText = michHZ + ' Hz';
+            updateMichEyepiece();
+        }
+
+        function toggleMichSlowMo() {
+            michSlowMo = document.getElementById('mich-slowmo').checked;
+            michPulses = [];
+        }
+
+        function setMichPreset(hz) {
+            document.getElementById('mich-hz').value = hz;
+            updateMichHZ();
+        }
+
+        function triggerMichPulse() {
+            michPulses.push({ pos: 30, stage: 'DOWN_1' });
+        }
+
+        function updateMichEyepiece() {
+            const dot = document.getElementById('mich-eyepiece-dot');
+            const statusText = document.getElementById('mich-status-text');
+
+            const targetHZ = 528;
+            const diff = Math.abs(michHZ - targetHZ);
+
+            let offsetX = 0;
+            let opacity = 1.0;
+
+            if (michHZ === 0) {
+                offsetX = 0; opacity = 1.0;
+                statusText.innerText = '視野狀況：靜止狀態，對準十字中心';
+                statusText.className = 'text-center font-bold text-sm text-cyan-300 mb-4';
+            } else if (diff < 12) {
+                offsetX = (michHZ - targetHZ) * 1.5;
+                opacity = 1.0;
+                statusText.innerText = '視野狀況：轉速精準！光點完美重合十字準星 ⭐';
+                statusText.className = 'text-center font-bold text-sm text-cyan-300 mb-4';
+            } else {
+                offsetX = (michHZ - targetHZ) * 1.5;
+                if (Math.abs(offsetX) > 50) opacity = 0.1;
+                statusText.innerText = '視野狀況：反射角度偏移！光點脫離中心準星';
+                statusText.className = 'text-center font-bold text-sm text-red-400 mb-4';
+            }
+
+            dot.style.transform = `translateX(${offsetX}px)`;
+            dot.style.opacity = opacity;
+        }
+
+        function drawMich(ctx, w, h) {
+            ctx.clearRect(0, 0, w, h);
+            ctx.fillStyle = '#030712'; ctx.fillRect(0, 0, w, h);
+
+            // 幾何座標設定 (依據使用者修正要求)
+            // 1. 光源：位在八面鏡正上方 (220, 30)，垂直向下發射
+            // 2. 八面鏡：圓心 (220, 180), R = 42
+            //    - 上端鏡面觸光點：(220, 145) -> 反射為水平向右
+            //    - 下端鏡面觸光點：(220, 215) -> 接受折回光線，反射為垂直向下
+            // 3. 角反射器 Corner Reflector (右側 710):
+            //    - 兩面互相垂直 90 度的鏡面，將 (710, 145) 的入射光反射平移向下至 (710, 215) 並反向向左折回
+            // 4. 正下方觀測點 / 望遠鏡：(220, 320) (位於八面鏡正下方)
+
+            const lightSrc = { x: 220, y: 30 };
+            const octCenter = { x: 220, y: 180 };
+            const topFacet = { x: 220, y: 145 };
+            const botFacet = { x: 220, y: 215 };
+            const cornerReflectorX = 710;
+            const telescopePos = { x: 220, y: 320 };
+
+            // 1. 光源 (正上方)
+            ctx.fillStyle = '#facc15'; ctx.beginPath(); ctx.arc(lightSrc.x, lightSrc.y, 8, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#cbd5e1'; ctx.font = '11px Noto Sans TC'; ctx.fillText('光源 (正上方)', lightSrc.x - 30, lightSrc.y - 12);
+
+            // 2. 八面鏡繪製
+            michOctagonAngle += (michHZ / 60) * 0.08;
+
+            ctx.save();
+            ctx.translate(octCenter.x, octCenter.y);
+            ctx.rotate(michOctagonAngle);
+
+            const R = 42;
+            ctx.beginPath();
+            for (let i = 0; i < 8; i++) {
+                const a = (i / 8) * Math.PI * 2;
+                const x = Math.cos(a) * R;
+                const y = Math.sin(a) * R;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.fillStyle = '#1e293b'; ctx.fill();
+            ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 2.5; ctx.stroke();
+
+            // 標示八個鏡面號碼
+            ctx.fillStyle = '#93c5fd'; ctx.font = '9px sans-serif';
+            for (let i = 0; i < 8; i++) {
+                const a = (i / 8) * Math.PI * 2 + Math.PI / 8;
+                const x = Math.cos(a) * (R - 10);
+                const y = Math.sin(a) * (R - 10);
+                ctx.fillText(i + 1, x - 3, y + 3);
+            }
+            ctx.restore();
+
+            ctx.fillStyle = '#38bdf8'; ctx.fillText(`八面旋轉鏡 (${michHZ} Hz)`, octCenter.x - 45, octCenter.y + 5);
+
+            // 3. 右側角反射器 (Corner Reflector - 兩面 90 度互相垂直平面鏡)
+            ctx.strokeStyle = '#64748b'; ctx.lineWidth = 4;
+            ctx.beginPath();
+            // 上反射面 (傾斜 45度)
+            ctx.moveTo(cornerReflectorX - 20, topFacet.y - 20); ctx.lineTo(cornerReflectorX, topFacet.y);
+            // 下反射面 (傾斜 -45度)
+            ctx.lineTo(cornerReflectorX - 20, botFacet.y + 20);
+            ctx.stroke();
+
+            ctx.fillStyle = '#cbd5e1'; ctx.fillText('角反射器 (兩垂直 90° 平面鏡)', cornerReflectorX - 70, topFacet.y - 28);
+
+            // 4. 正下方觀測點 / 望遠鏡
+            ctx.fillStyle = '#3b82f6'; ctx.fillRect(telescopePos.x - 16, telescopePos.y, 32, 18);
+            ctx.fillStyle = '#60a5fa'; ctx.fillText('觀測點 / 望遠鏡 (正下方)', telescopePos.x - 50, telescopePos.y + 34);
+
+            // 角度偏轉與光路繪製
+            const targetHZ = 528;
+            const diff = Math.abs(michHZ - targetHZ);
+
+            if (!michSlowMo) {
+                // A. 垂直向下照射至八面鏡上端鏡面
+                ctx.strokeStyle = 'rgba(250, 232, 66, 0.85)'; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.moveTo(lightSrc.x, lightSrc.y); ctx.lineTo(topFacet.x, topFacet.y); ctx.stroke();
+
+                // B. 上端鏡面反射 ➔ 水平向右至角反射器頂端
+                ctx.beginPath(); ctx.moveTo(topFacet.x, topFacet.y); ctx.lineTo(cornerReflectorX, topFacet.y); ctx.stroke();
+
+                // C. 角反射器內部向下平移兩次反射 ➔ 水平向左向返航
+                ctx.beginPath(); ctx.moveTo(cornerReflectorX, topFacet.y); ctx.lineTo(cornerReflectorX - 10, (topFacet.y + botFacet.y)/2); ctx.lineTo(cornerReflectorX, botFacet.y); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(cornerReflectorX, botFacet.y); ctx.lineTo(botFacet.x, botFacet.y); ctx.stroke();
+
+                // D. 下端鏡面反射 ➔ 垂直向下進入望遠鏡 (若轉速不精確，角度偏斜)
+                let teleTargetX = telescopePos.x;
+                if (michHZ !== 0 && diff > 15) {
+                    teleTargetX = telescopePos.x + (michHZ > targetHZ ? 60 : -60);
+                }
+
+                ctx.beginPath(); ctx.moveTo(botFacet.x, botFacet.y); ctx.lineTo(teleTargetX, telescopePos.y); ctx.stroke();
+            } else {
+                // 慢動作粒子追蹤
+                if (Math.random() < 0.05) {
+                    michPulses.push({ pos: lightSrc.y, stage: 'DOWN_1' });
+                }
+
+                for (let i = michPulses.length - 1; i >= 0; i--) {
+                    let p = michPulses[i];
+                    let px = lightSrc.x, py = p.pos;
+
+                    if (p.stage === 'DOWN_1') {
+                        p.pos += 4;
+                        px = lightSrc.x; py = p.pos;
+                        if (p.pos >= topFacet.y) { p.stage = 'RIGHT'; p.pos = topFacet.x; }
+                    } else if (p.stage === 'RIGHT') {
+                        p.pos += 6;
+                        px = p.pos; py = topFacet.y;
+                        if (p.pos >= cornerReflectorX) { p.stage = 'REFLECT_CORNER'; p.pos = topFacet.y; }
+                    } else if (p.stage === 'REFLECT_CORNER') {
+                        p.pos += 4;
+                        px = cornerReflectorX; py = p.pos;
+                        if (p.pos >= botFacet.y) { p.stage = 'LEFT'; p.pos = cornerReflectorX; }
+                    } else if (p.stage === 'LEFT') {
+                        p.pos -= 6;
+                        px = p.pos; py = botFacet.y;
+                        if (p.pos <= botFacet.x) { p.stage = 'DOWN_2'; p.pos = botFacet.y; }
+                    } else if (p.stage === 'DOWN_2') {
+                        p.pos += 4;
+                        let errX = (michHZ === 0 || diff < 15) ? 0 : (michHZ - targetHZ) * 0.8;
+                        px = botFacet.x + (p.pos - botFacet.y) * (errX * 0.02);
+                        py = p.pos;
+                    }
+
+                    ctx.fillStyle = '#fae842';
+                    ctx.beginPath(); ctx.arc(px, py, 3.5, 0, Math.PI * 2); ctx.fill();
+
+                    if (p.stage === 'DOWN_2' && py >= telescopePos.y) michPulses.splice(i, 1);
+                }
+            }
+        }
+
+        // =========================================================================
+        // 動畫主迴圈
+        // =========================================================================
+        function mainLoop() {
+            if (currentTab === 1) {
+                const cvs = document.getElementById('canvas-tab1');
+                if (cvs) drawGalileo(cvs.getContext('2d'), cvs.width, cvs.height);
+            } else if (currentTab === 2) {
+                const cvs = document.getElementById('canvas-tab2');
+                if (cvs) drawRomer(cvs.getContext('2d'), cvs.width, cvs.height);
+            } else if (currentTab === 3) {
+                const cvs = document.getElementById('canvas-tab3');
+                if (cvs) drawFizeau(cvs.getContext('2d'), cvs.width, cvs.height);
+            } else if (currentTab === 4) {
+                const cvs = document.getElementById('canvas-tab4');
+                if (cvs) drawMich(cvs.getContext('2d'), cvs.width, cvs.height);
+            }
+            requestAnimationFrame(mainLoop);
+        }
+
+        window.onload = function() {
+            resizeAllCanvases();
+            updateGalileoParams();
+            updateFizeauRPM();
+            updateMichHZ();
+            requestAnimationFrame(mainLoop);
+        };
+    </script>
+</body>
+</html>
