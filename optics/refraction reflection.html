@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cyber-Optics 光學物理演示教學系統</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            cyber: {
+              bg: '#0b0f19',
+              card: 'rgba(17, 24, 39, 0.85)',
+              border: '#1e293b',
+              accent: '#06b6d4',
+              laser: '#38bdf8',
+              laserGreen: '#10b981',
+              gold: '#f59e0b'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap');
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background-color: #0b0f19;
+      color: #f3f4f6;
+      overflow-x: hidden;
+      user-select: none;
+    }
+    .font-mono-code {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .glass-panel {
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0b0f19; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #06b6d4; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col bg-[#0b0f19] text-gray-100">
+
+  <!-- Header / Navigation Bar -->
+  <header class="glass-panel sticky top-0 z-40 border-b border-cyan-900/40 px-4 py-3 flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center space-x-3">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/30">
+        <i class="fa-solid fa-graduation-cap text-white text-xl"></i>
+      </div>
+      <div>
+        <h1 class="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 via-sky-300 to-indigo-400">
+          Cyber-Optics 光學物理教學系統
+        </h1>
+        <p class="text-xs text-cyan-300/70">精確折射、反射物理動態演示與斯奈爾定律驗證</p>
+      </div>
+    </div>
+
+    <!-- Main Navigation Tabs -->
+    <nav class="flex items-center bg-slate-900/80 p-1 rounded-xl border border-slate-800">
+      <button id="tab-teaching" onclick="switchMode('teaching')" class="nav-tab px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 bg-cyan-500 text-slate-950 font-semibold shadow-md">
+        <i class="fa-solid fa-film"></i> 慢動作折射與反射
+      </button>
+      <button id="tab-multilayer" onclick="switchMode('multilayer')" class="nav-tab px-4 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-slate-200 transition-all flex items-center gap-2">
+        <i class="fa-solid fa-layer-group"></i> 多層介質連續折射
+      </button>
+    </nav>
+
+    <!-- Global Controls -->
+    <div class="flex items-center space-x-2">
+      <button onclick="openHelpModal()" class="p-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 hover:bg-slate-700 transition flex items-center gap-1.5 text-xs">
+        <i class="fa-solid fa-circle-question text-cyan-400"></i> 教學指南
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Work Area -->
+  <main class="flex-1 flex flex-col lg:flex-row p-4 gap-4 max-w-[1700px] w-full mx-auto">
+    
+    <!-- Left Column: Primary Interactive Canvas Container -->
+    <div class="flex-1 flex flex-col items-center justify-start min-w-0">
+      <div class="w-full glass-panel rounded-2xl p-3 relative flex flex-col items-center overflow-hidden border border-slate-800 shadow-2xl">
+        
+        <!-- Top Status HUD overlay -->
+        <div class="w-full flex items-center justify-between px-3 py-1.5 mb-2 bg-slate-900/60 rounded-xl border border-slate-800 text-xs">
+          <div class="flex items-center space-x-3">
+            <span class="inline-flex items-center gap-1.5 text-cyan-400 font-semibold">
+              <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+              <span id="hud-mode-title">慢動作折射與反射教學</span>
+            </span>
+            <span class="text-slate-500">|</span>
+            <span id="hud-status" class="text-slate-300">拖曳光源移動位置，長按橘色手把或滑桿調整發射角度</span>
+          </div>
+        </div>
+
+        <!-- Canvas Container -->
+        <div class="relative w-full aspect-[4/3] max-h-[620px] rounded-xl overflow-hidden bg-slate-950 border border-cyan-900/30 flex items-center justify-center cursor-crosshair">
+          <canvas id="opticsCanvas" class="w-full h-full block"></canvas>
+
+          <!-- Floating Calculation / Dynamic Snell's Law HUD Overlay -->
+          <div id="snell-hud-card" class="absolute top-4 right-4 max-w-sm w-80 glass-panel rounded-xl p-3.5 border border-cyan-500/30 text-xs text-slate-200 transition-all duration-300 shadow-2xl">
+            <div class="flex items-center justify-between border-b border-cyan-500/20 pb-2 mb-2">
+              <span class="font-bold text-cyan-400 flex items-center gap-1.5 text-sm">
+                <i class="fa-solid fa-calculator"></i> <span id="hud-card-title">斯奈爾定律即時驗證</span>
+              </span>
+              <span id="snell-status-badge" class="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                折射成立
+              </span>
+            </div>
+
+            <!-- Formula Equation Display -->
+            <div id="hud-formula-box" class="text-center font-mono-code text-cyan-200 bg-slate-900/80 p-2 rounded-lg border border-slate-800 mb-2.5">
+              <span class="text-amber-400">n₁ · sin(θ₁)</span> = <span class="text-emerald-400">n₂ · sin(θ₂)</span>
+            </div>
+
+            <div id="hud-math-details" class="space-y-1.5 font-mono-code">
+              <div class="flex items-center justify-between bg-slate-900/40 p-1.5 rounded border border-slate-800">
+                <span class="text-amber-400 font-semibold">入射角 (θ₁):</span>
+                <span>θ₁ = <span id="hud-theta1">45.0</span>°</span>
+              </div>
+              <div class="flex items-center justify-between bg-slate-900/40 p-1.5 rounded border border-slate-800">
+                <span class="text-sky-400 font-semibold">反射角 (θᵣ):</span>
+                <span>θᵣ = <span id="hud-thetar">45.0</span>°</span>
+              </div>
+              <div id="hud-refr-box" class="flex items-center justify-between bg-slate-900/40 p-1.5 rounded border border-slate-800 mt-1">
+                <span class="text-emerald-400 font-semibold">折射角 (θ₂):</span>
+                <span>θ₂ = <span id="hud-theta2">32.1</span>°</span>
+              </div>
+            </div>
+
+            <!-- Precision Match Banner -->
+            <div id="snell-match-banner" class="mt-2.5 pt-2 border-t border-slate-800 text-center font-semibold text-cyan-300 flex items-center justify-center gap-1">
+              <i class="fa-solid fa-circle-check text-emerald-400"></i>
+              <span>n₁sin(θ₁) === n₂sin(θ₂) 精確符合！</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Slow-Motion Animation Control Bar -->
+        <div id="slowmo-control-bar" class="w-full mt-3 p-2.5 glass-panel rounded-xl flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div class="flex items-center gap-2">
+            <button onclick="toggleSlowMoPlay()" id="btn-play-pause" class="px-3.5 py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold flex items-center gap-1.5 transition">
+              <i id="play-icon" class="fa-solid fa-pause"></i>
+              <span id="play-text">暫停慢動作</span>
+            </button>
+            <button onclick="resetSlowMo()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition flex items-center gap-1">
+              <i class="fa-solid fa-rotate-left"></i> 重頭傳播
+            </button>
+          </div>
+
+          <!-- Speed Slider -->
+          <div class="flex items-center gap-2.5">
+            <span class="text-slate-400 font-medium"><i class="fa-solid fa-gauge-high text-cyan-400 mr-1"></i>光速動態縮放:</span>
+            <input type="range" id="speed-slider" min="0.1" max="2.0" step="0.1" value="0.8" oninput="updateSpeed(this.value)" class="w-32 accent-cyan-400 bg-slate-800 h-1.5 rounded-lg cursor-pointer">
+            <span id="speed-val" class="font-mono-code text-cyan-400 font-bold w-10">0.8x</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Right Column: Control Panels -->
+    <div class="w-full lg:w-[420px] flex flex-col gap-4">
+      
+      <!-- Panel 1: Slow-Motion Optics Teaching Controls -->
+      <div id="panel-teaching" class="glass-panel rounded-2xl p-4 border border-slate-800 flex flex-col gap-4">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+          <h2 class="text-base font-bold text-cyan-400 flex items-center gap-2">
+            <i class="fa-solid fa-sliders"></i> 折射與反射實驗參數
+          </h2>
+          <!-- Refraction vs Reflection Subtabs -->
+          <div class="flex rounded-lg bg-slate-900 p-1 border border-slate-800 text-xs">
+            <button id="subtab-refract" onclick="setTeachingType('refraction')" class="px-2.5 py-1 rounded bg-cyan-500 text-slate-950 font-bold transition">折射演示</button>
+            <button id="subtab-reflect" onclick="setTeachingType('reflection')" class="px-2.5 py-1 rounded text-slate-400 hover:text-white transition">理想平面鏡</button>
+          </div>
+        </div>
+
+        <p class="text-xs text-slate-300 leading-relaxed bg-slate-900/50 p-3 rounded-xl border border-slate-800/80">
+          <i class="fa-solid fa-lightbulb text-amber-400 mr-1"></i>
+          拖曳光源中心可變更位置，<b>長按光源前方的橘色旋轉鈕</b>或下方滑桿可調角度。光路將同步繪製<b>垂直法線 (Normal)</b>、角度弧線與光波脈衝。
+        </p>
+
+        <!-- Source Angle Slider -->
+        <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800 space-y-1.5">
+          <div class="flex justify-between text-xs">
+            <span class="text-cyan-400 font-semibold flex items-center gap-1">
+              <i class="fa-solid fa-compass"></i> 入射角度 (Angle θ₁):
+            </span>
+            <span id="lbl-angle" class="font-mono-code text-cyan-300 font-bold">45.0°</span>
+          </div>
+          <input type="range" id="slider-angle" min="-85" max="85" step="0.5" value="45" oninput="updateSourceAngle(this.value)" class="w-full accent-cyan-400 bg-slate-800 h-2 rounded-lg cursor-pointer">
+          <div class="flex justify-between text-[10px] text-slate-400 font-mono-code">
+            <span>-85° (左傾)</span>
+            <span>0° (垂直法線)</span>
+            <span>+85° (右傾)</span>
+          </div>
+        </div>
+
+        <!-- Medium Properties Sliders -->
+        <div id="media-sliders-box" class="space-y-3 bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
+          <div>
+            <div class="flex justify-between text-xs mb-1.5">
+              <span class="text-amber-400 font-semibold flex items-center gap-1">
+                <i class="fa-solid fa-wind"></i> 介質 1 折射率 (n₁):
+              </span>
+              <span id="lbl-n1" class="font-mono-code text-amber-400 font-bold">1.00 (空氣)</span>
+            </div>
+            <input type="range" id="slider-n1" min="1.0" max="2.5" step="0.01" value="1.00" oninput="updateTeachingMedia()" class="w-full accent-amber-400 bg-slate-800 h-2 rounded-lg cursor-pointer">
+          </div>
+
+          <div id="box-n2-slider">
+            <div class="flex justify-between text-xs mb-1.5">
+              <span class="text-emerald-400 font-semibold flex items-center gap-1">
+                <i class="fa-solid fa-water"></i> 介質 2 折射率 (n₂):
+              </span>
+              <span id="lbl-n2" class="font-mono-code text-emerald-400 font-bold">1.33 (水)</span>
+            </div>
+            <input type="range" id="slider-n2" min="1.0" max="2.5" step="0.01" value="1.33" oninput="updateTeachingMedia()" class="w-full accent-emerald-400 bg-slate-800 h-2 rounded-lg cursor-pointer">
+          </div>
+
+          <!-- Preset Media Buttons -->
+          <div id="preset-buttons" class="flex flex-wrap gap-1.5 pt-1">
+            <button onclick="setMediaPreset(1.0, 1.33)" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-[11px] rounded border border-slate-700 text-slate-300">空氣 ➔ 水 (1.33)</button>
+            <button onclick="setMediaPreset(1.0, 1.50)" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-[11px] rounded border border-slate-700 text-slate-300">空氣 ➔ 玻璃 (1.50)</button>
+            <button onclick="setMediaPreset(1.5, 1.00)" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-[11px] rounded border border-slate-700 text-amber-300">玻璃 ➔ 空氣 (光密至光疏)</button>
+            <button onclick="setMediaPreset(1.0, 2.42)" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-[11px] rounded border border-slate-700 text-cyan-300">空氣 ➔ 鑽石 (2.42)</button>
+          </div>
+        </div>
+
+        <!-- Snell's Detailed Step-by-Step Breakdown -->
+        <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-800 space-y-2 text-xs">
+          <div class="font-semibold text-cyan-300 border-b border-slate-800 pb-1 flex items-center gap-1">
+            <i class="fa-solid fa-square-root-variable"></i> 物理公式詳細步驟推導
+          </div>
+          <div id="teaching-math-breakdown" class="font-mono-code space-y-1 text-slate-300">
+            <!-- Dynamically populated math steps -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel 2: Multi-Layer Refraction Controls -->
+      <div id="panel-multilayer" class="glass-panel rounded-2xl p-4 border border-slate-800 flex-col gap-4 hidden">
+        <div class="border-b border-slate-800 pb-3">
+          <h2 class="text-base font-bold text-cyan-400 flex items-center gap-2">
+            <i class="fa-solid fa-layer-group"></i> 四層平行介質參數設定
+          </h2>
+          <p class="text-xs text-slate-400 mt-1">
+            光線貫穿 4 層介質時，在每個介面均遵循斯奈爾定律，且乘積 <span class="font-mono-code text-cyan-300">nᵢ · sin(θᵢ)</span> 保持守恆。
+          </p>
+        </div>
+
+        <div class="space-y-3">
+          <!-- Layer 1 -->
+          <div class="bg-slate-900/60 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between text-xs">
+            <span class="text-amber-400 font-semibold">第一層 (n₁):</span>
+            <input type="number" id="ml-n1" value="1.00" min="1.0" max="3.0" step="0.05" onchange="updateMultiLayer()" class="w-20 bg-slate-800 border border-slate-700 text-amber-300 rounded px-2 py-1 font-mono-code text-right">
+          </div>
+          <!-- Layer 2 -->
+          <div class="bg-slate-900/60 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between text-xs">
+            <span class="text-emerald-400 font-semibold">第二層 (n₂):</span>
+            <input type="number" id="ml-n2" value="1.33" min="1.0" max="3.0" step="0.05" onchange="updateMultiLayer()" class="w-20 bg-slate-800 border border-slate-700 text-emerald-300 rounded px-2 py-1 font-mono-code text-right">
+          </div>
+          <!-- Layer 3 -->
+          <div class="bg-slate-900/60 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between text-xs">
+            <span class="text-sky-400 font-semibold">第三層 (n₃):</span>
+            <input type="number" id="ml-n3" value="1.50" min="1.0" max="3.0" step="0.05" onchange="updateMultiLayer()" class="w-20 bg-slate-800 border border-slate-700 text-sky-300 rounded px-2 py-1 font-mono-code text-right">
+          </div>
+          <!-- Layer 4 -->
+          <div class="bg-slate-900/60 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between text-xs">
+            <span class="text-purple-400 font-semibold">第四層 (n₄):</span>
+            <input type="number" id="ml-n4" value="2.42" min="1.0" max="3.0" step="0.05" onchange="updateMultiLayer()" class="w-20 bg-slate-800 border border-slate-700 text-purple-300 rounded px-2 py-1 font-mono-code text-right">
+          </div>
+        </div>
+
+        <!-- Continuous Refraction Verification Card -->
+        <div class="bg-slate-900/90 p-3 rounded-xl border border-cyan-500/30 text-xs space-y-2">
+          <div class="font-bold text-cyan-300 border-b border-slate-800 pb-1 flex items-center justify-between">
+            <span>連續介面不變量守恆</span>
+            <span class="font-mono-code text-emerald-400">恆定常數 = <span id="ml-invariant">0.707</span></span>
+          </div>
+          <div id="ml-verification-list" class="space-y-1.5 font-mono-code text-[11px]">
+            <!-- Dynamic verification lines -->
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Help / Instructions Modal -->
+  <div id="modal-help" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="glass-panel max-w-lg w-full rounded-2xl p-6 border border-cyan-500/30 space-y-4 shadow-2xl">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <h3 class="text-lg font-bold text-cyan-400 flex items-center gap-2">
+          <i class="fa-solid fa-book-open"></i> 光學物理教學指南
+        </h3>
+        <button onclick="closeHelpModal()" class="text-slate-400 hover:text-white text-lg">&times;</button>
+      </div>
+      <div class="text-xs text-slate-300 space-y-3 leading-relaxed max-h-[60vh] overflow-y-auto pr-1">
+        <div>
+          <h4 class="font-bold text-cyan-300 text-sm mb-1">1. 斯奈爾定律 (Snell's Law) 計算標準</h4>
+          <p>物理公式：<span class="font-mono-code text-amber-300">n₁ · sin(θ₁) = n₂ · sin(θ₂)</span>。入射角 $\theta_1$、反射角 $\theta_r$ 與折射角 $\theta_2$ 均定義為<b>光線與垂直法線 (Normal) 的夾角</b>。</p>
+        </div>
+        <div>
+          <h4 class="font-bold text-cyan-300 text-sm mb-1">2. 全反射 (Total Internal Reflection, TIR)</h4>
+          <p>當光線從<b>光密介質 (高折射率 n₁)</b> 進入 <b>光疏介質 (低折射率 n₂)</b>，且入射角 $\theta_1$ 大於臨界角 $\theta_c = \arcsin(n_2/n_1)$ 時，折射光消失，產生 100% 全反射。</p>
+        </div>
+        <div>
+          <h4 class="font-bold text-cyan-300 text-sm mb-1">3. 多層介質不變量守恆</h4>
+          <p>平行介質層中，不管經歷多少層折射，各層的 <span class="font-mono-code text-cyan-300">nᵢ · sin(θᵢ)</span> 均相等。</p>
+        </div>
+      </div>
+      <button onclick="closeHelpModal()" class="w-full py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs transition">
+        理解並關閉指南
+      </button>
+    </div>
+  </div>
+
+  <!-- JavaScript Implementation -->
+  <script>
+    let currentMode = 'teaching'; // 'teaching' or 'multilayer'
+    let teachingType = 'refraction'; // 'refraction' or 'reflection'
+
+    const canvas = document.getElementById('opticsCanvas');
+    const ctx = canvas.getContext('2d');
+    let canvasWidth = 800;
+    let canvasHeight = 600;
+
+    let lightSource = { x: 250, y: 120, angle: 45 }; 
+    let teachingN1 = 1.00;
+    let teachingN2 = 1.33;
+    let slowMoPlaying = true;
+    let slowMoProgress = 0;
+    let slowMoSpeed = 0.8;
+
+    let isDragging = false;
+    let dragTarget = null;
+    let mousePos = { x: 0, y: 0 };
+
+    let multiLayers = [
+      { name: '空氣 (Air)', n: 1.00, color: 'rgba(56, 189, 248, 0.05)' },
+      { name: '水 (Water)', n: 1.33, color: 'rgba(16, 185, 129, 0.15)' },
+      { name: '玻璃 (Glass)', n: 1.50, color: 'rgba(99, 102, 241, 0.20)' },
+      { name: '鑽石 (Diamond)', n: 2.42, color: 'rgba(168, 85, 247, 0.25)' }
+    ];
+
+    function calculateSnellPhysics(n1, theta1_deg, n2) {
+      const clampedTheta1 = Math.max(0, Math.min(89.999, Math.abs(theta1_deg)));
+      const theta1_rad = clampedTheta1 * Math.PI / 180;
+      const sin_theta1 = Math.sin(theta1_rad);
+      const lhs = n1 * sin_theta1;
+      const sin_theta2 = (n1 / n2) * sin_theta1;
+
+      if (sin_theta2 > 1.0) {
+        const critical_angle_rad = Math.asin(Math.min(1.0, n2 / n1));
+        const critical_angle_deg = critical_angle_rad * 180 / Math.PI;
+        return {
+          isTIR: true,
+          theta1_deg: clampedTheta1,
+          theta2_deg: clampedTheta1,
+          lhs: lhs,
+          rhs: lhs,
+          sin_theta1: sin_theta1,
+          sin_theta2: sin_theta2,
+          critical_angle_deg: critical_angle_deg
+        };
+      } else {
+        const theta2_rad = Math.asin(sin_theta2);
+        const theta2_deg = theta2_rad * 180 / Math.PI;
+        const rhs = n2 * Math.sin(theta2_rad);
+        return {
+          isTIR: false,
+          theta1_deg: clampedTheta1,
+          theta2_deg: theta2_deg,
+          lhs: lhs,
+          rhs: rhs,
+          sin_theta1: sin_theta1,
+          sin_theta2: sin_theta2
+        };
+      }
+    }
+
+    function normalizeVec(v) {
+      const len = Math.hypot(v.x, v.y);
+      return len < 1e-9 ? { x: 0, y: 0 } : { x: v.x / len, y: v.y / len };
+    }
+
+    function intersectRaySegment(rayStart, rayDir, segA, segB) {
+      const vx = segB.x - segA.x;
+      const vy = segB.y - segA.y;
+      const cross = rayDir.x * vy - rayDir.y * vx;
+      if (Math.abs(cross) < 1e-9) return null;
+
+      const t = ((segA.x - rayStart.x) * vy - (segA.y - rayStart.y) * vx) / cross;
+      const u = ((segA.x - rayStart.x) * rayDir.y - (segA.y - rayStart.y) * rayDir.x) / cross;
+
+      if (t > 1e-4 && u >= 0 && u <= 1) {
+        return {
+          t: t,
+          point: { x: rayStart.x + t * rayDir.x, y: rayStart.y + t * rayDir.y },
+          normal: normalizeVec({ x: -vy, y: vx })
+        };
+      }
+      return null;
+    }
+
+    function traceRayPath(startPt, startAngleDeg) {
+      const path = [];
+      let currentPt = { ...startPt };
+      const rad = (90 + startAngleDeg) * Math.PI / 180;
+      let currentDir = { x: Math.cos(rad), y: Math.sin(rad) };
+
+      if (currentMode === 'teaching') {
+        const hit = intersectRaySegment(currentPt, currentDir, { x: 0, y: 300 }, { x: canvasWidth, y: 300 });
+        if (hit) {
+          const hitPt = hit.point;
+          let norm = { x: 0, y: -1 };
+          const cosTheta1 = Math.max(0, Math.min(1, -(currentDir.x * norm.x + currentDir.y * norm.y)));
+          const theta1_deg = Math.acos(cosTheta1) * 180 / Math.PI;
+
+          if (teachingType === 'reflection') {
+            const reflDir = { x: currentDir.x, y: -currentDir.y };
+            const reflEnd = { x: hitPt.x + reflDir.x * 500, y: hitPt.y + reflDir.y * 500 };
+            path.push({ start: { ...currentPt }, end: { ...hitPt }, dir: currentDir, type: 'incident_hit', theta1_deg, normal: norm });
+            path.push({ start: { ...hitPt }, end: reflEnd, dir: reflDir, type: 'reflection', theta1_deg, normal: norm });
+          } else {
+            const snell = calculateSnellPhysics(teachingN1, theta1_deg, teachingN2);
+            const reflDir = { x: currentDir.x, y: -currentDir.y };
+            const reflEnd = { x: hitPt.x + reflDir.x * 400, y: hitPt.y + reflDir.y * 400 };
+
+            path.push({ start: { ...currentPt }, end: { ...hitPt }, dir: currentDir, type: 'incident_hit', snell, theta1_deg, normal: norm });
+            path.push({ start: { ...hitPt }, end: reflEnd, dir: reflDir, type: 'partial_reflection', theta1_deg, normal: norm });
+
+            if (snell.isTIR) {
+              path.push({ start: { ...hitPt }, end: reflEnd, dir: reflDir, type: 'tir', snell, theta1_deg, normal: norm });
+            } else {
+              const eta = teachingN1 / teachingN2;
+              const cosTheta2 = Math.cos(snell.theta2_deg * Math.PI / 180);
+              const refractDir = normalizeVec({
+                x: eta * currentDir.x + (eta * cosTheta1 - cosTheta2) * norm.x,
+                y: eta * currentDir.y + (eta * cosTheta1 - cosTheta2) * norm.y
+              });
+              const refrEnd = { x: hitPt.x + refractDir.x * 400, y: hitPt.y + refractDir.y * 400 };
+              path.push({ start: { ...hitPt }, end: refrEnd, dir: refractDir, type: 'refraction_branch', snell, theta1_deg, theta2_deg: snell.theta2_deg, normal: norm });
+            }
+          }
+        }
+      } else if (currentMode === 'multilayer') {
+        const ys = [150, 300, 450];
+        let currN = multiLayers[0].n;
+
+        for (let i = 0; i < ys.length; i++) {
+          const nextN = multiLayers[i+1].n;
+          const hit = intersectRaySegment(currentPt, currentDir, { x: 0, y: ys[i] }, { x: canvasWidth, y: ys[i] });
+          if (!hit) break;
+
+          const hitPt = hit.point;
+          const norm = { x: 0, y: -1 };
+          const cosTheta1 = Math.max(0, Math.min(1, -(currentDir.x * norm.x + currentDir.y * norm.y)));
+          const theta1_deg = Math.acos(cosTheta1) * 180 / Math.PI;
+          const snell = calculateSnellPhysics(currN, theta1_deg, nextN);
+
+          path.push({ start: { ...currentPt }, end: { ...hitPt }, dir: currentDir, type: 'refraction', snell, theta1_deg, normal: norm });
+
+          if (snell.isTIR) {
+            const reflDir = { x: currentDir.x, y: -currentDir.y };
+            path.push({ start: { ...hitPt }, end: { x: hitPt.x + reflDir.x * 300, y: hitPt.y + reflDir.y * 300 }, dir: reflDir, type: 'tir' });
+            break;
+          } else {
+            const eta = currN / nextN;
+            const cosTheta2 = Math.cos(snell.theta2_deg * Math.PI / 180);
+            currentDir = normalizeVec({
+              x: eta * currentDir.x + (eta * cosTheta1 - cosTheta2) * norm.x,
+              y: eta * currentDir.y + (eta * cosTheta1 - cosTheta2) * norm.y
+            });
+            currentPt = hitPt;
+            currN = nextN;
+          }
+        }
+        path.push({ start: { ...currentPt }, end: { x: currentPt.x + currentDir.x * 400, y: currentPt.y + currentDir.y * 400 }, dir: currentDir, type: 'final_out' });
+      }
+
+      return path;
+    }
+
+    function drawAngleArcBetween(ctx, cx, cy, angle1, angle2, radius, color, label) {
+      let diff = angle2 - angle1;
+      while (diff < -Math.PI) diff += Math.PI * 2;
+      while (diff > Math.PI) diff -= Math.PI * 2;
+
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, angle1, angle1 + diff, diff < 0);
+      ctx.stroke();
+
+      const midAngle = angle1 + diff / 2;
+      const lx = cx + (radius + 22) * Math.cos(midAngle);
+      const ly = cy + (radius + 22) * Math.sin(midAngle);
+
+      ctx.font = 'bold 11px "JetBrains Mono", monospace';
+      ctx.fillStyle = color;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(label, lx, ly);
+      ctx.restore();
+    }
+
+    function render() {
+      ctx.fillStyle = '#0b0f19';
+      ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+      // Grid
+      ctx.strokeStyle = 'rgba(30, 41, 59, 0.4)';
+      ctx.lineWidth = 1;
+      for (let x = 0; x < canvasWidth; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvasHeight); ctx.stroke(); }
+      for (let y = 0; y < canvasHeight; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvasWidth, y); ctx.stroke(); }
+
+      if (currentMode === 'teaching') renderTeachingMode();
+      else if (currentMode === 'multilayer') renderMultiLayerMode();
+
+      requestAnimationFrame(render);
+    }
+
+    function renderTeachingMode() {
+      // Top Medium 1
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.05)';
+      ctx.fillRect(0, 0, canvasWidth, 300);
+
+      // Bottom Medium 2
+      ctx.fillStyle = teachingType === 'reflection' ? 'rgba(30, 41, 59, 0.75)' : 'rgba(16, 185, 129, 0.12)';
+      ctx.fillRect(0, 300, canvasWidth, 300);
+
+      // Interface line y = 300
+      ctx.strokeStyle = teachingType === 'reflection' ? '#38bdf8' : '#10b981';
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(0, 300); ctx.lineTo(canvasWidth, 300); ctx.stroke();
+
+      if (teachingType === 'reflection') {
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
+        ctx.lineWidth = 1.5;
+        for (let x = 10; x < canvasWidth; x += 20) {
+          ctx.beginPath(); ctx.moveTo(x, 300); ctx.lineTo(x - 10, 312); ctx.stroke();
+        }
+      }
+
+      ctx.font = '600 13px Inter';
+      ctx.fillStyle = '#fbbf24';
+      ctx.fillText(`介質 1: (n₁ = ${teachingN1.toFixed(2)})`, 20, 30);
+      ctx.fillStyle = teachingType === 'reflection' ? '#38bdf8' : '#34d399';
+      ctx.fillText(`介質 2: ${teachingType === 'reflection' ? '理想平面鏡 (100% 反射)' : '折射介質'} (n₂ = ${teachingN2.toFixed(2)})`, 20, 330);
+
+      const rays = traceRayPath(lightSource, lightSource.angle);
+
+      // Slow-mo pulse progress
+      if (slowMoPlaying) {
+        slowMoProgress += 3.0 * slowMoSpeed;
+        if (slowMoProgress > 600) slowMoProgress = 0;
+      }
+
+      let hitPt = null;
+      let activeIncident = null;
+      let activeReflect = null;
+      let activeRefract = null;
+
+      rays.forEach(seg => {
+        if (seg.type === 'incident_hit') { hitPt = seg.end; activeIncident = seg; }
+        if (seg.type === 'partial_reflection' || seg.type === 'reflection') activeReflect = seg;
+        if (seg.type === 'refraction_branch') activeRefract = seg;
+
+        ctx.shadowColor = '#38bdf8';
+        ctx.shadowBlur = 10;
+        ctx.lineWidth = 3.5;
+
+        if (seg.type === 'partial_reflection') {
+          ctx.strokeStyle = 'rgba(56, 189, 248, 0.75)';
+          ctx.setLineDash([8, 4]);
+        } else if (seg.type === 'refraction_branch') {
+          ctx.strokeStyle = '#10b981';
+          ctx.setLineDash([]);
+        } else {
+          ctx.strokeStyle = '#38bdf8';
+          ctx.setLineDash([]);
+        }
+
+        ctx.beginPath();
+        ctx.moveTo(seg.start.x, seg.start.y);
+        ctx.lineTo(seg.end.x, seg.end.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.shadowBlur = 0;
+
+        // Animated wavefront pulses for Slow-Motion effect
+        const dx = seg.end.x - seg.start.x;
+        const dy = seg.end.y - seg.start.y;
+        const segLen = Math.hypot(dx, dy);
+        if (segLen > 0) {
+          const uX = dx / segLen;
+          const uY = dy / segLen;
+          for (let p = (slowMoProgress % 40); p < segLen; p += 40) {
+            const px = seg.start.x + uX * p;
+            const py = seg.start.y + uY * p;
+            ctx.fillStyle = seg.type === 'refraction_branch' ? '#34d399' : '#38bdf8';
+            ctx.beginPath(); ctx.arc(px, py, 3.5, 0, Math.PI * 2); ctx.fill();
+          }
+        }
+      });
+
+      // Normal line & Angle Arcs
+      if (hitPt) {
+        ctx.setLineDash([6, 6]);
+        ctx.strokeStyle = '#06b6d4';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(hitPt.x, hitPt.y - 140);
+        ctx.lineTo(hitPt.x, hitPt.y + 140);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.font = 'bold 11px "JetBrains Mono"';
+        ctx.fillStyle = '#06b6d4';
+        ctx.fillText('垂直法線 (Normal)', hitPt.x + 8, hitPt.y - 120);
+
+        const topNormalAngle = -Math.PI / 2;
+        const bottomNormalAngle = Math.PI / 2;
+        const inVecAngle = Math.atan2(lightSource.y - hitPt.y, lightSource.x - hitPt.x);
+        const theta1_deg = activeIncident ? activeIncident.theta1_deg : Math.abs(lightSource.angle);
+
+        drawAngleArcBetween(ctx, hitPt.x, hitPt.y, topNormalAngle, inVecAngle, 50, '#f59e0b', `θ₁ = ${theta1_deg.toFixed(1)}°`);
+
+        if (activeReflect || teachingType === 'reflection') {
+          const reflVec = activeReflect ? activeReflect.end : { x: hitPt.x + Math.sin(theta1_deg*Math.PI/180)*200, y: hitPt.y - Math.cos(theta1_deg*Math.PI/180)*200 };
+          const reflVecAngle = Math.atan2(reflVec.y - hitPt.y, reflVec.x - hitPt.x);
+          drawAngleArcBetween(ctx, hitPt.x, hitPt.y, topNormalAngle, reflVecAngle, 75, '#38bdf8', `θᵣ = ${theta1_deg.toFixed(1)}°`);
+        }
+
+        if (teachingType === 'refraction' && activeRefract && activeIncident.snell && !activeIncident.snell.isTIR) {
+          const theta2_deg = activeRefract.theta2_deg;
+          const refrVecAngle = Math.atan2(activeRefract.end.y - hitPt.y, activeRefract.end.x - hitPt.x);
+          drawAngleArcBetween(ctx, hitPt.x, hitPt.y, bottomNormalAngle, refrVecAngle, 65, '#10b981', `θ₂ = ${theta2_deg.toFixed(1)}°`);
+        }
+
+        const snell = activeIncident ? activeIncident.snell : calculateSnellPhysics(teachingN1, theta1_deg, teachingN2);
+        updateSnellHUDCard(teachingN1, theta1_deg, teachingN2, snell);
+      }
+
+      drawLightEmitter(lightSource.x, lightSource.y, lightSource.angle);
+    }
+
+    function renderMultiLayerMode() {
+      const layerH = 150;
+      multiLayers.forEach((layer, i) => {
+        ctx.fillStyle = layer.color;
+        ctx.fillRect(0, i * layerH, canvasWidth, layerH);
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.25)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(0, (i+1)*layerH); ctx.lineTo(canvasWidth, (i+1)*layerH); ctx.stroke();
+        ctx.font = '600 12px Inter'; ctx.fillStyle = '#f3f4f6';
+        ctx.fillText(`第 ${i+1} 層: ${layer.name} (n = ${layer.n.toFixed(2)})`, 20, i * layerH + 25);
+      });
+
+      const rays = traceRayPath(lightSource, lightSource.angle);
+      rays.forEach(seg => {
+        ctx.shadowColor = '#38bdf8'; ctx.shadowBlur = 10;
+        ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(seg.start.x, seg.start.y); ctx.lineTo(seg.end.x, seg.end.y); ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        if (seg.type === 'refraction') {
+          ctx.setLineDash([4, 4]); ctx.strokeStyle = '#06b6d4'; ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.moveTo(seg.end.x, seg.end.y - 45); ctx.lineTo(seg.end.x, seg.end.y + 45); ctx.stroke();
+          ctx.setLineDash([]);
+        }
+      });
+
+      drawLightEmitter(lightSource.x, lightSource.y, lightSource.angle);
+      updateMultiLayerHUD();
+    }
+
+    function drawLightEmitter(x, y, angleDeg) {
+      ctx.save();
+      ctx.translate(x, y);
+
+      const rad = (90 + angleDeg) * Math.PI / 180;
+      ctx.rotate(rad);
+
+      ctx.fillStyle = '#1e293b';
+      ctx.strokeStyle = '#06b6d4';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(-22, -14, 44, 28, 6);
+      else ctx.rect(-22, -14, 44, 28);
+      ctx.fill(); ctx.stroke();
+
+      ctx.fillStyle = '#f43f5e';
+      ctx.fillRect(22, -7, 8, 14);
+
+      ctx.fillStyle = '#38bdf8';
+      ctx.beginPath(); ctx.moveTo(12, 0); ctx.lineTo(0, -6); ctx.lineTo(0, 6); ctx.closePath(); ctx.fill();
+
+      ctx.restore();
+
+      // Rotation Handle
+      const handleDist = 55;
+      const hx = x + handleDist * Math.sin(angleDeg * Math.PI / 180);
+      const hy = y + handleDist * Math.cos(angleDeg * Math.PI / 180);
+
+      ctx.setLineDash([3, 3]);
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(hx, hy); ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.shadowColor = '#f59e0b'; ctx.shadowBlur = 10;
+      ctx.fillStyle = '#f59e0b';
+      ctx.beginPath(); ctx.arc(hx, hy, 9, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      ctx.font = 'bold 9px Inter'; ctx.fillStyle = '#0f172a'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('↻', hx, hy);
+    }
+
+    function updateSnellHUDCard(n1, theta1_deg, n2, snell) {
+      document.getElementById('hud-theta1').innerText = theta1_deg.toFixed(1);
+      document.getElementById('hud-thetar').innerText = theta1_deg.toFixed(1);
+
+      const titleEl = document.getElementById('hud-card-title');
+      const formulaBox = document.getElementById('hud-formula-box');
+      const badge = document.getElementById('snell-status-badge');
+      const banner = document.getElementById('snell-match-banner');
+      const refrBox = document.getElementById('hud-refr-box');
+
+      if (teachingType === 'reflection') {
+        titleEl.innerText = "反射定律即時驗證";
+        formulaBox.innerHTML = `<span class="text-amber-400">θ₁ (入射角)</span> === <span class="text-sky-400">θᵣ (反射角)</span>`;
+        badge.className = "px-2 py-0.5 rounded text-[10px] font-semibold bg-sky-500/20 text-sky-300 border border-sky-500/30";
+        badge.innerText = "反射定律成立";
+        refrBox.classList.add('hidden');
+        banner.innerHTML = `<i class="fa-solid fa-circle-check text-sky-400"></i> <span>入射角 (${theta1_deg.toFixed(1)}°) === 反射角 (${theta1_deg.toFixed(1)}°) 完全相符！</span>`;
+
+        document.getElementById('teaching-math-breakdown').innerHTML = `
+          <div>1. 入射光線夾角 θ₁ = <b class="text-amber-400">${theta1_deg.toFixed(1)}°</b></div>
+          <div>2. 理想平面鏡發生 100% 鏡面反射</div>
+          <div>3. 反射定律：反射角 θᵣ = θ₁ = <b class="text-sky-400">${theta1_deg.toFixed(1)}°</b></div>
+        `;
+      } else {
+        titleEl.innerText = "斯奈爾定律即時驗證";
+        formulaBox.innerHTML = `<span class="text-amber-400">n₁ · sin(θ₁)</span> = <span class="text-emerald-400">n₂ · sin(θ₂)</span>`;
+        refrBox.classList.remove('hidden');
+
+        if (snell.isTIR) {
+          badge.className = "px-2 py-0.5 rounded text-[10px] font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/30";
+          badge.innerText = "發生全反射 (TIR)";
+          document.getElementById('hud-theta2').innerText = "無折射 (TIR)";
+          banner.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-rose-400"></i> <span>θ₁ (${theta1_deg.toFixed(1)}°) > 臨界角 (${snell.critical_angle_deg.toFixed(1)}°) 發生全反射！</span>`;
+        } else {
+          badge.className = "px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
+          badge.innerText = "折射成立";
+          document.getElementById('hud-theta2').innerText = snell.theta2_deg.toFixed(1);
+          banner.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400"></i> <span>n₁sin(θ₁) [${snell.lhs.toFixed(3)}] === n₂sin(θ₂) [${snell.rhs.toFixed(3)}] 精確相等！</span>`;
+        }
+
+        document.getElementById('teaching-math-breakdown').innerHTML = `
+          <div>1. sin(θ₁) = sin(${theta1_deg.toFixed(1)}°) = ${Math.sin(theta1_deg * Math.PI / 180).toFixed(4)}</div>
+          <div>2. LHS = n₁·sin(θ₁) = <b class="text-amber-400">${snell.lhs.toFixed(3)}</b></div>
+          ${snell.isTIR ? 
+            `<div class="text-rose-400 font-bold">3. sin(θ₂) > 1.0 ⟹ 發生全反射 (臨界角 θc = ${snell.critical_angle_deg.toFixed(1)}°)</div>` : 
+            `<div>3. θ₂ = arcsin(${snell.sin_theta2.toFixed(4)}) = <b class="text-emerald-400">${snell.theta2_deg.toFixed(1)}°</b></div>
+             <div>4. RHS = n₂·sin(θ₂) = <b class="text-emerald-400">${snell.rhs.toFixed(3)}</b></div>`
+          }
+        `;
+      }
+    }
+
+    function updateMultiLayerHUD() {
+      const list = document.getElementById('ml-verification-list');
+      const rays = traceRayPath(lightSource, lightSource.angle);
+      let html = '';
+      let firstLHS = null;
+
+      rays.forEach((seg, i) => {
+        if (seg.type === 'refraction' && seg.snell) {
+          const lhs = seg.snell.lhs;
+          if (firstLHS === null) firstLHS = lhs;
+          html += `
+            <div class="flex justify-between items-center border-b border-slate-800/60 pb-1">
+              <span class="text-slate-400">介面 ${i+1} (n${i+1} ➔ n${i+2}):</span>
+              <span class="text-cyan-300 font-bold">${seg.snell.lhs.toFixed(3)} === ${seg.snell.rhs.toFixed(3)}</span>
+            </div>
+          `;
+        }
+      });
+      list.innerHTML = html || '<div class="text-slate-500">無穿透折射光路</div>';
+      document.getElementById('ml-invariant').innerText = firstLHS !== null ? firstLHS.toFixed(3) : 'N/A';
+    }
+
+    function updateSourceAngle(val) {
+      lightSource.angle = parseFloat(val);
+      document.getElementById('lbl-angle').innerText = `${lightSource.angle.toFixed(1)}°`;
+      document.getElementById('slider-angle').value = lightSource.angle;
+      slowMoProgress = 0;
+    }
+
+    function switchMode(mode) {
+      currentMode = mode;
+      document.querySelectorAll('.nav-tab').forEach(b => {
+        b.className = "nav-tab px-4 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-slate-200 transition-all flex items-center gap-2";
+      });
+      document.getElementById(`tab-${mode}`).className = "nav-tab px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 bg-cyan-500 text-slate-950 font-semibold shadow-md";
+
+      ['teaching', 'multilayer'].forEach(p => {
+        const el = document.getElementById(`panel-${p}`);
+        if (p === mode) el.classList.remove('hidden');
+        else el.classList.add('hidden');
+      });
+
+      const modeTitles = {
+        teaching: '慢動作折射與反射教學',
+        multilayer: '多層介質連續折射教學'
+      };
+      document.getElementById('hud-mode-title').innerText = modeTitles[mode];
+      if (mode !== 'teaching') document.getElementById('snell-hud-card').classList.add('hidden');
+      else document.getElementById('snell-hud-card').classList.remove('hidden');
+    }
+
+    function setTeachingType(type) {
+      teachingType = type;
+      document.getElementById('subtab-refract').className = type === 'refraction' ? 'px-2.5 py-1 rounded bg-cyan-500 text-slate-950 font-bold transition' : 'px-2.5 py-1 rounded text-slate-400 hover:text-white transition';
+      document.getElementById('subtab-reflect').className = type === 'reflection' ? 'px-2.5 py-1 rounded bg-cyan-500 text-slate-950 font-bold transition' : 'px-2.5 py-1 rounded text-slate-400 hover:text-white transition';
+
+      const n2Box = document.getElementById('box-n2-slider');
+      const presetBtns = document.getElementById('preset-buttons');
+      if (type === 'reflection') {
+        n2Box.classList.add('opacity-40', 'pointer-events-none');
+        presetBtns.classList.add('opacity-40', 'pointer-events-none');
+      } else {
+        n2Box.classList.remove('opacity-40', 'pointer-events-none');
+        presetBtns.classList.remove('opacity-40', 'pointer-events-none');
+      }
+      slowMoProgress = 0;
+    }
+
+    function updateTeachingMedia() {
+      teachingN1 = parseFloat(document.getElementById('slider-n1').value);
+      teachingN2 = parseFloat(document.getElementById('slider-n2').value);
+      document.getElementById('lbl-n1').innerText = `${teachingN1.toFixed(2)}`;
+      document.getElementById('lbl-n2').innerText = `${teachingN2.toFixed(2)}`;
+      slowMoProgress = 0;
+    }
+
+    function setMediaPreset(n1, n2) {
+      document.getElementById('slider-n1').value = n1;
+      document.getElementById('slider-n2').value = n2;
+      updateTeachingMedia();
+    }
+
+    function toggleSlowMoPlay() {
+      slowMoPlaying = !slowMoPlaying;
+      document.getElementById('play-icon').className = slowMoPlaying ? 'fa-solid fa-pause' : 'fa-solid fa-play';
+      document.getElementById('play-text').innerText = slowMoPlaying ? '暫停慢動作' : '播放慢動作';
+    }
+
+    function resetSlowMo() { slowMoProgress = 0; slowMoPlaying = true; }
+    function updateSpeed(val) { slowMoSpeed = parseFloat(val); document.getElementById('speed-val').innerText = `${slowMoSpeed.toFixed(1)}x`; }
+
+    function updateMultiLayer() {
+      multiLayers[0].n = parseFloat(document.getElementById('ml-n1').value);
+      multiLayers[1].n = parseFloat(document.getElementById('ml-n2').value);
+      multiLayers[2].n = parseFloat(document.getElementById('ml-n3').value);
+      multiLayers[3].n = parseFloat(document.getElementById('ml-n4').value);
+    }
+
+    function getCanvasCoordinates(e) {
+      const rect = canvas.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      return {
+        x: (clientX - rect.left) * (canvasWidth / rect.width),
+        y: (clientY - rect.top) * (canvasHeight / rect.height)
+      };
+    }
+
+    canvas.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      mousePos = getCanvasCoordinates(e);
+
+      const handleDist = 55;
+      const hx = lightSource.x + handleDist * Math.sin(lightSource.angle * Math.PI / 180);
+      const hy = lightSource.y + handleDist * Math.cos(lightSource.angle * Math.PI / 180);
+
+      if (Math.hypot(mousePos.x - hx, mousePos.y - hy) < 20) {
+        dragTarget = 'source-angle';
+      } else if (Math.hypot(mousePos.x - lightSource.x, mousePos.y - lightSource.y) < 32) {
+        dragTarget = 'source-pos';
+      }
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      mousePos = getCanvasCoordinates(e);
+      if (!isDragging) return;
+
+      if (dragTarget === 'source-pos') {
+        lightSource.x = mousePos.x;
+        lightSource.y = mousePos.y;
+      } else if (dragTarget === 'source-angle') {
+        const dx = mousePos.x - lightSource.x;
+        const dy = mousePos.y - lightSource.y;
+        let deg = Math.atan2(dx, dy) * 180 / Math.PI;
+        deg = Math.max(-85, Math.min(85, deg));
+        updateSourceAngle(deg);
+      }
+    });
+
+    canvas.addEventListener('mouseup', () => { isDragging = false; dragTarget = null; });
+    canvas.addEventListener('touchstart', (e) => { e.preventDefault(); canvas.dispatchEvent(new MouseEvent('mousedown', { clientX: e.touches[0].clientX, clientY: e.touches[0].clientY })); });
+    canvas.addEventListener('touchmove', (e) => { e.preventDefault(); canvas.dispatchEvent(new MouseEvent('mousemove', { clientX: e.touches[0].clientX, clientY: e.touches[0].clientY })); });
+    canvas.addEventListener('touchend', () => { canvas.dispatchEvent(new MouseEvent('mouseup', {})); });
+
+    function openHelpModal() { document.getElementById('modal-help').classList.remove('hidden'); }
+    function closeHelpModal() { document.getElementById('modal-help').classList.add('hidden'); }
+
+    function resizeCanvas() {
+      const container = canvas.parentElement;
+      canvasWidth = container.clientWidth;
+      canvasHeight = Math.min(620, canvasWidth * 0.75);
+      canvas.width = canvasWidth;
+      canvas.height = canvasHeight;
+    }
+
+    window.onload = function() {
+      resizeCanvas();
+      window.addEventListener('resize', resizeCanvas);
+      updateTeachingMedia();
+      render();
+    };
+  </script>
+</body>
+</html>

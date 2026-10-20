@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>光學繪鏡打靶闖關實驗室 (獨立版)</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        cyber: {
+                            bg: '#080c14',
+                            card: '#0f172a',
+                            border: '#1e293b',
+                            cyan: '#06b6d4',
+                            pink: '#f43f5e',
+                            green: '#10b981',
+                            yellow: '#f59e0b',
+                            purple: '#a855f7'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Noto Sans TC', 'Inter', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #080c14;
+            color: #e2e8f0;
+            overflow-x: hidden;
+            user-select: none;
+        }
+
+        .glow-cyan { box-shadow: 0 0 15px rgba(6, 182, 212, 0.35); }
+        .glow-pink { box-shadow: 0 0 15px rgba(244, 63, 94, 0.35); }
+        .glow-green { box-shadow: 0 0 15px rgba(16, 185, 129, 0.35); }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #080c14; }
+        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #06b6d4; }
+
+        canvas { touch-action: none; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col font-sans">
+
+    <!-- Header Navigation -->
+    <header class="bg-cyber-card/90 backdrop-blur border-b border-cyber-border sticky top-0 z-40 px-4 py-3">
+        <div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-pink-500 flex items-center justify-center text-white font-bold text-xl glow-cyan">
+                    <i class="fa-solid fa-bullseye"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 via-teal-300 to-pink-500">
+                        光學平面鏡打靶闖關實驗室
+                    </h1>
+                    <p class="text-xs text-slate-400">反射折射 ✕ 多色光源標靶 ✕ 貫穿多靶 ✕ 即時法線預覽</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <button id="mute-btn" onclick="toggleMute()" class="w-9 h-9 rounded-lg bg-slate-900 border border-cyber-border hover:border-cyan-500 text-slate-300 hover:text-cyan-400 flex items-center justify-center transition">
+                    <i id="mute-icon" class="fa-solid fa-volume-high"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 flex flex-col gap-4">
+
+        <!-- Header Controls Bar -->
+        <div class="bg-cyber-card border border-cyber-border rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="px-3 py-1 bg-cyan-950 border border-cyan-800 rounded-xl font-bold text-cyan-400 text-xs flex items-center gap-2">
+                    <i class="fa-solid fa-trophy"></i>
+                    <span id="game-level-title">關卡 1: 平面鏡反射入門</span>
+                </div>
+                <span id="game-level-desc" class="text-xs text-slate-300 hidden lg:inline">固定光源角度！僅使用平面鏡反射光線命中目標靶心。</span>
+            </div>
+
+            <div class="flex items-center gap-2 flex-wrap">
+                <select id="game-level-select" onchange="loadGameLevel(parseInt(this.value))" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200">
+                    <!-- Dynamic Options -->
+                </select>
+
+                <button onclick="toggleHintModal()" class="px-3 py-1.5 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-300 hover:bg-amber-500/30 text-xs font-semibold flex items-center gap-1">
+                    <i class="fa-solid fa-lightbulb"></i> 提示
+                </button>
+
+                <!-- Undo Button (復原) -->
+                <button onclick="undoPlayerMirror()" class="px-3 py-1.5 rounded-lg bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 hover:bg-indigo-500/30 text-xs font-semibold flex items-center gap-1 transition active:scale-95">
+                    <i class="fa-solid fa-rotate-left"></i> 復原 (Undo)
+                </button>
+
+                <button onclick="clearPlayerDrawnGameObjects()" class="px-3 py-1.5 rounded-lg bg-rose-500/20 border border-rose-500/30 text-rose-300 hover:bg-rose-500/30 text-xs font-semibold flex items-center gap-1">
+                    <i class="fa-solid fa-trash-can"></i> 清除平面鏡
+                </button>
+
+                <button id="game-test-launch-btn" onclick="triggerGameTestLaunch()" class="px-5 py-1.5 rounded-lg bg-gradient-to-r from-cyan-500 to-pink-500 hover:from-cyan-400 hover:to-pink-400 text-white font-bold text-xs glow-pink flex items-center gap-1.5 transition transform active:scale-95">
+                    <i class="fa-solid fa-play"></i> 測試發射
+                </button>
+            </div>
+        </div>
+
+        <!-- Canvas Workspace & Toolbox -->
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
+            <!-- Main Canvas Workspace -->
+            <div class="lg:col-span-3 bg-cyber-card border border-cyber-border rounded-2xl p-2 relative flex flex-col items-center">
+                <canvas id="gameCanvas" width="840" height="480" class="w-full h-auto bg-[#070a12] rounded-xl border border-slate-800/80 cursor-crosshair"></canvas>
+                <div id="game-canvas-status-tip" class="absolute bottom-4 left-6 bg-slate-900/90 border border-slate-800 text-slate-300 text-xs px-3 py-1.5 rounded-lg pointer-events-none flex items-center gap-2">
+                    <i class="fa-solid fa-pen text-cyan-400"></i>
+                    【畫平面鏡模式】：拖曳畫鏡，繪製時即時顯示法線與直角符號！
+                </div>
+            </div>
+
+            <!-- Game Tool Panel -->
+            <div class="space-y-4">
+                <div class="bg-cyber-card border border-cyber-border rounded-2xl p-4 space-y-3">
+                    <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider border-b border-cyber-border pb-2 flex items-center gap-2">
+                        <i class="fa-solid fa-toolbox text-cyan-400"></i> 操作工具箱
+                    </h3>
+
+                    <div class="grid grid-cols-1 gap-2">
+                        <button id="tool-draw-mirror" onclick="setGameTool('draw_mirror')" class="p-3 rounded-xl border bg-cyan-950/60 border-cyan-500 text-cyan-300 text-xs font-bold flex items-center gap-3 transition glow-cyan">
+                            <i class="fa-solid fa-pen-nib text-lg"></i>
+                            <div class="text-left">
+                                <div>✏️ 畫平面鏡 (Flat Mirror)</div>
+                                <div class="text-[10px] text-cyan-400/70 font-normal">拖曳畫線，即時呈現法線</div>
+                            </div>
+                        </button>
+
+                        <button id="tool-eraser" onclick="setGameTool('eraser')" class="p-3 rounded-xl border bg-slate-900 border-slate-700 text-slate-300 text-xs font-bold flex items-center gap-3 hover:border-slate-500 transition">
+                            <i class="fa-solid fa-eraser text-lg text-rose-400"></i>
+                            <div class="text-left">
+                                <div>🧹 橡皮擦 (Eraser)</div>
+                                <div class="text-[10px] text-slate-400 font-normal">點擊或拖曳擦除已畫鏡面</div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Targets Status Panel -->
+                <div class="bg-cyber-card border border-cyber-border rounded-2xl p-4 space-y-2 text-xs">
+                    <div class="font-bold text-slate-200 border-b border-cyber-border pb-1 flex justify-between items-center">
+                        <span>本關標靶狀態:</span>
+                        <span id="game-target-progress" class="text-cyan-400 font-mono">0 / 0 命中</span>
+                    </div>
+                    <div id="targets-status-list" class="space-y-1.5 pt-1">
+                        <!-- Dynamic Target Status Badges -->
+                    </div>
+                </div>
+
+                <!-- Level Mirror Stats -->
+                <div class="bg-cyber-card border border-cyber-border rounded-2xl p-4 space-y-2 text-xs">
+                    <div class="font-bold text-slate-200 border-b border-cyber-border pb-1">鏡面統計:</div>
+                    <div class="flex justify-between bg-slate-900 p-2 rounded border border-slate-800">
+                        <span class="text-slate-400">本關已畫鏡面:</span>
+                        <span id="game-mirrors-count" class="text-cyan-400 font-mono font-bold">0 面</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modals -->
+    <div id="hint-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-cyber-card border border-cyber-border rounded-2xl p-6 max-w-md w-full space-y-4 shadow-2xl relative">
+            <h3 class="text-lg font-bold text-amber-400 flex items-center gap-2">
+                <i class="fa-solid fa-lightbulb"></i> 關卡解題提示
+            </h3>
+            <p id="hint-text" class="text-sm text-slate-300 leading-relaxed">
+                提示內容加載中...
+            </p>
+            <div class="flex justify-end">
+                <button onclick="toggleHintModal()" class="px-4 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 hover:bg-slate-700 text-xs font-bold">
+                    我知道了
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Victory Settlement Modal -->
+    <div id="victory-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-cyber-card border border-cyan-500/50 rounded-2xl p-6 max-w-lg w-full space-y-5 shadow-[0_0_30px_rgba(6,182,212,0.3)] text-center relative">
+            <div class="w-16 h-16 rounded-full bg-gradient-to-tr from-cyan-500 to-green-400 mx-auto flex items-center justify-center text-3xl text-white glow-green animate-bounce">
+                <i class="fa-solid fa-trophy"></i>
+            </div>
+            <div>
+                <h3 id="victory-header-text" class="text-2xl font-bold text-white mb-1">精準貫穿標靶！ Target Destroyed!</h3>
+                <p id="victory-level-name" class="text-cyan-400 text-sm font-semibold">關卡 1: 平面鏡反射入門</p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div class="bg-slate-900/90 p-3 rounded-xl border border-slate-800 text-center">
+                    <div class="text-[11px] text-slate-400">本關卡繪製平面鏡</div>
+                    <div id="victory-this-count" class="text-xl font-bold font-mono text-cyan-400">1 面</div>
+                </div>
+                <div class="bg-slate-900/90 p-3 rounded-xl border border-slate-800 text-center">
+                    <div class="text-[11px] text-slate-400">標靶完全命中</div>
+                    <div id="victory-target-count" class="text-xl font-bold font-mono text-emerald-400">100%</div>
+                </div>
+            </div>
+
+            <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-800 text-left text-xs text-slate-300 space-y-2">
+                <div class="font-bold text-cyan-300 flex items-center gap-1">
+                    <i class="fa-solid fa-graduation-cap"></i> 光學原理解析:
+                </div>
+                <p id="victory-physics-explain" class="leading-relaxed text-slate-400">
+                    解答載入中...
+                </p>
+            </div>
+
+            <div class="flex items-center justify-center gap-3 pt-2">
+                <button onclick="toggleVictoryModal(false);" class="px-4 py-2 rounded-xl bg-slate-800 border border-slate-700 hover:border-slate-500 text-slate-200 text-xs font-bold">
+                    再試一次
+                </button>
+                <button onclick="nextGameLevel(); toggleVictoryModal(false);" class="px-6 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-pink-500 hover:from-cyan-400 hover:to-pink-400 text-white text-xs font-bold glow-pink flex items-center gap-1.5">
+                    進入下一關 <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Optics Target Game Engine -->
+    <script>
+        /* ==========================================================================
+           1. Audio Synthesizer (Web Audio API)
+           ========================================================================== */
+        let audioCtx = null;
+        let isMuted = false;
+
+        function initAudio() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+            }
+        }
+
+        function toggleMute() {
+            isMuted = !isMuted;
+            const icon = document.getElementById('mute-icon');
+            icon.className = isMuted ? 'fa-solid fa-volume-xmark text-rose-400' : 'fa-solid fa-volume-high';
+            if (!isMuted) playClickSound();
+        }
+
+        function playClickSound() {
+            if (isMuted) return;
+            initAudio();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(200, audioCtx.currentTime + 0.05);
+            gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.05);
+        }
+
+        function playLaserSound() {
+            if (isMuted) return;
+            initAudio();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(150, audioCtx.currentTime + 0.25);
+            gain.gain.setValueAtTime(0.18, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.25);
+        }
+
+        function playWinSound() {
+            if (isMuted) return;
+            initAudio();
+            const now = audioCtx.currentTime;
+            [523.25, 659.25, 783.99, 1046.50].forEach((freq, idx) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+                gain.gain.setValueAtTime(0.2, now + idx * 0.08);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.3);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now + idx * 0.08);
+                osc.stop(now + idx * 0.08 + 0.3);
+            });
+        }
+
+        /* ==========================================================================
+           2. Vector Math & Optics Physics Engine
+           ========================================================================== */
+        const Vec = {
+            add: (v1, v2) => ({ x: v1.x + v2.x, y: v1.y + v2.y }),
+            sub: (v1, v2) => ({ x: v1.x - v2.x, y: v1.y - v2.y }),
+            mult: (v, s) => ({ x: v.x * s, y: v.y * s }),
+            dot: (v1, v2) => v1.x * v2.x + v1.y * v2.y,
+            cross: (v1, v2) => v1.x * v2.y - v1.y * v2.x,
+            len: (v) => Math.hypot(v.x, v.y),
+            norm: (v) => {
+                const l = Math.hypot(v.x, v.y);
+                return l === 0 ? { x: 0, y: 0 } : { x: v.x / l, y: v.y / l };
+            },
+            rot: (v, rad) => ({
+                x: v.x * Math.cos(rad) - v.y * Math.sin(rad),
+                y: v.x * Math.sin(rad) + v.y * Math.cos(rad)
+            }),
+            dist: (v1, v2) => Math.hypot(v1.x - v2.x, v1.y - v2.y)
+        };
+
+        function intersectRaySegment(P, D, A, B) {
+            const E = Vec.sub(B, A);
+            const det = D.x * E.y - D.y * E.x;
+            if (Math.abs(det) < 1e-6) return null;
+
+            const t = ((A.x - P.x) * E.y - (A.y - P.y) * E.x) / det;
+            const s = ((A.x - P.x) * D.y - (A.y - P.y) * D.x) / det;
+
+            if (t > 1e-4 && s >= 0 && s <= 1) {
+                return { t, point: Vec.add(P, Vec.mult(D, t)), s };
+            }
+            return null;
+        }
+
+        function distToSegment(P, A, B) {
+            const l2 = (B.x - A.x)**2 + (B.y - A.y)**2;
+            if (l2 === 0) return Vec.dist(P, A);
+            let t = ((P.x - A.x) * (B.x - A.x) + (P.y - A.y) * (B.y - A.y)) / l2;
+            t = Math.max(0, Math.min(1, t));
+            const proj = { x: A.x + t * (B.x - A.x), y: A.y + t * (B.y - A.y) };
+            return Vec.dist(P, proj);
+        }
+
+        function computeRefraction(I, N, n1, n2) {
+            let normal = { ...N };
+            let cosI = -Vec.dot(I, normal);
+            if (cosI < 0) {
+                cosI = -cosI;
+                normal = Vec.mult(normal, -1);
+            }
+            const eta = n1 / n2;
+            const k = 1 - eta * eta * (1 - cosI * cosI);
+
+            if (k < 0) {
+                const R = Vec.sub(I, Vec.mult(normal, 2 * Vec.dot(I, normal)));
+                return { dir: Vec.norm(R), isTIR: true };
+            } else {
+                const cosT = Math.sqrt(k);
+                const T = Vec.add(Vec.mult(I, eta), Vec.mult(normal, eta * cosI - cosT));
+                return { dir: Vec.norm(T), isTIR: false };
+            }
+        }
+
+        function getPolygonEdges(obj) {
+            let pts = [];
+            if (obj.shape === 'rect') {
+                const w = obj.w, h = obj.h;
+                const rad = (obj.angle || 0) * Math.PI / 180;
+                const localPts = [
+                    { x: -w/2, y: -h/2 }, { x: w/2, y: -h/2 },
+                    { x: w/2, y: h/2 }, { x: -w/2, y: h/2 }
+                ];
+                pts = localPts.map(p => Vec.add(obj.center, Vec.rot(p, rad)));
+            }
+            const edges = [];
+            for (let i = 0; i < pts.length; i++) {
+                edges.push({ p1: pts[i], p2: pts[(i + 1) % pts.length] });
+            }
+            return edges;
+        }
+
+        /* Multi-Color Multi-Target Ray Tracing Engine */
+        function traceRayPathFull(origin, direction, rayColor, objects, targets, maxBounces = 25) {
+            let currentOrigin = { ...origin };
+            let currentDir = Vec.norm(direction);
+            let currentMediumN = 1.0;
+            const steps = [];
+
+            for (let bounce = 0; bounce < maxBounces; bounce++) {
+                let closestHit = null;
+
+                // Check mirrors, walls, glasses
+                objects.forEach(obj => {
+                    if (obj.type === 'mirror') {
+                        const hit = intersectRaySegment(currentOrigin, currentDir, obj.p1, obj.p2);
+                        if (hit && (!closestHit || hit.t < closestHit.t)) {
+                            const seg = Vec.sub(obj.p2, obj.p1);
+                            const norm = Vec.norm({ x: -seg.y, y: seg.x });
+                            closestHit = { ...hit, object: obj, type: 'mirror', normal: norm };
+                        }
+                    } else if (obj.type === 'wall') {
+                        const edges = getPolygonEdges(obj);
+                        edges.forEach(edge => {
+                            const hit = intersectRaySegment(currentOrigin, currentDir, edge.p1, edge.p2);
+                            if (hit && (!closestHit || hit.t < closestHit.t)) {
+                                closestHit = { ...hit, object: obj, type: 'wall' };
+                            }
+                        });
+                    } else if (obj.type === 'glass') {
+                        const edges = getPolygonEdges(obj);
+                        edges.forEach(edge => {
+                            const hit = intersectRaySegment(currentOrigin, currentDir, edge.p1, edge.p2);
+                            if (hit && (!closestHit || hit.t < closestHit.t)) {
+                                const seg = Vec.sub(edge.p2, edge.p1);
+                                const norm = Vec.norm({ x: -seg.y, y: seg.x });
+                                closestHit = { ...hit, object: obj, type: 'glass', normal: norm };
+                            }
+                        });
+                    }
+                });
+
+                let segLen = 1200;
+                let nextOrigin = Vec.add(currentOrigin, Vec.mult(currentDir, segLen));
+                let hitInfo = null;
+
+                if (closestHit) {
+                    segLen = closestHit.t;
+                    nextOrigin = closestHit.point;
+                    hitInfo = closestHit;
+                }
+
+                // Check if this ray segment passes through any targets (Color-Matching)
+                targets.forEach(target => {
+                    const dist = distToSegment(target.center, currentOrigin, nextOrigin);
+                    if (dist <= target.radius) {
+                        // Check color matching!
+                        if (target.color.toLowerCase() === rayColor.toLowerCase()) {
+                            target.hit = true;
+                        }
+                    }
+                });
+
+                steps.push({
+                    p1: currentOrigin,
+                    p2: nextOrigin,
+                    dir: currentDir,
+                    length: segLen,
+                    color: rayColor,
+                    mediumN: currentMediumN,
+                    hit: hitInfo
+                });
+
+                if (!closestHit || closestHit.type === 'wall') break;
+
+                if (closestHit.type === 'mirror') {
+                    let N = closestHit.normal;
+                    if (Vec.dot(currentDir, N) > 0) N = Vec.mult(N, -1);
+                    const refDir = Vec.norm(Vec.sub(currentDir, Vec.mult(N, 2 * Vec.dot(currentDir, N))));
+                    currentDir = refDir;
+                    currentOrigin = Vec.add(nextOrigin, Vec.mult(currentDir, 0.1));
+                } else if (closestHit.type === 'glass') {
+                    let N = closestHit.normal;
+                    let n1 = currentMediumN;
+                    let n2 = closestHit.object.n || 1.5;
+
+                    if (Vec.dot(currentDir, N) > 0) {
+                        N = Vec.mult(N, -1);
+                        n1 = closestHit.object.n || 1.5;
+                        n2 = 1.0;
+                    }
+                    const refr = computeRefraction(currentDir, N, n1, n2);
+                    currentDir = refr.dir;
+                    currentMediumN = refr.isTIR ? n1 : n2;
+                    currentOrigin = Vec.add(nextOrigin, Vec.mult(currentDir, 0.2));
+                }
+            }
+
+            return steps;
+        }
+
+        /* ==========================================================================
+           3. Game Levels & Setup
+           ========================================================================== */
+        const GAME_LEVELS = [
+            {
+                title: "關卡 1: 平面鏡反射入門",
+                desc: "固定青色光源！請劃出一面平面鏡反射光線繞過障礙物擊中青色靶心。",
+                hint: "劃出一面 45° 傾斜的平面鏡，使光線遵循反射定律向上方偏轉。",
+                physics: "根據平面鏡反射定律（∠i = ∠r），入射角等於反射角，可精確控制光路方向。",
+                emitters: [
+                    { center: { x: 100, y: 400 }, angle: -35, color: '#06b6d4' }
+                ],
+                targets: [
+                    { id: 'T1', name: '青標靶 1', center: { x: 750, y: 400 }, radius: 24, color: '#06b6d4', hit: false }
+                ],
+                fixedObjects: [
+                    { type: 'wall', shape: 'rect', center: { x: 420, y: 260 }, w: 40, h: 360 }
+                ]
+            },
+            {
+                title: "關卡 2: 雙鏡折返迷宮",
+                desc: "障礙物形成 U 型迷宮，劃出 2 面平面鏡進行連續二次反射擊中標靶。",
+                hint: "先在左上方畫一面鏡子向下反射，再於右下方畫第二面鏡子向右反射。",
+                physics: "連續多次鏡面反射能使光線在封閉通道或迷宮中多次轉向。",
+                emitters: [
+                    { center: { x: 100, y: 440 }, angle: -60, color: '#06b6d4' }
+                ],
+                targets: [
+                    { id: 'T1', name: '青標靶 1', center: { x: 750, y: 440 }, radius: 24, color: '#06b6d4', hit: false }
+                ],
+                fixedObjects: [
+                    { type: 'wall', shape: 'rect', center: { x: 350, y: 280 }, w: 40, h: 320 },
+                    { type: 'wall', shape: 'rect', center: { x: 600, y: 180 }, w: 40, h: 320 }
+                ]
+            },
+            {
+                title: "關卡 3: 【新機制】一箭雙雕 (貫穿雙靶)",
+                desc: "單一光源！請利用平面鏡引導光束，連續貫穿 2 個青色標靶才能通關！",
+                hint: "標靶為可穿透感應環！讓光線穿過第一個標靶後，利用第二面鏡子反射穿過第二個標靶。",
+                physics: "光線傳播為直線，只要光路經過感應區域即可連續觸發多個標靶。",
+                emitters: [
+                    { center: { x: 100, y: 100 }, angle: 30, color: '#06b6d4' }
+                ],
+                targets: [
+                    { id: 'T1', name: '青標靶 1', center: { x: 400, y: 280 }, radius: 22, color: '#06b6d4', hit: false },
+                    { id: 'T2', name: '青標靶 2', center: { x: 750, y: 120 }, radius: 22, color: '#06b6d4', hit: false }
+                ],
+                fixedObjects: [
+                    { type: 'wall', shape: 'rect', center: { x: 280, y: 380 }, w: 40, h: 200 },
+                    { type: 'wall', shape: 'rect', center: { x: 580, y: 180 }, w: 40, h: 220 }
+                ]
+            },
+            {
+                title: "關卡 4: 【新機制】雙色共演 (同色對決)",
+                desc: "紅色與綠色雙光源！紅光必須命中紅靶，綠光必須命中綠靶才能獲勝！",
+                hint: "注意光源與標靶的顏色顏色必須對應！畫鏡時盡量避免阻擋到另一條光路。",
+                physics: "不同顏色的光在同種介質中的折射與反射遵循獨立光路傳播原理。",
+                emitters: [
+                    { center: { x: 100, y: 120 }, angle: 35, color: '#f43f5e' }, // Red
+                    { center: { x: 100, y: 360 }, angle: -35, color: '#10b981' }  // Green
+                ],
+                targets: [
+                    { id: 'T1', name: '紅標靶', center: { x: 720, y: 380 }, radius: 24, color: '#f43f5e', hit: false },
+                    { id: 'T2', name: '綠標靶', center: { x: 720, y: 100 }, radius: 24, color: '#10b981', hit: false }
+                ],
+                fixedObjects: [
+                    { type: 'wall', shape: 'rect', center: { x: 420, y: 240 }, w: 40, h: 240 }
+                ]
+            },
+            {
+                title: "關卡 5: 水下水箱折射擊靶",
+                desc: "目標標靶位於水箱 ($n=1.33$) 中，畫鏡面將光線反射進入水中並利用折射命中！",
+                hint: "光線由空氣進入水中會向法線偏轉，計算折射角度後設定鏡面角度。",
+                physics: "光從空氣進入水 ($n_1 < n_2$) 時會偏向法線，折射角 $\\theta_2$ 小於入射角 $\\theta_1$。",
+                emitters: [
+                    { center: { x: 100, y: 120 }, angle: 20, color: '#06b6d4' }
+                ],
+                targets: [
+                    { id: 'T1', name: '水下青靶', center: { x: 650, y: 360 }, radius: 24, color: '#06b6d4', hit: false }
+                ],
+                fixedObjects: [
+                    { type: 'glass', shape: 'rect', center: { x: 550, y: 320 }, w: 400, h: 240, angle: 0, n: 1.33 },
+                    { type: 'wall', shape: 'rect', center: { x: 320, y: 200 }, w: 30, h: 240 }
+                ]
+            },
+            {
+                title: "關卡 6: 【新機制】三原色雙靶交響曲",
+                desc: "紅光需連續貫穿 2 個紅靶，青光需貫穿 2 個青靶！極致光路交錯考驗！",
+                hint: "先處理紅色光路使其連貫穿過兩紅靶，再設置鏡面引導青色光路。",
+                physics: "透過精心設計的鏡面角度，可以在有限的空間中使多條光束交叉而不互相干擾。",
+                emitters: [
+                    { center: { x: 80, y: 100 }, angle: 25, color: '#f43f5e' },  // Red
+                    { center: { x: 80, y: 380 }, angle: -25, color: '#06b6d4' }  // Cyan
+                ],
+                targets: [
+                    { id: 'T1', name: '紅標靶 1', center: { x: 380, y: 240 }, radius: 20, color: '#f43f5e', hit: false },
+                    { id: 'T2', name: '紅標靶 2', center: { x: 740, y: 380 }, radius: 20, color: '#f43f5e', hit: false },
+                    { id: 'T3', name: '青標靶 1', center: { x: 380, y: 380 }, radius: 20, color: '#06b6d4', hit: false },
+                    { id: 'T4', name: '青標靶 2', center: { x: 740, y: 100 }, radius: 20, color: '#06b6d4', hit: false }
+                ],
+                fixedObjects: [
+                    { type: 'wall', shape: 'rect', center: { x: 240, y: 240 }, w: 30, h: 200 },
+                    { type: 'wall', shape: 'rect', center: { x: 560, y: 240 }, w: 30, h: 200 }
+                ]
+            },
+            {
+                title: "關卡 7: 玻璃磚偏轉考驗",
+                desc: "高密度玻璃磚 ($n=1.52$) 擋在路上，畫鏡面引導光束側向平行位移擊中標靶。",
+                hint: "光線穿過平行玻璃磚會產生平行位移，調整進入玻璃磚的入射角。",
+                physics: "平行玻璃磚使出射光與入射光保持平行，但會產生一小段平行側移距離。",
+                emitters: [
+                    { center: { x: 100, y: 240 }, angle: 0, color: '#06b6d4' }
+                ],
+                targets: [
+                    { id: 'T1', name: '青標靶', center: { x: 780, y: 240 }, radius: 24, color: '#06b6d4', hit: false }
+                ],
+                fixedObjects: [
+                    { type: 'glass', shape: 'rect', center: { x: 420, y: 240 }, w: 100, h: 200, angle: 15, n: 1.52 },
+                    { type: 'wall', shape: 'rect', center: { x: 580, y: 240 }, w: 40, h: 180 }
+                ]
+            },
+            {
+                title: "關卡 8: 終極複合介質迷宮",
+                desc: "終極挑戰！結合多重障礙物與水/玻璃介質，將紅光與青光引導至相應標靶！",
+                hint: "利用多重反射將光束射入玻璃磚，精準計算出射光方向與折射率。",
+                physics: "恭喜！您已成功掌握光學幾何反射、斯奈爾折射與多色光路系統！",
+                emitters: [
+                    { center: { x: 80, y: 440 }, angle: -50, color: '#f43f5e' },
+                    { center: { x: 80, y: 80 }, angle: 50, color: '#06b6d4' }
+                ],
+                targets: [
+                    { id: 'T1', name: '紅標靶', center: { x: 420, y: 80 }, radius: 22, color: '#f43f5e', hit: false },
+                    { id: 'T2', name: '青標靶', center: { x: 740, y: 240 }, radius: 22, color: '#06b6d4', hit: false }
+                ],
+                fixedObjects: [
+                    { type: 'wall', shape: 'rect', center: { x: 280, y: 320 }, w: 30, h: 280 },
+                    { type: 'glass', shape: 'rect', center: { x: 500, y: 220 }, w: 160, h: 220, angle: 0, n: 1.52 },
+                    { type: 'wall', shape: 'rect', center: { x: 650, y: 160 }, w: 30, h: 280 }
+                ]
+            }
+        ];
+
+        /* ==========================================================================
+           4. Game State & Logic
+           ========================================================================== */
+        const gameCanvas = document.getElementById('gameCanvas');
+        const gameCtx = gameCanvas.getContext('2d');
+
+        let currentGameLevelIdx = 0;
+        let gameEmitters = [];
+        let gameTargets = [];
+        let gameFixedObjects = [];
+        let gamePlayerObjects = []; // Mirror history stack
+        let gameActiveTool = 'draw_mirror';
+
+        let isDrawingMirror = false;
+        let drawStartPt = null;
+        let drawCurrentPt = null;
+
+        let isErasing = false;
+        let eraserPos = { x: 0, y: 0 };
+
+        let calculatedRays = [];
+
+        function initLevelSelect() {
+            const select = document.getElementById('game-level-select');
+            select.innerHTML = '';
+            GAME_LEVELS.forEach((lvl, idx) => {
+                const opt = document.createElement('option');
+                opt.value = idx;
+                opt.textContent = lvl.title;
+                select.appendChild(opt);
+            });
+        }
+
+        function loadGameLevel(idx) {
+            currentGameLevelIdx = idx;
+            const level = GAME_LEVELS[idx];
+            document.getElementById('game-level-title').textContent = level.title;
+            document.getElementById('game-level-desc').textContent = level.desc;
+            document.getElementById('game-level-select').value = idx;
+
+            gameEmitters = JSON.parse(JSON.stringify(level.emitters));
+            gameTargets = JSON.parse(JSON.stringify(level.targets));
+            gameFixedObjects = JSON.parse(JSON.stringify(level.fixedObjects));
+            gamePlayerObjects = [];
+
+            updateGameStats();
+            recalcGameRay();
+        }
+
+        function setGameTool(tool) {
+            gameActiveTool = tool;
+            playClickSound();
+
+            const drawBtn = document.getElementById('tool-draw-mirror');
+            const eraseBtn = document.getElementById('tool-eraser');
+
+            if (tool === 'draw_mirror') {
+                drawBtn.className = "p-3 rounded-xl border bg-cyan-950/60 border-cyan-500 text-cyan-300 text-xs font-bold flex items-center gap-3 transition glow-cyan";
+                eraseBtn.className = "p-3 rounded-xl border bg-slate-900 border-slate-700 text-slate-300 text-xs font-bold flex items-center gap-3 hover:border-slate-500 transition";
+                document.getElementById('game-canvas-status-tip').innerHTML = `<i class="fa-solid fa-pen text-cyan-400"></i> 【畫平面鏡模式】：拖曳畫鏡，繪製時即時顯示法線與直角符號！`;
+            } else {
+                eraseBtn.className = "p-3 rounded-xl border bg-rose-950/60 border-rose-500 text-rose-300 text-xs font-bold flex items-center gap-3 transition glow-pink";
+                drawBtn.className = "p-3 rounded-xl border bg-slate-900 border-slate-700 text-slate-300 text-xs font-bold flex items-center gap-3 hover:border-slate-500 transition";
+                document.getElementById('game-canvas-status-tip').innerHTML = `<i class="fa-solid fa-eraser text-rose-400"></i> 【橡皮擦模式】：點擊或拖曳擦除已畫出的鏡面！`;
+            }
+        }
+
+        /* Undo Feature (復原) */
+        function undoPlayerMirror() {
+            if (gamePlayerObjects.length > 0) {
+                gamePlayerObjects.pop();
+                playClickSound();
+                updateGameStats();
+                recalcGameRay();
+            }
+        }
+
+        function clearPlayerDrawnGameObjects() {
+            playClickSound();
+            gamePlayerObjects = [];
+            updateGameStats();
+            recalcGameRay();
+        }
+
+        function updateGameStats() {
+            document.getElementById('game-mirrors-count').textContent = `${gamePlayerObjects.length} 面`;
+
+            const hitCount = gameTargets.filter(t => t.hit).length;
+            document.getElementById('game-target-progress').textContent = `${hitCount} / ${gameTargets.length} 命中`;
+
+            // Render Target Status Badges
+            const list = document.getElementById('targets-status-list');
+            list.innerHTML = '';
+            gameTargets.forEach(t => {
+                const badge = document.createElement('div');
+                badge.className = "flex justify-between items-center bg-slate-900 p-2 rounded border border-slate-800 text-[11px]";
+                badge.innerHTML = `
+                    <span class="flex items-center gap-1.5 font-bold" style="color: ${t.color}">
+                        <span class="w-2.5 h-2.5 rounded-full" style="background-color: ${t.color}"></span>
+                        ${t.name}
+                    </span>
+                    <span class="${t.hit ? 'text-emerald-400 font-bold' : 'text-slate-500'}">
+                        ${t.hit ? '✓ 命中' : '未觸發'}
+                    </span>
+                `;
+                list.appendChild(badge);
+            });
+        }
+
+        function recalcGameRay() {
+            // Reset Target Hit states
+            gameTargets.forEach(t => t.hit = false);
+
+            const allObjs = [...gameFixedObjects, ...gamePlayerObjects];
+            calculatedRays = [];
+
+            gameEmitters.forEach(emitter => {
+                const rad = emitter.angle * Math.PI / 180;
+                const dir = { x: Math.cos(rad), y: Math.sin(rad) };
+                const raySteps = traceRayPathFull(emitter.center, dir, emitter.color, allObjs, gameTargets);
+                calculatedRays.push(raySteps);
+            });
+
+            updateGameStats();
+        }
+
+        function triggerGameTestLaunch() {
+            playLaserSound();
+            recalcGameRay();
+
+            // Check victory condition
+            const allTargetsHit = gameTargets.length > 0 && gameTargets.every(t => t.hit);
+            if (allTargetsHit) {
+                playWinSound();
+                setTimeout(() => toggleVictoryModal(true), 300);
+            }
+        }
+
+        function nextGameLevel() {
+            if (currentGameLevelIdx < GAME_LEVELS.length - 1) {
+                loadGameLevel(currentGameLevelIdx + 1);
+            } else {
+                loadGameLevel(0);
+            }
+        }
+
+        function toggleHintModal() {
+            document.getElementById('hint-text').textContent = GAME_LEVELS[currentGameLevelIdx].hint;
+            document.getElementById('hint-modal').classList.toggle('hidden');
+        }
+
+        function toggleVictoryModal(show) {
+            const modal = document.getElementById('victory-modal');
+            if (show) {
+                document.getElementById('victory-level-name').textContent = GAME_LEVELS[currentGameLevelIdx].title;
+                document.getElementById('victory-physics-explain').textContent = GAME_LEVELS[currentGameLevelIdx].physics;
+                document.getElementById('victory-this-count').textContent = `${gamePlayerObjects.length} 面`;
+
+                if (currentGameLevelIdx === GAME_LEVELS.length - 1) {
+                    document.getElementById('victory-header-text').textContent = "🎉 恭喜通關全部關卡！Grand Master!";
+                } else {
+                    document.getElementById('victory-header-text').textContent = "精準貫穿標靶！ Target Destroyed!";
+                }
+
+                modal.classList.remove('hidden');
+            } else {
+                modal.classList.add('hidden');
+            }
+        }
+
+        function eraseAtPos(pos) {
+            const beforeLen = gamePlayerObjects.length;
+            gamePlayerObjects = gamePlayerObjects.filter(obj => distToSegment(pos, obj.p1, obj.p2) > 18);
+            if (gamePlayerObjects.length !== beforeLen) {
+                playClickSound();
+                updateGameStats();
+                recalcGameRay();
+            }
+        }
+
+        /* Canvas Event Handlers */
+        gameCanvas.addEventListener('pointerdown', (e) => {
+            const rect = gameCanvas.getBoundingClientRect();
+            const mx = (e.clientX - rect.left) * (gameCanvas.width / rect.width);
+            const my = (e.clientY - rect.top) * (gameCanvas.height / rect.height);
+
+            if (gameActiveTool === 'draw_mirror') {
+                isDrawingMirror = true;
+                drawStartPt = { x: mx, y: my };
+                drawCurrentPt = { x: mx, y: my };
+            } else if (gameActiveTool === 'eraser') {
+                isErasing = true;
+                eraserPos = { x: mx, y: my };
+                eraseAtPos(eraserPos);
+            }
+        });
+
+        gameCanvas.addEventListener('pointermove', (e) => {
+            const rect = gameCanvas.getBoundingClientRect();
+            const mx = (e.clientX - rect.left) * (gameCanvas.width / rect.width);
+            const my = (e.clientY - rect.top) * (gameCanvas.height / rect.height);
+
+            if (isDrawingMirror) {
+                drawCurrentPt = { x: mx, y: my };
+            } else if (isErasing) {
+                eraserPos = { x: mx, y: my };
+                eraseAtPos(eraserPos);
+            }
+        });
+
+        window.addEventListener('pointerup', () => {
+            if (isDrawingMirror && drawStartPt && drawCurrentPt) {
+                const len = Vec.len(Vec.sub(drawCurrentPt, drawStartPt));
+                if (len > 15) {
+                    gamePlayerObjects.push({
+                        id: Date.now(),
+                        type: 'mirror',
+                        p1: drawStartPt,
+                        p2: drawCurrentPt,
+                        isPlayer: true
+                    });
+                    playClickSound();
+                    updateGameStats();
+                    recalcGameRay();
+
+                    // Real-time check victory when drawing
+                    if (gameTargets.length > 0 && gameTargets.every(t => t.hit)) {
+                        playWinSound();
+                        setTimeout(() => toggleVictoryModal(true), 300);
+                    }
+                }
+            }
+            isDrawingMirror = false;
+            isErasing = false;
+            drawStartPt = null;
+            drawCurrentPt = null;
+        });
+
+        /* ==========================================================================
+           5. Main Render Loop
+           ========================================================================== */
+        function renderGame() {
+            gameCtx.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
+
+            // Grid Background
+            gameCtx.strokeStyle = 'rgba(31, 41, 61, 0.4)';
+            gameCtx.lineWidth = 1;
+            for (let x = 0; x < gameCanvas.width; x += 40) {
+                gameCtx.beginPath(); gameCtx.moveTo(x, 0); gameCtx.lineTo(x, gameCanvas.height); gameCtx.stroke();
+            }
+            for (let y = 0; y < gameCanvas.height; y += 40) {
+                gameCtx.beginPath(); gameCtx.moveTo(0, y); gameCtx.lineTo(gameCanvas.width, y); gameCtx.stroke();
+            }
+
+            // Draw Fixed Objects & Player Mirrors
+            [...gameFixedObjects, ...gamePlayerObjects].forEach(obj => {
+                if (obj.type === 'wall') drawWall(gameCtx, obj);
+                else if (obj.type === 'mirror') drawMirror(gameCtx, obj);
+                else if (obj.type === 'glass') drawGlass(gameCtx, obj);
+            });
+
+            // Draw Targets
+            gameTargets.forEach(t => drawTarget(gameCtx, t));
+
+            // Draw Emitters
+            gameEmitters.forEach(em => drawEmitterObj(gameCtx, em.center, em.angle, em.color));
+
+            // Draw Light Rays
+            calculatedRays.forEach(raySteps => {
+                raySteps.forEach(step => {
+                    drawGlowingRay(gameCtx, step.p1, step.p2, step.color, 3);
+                });
+            });
+
+            // Real-time Mirror Preview when Drawing
+            if (isDrawingMirror && drawStartPt && drawCurrentPt) {
+                gameCtx.save();
+                gameCtx.strokeStyle = '#22d3ee';
+                gameCtx.lineWidth = 4;
+                gameCtx.beginPath();
+                gameCtx.moveTo(drawStartPt.x, drawStartPt.y);
+                gameCtx.lineTo(drawCurrentPt.x, drawCurrentPt.y);
+                gameCtx.stroke();
+
+                // Real-time Normal Preview
+                const midP = Vec.mult(Vec.add(drawStartPt, drawCurrentPt), 0.5);
+                const segVec = Vec.sub(drawCurrentPt, drawStartPt);
+                const segLen = Vec.len(segVec);
+
+                if (segLen > 10) {
+                    const normVec = Vec.norm({ x: -segVec.y, y: segVec.x });
+                    const normLen = 35;
+
+                    gameCtx.strokeStyle = '#f59e0b';
+                    gameCtx.lineWidth = 1.8;
+                    gameCtx.setLineDash([4, 4]);
+                    gameCtx.beginPath();
+                    gameCtx.moveTo(midP.x - normVec.x * normLen, midP.y - normVec.y * normLen);
+                    gameCtx.lineTo(midP.x + normVec.x * normLen, midP.y + normVec.y * normLen);
+                    gameCtx.stroke();
+                    gameCtx.setLineDash([]);
+
+                    // Right angle indicator
+                    const dirU = Vec.norm(segVec);
+                    const sqSize = 8;
+                    const pA = Vec.add(midP, Vec.mult(dirU, sqSize));
+                    const pB = Vec.add(pA, Vec.mult(normVec, sqSize));
+                    const pC = Vec.add(midP, Vec.mult(normVec, sqSize));
+
+                    gameCtx.strokeStyle = '#f59e0b';
+                    gameCtx.lineWidth = 1.2;
+                    gameCtx.beginPath();
+                    gameCtx.moveTo(pA.x, pA.y);
+                    gameCtx.lineTo(pB.x, pB.y);
+                    gameCtx.lineTo(pC.x, pC.y);
+                    gameCtx.stroke();
+                }
+                gameCtx.restore();
+            }
+
+            // Eraser Cursor Indicator
+            if (gameActiveTool === 'eraser' && eraserPos) {
+                gameCtx.save();
+                gameCtx.strokeStyle = '#f43f5e';
+                gameCtx.lineWidth = 2;
+                gameCtx.beginPath();
+                gameCtx.arc(eraserPos.x, eraserPos.y, 18, 0, Math.PI * 2);
+                gameCtx.stroke();
+                gameCtx.restore();
+            }
+
+            requestAnimationFrame(renderGame);
+        }
+
+        /* ==========================================================================
+           6. Graphics Drawing Helpers
+           ========================================================================== */
+        function drawGlowingRay(ctx, p1, p2, color, width) {
+            ctx.save();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = width;
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 12;
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.stroke();
+
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = width * 0.4;
+            ctx.shadowBlur = 0;
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        function drawEmitterObj(ctx, center, angleDeg, color = '#06b6d4') {
+            ctx.save();
+            ctx.translate(center.x, center.y);
+            ctx.rotate(angleDeg * Math.PI / 180);
+
+            ctx.fillStyle = '#1e293b';
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 3;
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 10;
+            ctx.beginPath();
+            ctx.arc(0, 0, 18, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = color;
+            ctx.fillRect(0, -5, 24, 10);
+            ctx.restore();
+        }
+
+        function drawMirror(ctx, obj) {
+            ctx.save();
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 5;
+            ctx.shadowColor = '#06b6d4';
+            ctx.shadowBlur = 10;
+            ctx.beginPath();
+            ctx.moveTo(obj.p1.x, obj.p1.y);
+            ctx.lineTo(obj.p2.x, obj.p2.y);
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        function drawGlass(ctx, obj) {
+            ctx.save();
+            const edges = getPolygonEdges(obj);
+            ctx.fillStyle = 'rgba(6, 182, 212, 0.22)';
+            ctx.strokeStyle = '#22d3ee';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(edges[0].p1.x, edges[0].p1.y);
+            edges.forEach(e => ctx.lineTo(e.p2.x, e.p2.y));
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        function drawWall(ctx, obj) {
+            ctx.save();
+            const edges = getPolygonEdges(obj);
+            ctx.fillStyle = '#020617';
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(edges[0].p1.x, edges[0].p1.y);
+            edges.forEach(e => ctx.lineTo(e.p2.x, e.p2.y));
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        function drawTarget(ctx, obj) {
+            ctx.save();
+            ctx.translate(obj.center.x, obj.center.y);
+
+            const color = obj.color || '#06b6d4';
+
+            // Target Outer Ring
+            ctx.strokeStyle = color;
+            ctx.lineWidth = obj.hit ? 4 : 2.5;
+            ctx.shadowColor = color;
+            ctx.shadowBlur = obj.hit ? 20 : 8;
+            ctx.beginPath();
+            ctx.arc(0, 0, obj.radius, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Inner Ring
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(0, 0, obj.radius * 0.5, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Center Point / Checkmark
+            if (obj.hit) {
+                ctx.fillStyle = '#10b981';
+                ctx.shadowColor = '#10b981';
+                ctx.shadowBlur = 12;
+                ctx.beginPath();
+                ctx.arc(0, 0, 8, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 12px font-sans';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('✓', 0, 0);
+            } else {
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.arc(0, 0, 4, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            ctx.restore();
+        }
+
+        /* App Initialization */
+        window.onload = function () {
+            initLevelSelect();
+            loadGameLevel(0);
+            requestAnimationFrame(renderGame);
+        };
+    </script>
+</body>
+</html>
