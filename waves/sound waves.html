@@ -118,8 +118,8 @@
                 <button id="tabHearingTest" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition-all">
                     <i class="fa-solid fa-ear-listen mr-1"></i> 聽力極限 (10-21kHz)
                 </button>
-                <button id="tabGame" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition-all">
-                    <i class="fa-solid fa-gamepad mr-1"></i> 聽音辨波大挑戰
+                <button id="tabNoise" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition-all">
+                    <i class="fa-solid fa-volume-xmark mr-1"></i> 樂音 vs 噪音
                 </button>
             </div>
         </div>
@@ -336,11 +336,29 @@
                 </div>
 
                 <!-- Canvas Drawing Area -->
-                <div class="relative w-full h-52 bg-slate-950 rounded-xl border border-purple-500/40 overflow-hidden cursor-crosshair">
+                <div class="relative w-full h-44 bg-slate-950 rounded-xl border border-purple-500/40 overflow-hidden cursor-crosshair">
                     <canvas id="drawCanvas" class="w-full h-full block touch-none"></canvas>
                     <div class="absolute top-2 left-3 text-[10px] font-mono text-slate-500 pointer-events-none">
                         拖曳劃出一個完整週期波 [0 ~ 2&pi;]
                     </div>
+                </div>
+
+                <!-- Fixed Time Window (10ms) Oscilloscope Display -->
+                <div class="bg-slate-950/90 p-3.5 rounded-xl border border-cyan-500/40 flex flex-col gap-2">
+                    <div class="flex justify-between items-center text-xs">
+                        <span class="font-bold text-cyan-400 flex items-center gap-1.5">
+                            <i class="fa-solid fa-stopwatch"></i> 固定時間長度 (10 ms) 時域波形對比
+                        </span>
+                        <span class="font-mono text-xs text-slate-300">
+                            10 ms 內包含：<strong id="cyclesCountText" class="text-cyan-400 text-sm">4.4</strong> 個波
+                        </span>
+                    </div>
+                    <div class="relative w-full h-28 bg-slate-950 rounded-lg border border-slate-800 overflow-hidden">
+                        <canvas id="fixedTimeCanvas" class="w-full h-full block"></canvas>
+                    </div>
+                    <p class="text-[11px] text-slate-400">
+                        💡 <strong>觀察提示：</strong>當你拉高音高（頻率）時，固定 10 ms 時間視窗內容納的波形數量會變多，波形變緊密！
+                    </p>
                 </div>
 
                 <!-- Pitch / Frequency Control for Synthesizer -->
@@ -583,47 +601,119 @@
 
         </div>
 
-        <div id="pageGame" class="hidden glass-panel p-6 rounded-2xl border border-amber-500/30 flex flex-col gap-6 w-full">
+        <!-- Page 4: Noise vs Tone Comparison Page (Replacing Game Tab) -->
+        <div id="pageNoise" class="hidden glass-panel p-6 rounded-2xl border border-rose-500/30 flex flex-col gap-6 w-full">
             <div class="flex justify-between items-center border-b border-slate-800 pb-4">
                 <div>
-                    <h2 class="text-xl font-black text-amber-400 flex items-center gap-2">
-                        <i class="fa-solid fa-bullseye"></i> 聽音辨波大挑戰 (Match the Target Wave)
+                    <h2 class="text-xl font-black text-rose-400 flex items-center gap-2">
+                        <i class="fa-solid fa-volume-xmark"></i> 樂音 (Tone) 與 噪音 (Noise) 之波形對比
                     </h2>
-                    <p class="text-xs text-slate-400 mt-1">請聽目標發聲體的聲音或觀察虛線目標波形，調整下方頻率與振幅拉桿，使你的綠色聲波與目標完全重疊！</p>
+                    <p class="text-xs text-slate-400 mt-1">樂音具有規律且重複的週期波形；噪音則由無數雜亂頻率組成，呈現極度不規則之波形</p>
                 </div>
-                <div class="flex items-center gap-4">
-                    <button id="playTargetBtn" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-2 shadow">
-                        <i class="fa-solid fa-volume-high"></i> 播放目標聲音
-                    </button>
-                    <button id="nextLevelBtn" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs">
-                        下一題
-                    </button>
+                <div class="flex items-center gap-2 bg-rose-950/60 border border-rose-500/40 px-3 py-1.5 rounded-xl text-rose-300 text-xs">
+                    <i class="fa-solid fa-wave-square"></i>
+                    <span>不規則聲波與聲音體驗</span>
                 </div>
             </div>
 
-            <!-- Challenge Oscilloscope Window -->
-            <div class="relative w-full h-72 bg-slate-950 rounded-xl border border-slate-800 overflow-hidden">
-                <canvas id="gameCanvas" class="w-full h-full block"></canvas>
-                <div id="matchScoreBadge" class="absolute top-4 right-4 bg-slate-900/90 border border-amber-500/40 px-4 py-2 rounded-xl font-mono text-amber-400 font-bold text-sm">
-                    波形重疊率: <span id="matchPercent" class="text-lg text-white">0</span> %
+            <!-- Main Oscilloscope & Control Layout for Noise -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Visualizer Screen (7 cols) -->
+                <div class="lg:col-span-7 flex flex-col gap-4">
+                    <div class="bg-slate-950/90 p-4 rounded-2xl border border-slate-800 flex flex-col gap-3">
+                        <div class="flex justify-between items-center text-xs font-mono">
+                            <span class="text-rose-400 font-bold flex items-center gap-1">
+                                <i class="fa-solid fa-chart-line"></i> 噪音即時波形 (Irregular Signal)
+                            </span>
+                            <span id="noiseTypeBadge" class="px-2.5 py-0.5 rounded bg-rose-950 border border-rose-500/30 text-rose-300 text-[11px] font-bold">
+                                白噪音 (White Noise)
+                            </span>
+                        </div>
+                        <div class="relative w-full h-64 bg-slate-950 rounded-xl overflow-hidden border border-slate-800">
+                            <canvas id="noiseOscCanvas" class="w-full h-full block"></canvas>
+                        </div>
+                        <div class="text-[11px] text-slate-300 bg-slate-900/80 p-3 rounded-xl border border-slate-800">
+                            <strong class="text-rose-300">波形物理特徵：</strong>
+                            <span id="noiseDescText">白噪音在各頻段上的能量分佈均勻，其波形無週期性、起伏隨機且劇烈，聽感為持續性沙沙聲。</span>
+                        </div>
+                    </div>
                 </div>
-            </div>
 
-            <!-- Challenge Slider Controls -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-900/50 p-4 rounded-xl border border-slate-800">
-                <div class="flex flex-col gap-2">
-                    <label class="text-xs font-bold text-cyan-400 flex justify-between">
-                        <span>調整頻率 (音調)</span>
-                        <span id="gameFreqText" class="font-mono">440 Hz</span>
-                    </label>
-                    <input type="range" id="gameFreqSlider" min="100" max="1000" value="300" class="slider-pitch">
-                </div>
-                <div class="flex flex-col gap-2">
-                    <label class="text-xs font-bold text-rose-400 flex justify-between">
-                        <span>調整振幅 (響度)</span>
-                        <span id="gameAmpText" class="font-mono">50 %</span>
-                    </label>
-                    <input type="range" id="gameAmpSlider" min="10" max="100" value="30" class="slider-loudness">
+                <!-- Noise Types Selector & Comparison Table (5 cols) -->
+                <div class="lg:col-span-5 flex flex-col gap-4">
+                    <div class="bg-slate-900/60 p-4 rounded-2xl border border-slate-800 flex flex-col gap-3">
+                        <h3 class="text-sm font-bold text-slate-200 flex items-center gap-2">
+                            <i class="fa-solid fa-sliders text-rose-400"></i> 選擇不同噪音與發聲試聽
+                        </h3>
+                        
+                        <div class="grid grid-cols-1 gap-2.5">
+                            <button class="noise-type-btn text-left p-3 rounded-xl border border-rose-500 bg-rose-950/40 text-rose-200 transition flex items-center justify-between" data-noise="white">
+                                <div>
+                                    <div class="font-bold text-sm text-rose-300 flex items-center gap-2">
+                                        <i class="fa-solid fa-snowflake"></i> 白噪音 (White Noise)
+                                    </div>
+                                    <div class="text-[11px] text-slate-400 mt-0.5">全頻率能量均勻，如收音機靜音時的沙沙雜音</div>
+                                </div>
+                                <i class="fa-solid fa-volume-high text-rose-400"></i>
+                            </button>
+
+                            <button class="noise-type-btn text-left p-3 rounded-xl border border-slate-800 bg-slate-900/60 text-slate-300 transition flex items-center justify-between hover:border-rose-500/50" data-noise="pink">
+                                <div>
+                                    <div class="font-bold text-sm text-pink-300 flex items-center gap-2">
+                                        <i class="fa-solid fa-cloud-rain"></i> 粉紅噪音 (Pink Noise)
+                                    </div>
+                                    <div class="text-[11px] text-slate-400 mt-0.5">低頻能量較高 (1/f)，類似雨聲、瀑布或風聲</div>
+                                </div>
+                                <i class="fa-solid fa-volume-low text-slate-500"></i>
+                            </button>
+
+                            <button class="noise-type-btn text-left p-3 rounded-xl border border-slate-800 bg-slate-900/60 text-slate-300 transition flex items-center justify-between hover:border-rose-500/50" data-noise="brown">
+                                <div>
+                                    <div class="font-bold text-sm text-amber-300 flex items-center gap-2">
+                                        <i class="fa-solid fa-water"></i> 棕色/紅噪音 (Brown Noise)
+                                    </div>
+                                    <div class="text-[11px] text-slate-400 mt-0.5">極深沉低頻 (1/f²)，類似遠處海浪聲或低沉雷鳴</div>
+                                </div>
+                                <i class="fa-solid fa-volume-low text-slate-500"></i>
+                            </button>
+
+                            <button class="noise-type-btn text-left p-3 rounded-xl border border-slate-800 bg-slate-900/60 text-slate-300 transition flex items-center justify-between hover:border-rose-500/50" data-noise="irregular">
+                                <div>
+                                    <div class="font-bold text-sm text-purple-300 flex items-center gap-2">
+                                        <i class="fa-solid fa-hammer"></i> 不規則工程與打擊衝擊音
+                                    </div>
+                                    <div class="text-[11px] text-slate-400 mt-0.5">振幅劇烈突變與無預期衝擊波形</div>
+                                </div>
+                                <i class="fa-solid fa-volume-low text-slate-500"></i>
+                            </button>
+                        </div>
+
+                        <button id="stopNoiseBtn" class="mt-1 w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs flex items-center justify-center gap-2 transition">
+                            <i class="fa-solid fa-stop text-rose-400"></i> 停止噪音播放
+                        </button>
+                    </div>
+
+                    <div class="bg-slate-900/60 p-4 rounded-2xl border border-slate-800 flex flex-col gap-2">
+                        <h4 class="text-xs font-bold text-cyan-400">理化觀念總結：樂音 vs 噪音</h4>
+                        <div class="grid grid-cols-2 gap-2 text-[11px]">
+                            <div class="bg-slate-950 p-2.5 rounded-xl border border-cyan-500/30">
+                                <span class="font-bold text-cyan-300 block mb-1">🎵 樂音 (Musical Tone)</span>
+                                <ul class="text-slate-400 space-y-1 list-disc list-inside">
+                                    <li>波形具有規律週期</li>
+                                    <li>具有明確穩定的音高</li>
+                                    <li>由基頻與和諧泛音構成</li>
+                                </ul>
+                            </div>
+                            <div class="bg-slate-950 p-2.5 rounded-xl border border-rose-500/30">
+                                <span class="font-bold text-rose-300 block mb-1">⚡ 噪音 (Noise)</span>
+                                <ul class="text-slate-400 space-y-1 list-disc list-inside">
+                                    <li>無週期、無固定規律</li>
+                                    <li>無固定音高，波形起伏雜亂</li>
+                                    <li>許多頻率隨機混雜</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -637,6 +727,13 @@
         let analyser = null;
         let isAudioPlaying = false;
 
+        // Noise Generation Nodes
+        let noiseSourceNode = null;
+        let noiseGainNode = null;
+        let noiseAnalyser = null;
+        let isNoisePlaying = false;
+        let activeNoiseType = 'white';
+
         // Custom Drawn Wave Variables
         let customPeriodicWave = null;
 
@@ -645,9 +742,6 @@
         let currentAmp = 50; // 0 - 100
         let currentWaveType = 'sine';
 
-        // Challenge Game States
-        let targetFreq = 520;
-        let targetAmp = 70;
         let activeTab = 'explore';
 
         // Canvas Elements
@@ -655,10 +749,12 @@
         const oscCtx = oscCanvas ? oscCanvas.getContext('2d') : null;
         const particleCanvas = document.getElementById('particleCanvas');
         const particleCtx = particleCanvas ? particleCanvas.getContext('2d') : null;
-        const gameCanvas = document.getElementById('gameCanvas');
-        const gameCtx = gameCanvas ? gameCanvas.getContext('2d') : null;
+        const fixedTimeCanvas = document.getElementById('fixedTimeCanvas');
+        const fixedTimeCtx = fixedTimeCanvas ? fixedTimeCanvas.getContext('2d') : null;
         const drawCanvas = document.getElementById('drawCanvas');
         const drawCtx = drawCanvas ? drawCanvas.getContext('2d') : null;
+        const noiseOscCanvas = document.getElementById('noiseOscCanvas');
+        const noiseOscCtx = noiseOscCanvas ? noiseOscCanvas.getContext('2d') : null;
 
         let synthFreq = 440;
         let harmonicAmplitudes = [1.0, 0, 0, 0, 0, 0, 0, 0]; // 8 harmonics ratios (0.0 ~ 1.0)
@@ -678,8 +774,9 @@
             const list = [
                 { canvas: oscCanvas, parent: oscCanvas?.parentElement },
                 { canvas: particleCanvas, parent: particleCanvas?.parentElement },
-                { canvas: gameCanvas, parent: gameCanvas?.parentElement },
-                { canvas: drawCanvas, parent: drawCanvas?.parentElement }
+                { canvas: fixedTimeCanvas, parent: fixedTimeCanvas?.parentElement },
+                { canvas: drawCanvas, parent: drawCanvas?.parentElement },
+                { canvas: noiseOscCanvas, parent: noiseOscCanvas?.parentElement }
             ];
 
             list.forEach(({ canvas, parent }) => {
@@ -694,6 +791,7 @@
 
             initParticles();
             renderDrawCanvas();
+            renderFixedTimeCanvas();
         }
 
         function initParticles() {
@@ -858,7 +956,214 @@
 
                 // Render Air Particle Compression Wave
                 renderParticles(time, wavelength);
+            } else if (activeTab === 'soundLab') {
+                renderFixedTimeCanvas();
             }
+        }
+
+        function renderFixedTimeCanvas() {
+            if (activeTab !== 'soundLab' || !fixedTimeCanvas) return;
+            const w = fixedTimeCanvas.width;
+            const h = fixedTimeCanvas.height;
+            if (w === 0 || h === 0) return;
+
+            fixedTimeCtx.clearRect(0, 0, w, h);
+            const centerY = h / 2;
+
+            // Grid Lines
+            fixedTimeCtx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+            fixedTimeCtx.lineWidth = 1;
+            for (let x = 0; x < w; x += 30) {
+                fixedTimeCtx.beginPath(); fixedTimeCtx.moveTo(x, 0); fixedTimeCtx.lineTo(x, h); fixedTimeCtx.stroke();
+            }
+
+            // Zero Axis
+            fixedTimeCtx.strokeStyle = 'rgba(0, 240, 255, 0.2)';
+            fixedTimeCtx.beginPath(); fixedTimeCtx.moveTo(0, centerY); fixedTimeCtx.lineTo(w, centerY); fixedTimeCtx.stroke();
+
+            // Fixed time window: 0.01 seconds (10 ms)
+            const timeWindow = 0.01;
+            const totalCycles = synthFreq * timeWindow;
+
+            fixedTimeCtx.beginPath();
+            fixedTimeCtx.lineWidth = 2.5;
+            fixedTimeCtx.strokeStyle = '#00f0ff';
+            fixedTimeCtx.shadowBlur = 8;
+            fixedTimeCtx.shadowColor = '#00f0ff';
+
+            for (let x = 0; x < w; x++) {
+                const normPos = (x / w) * totalCycles;
+                const phase = (normPos % 1) * Math.PI * 2;
+                let val = 0;
+
+                if (currentWaveType === 'custom' && drawPoints.length === DRAW_SAMPLES) {
+                    const sampleIdx = Math.floor(((phase % (2 * Math.PI)) / (2 * Math.PI)) * DRAW_SAMPLES) % DRAW_SAMPLES;
+                    val = drawPoints[sampleIdx];
+                } else {
+                    for (let hIdx = 0; hIdx < 8; hIdx++) {
+                        val += harmonicAmplitudes[hIdx] * Math.sin(phase * (hIdx + 1));
+                    }
+                }
+
+                const y = centerY - val * (h * 0.38);
+                if (x === 0) fixedTimeCtx.moveTo(x, y);
+                else fixedTimeCtx.lineTo(x, y);
+            }
+            fixedTimeCtx.stroke();
+            fixedTimeCtx.shadowBlur = 0;
+
+            const cyclesText = document.getElementById('cyclesCountText');
+            if (cyclesText) cyclesText.textContent = totalCycles.toFixed(1);
+        }
+
+        function renderNoiseOscilloscope() {
+            if (activeTab !== 'noise' || !noiseOscCanvas) return;
+            requestAnimationFrame(renderNoiseOscilloscope);
+
+            const w = noiseOscCanvas.width;
+            const h = noiseOscCanvas.height;
+            if (w === 0 || h === 0) return;
+
+            noiseOscCtx.clearRect(0, 0, w, h);
+            const centerY = h / 2;
+
+            // Grid
+            noiseOscCtx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+            noiseOscCtx.lineWidth = 1;
+            for (let x = 0; x < w; x += 30) {
+                noiseOscCtx.beginPath(); noiseOscCtx.moveTo(x, 0); noiseOscCtx.lineTo(x, h); noiseOscCtx.stroke();
+            }
+
+            noiseOscCtx.beginPath();
+            noiseOscCtx.lineWidth = 2;
+            noiseOscCtx.strokeStyle = '#f43f5e';
+            noiseOscCtx.shadowBlur = 8;
+            noiseOscCtx.shadowColor = '#f43f5e';
+
+            if (isNoisePlaying && noiseAnalyser) {
+                const bufferLength = noiseAnalyser.frequencyBinCount;
+                const dataArray = new Uint8Array(bufferLength);
+                noiseAnalyser.getByteTimeDomainData(dataArray);
+
+                const sliceWidth = w / bufferLength;
+                let x = 0;
+                for (let i = 0; i < bufferLength; i++) {
+                    const v = dataArray[i] / 128.0;
+                    const y = (v * h) / 2;
+                    if (i === 0) noiseOscCtx.moveTo(x, y);
+                    else noiseOscCtx.lineTo(x, y);
+                    x += sliceWidth;
+                }
+            } else {
+                // Animated chaotic noise representation when not playing sound
+                const time = Date.now() * 0.005;
+                for (let x = 0; x < w; x++) {
+                    let randVal = Math.sin(x * 0.15 + time) * Math.cos(x * 0.35 - time) + (Math.sin(x * 0.9) * 0.4);
+                    if (activeNoiseType === 'irregular') {
+                        if (x % 40 === 0) randVal += (Math.random() - 0.5) * 1.5;
+                    }
+                    const y = centerY - randVal * (h * 0.25);
+                    if (x === 0) noiseOscCtx.moveTo(x, y);
+                    else noiseOscCtx.lineTo(x, y);
+                }
+            }
+            noiseOscCtx.stroke();
+            noiseOscCtx.shadowBlur = 0;
+        }
+
+        function playNoiseSound(type) {
+            if (!audioCtx) {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContextClass();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
+            stopNoiseSound();
+
+            activeNoiseType = type;
+            const bufferSize = audioCtx.sampleRate * 2; // 2 seconds loop
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const output = buffer.getChannelData(0);
+
+            let descText = '';
+            let badgeText = '';
+
+            if (type === 'white') {
+                badgeText = '白噪音 (White Noise)';
+                descText = '白噪音在各頻段上的能量分佈均勻，其波形無週期性、起伏隨機且劇烈，聽感為持續性沙沙聲。';
+                for (let i = 0; i < bufferSize; i++) {
+                    output[i] = Math.random() * 2 - 1;
+                }
+            } else if (type === 'pink') {
+                badgeText = '粉紅噪音 (Pink Noise)';
+                descText = '粉紅噪音的高頻分量隨著頻率遞減 (1/f)，使得低頻能量較強，波形較白噪音平滑，聽感如同雨聲或溪流聲。';
+                let b0=0, b1=0, b2=0, b3=0, b4=0, b5=0, b6=0;
+                for (let i = 0; i < bufferSize; i++) {
+                    let white = Math.random() * 2 - 1;
+                    b0 = 0.99886 * b0 + white * 0.0555179;
+                    b1 = 0.99332 * b1 + white * 0.0750759;
+                    b2 = 0.96900 * b2 + white * 0.1538520;
+                    b3 = 0.86650 * b3 + white * 0.3104856;
+                    b4 = 0.55000 * b4 + white * 0.5329522;
+                    b5 = -0.7616 * b5 - white * 0.0168980;
+                    output[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.11;
+                    b6 = white * 0.115926;
+                }
+            } else if (type === 'brown') {
+                badgeText = '棕色噪音 (Brown Noise)';
+                descText = '棕色/紅噪音能量集中在極低頻 (1/f²)，高頻急速衰減，波形震盪較慢且滑順，聽感如深沉的海浪或遠處雷鳴。';
+                let lastOut = 0.0;
+                for (let i = 0; i < bufferSize; i++) {
+                    let white = Math.random() * 2 - 1;
+                    output[i] = (lastOut + (0.02 * white)) / 1.02;
+                    lastOut = output[i];
+                    output[i] *= 3.5;
+                }
+            } else if (type === 'irregular') {
+                badgeText = '不規則打擊與工程雜音';
+                descText = '不規則衝擊噪音展現無預期的振幅突變與不連續突波，沒有任何固定週期，視覺上可觀察到尖銳的衝擊波形。';
+                let amp = 0;
+                for (let i = 0; i < bufferSize; i++) {
+                    if (i % 3000 === 0 && Math.random() > 0.3) {
+                        amp = Math.random() * 1.5;
+                    }
+                    amp *= 0.9992;
+                    output[i] = (Math.random() * 2 - 1) * amp + (Math.sin(i * 0.03) * 0.15);
+                }
+            }
+
+            document.getElementById('noiseTypeBadge').textContent = badgeText;
+            document.getElementById('noiseDescText').textContent = descText;
+
+            noiseSourceNode = audioCtx.createBufferSource();
+            noiseSourceNode.buffer = buffer;
+            noiseSourceNode.loop = true;
+
+            noiseGainNode = audioCtx.createGain();
+            noiseGainNode.gain.setValueAtTime(0.18, audioCtx.currentTime);
+
+            noiseAnalyser = audioCtx.createAnalyser();
+            noiseAnalyser.fftSize = 2048;
+
+            noiseSourceNode.connect(noiseGainNode);
+            noiseGainNode.connect(noiseAnalyser);
+            noiseAnalyser.connect(audioCtx.destination);
+
+            noiseSourceNode.start();
+            isNoisePlaying = true;
+        }
+
+        function stopNoiseSound() {
+            if (noiseSourceNode) {
+                try {
+                    noiseSourceNode.stop();
+                    noiseSourceNode.disconnect();
+                } catch(e) {}
+                noiseSourceNode = null;
+            }
+            isNoisePlaying = false;
         }
 
         function renderParticles(time, wavelength) {
@@ -1229,8 +1534,8 @@
         function switchTab(target) {
             activeTab = target;
 
-            const allTabs = [tabExplore, tabSoundLab, tabHearingTest, tabGame];
-            const allPages = [pageExplore, pageSoundLab, pageHearingTest, pageGame];
+            const allTabs = [tabExplore, tabSoundLab, tabHearingTest, tabNoise];
+            const allPages = [pageExplore, pageSoundLab, pageHearingTest, pageNoise];
 
             allTabs.forEach(t => {
                 t?.classList.remove('bg-blue-600', 'text-white');
@@ -1248,18 +1553,22 @@
             } else if (target === 'hearingTest') {
                 tabHearingTest?.classList.add('bg-blue-600', 'text-white');
                 pageHearingTest?.classList.remove('hidden');
-            } else if (target === 'game') {
-                tabGame?.classList.add('bg-blue-600', 'text-white');
-                pageGame?.classList.remove('hidden');
+            } else if (target === 'noise') {
+                tabNoise?.classList.add('bg-blue-600', 'text-white');
+                pageNoise?.classList.remove('hidden');
             }
 
-            // Trigger canvas resize after unhiding page
+            if (target !== 'noise') {
+                stopNoiseSound();
+            }
+
             setTimeout(() => {
                 resizeCanvases();
                 if (target === 'soundLab') {
                     renderDrawCanvas();
-                } else if (target === 'game') {
-                    renderGameCanvas();
+                    renderFixedTimeCanvas();
+                } else if (target === 'noise') {
+                    renderNoiseOscilloscope();
                 }
             }, 50);
         }
@@ -1267,7 +1576,7 @@
         tabExplore?.addEventListener('click', () => switchTab('explore'));
         tabSoundLab?.addEventListener('click', () => switchTab('soundLab'));
         tabHearingTest?.addEventListener('click', () => switchTab('hearingTest'));
-        tabGame?.addEventListener('click', () => switchTab('game'));
+        tabNoise?.addEventListener('click', () => switchTab('noise'));
 
         function setupControls() {
             document.getElementById('masterAudioBtn')?.addEventListener('click', toggleAudio);
@@ -1284,6 +1593,7 @@
                 if (oscillator && audioCtx) {
                     oscillator.frequency.setValueAtTime(synthFreq, audioCtx.currentTime);
                 }
+                renderFixedTimeCanvas();
             });
 
             document.querySelectorAll('.synth-piano-key').forEach(key => {
@@ -1298,7 +1608,35 @@
                     if (oscillator && audioCtx) {
                         oscillator.frequency.setValueAtTime(synthFreq, audioCtx.currentTime);
                     }
+                    renderFixedTimeCanvas();
                 });
+            });
+
+            document.querySelectorAll('.noise-type-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.noise-type-btn').forEach(b => {
+                        b.classList.remove('border-rose-500', 'bg-rose-950/40', 'text-rose-200');
+                        b.classList.add('border-slate-800', 'bg-slate-900/60', 'text-slate-300');
+                        const icon = b.querySelector('.fa-volume-high, .fa-volume-low');
+                        if (icon) {
+                            icon.className = 'fa-solid fa-volume-low text-slate-500';
+                        }
+                    });
+                    btn.classList.remove('border-slate-800', 'bg-slate-900/60', 'text-slate-300');
+                    btn.classList.add('border-rose-500', 'bg-rose-950/40', 'text-rose-200');
+
+                    const icon = btn.querySelector('.fa-volume-low, .fa-volume-high');
+                    if (icon) {
+                        icon.className = 'fa-solid fa-volume-high text-rose-400';
+                    }
+
+                    const noiseType = btn.dataset.noise;
+                    playNoiseSound(noiseType);
+                });
+            });
+
+            document.getElementById('stopNoiseBtn')?.addEventListener('click', () => {
+                stopNoiseSound();
             });
 
             // Harmonic Sliders Event Listeners

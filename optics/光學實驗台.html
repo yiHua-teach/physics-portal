@@ -1,0 +1,1425 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="dark h-full select-none">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>大屏互動光學實驗室 | Interactive Optics & Laser Lab</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        cyber: {
+                            bg: '#060911',
+                            panel: 'rgba(13, 22, 41, 0.88)',
+                            border: 'rgba(56, 189, 248, 0.3)',
+                            cyan: '#06b6d4',
+                            magenta: '#e11d48',
+                            amber: '#f59e0b',
+                            emerald: '#10b981',
+                            purple: '#a855f7'
+                        }
+                    },
+                    fontFamily: {
+                        mono: ['JetBrains Mono', 'Fira Code', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            touch-action: none;
+            overflow: hidden;
+            background-color: #060911;
+        }
+        .canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1;
+        }
+        .glass-panel {
+            background: rgba(13, 22, 41, 0.88);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(56, 189, 248, 0.25);
+            box-shadow: 0 10px 35px 0 rgba(0, 0, 0, 0.6), 0 0 20px rgba(6, 182, 212, 0.15);
+        }
+        .touch-btn {
+            transition: all 0.12s ease-out;
+        }
+        .touch-btn:active, .touch-btn.active {
+            transform: scale(0.94);
+        }
+        input[type=range] {
+            accent-color: #06b6d4;
+        }
+    </style>
+</head>
+<body class="h-full text-slate-100 font-sans antialiased">
+
+    <!-- Primary Canvas Layer -->
+    <div class="canvas-container">
+        <canvas id="opticsCanvas" class="w-full h-full block"></canvas>
+    </div>
+
+    <!-- UI Overlay Layer -->
+    <div class="relative z-10 w-full h-full pointer-events-none flex flex-col justify-between p-3 md:p-5">
+
+        <!-- Top Navigation Header -->
+        <header class="w-full flex items-center justify-between pointer-events-auto">
+            <!-- Title & Mode Indicator -->
+            <div class="glass-panel px-5 py-3 rounded-2xl flex items-center space-x-3 border-l-4 border-l-cyan-400">
+                <div class="relative flex h-4 w-4">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-4 w-4 bg-cyan-500"></span>
+                </div>
+                <div>
+                    <h1 class="text-base md:text-lg font-bold text-white tracking-wide flex items-center gap-2">
+                        大屏互動光學實驗室 <span class="text-xs font-mono bg-cyan-950 text-cyan-300 border border-cyan-800 px-2 py-0.5 rounded-full">複數光源與幾何透鏡版</span>
+                    </h1>
+                    <p class="text-[11px] text-slate-400">Multi-Source Laser Reflection, Refraction & Dispersion Lab</p>
+                </div>
+            </div>
+
+            <!-- Active Mode Action Banner -->
+            <div id="drawingModeBanner" class="hidden glass-panel px-6 py-2.5 rounded-2xl flex items-center gap-3 border border-amber-500/50 bg-amber-950/40 animate-pulse">
+                <i id="drawingModeIcon" class="fa-solid fa-lightbulb text-amber-400 text-lg"></i>
+                <span id="drawingModeText" class="text-xs md:text-sm font-bold text-amber-300 font-mono">請點擊螢幕放置光源位置，接著拖曳設定發射角度...</span>
+            </div>
+
+            <!-- Global Quick Action Controls -->
+            <div class="glass-panel p-2 rounded-2xl flex items-center space-x-2">
+                <button id="undoBtn" onclick="undoLastObject()" title="復原 (Undo)" class="touch-btn w-11 h-11 rounded-xl glass-panel flex items-center justify-center text-slate-200 hover:text-cyan-400">
+                    <i class="fa-solid fa-rotate-left text-lg"></i>
+                </button>
+                <button id="toggleAudioBtn" onclick="toggleAudio()" title="音效" class="touch-btn w-11 h-11 rounded-xl glass-panel flex items-center justify-center text-cyan-400">
+                    <i id="audioIcon" class="fa-solid fa-volume-high text-lg"></i>
+                </button>
+                <button id="toggleToolsBtn" onclick="toggleOverlayTools()" title="數位量角器" class="touch-btn w-11 h-11 rounded-xl glass-panel flex items-center justify-center text-amber-400">
+                    <i class="fa-solid fa-ruler-combined text-lg"></i>
+                </button>
+                <button id="clearBtn" onclick="clearAllObjects()" title="清空全部" class="touch-btn w-11 h-11 rounded-xl glass-panel flex items-center justify-center text-rose-400 hover:bg-rose-500/20">
+                    <i class="fa-solid fa-trash-can text-lg"></i>
+                </button>
+                <button id="fullscreenBtn" onclick="toggleFullscreen()" title="全螢幕" class="touch-btn w-11 h-11 rounded-xl glass-panel flex items-center justify-center text-emerald-400">
+                    <i class="fa-solid fa-expand text-lg"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Middle Screen Area (Floating Badges & Selected Emitter Control HUD) -->
+        <div class="flex justify-between items-start my-auto pointer-events-none">
+            <!-- Physical Ruler Detection Notification -->
+            <div id="physicalRulerBadge" class="opacity-0 transition-opacity duration-300 glass-panel border-l-4 border-l-emerald-400 px-4 py-3 rounded-2xl flex items-center gap-3 bg-emerald-950/40">
+                <div class="relative flex h-3 w-3">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                </div>
+                <div>
+                    <div class="text-xs font-bold text-emerald-400 tracking-wider">大屏實體接觸感應 (PHYSICAL RULER SENSING)</div>
+                    <div id="physicalRulerDetails" class="text-xs text-slate-200 font-mono">實體尺/導電棒置於螢幕 → 自動生成反射邊界</div>
+                </div>
+            </div>
+
+            <!-- Physics Telemetry & Selected Emitter Settings Panel -->
+            <div id="physicsHUD" class="glass-panel p-4 rounded-2xl w-80 pointer-events-auto space-y-3 border-r-2 border-r-cyan-400 text-xs">
+                <div class="flex justify-between items-center border-b border-slate-700/60 pb-2">
+                    <span class="font-bold text-cyan-300 flex items-center gap-2">
+                        <i class="fa-solid fa-chart-line"></i> 光學數據診斷 (Physics HUD)
+                    </span>
+                    <span id="fpsDisplay" class="font-mono text-emerald-400 font-bold">60 FPS</span>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2 text-slate-300">
+                    <div class="bg-slate-900/60 p-2 rounded-xl border border-slate-800">
+                        <div class="text-[10px] text-slate-400">入射角 (θi)</div>
+                        <div id="hudIncidentAngle" class="text-sm font-mono font-bold text-amber-400">--°</div>
+                    </div>
+                    <div class="bg-slate-900/60 p-2 rounded-xl border border-slate-800">
+                        <div class="text-[10px] text-slate-400">反射/折射角</div>
+                        <div id="hudReflectAngle" class="text-sm font-mono font-bold text-emerald-400">--°</div>
+                    </div>
+                    <div class="bg-slate-900/60 p-2 rounded-xl border border-slate-800">
+                        <div class="text-[10px] text-slate-400">光源總數 / 反射次數</div>
+                        <div id="hudSourceCount" class="text-sm font-mono font-bold text-cyan-400">1 個 / 0 次</div>
+                    </div>
+                    <div class="bg-slate-900/60 p-2 rounded-xl border border-slate-800">
+                        <div class="text-[10px] text-slate-400">全反射 (TIR) 狀態</div>
+                        <div id="hudTIRStatus" class="text-sm font-mono font-bold text-slate-400">無</div>
+                    </div>
+                </div>
+
+                <!-- Refractive Index Slider Control -->
+                <div class="space-y-1.5 pt-1 border-t border-slate-700/60">
+                    <div class="flex justify-between items-center">
+                        <span class="text-[11px] text-slate-300">透鏡折射率 ( Refractive Index n )</span>
+                        <span id="refractiveIndexVal" class="font-mono text-purple-400 font-bold">1.50 (玻璃)</span>
+                    </div>
+                    <input type="range" id="refractiveIndexSlider" min="1.00" max="2.42" step="0.01" value="1.50" oninput="updateRefractiveIndex(this.value)" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer">
+                    <div class="flex justify-between text-[9px] text-slate-400 font-mono">
+                        <span>空氣 (1.0)</span>
+                        <span>水 (1.33)</span>
+                        <span>玻璃 (1.5)</span>
+                        <span>鑽石 (2.42)</span>
+                    </div>
+                </div>
+
+                <!-- Active Emitter Controls (Shows when an emitter is selected) -->
+                <div id="selectedEmitterControls" class="space-y-2 pt-2 border-t border-slate-700/60">
+                    <div class="flex justify-between items-center">
+                        <span class="text-[11px] font-bold text-amber-300 flex items-center gap-1.5">
+                            <i class="fa-solid fa-sliders"></i> 所選光源設定 (Emitter)
+                        </span>
+                        <button onclick="deleteSelectedEmitter()" class="text-rose-400 hover:text-rose-300 text-xs px-2 py-0.5 rounded bg-rose-950/60 border border-rose-800">
+                            <i class="fa-solid fa-trash-can"></i> 刪除此光源
+                        </button>
+                    </div>
+
+                    <!-- Beam Mode Selection -->
+                    <div>
+                        <div class="text-[10px] text-slate-400 mb-1">光束發射模式</div>
+                        <div class="grid grid-cols-5 gap-1">
+                            <button onclick="setSelectedBeamType('single')" id="beamSingleBtn" class="py-1 rounded bg-slate-800 text-slate-300 text-[10px] text-center border border-slate-700">單束</button>
+                            <button onclick="setSelectedBeamType('parallel3')" id="beamParallel3Btn" class="py-1 rounded bg-slate-800 text-slate-300 text-[10px] text-center border border-slate-700">3平行</button>
+                            <button onclick="setSelectedBeamType('parallel5')" id="beamParallel5Btn" class="py-1 rounded bg-slate-800 text-slate-300 text-[10px] text-center border border-slate-700">5平行</button>
+                            <button onclick="setSelectedBeamType('fan')" id="beamFanBtn" class="py-1 rounded bg-slate-800 text-slate-300 text-[10px] text-center border border-slate-700">扇形</button>
+                            <button onclick="setSelectedBeamType('dispersion')" id="beamDispersionBtn" class="py-1 rounded bg-slate-800 text-slate-300 text-[10px] text-center border border-slate-700">色散</button>
+                        </div>
+                    </div>
+
+                    <!-- Wavelength & Color Selection -->
+                    <div>
+                        <div class="text-[10px] text-slate-400 mb-1">雷射顏色 / 波長</div>
+                        <div class="flex items-center gap-1.5 justify-between">
+                            <button onclick="setSelectedEmitterColor('#00ff66', 532)" class="w-7 h-7 rounded-full bg-emerald-500 border-2 border-white/20 hover:scale-110 transition-transform" title="綠光 (532nm)"></button>
+                            <button onclick="setSelectedEmitterColor('#ff2255', 650)" class="w-7 h-7 rounded-full bg-rose-500 border-2 border-white/20 hover:scale-110 transition-transform" title="紅光 (650nm)"></button>
+                            <button onclick="setSelectedEmitterColor('#2288ff', 450)" class="w-7 h-7 rounded-full bg-blue-500 border-2 border-white/20 hover:scale-110 transition-transform" title="藍光 (450nm)"></button>
+                            <button onclick="setSelectedEmitterColor('#f59e0b', 580)" class="w-7 h-7 rounded-full bg-amber-500 border-2 border-white/20 hover:scale-110 transition-transform" title="黃光 (580nm)"></button>
+                            <button onclick="setSelectedEmitterColor('#a855f7', 400)" class="w-7 h-7 rounded-full bg-purple-500 border-2 border-white/20 hover:scale-110 transition-transform" title="紫光 (400nm)"></button>
+                            <button onclick="setSelectedEmitterColor('#ffffff', 0)" class="w-7 h-7 rounded-full bg-white border-2 border-slate-400 hover:scale-110 transition-transform" title="白光"></button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Bottom Touch Interactive Toolbar -->
+        <footer class="w-full flex justify-center items-end pointer-events-auto">
+            <div class="glass-panel px-4 py-3 rounded-3xl flex flex-wrap items-center justify-center gap-2 md:gap-3 border-t-2 border-t-cyan-400/60 shadow-2xl">
+
+                <!-- Primary Tool Selector -->
+                <button id="toolSelectBtn" onclick="setActiveTool('select')" class="touch-btn px-3.5 py-2 rounded-2xl bg-cyan-500/30 text-cyan-300 border border-cyan-500/60 flex items-center gap-2">
+                    <i class="fa-solid fa-hand-pointer text-base"></i>
+                    <span class="text-xs font-bold">選擇 / 移動</span>
+                </button>
+
+                <!-- Add Light Source Mode Button -->
+                <button id="toolAddEmitterBtn" onclick="setActiveTool('addEmitter')" class="touch-btn px-3.5 py-2 rounded-2xl bg-slate-800 hover:bg-amber-950/50 border border-amber-500/40 text-amber-300 flex items-center gap-2">
+                    <i class="fa-solid fa-lightbulb text-base"></i>
+                    <span class="text-xs font-bold">新增光源 (點擊拖曳)</span>
+                </button>
+
+                <!-- Lens Preset Submenu -->
+                <div class="flex items-center space-x-1 border-l border-r border-slate-700 px-2">
+                    <span class="text-[10px] text-purple-400 font-bold px-1 hidden lg:inline">透鏡:</span>
+                    <button id="toolLensCircleBtn" onclick="addPresetLens('circle')" class="touch-btn px-2.5 py-2 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-purple-300 flex items-center gap-1">
+                        <i class="fa-regular fa-circle text-purple-400"></i>
+                        <span class="text-xs">圓形</span>
+                    </button>
+                    <button id="toolLensTriangleBtn" onclick="addPresetLens('triangle')" class="touch-btn px-2.5 py-2 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-purple-300 flex items-center gap-1">
+                        <i class="fa-solid fa-play -rotate-90 text-purple-400"></i>
+                        <span class="text-xs">三角形稜鏡</span>
+                    </button>
+                    <button id="toolLensRectBtn" onclick="addPresetLens('rectangle')" class="touch-btn px-2.5 py-2 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-purple-300 flex items-center gap-1">
+                        <i class="fa-regular fa-square text-purple-400"></i>
+                        <span class="text-xs">長方形玻璃磚</span>
+                    </button>
+                    <button id="toolLensConvexBtn" onclick="addPresetLens('biconvex')" class="touch-btn px-2.5 py-2 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-purple-300 flex items-center gap-1">
+                        <i class="fa-solid fa-circle text-purple-400"></i>
+                        <span class="text-xs">雙凸</span>
+                    </button>
+                    <button id="toolLensConcaveBtn" onclick="addPresetLens('biconcave')" class="touch-btn px-2.5 py-2 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-purple-300 flex items-center gap-1">
+                        <i class="fa-solid fa-hourglass-half text-purple-400"></i>
+                        <span class="text-xs">雙凹</span>
+                    </button>
+                    <button id="toolLensFreeBtn" onclick="setActiveTool('drawLensFree')" class="touch-btn px-2.5 py-2 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-purple-300 flex items-center gap-1">
+                        <i class="fa-solid fa-draw-polygon text-purple-400"></i>
+                        <span class="text-xs">手畫閉合</span>
+                    </button>
+                </div>
+
+                <!-- Mirror Drawing Submenu -->
+                <div class="flex items-center space-x-1 border-r border-slate-700 pr-2">
+                    <span class="text-[10px] text-cyan-400 font-bold px-1 hidden lg:inline">反射鏡:</span>
+                    <button id="toolMirrorFreeBtn" onclick="setActiveTool('drawMirrorFree')" class="touch-btn px-2.5 py-2 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 flex items-center gap-1">
+                        <i class="fa-solid fa-signature text-cyan-400"></i>
+                        <span class="text-xs">手畫鏡</span>
+                    </button>
+                    <button id="toolMirrorLineBtn" onclick="setActiveTool('drawMirrorLine')" class="touch-btn px-2.5 py-2 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 flex items-center gap-1">
+                        <i class="fa-solid fa-minus text-cyan-400"></i>
+                        <span class="text-xs">直線鏡</span>
+                    </button>
+                </div>
+
+                <!-- Eraser -->
+                <button id="toolEraserBtn" onclick="setActiveTool('eraser')" class="touch-btn px-3.5 py-2 rounded-2xl bg-slate-800 hover:bg-rose-950/50 border border-slate-700 text-rose-300 flex items-center gap-1.5">
+                    <i class="fa-solid fa-eraser"></i>
+                    <span class="text-xs font-medium">橡皮擦</span>
+                </button>
+
+                <!-- Annotation Toggles -->
+                <div class="flex items-center space-x-1 pl-1">
+                    <button id="toggleNormalBtn" onclick="toggleHUDSetting('showNormal')" class="touch-btn px-2.5 py-2 rounded-xl bg-cyan-950/60 border border-cyan-500/50 text-cyan-300 text-xs flex items-center gap-1">
+                        <i class="fa-solid fa-vector-square"></i> 法線
+                    </button>
+                    <button id="toggleAnglesBtn" onclick="toggleHUDSetting('showAngles')" class="touch-btn px-2.5 py-2 rounded-xl bg-cyan-950/60 border border-cyan-500/50 text-cyan-300 text-xs flex items-center gap-1">
+                        <i class="fa-solid fa-angle-left"></i> 角度
+                    </button>
+                    <button id="toggleGridBtn" onclick="toggleHUDSetting('showGrid')" class="touch-btn px-2.5 py-2 rounded-xl bg-cyan-950/60 border border-cyan-500/50 text-cyan-300 text-xs flex items-center gap-1">
+                        <i class="fa-solid fa-border-all"></i> 網格
+                    </button>
+                </div>
+
+            </div>
+        </footer>
+
+    </div>
+
+    <!-- Web Audio Engine & Core Optics Physics JS -->
+    <script>
+        /**
+         * Synthesizer Sound Engine (Web Audio API)
+         */
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (AudioCtx) this.ctx = new AudioCtx();
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+            playTone(freq = 600, duration = 0.05, type = 'sine') {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                    gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + duration);
+                } catch(e){}
+            }
+            playDraw() { this.playTone(400, 0.03, 'triangle'); }
+            playClick() { this.playTone(800, 0.05, 'sine'); }
+            playReflect() { this.playTone(1200, 0.04, 'sawtooth'); }
+            playAddSource() { this.playTone(950, 0.08, 'sine'); }
+        }
+
+        const sound = new SoundEngine();
+
+        /**
+         * 2D Vector Mathematics
+         */
+        class Vec2 {
+            constructor(x = 0, y = 0) { this.x = x; this.y = y; }
+            add(v) { return new Vec2(this.x + v.x, this.y + v.y); }
+            sub(v) { return new Vec2(this.x - v.x, this.y - v.y); }
+            mult(n) { return new Vec2(this.x * n, this.y * n); }
+            dot(v) { return this.x * v.x + this.y * v.y; }
+            cross(v) { return this.x * v.y - this.y * v.x; }
+            mag() { return Math.hypot(this.x, this.y); }
+            norm() {
+                const m = this.mag();
+                return m === 0 ? new Vec2(0, 0) : new Vec2(this.x / m, this.y / m);
+            }
+            dist(v) { return Math.hypot(this.x - v.x, this.y - v.y); }
+            rotate(angle) {
+                const c = Math.cos(angle), s = Math.sin(angle);
+                return new Vec2(this.x * c - this.y * s, this.x * s + this.y * c);
+            }
+        }
+
+        /**
+         * Light Emitter Class (Multiple Light Sources Support)
+         */
+        class Emitter {
+            constructor(x, y, angle = 0) {
+                this.id = 'emitter_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+                this.pos = new Vec2(x, y);
+                this.angle = angle; // Radians
+                this.type = 'single'; // 'single', 'parallel3', 'parallel5', 'fan', 'dispersion'
+                this.color = '#00ff66';
+                this.wavelength = 532; // Green laser default
+            }
+        }
+
+        /**
+         * Application Global State
+         */
+        const state = {
+            activeTool: 'select', // 'select', 'addEmitter', 'drawMirrorFree', 'drawMirrorLine', 'drawLensFree', 'eraser'
+            currentRefractiveIndex: 1.50,
+            emitters: [], // Array of Emitter instances
+            selectedEmitterId: null,
+            hud: {
+                showNormal: true,
+                showAngles: true,
+                showGrid: true,
+                showTools: false
+            },
+            objects: [], // Scene Mirrors & Polygon Lenses
+            currentDrawingPoints: [], // Touch path buffer
+            placingEmitter: null, // Temporary placement state
+            physicalRuler: null,
+            dragState: {
+                target: null,
+                type: null, // 'emitter_move', 'emitter_rotate', 'object_move'
+                startPos: null
+            },
+            lastStats: {
+                incidentAngle: null,
+                reflectAngle: null,
+                bounces: 0,
+                hasTIR: false
+            }
+        };
+
+        /**
+         * Optical Scene Objects Definitions
+         */
+        class FreehandMirror {
+            constructor(points) {
+                this.type = 'freehand_mirror';
+                this.points = points;
+            }
+            getSegments() {
+                const segs = [];
+                for (let i = 0; i < this.points.length - 1; i++) {
+                    segs.push({ p1: this.points[i], p2: this.points[i+1], parent: this, isMirror: true });
+                }
+                return segs;
+            }
+            getCenter() {
+                let sx = 0, sy = 0;
+                this.points.forEach(p => { sx += p.x; sy += p.y; });
+                return new Vec2(sx / this.points.length, sy / this.points.length);
+            }
+        }
+
+        class LineMirror {
+            constructor(p1, p2) {
+                this.type = 'line_mirror';
+                this.p1 = p1;
+                this.p2 = p2;
+            }
+            getSegments() {
+                return [{ p1: this.p1, p2: this.p2, parent: this, isMirror: true }];
+            }
+            getCenter() { return this.p1.add(this.p2).mult(0.5); }
+        }
+
+        class PolygonLens {
+            constructor(points, n = 1.50, shapeName = 'custom') {
+                this.type = 'polygon_lens';
+                this.points = points; // Closed polygon contour of Vec2
+                this.n = n;
+                this.shapeName = shapeName;
+            }
+            getSegments() {
+                const segs = [];
+                const len = this.points.length;
+                for (let i = 0; i < len; i++) {
+                    const p1 = this.points[i];
+                    const p2 = this.points[(i + 1) % len];
+                    segs.push({ p1, p2, parent: this, isLens: true, n: this.n });
+                }
+                return segs;
+            }
+            getCenter() {
+                let sx = 0, sy = 0;
+                this.points.forEach(p => { sx += p.x; sy += p.y; });
+                return new Vec2(sx / this.points.length, sy / this.points.length);
+            }
+            containsPoint(p) {
+                // Ray casting point-in-polygon algorithm
+                let inside = false;
+                const len = this.points.length;
+                for (let i = 0, j = len - 1; i < len; j = i++) {
+                    const xi = this.points[i].x, yi = this.points[i].y;
+                    const xj = this.points[j].x, yj = this.points[j].y;
+                    const intersect = ((yi > p.y) !== (yj > p.y)) &&
+                        (p.x < (xj - xi) * (p.y - yi) / (yj - yi) + xi);
+                    if (intersect) inside = !inside;
+                }
+                return inside;
+            }
+        }
+
+        /**
+         * Canvas Setup & Resize Handler
+         */
+        const canvas = document.getElementById('opticsCanvas');
+        const ctx = canvas.getContext('2d');
+        let width = canvas.width = window.innerWidth;
+        let height = canvas.height = window.innerHeight;
+
+        window.addEventListener('resize', () => {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        });
+
+        /**
+         * Initialize Default Emitter Light Source
+         */
+        function initDefaultScene() {
+            const defaultEmitter = new Emitter(220, height / 2, 0);
+            state.emitters.push(defaultEmitter);
+            state.selectedEmitterId = defaultEmitter.id;
+        }
+
+        /**
+         * Preset Lens Generators (Circle, Triangle, Rectangle, Biconvex, Biconcave)
+         */
+        function addPresetLens(shapeType) {
+            sound.playClick();
+            const center = new Vec2(width / 2, height / 2);
+            let lensObj = null;
+
+            if (shapeType === 'circle') {
+                // Smooth circular polygon (32 vertices)
+                const pts = [];
+                const steps = 32, radius = 70;
+                for (let i = 0; i < steps; i++) {
+                    const a = (i / steps) * Math.PI * 2;
+                    pts.push(new Vec2(center.x + Math.cos(a) * radius, center.y + Math.sin(a) * radius));
+                }
+                lensObj = new PolygonLens(pts, state.currentRefractiveIndex, '圓形透鏡');
+
+            } else if (shapeType === 'triangle') {
+                // Triangular Prism
+                const size = 140;
+                const pts = [
+                    new Vec2(center.x, center.y - size / 1.1),
+                    new Vec2(center.x + size / 1.1, center.y + size / 1.5),
+                    new Vec2(center.x - size / 1.1, center.y + size / 1.5)
+                ];
+                lensObj = new PolygonLens(pts, state.currentRefractiveIndex, '三角形稜鏡');
+
+            } else if (shapeType === 'rectangle') {
+                // Rectangular Glass Block
+                const w = 180, h = 100;
+                const pts = [
+                    new Vec2(center.x - w / 2, center.y - h / 2),
+                    new Vec2(center.x + w / 2, center.y - h / 2),
+                    new Vec2(center.x + w / 2, center.y + h / 2),
+                    new Vec2(center.x - w / 2, center.y + h / 2)
+                ];
+                lensObj = new PolygonLens(pts, state.currentRefractiveIndex, '長方形玻璃磚');
+
+            } else if (shapeType === 'biconvex') {
+                // FIXED Biconvex Lens (Complete seamless curved contour)
+                const pts = [];
+                const steps = 24, w = 70, h = 180;
+                // Right arc (t from -PI/2 to PI/2)
+                for (let i = 0; i <= steps; i++) {
+                    const t = -Math.PI / 2 + (Math.PI * i / steps);
+                    const x = center.x + Math.cos(t) * (w / 2);
+                    const y = center.y + Math.sin(t) * (h / 2);
+                    pts.push(new Vec2(x, y));
+                }
+                // Left arc (t from PI/2 to 3*PI/2)
+                for (let i = 0; i <= steps; i++) {
+                    const t = Math.PI / 2 + (Math.PI * i / steps);
+                    const x = center.x + Math.cos(t) * (w / 2);
+                    const y = center.y + Math.sin(t) * (h / 2);
+                    pts.push(new Vec2(x, y));
+                }
+                lensObj = new PolygonLens(pts, state.currentRefractiveIndex, '雙凸透鏡');
+
+            } else if (shapeType === 'biconcave') {
+                // Biconcave Lens
+                const w = 60, h = 180;
+                const pts = [
+                    new Vec2(center.x - w / 2, center.y - h / 2),
+                    new Vec2(center.x + w / 2, center.y - h / 2),
+                    new Vec2(center.x + w / 4, center.y),
+                    new Vec2(center.x + w / 2, center.y + h / 2),
+                    new Vec2(center.x - w / 2, center.y + h / 2),
+                    new Vec2(center.x - w / 4, center.y)
+                ];
+                lensObj = new PolygonLens(pts, state.currentRefractiveIndex, '雙凹透鏡');
+            }
+
+            if (lensObj) {
+                state.objects.push(lensObj);
+                setActiveTool('select');
+            }
+        }
+
+        /**
+         * Tool & Interface Controls
+         */
+        function setActiveTool(tool) {
+            state.activeTool = tool;
+            sound.playClick();
+
+            const banner = document.getElementById('drawingModeBanner');
+            const bannerIcon = document.getElementById('drawingModeIcon');
+            const bannerText = document.getElementById('drawingModeText');
+
+            if (tool === 'addEmitter') {
+                banner.classList.remove('hidden');
+                bannerIcon.className = 'fa-solid fa-lightbulb text-amber-400 text-lg';
+                bannerText.innerText = '請點擊螢幕放置光源位置，接著拖曳設定發射角度...';
+            } else if (tool === 'drawMirrorFree') {
+                banner.classList.remove('hidden');
+                bannerIcon.className = 'fa-solid fa-signature text-cyan-400 text-lg';
+                bannerText.innerText = '請用手指/觸控筆在螢幕上手畫自由鏡面...';
+            } else if (tool === 'drawMirrorLine') {
+                banner.classList.remove('hidden');
+                bannerIcon.className = 'fa-solid fa-minus text-cyan-400 text-lg';
+                bannerText.innerText = '請在螢幕上拖曳繪製直線平面鏡...';
+            } else if (tool === 'drawLensFree') {
+                banner.classList.remove('hidden');
+                bannerIcon.className = 'fa-solid fa-draw-polygon text-purple-400 text-lg';
+                bannerText.innerText = '請在螢幕上手畫一圈閉合透鏡/稜鏡...';
+            } else if (tool === 'eraser') {
+                banner.classList.remove('hidden');
+                bannerIcon.className = 'fa-solid fa-eraser text-rose-400 text-lg';
+                bannerText.innerText = '點擊任意鏡面、透鏡或光源即可擦除清理...';
+            } else {
+                banner.classList.add('hidden');
+            }
+
+            // Button active states UI highlighting
+            const toolBtns = {
+                select: 'toolSelectBtn',
+                addEmitter: 'toolAddEmitterBtn',
+                drawMirrorFree: 'toolMirrorFreeBtn',
+                drawMirrorLine: 'toolMirrorLineBtn',
+                drawLensFree: 'toolLensFreeBtn',
+                eraser: 'toolEraserBtn'
+            };
+
+            Object.keys(toolBtns).forEach(k => {
+                const btn = document.getElementById(toolBtns[k]);
+                if (btn) {
+                    if (k === tool) {
+                        btn.classList.add('bg-cyan-500/30', 'text-cyan-300', 'border-cyan-500/60');
+                        btn.classList.remove('bg-slate-800', 'text-slate-200');
+                    } else {
+                        btn.classList.remove('bg-cyan-500/30', 'text-cyan-300', 'border-cyan-500/60');
+                        btn.classList.add('bg-slate-800', 'text-slate-200');
+                    }
+                }
+            });
+        }
+
+        function updateRefractiveIndex(val) {
+            state.currentRefractiveIndex = parseFloat(val);
+            // Update refractive index on existing scene lenses
+            state.objects.forEach(obj => {
+                if (obj.type === 'polygon_lens') obj.n = state.currentRefractiveIndex;
+            });
+            const labelEl = document.getElementById('refractiveIndexVal');
+            let name = '玻璃';
+            if (val < 1.1) name = '空氣';
+            else if (val < 1.4) name = '水';
+            else if (val > 2.2) name = '鑽石';
+            labelEl.innerText = `${val} (${name})`;
+        }
+
+        function getSelectedEmitter() {
+            return state.emitters.find(e => e.id === state.selectedEmitterId);
+        }
+
+        function setSelectedBeamType(type) {
+            const em = getSelectedEmitter();
+            if (em) {
+                em.type = type;
+                updateSelectedEmitterUI();
+                sound.playClick();
+            }
+        }
+
+        function setSelectedEmitterColor(colorHex, wavelength) {
+            const em = getSelectedEmitter();
+            if (em) {
+                em.color = colorHex;
+                em.wavelength = wavelength;
+                sound.playClick();
+            }
+        }
+
+        function deleteSelectedEmitter() {
+            if (state.selectedEmitterId) {
+                state.emitters = state.emitters.filter(e => e.id !== state.selectedEmitterId);
+                state.selectedEmitterId = state.emitters.length > 0 ? state.emitters[0].id : null;
+                updateSelectedEmitterUI();
+                sound.playClick();
+            }
+        }
+
+        function updateSelectedEmitterUI() {
+            const panel = document.getElementById('selectedEmitterControls');
+            const em = getSelectedEmitter();
+            if (!em) {
+                panel.classList.add('opacity-40', 'pointer-events-none');
+                return;
+            }
+            panel.classList.remove('opacity-40', 'pointer-events-none');
+
+            // Highlight active beam type button
+            ['single', 'parallel3', 'parallel5', 'fan', 'dispersion'].forEach(t => {
+                const btn = document.getElementById(`beam${t.charAt(0).toUpperCase() + t.slice(1)}Btn`);
+                if (btn) {
+                    if (em.type === t) {
+                        btn.className = 'py-1 rounded bg-amber-500/30 text-amber-300 font-bold text-[10px] text-center border border-amber-500/50';
+                    } else {
+                        btn.className = 'py-1 rounded bg-slate-800 text-slate-300 text-[10px] text-center border border-slate-700';
+                    }
+                }
+            });
+        }
+
+        function toggleHUDSetting(key) {
+            state.hud[key] = !state.hud[key];
+            const btnMap = { showNormal: 'toggleNormalBtn', showAngles: 'toggleAnglesBtn', showGrid: 'toggleGridBtn' };
+            const btn = document.getElementById(btnMap[key]);
+            if (state.hud[key]) {
+                btn.classList.add('bg-cyan-950/60', 'border-cyan-500/50', 'text-cyan-300');
+                btn.classList.remove('bg-slate-800', 'border-slate-700', 'text-slate-400');
+            } else {
+                btn.classList.remove('bg-cyan-950/60', 'border-cyan-500/50', 'text-cyan-300');
+                btn.classList.add('bg-slate-800', 'border-slate-700', 'text-slate-400');
+            }
+            sound.playClick();
+        }
+
+        function toggleOverlayTools() {
+            state.hud.showTools = !state.hud.showTools;
+            sound.playClick();
+        }
+
+        function undoLastObject() {
+            if (state.objects.length > 0) {
+                state.objects.pop();
+                sound.playClick();
+            } else if (state.emitters.length > 1) {
+                state.emitters.pop();
+                state.selectedEmitterId = state.emitters[state.emitters.length - 1].id;
+                updateSelectedEmitterUI();
+                sound.playClick();
+            }
+        }
+
+        function clearAllObjects() {
+            state.objects = [];
+            state.emitters = [];
+            initDefaultScene();
+            sound.playClick();
+        }
+
+        function toggleAudio() {
+            sound.enabled = !sound.enabled;
+            const icon = document.getElementById('audioIcon');
+            icon.className = sound.enabled ? 'fa-solid fa-volume-high text-lg' : 'fa-solid fa-volume-xmark text-lg text-slate-500';
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(() => {});
+            } else {
+                if (document.exitFullscreen) document.exitFullscreen();
+            }
+            sound.playClick();
+        }
+
+        /**
+         * Optics Engine: Raycaster & Snell's Law Math
+         */
+        function raySegmentIntersection(rayOrigin, rayDir, p1, p2) {
+            const v1 = rayOrigin.sub(p1);
+            const v2 = p2.sub(p1);
+            const v3 = new Vec2(-rayDir.y, rayDir.x);
+
+            const dot = v2.dot(v3);
+            if (Math.abs(dot) < 0.000001) return null;
+
+            const t1 = v2.cross(v1) / dot;
+            const t2 = v1.dot(v3) / dot;
+
+            if (t1 > 0.001 && t2 >= 0 && t2 <= 1) {
+                return { point: rayOrigin.add(rayDir.mult(t1)), dist: t1 };
+            }
+            return null;
+        }
+
+        function traceSingleRay(origin, dir, wavelength = 532, refractiveIndex = 1.0, depth = 0) {
+            if (depth >= 16) return []; // Ray bounce depth limit
+
+            let closestHit = null;
+            let closestDist = Infinity;
+            let hitSegment = null;
+
+            // Collect all collision boundaries
+            const segments = [];
+            state.objects.forEach(obj => {
+                if (obj.getSegments) segments.push(...obj.getSegments());
+            });
+
+            if (state.physicalRuler) {
+                segments.push(...state.physicalRuler.getSegments());
+            }
+
+            // Raycaster hit check
+            segments.forEach(seg => {
+                const hit = raySegmentIntersection(origin, dir, seg.p1, seg.p2);
+                if (hit && hit.dist < closestDist) {
+                    closestDist = hit.dist;
+                    closestHit = hit;
+                    hitSegment = seg;
+                }
+            });
+
+            // Ray exits into infinite space
+            if (!closestHit) {
+                let rayColor = state.laser.color || '#00ff66';
+                if (wavelength === 650) rayColor = '#ff2255';
+                if (wavelength === 450) rayColor = '#2288ff';
+                if (wavelength === 580) rayColor = '#f59e0b';
+                if (wavelength === 400) rayColor = '#a855f7';
+                return [{ start: origin, end: origin.add(dir.mult(3000)), color: rayColor }];
+            }
+
+            const hitPoint = closestHit.point;
+            const segVec = hitSegment.p2.sub(hitSegment.p1);
+            let normal = new Vec2(-segVec.y, segVec.x).norm();
+
+            if (dir.dot(normal) > 0) normal = normal.mult(-1);
+
+            let rayColor = state.laser.color || '#00ff66';
+            if (wavelength === 650) rayColor = '#ff2255';
+            if (wavelength === 450) rayColor = '#2288ff';
+            if (wavelength === 580) rayColor = '#f59e0b';
+            if (wavelength === 400) rayColor = '#a855f7';
+
+            const rayPath = [{
+                start: origin,
+                end: hitPoint,
+                normal: normal,
+                hitObject: hitSegment.parent,
+                color: rayColor
+            }];
+
+            if (depth === 0) {
+                state.lastStats.bounces = 1;
+                const incRad = Math.acos(Math.min(1, Math.max(-1, -dir.dot(normal))));
+                state.lastStats.incidentAngle = (incRad * 180 / Math.PI).toFixed(1);
+            } else {
+                state.lastStats.bounces++;
+            }
+
+            // Mirror Specular Reflection
+            if (hitSegment.isMirror || hitSegment.parent.type === 'line_mirror' || hitSegment.parent.type === 'freehand_mirror') {
+                const reflectDir = dir.sub(normal.mult(2 * dir.dot(normal))).norm();
+                if (depth === 0) state.lastStats.reflectAngle = state.lastStats.incidentAngle;
+
+                const nextRays = traceSingleRay(hitPoint.add(reflectDir.mult(0.1)), reflectDir, wavelength, refractiveIndex, depth + 1);
+                return rayPath.concat(nextRays);
+            }
+
+            // Lens Refraction (Snell's Law)
+            if (hitSegment.isLens) {
+                const lensObj = hitSegment.parent;
+                const isEntering = lensObj.containsPoint ? !lensObj.containsPoint(origin.add(dir.mult(0.1))) : true;
+
+                let nMedium = hitSegment.n || state.currentRefractiveIndex;
+                if (wavelength === 650) nMedium -= 0.02; // Red bends less
+                if (wavelength === 450) nMedium += 0.02; // Blue bends more
+
+                const n1 = isEntering ? 1.0 : nMedium;
+                const n2 = isEntering ? nMedium : 1.0;
+                const eta = n1 / n2;
+
+                const cosI = -dir.dot(normal);
+                const sinT2 = eta * eta * (1.0 - cosI * cosI);
+
+                // Check Total Internal Reflection (TIR)
+                if (sinT2 > 1.0) {
+                    state.lastStats.hasTIR = true;
+                    const reflectDir = dir.sub(normal.mult(2 * dir.dot(normal))).norm();
+                    const nextRays = traceSingleRay(hitPoint.add(reflectDir.mult(0.1)), reflectDir, wavelength, refractiveIndex, depth + 1);
+                    return rayPath.concat(nextRays);
+                } else {
+                    const cosT = Math.sqrt(1.0 - sinT2);
+                    const refractDir = dir.mult(eta).add(normal.mult(eta * cosI - cosT)).norm();
+
+                    if (depth === 0) {
+                        const refRad = Math.acos(Math.min(1, Math.max(-1, -refractDir.dot(normal))));
+                        state.lastStats.reflectAngle = (refRad * 180 / Math.PI).toFixed(1);
+                    }
+
+                    const nextRays = traceSingleRay(hitPoint.add(refractDir.mult(0.2)), refractDir, wavelength, refractiveIndex, depth + 1);
+                    return rayPath.concat(nextRays);
+                }
+            }
+
+            return rayPath;
+        }
+
+        /**
+         * Canvas Rendering Pipeline
+         */
+        function drawGrid() {
+            if (!state.hud.showGrid) return;
+            ctx.strokeStyle = 'rgba(30, 41, 59, 0.35)';
+            ctx.lineWidth = 1;
+            const step = 40;
+            for (let x = 0; x < width; x += step) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke();
+            }
+            for (let y = 0; y < height; y += step) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
+            }
+        }
+
+        function drawEmitters() {
+            state.emitters.forEach(em => {
+                const isSelected = (em.id === state.selectedEmitterId);
+                ctx.save();
+                ctx.translate(em.pos.x, em.pos.y);
+                ctx.rotate(em.angle);
+
+                // Selected Outer Glow Ring
+                if (isSelected) {
+                    ctx.strokeStyle = '#f59e0b';
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([4, 4]);
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 32, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
+
+                // Laser Body Housing
+                ctx.fillStyle = '#1e293b';
+                ctx.strokeStyle = isSelected ? '#f59e0b' : (em.color || '#00ff66');
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.roundRect(-24, -14, 48, 28, 6);
+                ctx.fill(); ctx.stroke();
+
+                // Emitter Front Lens Lens Tip
+                ctx.fillStyle = em.color || '#00ff66';
+                ctx.shadowColor = em.color || '#00ff66';
+                ctx.shadowBlur = 10;
+                ctx.fillRect(24, -5, 6, 10);
+
+                // Angle Direction Arrow Line Handle
+                ctx.strokeStyle = '#38bdf8';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(30, 0);
+                ctx.lineTo(55, 0);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.arc(55, 0, 5, 0, Math.PI * 2);
+                ctx.fillStyle = '#38bdf8';
+                ctx.fill();
+
+                // Selected Delete Button Icon (X)
+                if (isSelected && state.emitters.length > 1) {
+                    ctx.translate(0, -32);
+                    ctx.fillStyle = '#f43f5e';
+                    ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 10px sans-serif';
+                    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                    ctx.fillText('✕', 0, 0);
+                }
+
+                ctx.restore();
+            });
+
+            // Draw Emitter Placement Direction Line Preview
+            if (state.placingEmitter) {
+                const em = state.placingEmitter;
+                ctx.save();
+                ctx.strokeStyle = 'rgba(245, 158, 11, 0.8)';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([6, 6]);
+                ctx.beginPath();
+                ctx.moveTo(em.pos.x, em.pos.y);
+                ctx.lineTo(em.pos.x + Math.cos(em.angle) * 120, em.pos.y + Math.sin(em.angle) * 120);
+                ctx.stroke();
+                ctx.restore();
+            }
+        }
+
+        function drawSceneObjects() {
+            state.objects.forEach(obj => {
+                if (obj.type === 'freehand_mirror' || obj.type === 'line_mirror') {
+                    const pts = obj.points || [obj.p1, obj.p2];
+                    ctx.save();
+                    ctx.strokeStyle = '#38bdf8';
+                    ctx.lineWidth = 5;
+                    ctx.lineCap = 'round';
+                    ctx.lineJoin = 'round';
+                    ctx.shadowColor = '#06b6d4';
+                    ctx.shadowBlur = 12;
+
+                    ctx.beginPath();
+                    ctx.moveTo(pts[0].x, pts[0].y);
+                    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+                    ctx.stroke();
+
+                    // White Specular Highlight
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
+                    ctx.restore();
+
+                } else if (obj.type === 'polygon_lens') {
+                    ctx.save();
+                    ctx.fillStyle = 'rgba(192, 132, 252, 0.22)';
+                    ctx.strokeStyle = '#c084fc';
+                    ctx.lineWidth = 3.0; // FIXED COMPLETE BORDER
+                    ctx.lineCap = 'round';
+                    ctx.lineJoin = 'round';
+                    ctx.shadowColor = '#c084fc';
+                    ctx.shadowBlur = 14;
+
+                    ctx.beginPath();
+                    ctx.moveTo(obj.points[0].x, obj.points[0].y);
+                    for (let i = 1; i < obj.points.length; i++) ctx.lineTo(obj.points[i].x, obj.points[i].y);
+                    ctx.closePath(); // Complete seamless closure
+                    ctx.fill();
+                    ctx.stroke();
+
+                    // Shape Title & Refractive Index Tag
+                    const center = obj.getCenter();
+                    ctx.fillStyle = '#e9d5ff';
+                    ctx.font = 'bold 11px JetBrains Mono';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(`${obj.shapeName || '透鏡'} (n=${obj.n})`, center.x, center.y + 4);
+                    ctx.restore();
+                }
+            });
+
+            // Draw Active Drawing Stroke
+            if (state.currentDrawingPoints.length > 1) {
+                ctx.save();
+                ctx.lineWidth = 4;
+                ctx.lineCap = 'round';
+                ctx.strokeStyle = state.activeTool.includes('Mirror') ? '#38bdf8' : '#c084fc';
+                ctx.shadowColor = ctx.strokeStyle;
+                ctx.shadowBlur = 10;
+                ctx.beginPath();
+                ctx.moveTo(state.currentDrawingPoints[0].x, state.currentDrawingPoints[0].y);
+                for (let i = 1; i < state.currentDrawingPoints.length; i++) {
+                    ctx.lineTo(state.currentDrawingPoints[i].x, state.currentDrawingPoints[i].y);
+                }
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            // Draw Physical Touch Ruler
+            if (state.physicalRuler) {
+                const r = state.physicalRuler;
+                ctx.save();
+                ctx.strokeStyle = '#10b981';
+                ctx.lineWidth = 8;
+                ctx.lineCap = 'round';
+                ctx.shadowColor = '#10b981';
+                ctx.shadowBlur = 15;
+
+                ctx.beginPath(); ctx.moveTo(r.p1.x, r.p1.y); ctx.lineTo(r.p2.x, r.p2.y); ctx.stroke();
+
+                const mid = r.p1.add(r.p2).mult(0.5);
+                ctx.fillStyle = '#10b981';
+                ctx.font = 'bold 11px JetBrains Mono';
+                ctx.fillText('實體接觸感應邊界 (PHYSICAL RULER)', mid.x - 90, mid.y - 12);
+                ctx.restore();
+            }
+        }
+
+        function drawOverlayTools() {
+            if (!state.hud.showTools) return;
+            const center = new Vec2(width / 2, height / 2);
+            ctx.save();
+            ctx.strokeStyle = 'rgba(245, 158, 11, 0.6)';
+            ctx.lineWidth = 2;
+            ctx.fillStyle = 'rgba(245, 158, 11, 0.05)';
+
+            ctx.beginPath(); ctx.arc(center.x, center.y, 130, Math.PI, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+
+            for (let a = 0; a <= 180; a += 10) {
+                const rad = (a - 180) * Math.PI / 180;
+                const p1 = new Vec2(center.x + Math.cos(rad) * 120, center.y + Math.sin(rad) * 120);
+                const p2 = new Vec2(center.x + Math.cos(rad) * 130, center.y + Math.sin(rad) * 130);
+                ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+            }
+            ctx.restore();
+        }
+
+        function drawRayPaths(raySegments) {
+            raySegments.forEach(ray => {
+                ctx.save();
+                ctx.strokeStyle = ray.color;
+                ctx.lineWidth = 2.5;
+                ctx.shadowColor = ray.color;
+                ctx.shadowBlur = 12;
+
+                ctx.beginPath();
+                ctx.moveTo(ray.start.x, ray.start.y);
+                ctx.lineTo(ray.end.x, ray.end.y);
+                ctx.stroke();
+
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 0.8;
+                ctx.stroke();
+                ctx.restore();
+
+                // Surface normal dashed annotations
+                if (ray.normal && state.hud.showNormal) {
+                    ctx.save();
+                    ctx.strokeStyle = 'rgba(56, 189, 248, 0.6)';
+                    ctx.lineWidth = 1;
+                    ctx.setLineDash([3, 3]);
+
+                    const nStart = ray.end.sub(ray.normal.mult(35));
+                    const nEnd = ray.end.add(ray.normal.mult(35));
+                    ctx.beginPath(); ctx.moveTo(nStart.x, nStart.y); ctx.lineTo(nEnd.x, nEnd.y); ctx.stroke();
+                    ctx.restore();
+                }
+
+                // Angle values text annotations
+                if (ray.normal && state.hud.showAngles && state.lastStats.incidentAngle) {
+                    ctx.save();
+                    ctx.fillStyle = '#fbbf24';
+                    ctx.font = '10px JetBrains Mono';
+                    ctx.fillText(`θi=${state.lastStats.incidentAngle}°`, ray.end.x + 10, ray.end.y - 10);
+                    if (state.lastStats.reflectAngle) {
+                        ctx.fillStyle = '#34d399';
+                        ctx.fillText(`θr=${state.lastStats.reflectAngle}°`, ray.end.x + 10, ray.end.y + 14);
+                    }
+                    ctx.restore();
+                }
+            });
+        }
+
+        /**
+         * Core Engine Loop
+         */
+        let lastFPS = performance.now();
+        let frames = 0;
+
+        function mainLoop() {
+            ctx.clearRect(0, 0, width, height);
+
+            drawGrid();
+
+            // Fire Laser Rays from ALL Active Light Source Emitters
+            let allRays = [];
+            state.lastStats.hasTIR = false;
+
+            state.emitters.forEach(em => {
+                state.laser = em; // Temporary reference context
+                const dir = new Vec2(Math.cos(em.angle), Math.sin(em.angle));
+
+                if (em.type === 'single') {
+                    allRays.push(...traceSingleRay(em.pos, dir, em.wavelength));
+
+                } else if (em.type === 'parallel3' || em.type === 'parallel5') {
+                    const count = em.type === 'parallel3' ? 3 : 5;
+                    const perp = new Vec2(-dir.y, dir.x);
+                    const spacing = 18;
+                    const startIdx = -Math.floor(count / 2);
+                    for (let i = 0; i < count; i++) {
+                        const offset = startIdx + i;
+                        const origin = em.pos.add(perp.mult(offset * spacing));
+                        allRays.push(...traceSingleRay(origin, dir, em.wavelength));
+                    }
+
+                } else if (em.type === 'fan') {
+                    const count = 5;
+                    const spreadAngle = 0.35; // ~20 degrees fan
+                    for (let i = 0; i < count; i++) {
+                        const deltaA = -spreadAngle / 2 + (spreadAngle * i / (count - 1));
+                        const fanDir = dir.rotate(deltaA);
+                        allRays.push(...traceSingleRay(em.pos, fanDir, em.wavelength));
+                    }
+
+                } else if (em.type === 'dispersion') {
+                    // White light dispersion into RGB
+                    allRays.push(...traceSingleRay(em.pos, dir, 650));
+                    allRays.push(...traceSingleRay(em.pos, dir, 532));
+                    allRays.push(...traceSingleRay(em.pos, dir, 450));
+                }
+            });
+
+            drawSceneObjects();
+            drawRayPaths(allRays);
+            drawEmitters();
+            drawOverlayTools();
+
+            // Update Physics HUD Values
+            document.getElementById('hudIncidentAngle').innerText = state.lastStats.incidentAngle ? `${state.lastStats.incidentAngle}°` : '--°';
+            document.getElementById('hudReflectAngle').innerText = state.lastStats.reflectAngle ? `${state.lastStats.reflectAngle}°` : '--°';
+            document.getElementById('hudSourceCount').innerText = `${state.emitters.length} 個 / ${state.lastStats.bounces} 次`;
+
+            const tirEl = document.getElementById('hudTIRStatus');
+            if (state.lastStats.hasTIR) {
+                tirEl.innerText = '發生全反射!';
+                tirEl.className = 'text-sm font-mono font-bold text-amber-400 animate-pulse';
+            } else {
+                tirEl.innerText = '無';
+                tirEl.className = 'text-sm font-mono font-bold text-slate-400';
+            }
+
+            // FPS Counter
+            frames++;
+            const now = performance.now();
+            if (now - lastFPS >= 1000) {
+                document.getElementById('fpsDisplay').innerText = `${frames} FPS`;
+                frames = 0;
+                lastFPS = now;
+            }
+
+            requestAnimationFrame(mainLoop);
+        }
+
+        /**
+         * Touch & Pointer Interaction Logic
+         */
+        function getEventPos(e) {
+            if (e.touches && e.touches.length > 0) {
+                return new Vec2(e.touches[0].clientX, e.touches[0].clientY);
+            }
+            return new Vec2(e.clientX, e.clientY);
+        }
+
+        function handleMultiTouchRuler(e) {
+            const badge = document.getElementById('physicalRulerBadge');
+            const details = document.getElementById('physicalRulerDetails');
+
+            if (e.touches && e.touches.length >= 2) {
+                const p1 = new Vec2(e.touches[0].clientX, e.touches[0].clientY);
+                const p2 = new Vec2(e.touches[1].clientX, e.touches[1].clientY);
+                state.physicalRuler = new LineMirror(p1, p2);
+                const len = p1.dist(p2).toFixed(0);
+                details.innerText = `雙點實體接觸感應中: 長度 ${len}px`;
+                badge.classList.remove('opacity-0');
+            } else if (e.touches && e.touches.length < 2) {
+                state.physicalRuler = null;
+                badge.classList.add('opacity-0');
+            }
+        }
+
+        function onPointerDown(e) {
+            sound.init();
+            handleMultiTouchRuler(e);
+
+            const pos = getEventPos(e);
+
+            // 1. Eraser Tool Mode
+            if (state.activeTool === 'eraser') {
+                // Check Emitters delete
+                for (let i = state.emitters.length - 1; i >= 0; i--) {
+                    if (pos.dist(state.emitters[i].pos) < 35) {
+                        state.emitters.splice(i, 1);
+                        if (state.emitters.length === 0) initDefaultScene();
+                        else state.selectedEmitterId = state.emitters[0].id;
+                        updateSelectedEmitterUI();
+                        sound.playClick();
+                        return;
+                    }
+                }
+                // Check Scene Objects delete
+                for (let i = state.objects.length - 1; i >= 0; i--) {
+                    if (pos.dist(state.objects[i].getCenter()) < 45) {
+                        state.objects.splice(i, 1);
+                        sound.playClick();
+                        return;
+                    }
+                }
+            }
+
+            // 2. Add Light Source Mode (Point-and-drag angle placement)
+            if (state.activeTool === 'addEmitter') {
+                const newEmitter = new Emitter(pos.x, pos.y, 0);
+                state.emitters.push(newEmitter);
+                state.selectedEmitterId = newEmitter.id;
+                state.placingEmitter = newEmitter;
+                updateSelectedEmitterUI();
+                sound.playAddSource();
+                return;
+            }
+
+            // 3. Drawing Tools Mode
+            if (state.activeTool.startsWith('draw')) {
+                state.currentDrawingPoints = [pos];
+                sound.playDraw();
+                return;
+            }
+
+            // 4. Select / Move Emitters or Objects Mode
+            for (let em of state.emitters) {
+                // Delete X button hit check
+                if (em.id === state.selectedEmitterId && state.emitters.length > 1) {
+                    const delPos = em.pos.add(new Vec2(0, -32).rotate(em.angle));
+                    if (pos.dist(delPos) < 16) {
+                        deleteSelectedEmitter();
+                        return;
+                    }
+                }
+
+                // Rotation handle hit check
+                const rotHandle = em.pos.add(new Vec2(55, 0).rotate(em.angle));
+                if (pos.dist(rotHandle) < 22) {
+                    state.selectedEmitterId = em.id;
+                    state.dragState.target = em;
+                    state.dragState.type = 'emitter_rotate';
+                    updateSelectedEmitterUI();
+                    return;
+                }
+
+                // Emitter body hit check
+                if (pos.dist(em.pos) < 32) {
+                    state.selectedEmitterId = em.id;
+                    state.dragState.target = em;
+                    state.dragState.type = 'emitter_move';
+                    updateSelectedEmitterUI();
+                    return;
+                }
+            }
+
+            // Move Scene Mirrors & Lenses
+            for (let obj of state.objects) {
+                if (pos.dist(obj.getCenter()) < 60) {
+                    state.dragState.target = obj;
+                    state.dragState.type = 'object_move';
+                    state.dragState.startPos = pos;
+                    return;
+                }
+            }
+        }
+
+        function onPointerMove(e) {
+            handleMultiTouchRuler(e);
+            const pos = getEventPos(e);
+
+            // Active placement angle dragging
+            if (state.placingEmitter) {
+                state.placingEmitter.angle = Math.atan2(pos.y - state.placingEmitter.pos.y, pos.x - state.placingEmitter.pos.x);
+                return;
+            }
+
+            // Active path stroke drawing
+            if (state.currentDrawingPoints.length > 0) {
+                const lastPt = state.currentDrawingPoints[state.currentDrawingPoints.length - 1];
+                if (pos.dist(lastPt) > 8) {
+                    state.currentDrawingPoints.push(pos);
+                }
+                return;
+            }
+
+            // Active object / emitter dragging
+            if (state.dragState.target) {
+                const { target, type } = state.dragState;
+                if (type === 'emitter_move') {
+                    target.pos = pos;
+                } else if (type === 'emitter_rotate') {
+                    target.angle = Math.atan2(pos.y - target.pos.y, pos.x - target.pos.x);
+                } else if (type === 'object_move') {
+                    const delta = pos.sub(state.dragState.startPos);
+                    if (target.points) {
+                        target.points = target.points.map(p => p.add(delta));
+                    } else if (target.p1) {
+                        target.p1 = target.p1.add(delta);
+                        target.p2 = target.p2.add(delta);
+                    }
+                    state.dragState.startPos = pos;
+                }
+            }
+        }
+
+        function onPointerUp(e) {
+            // Finalize light emitter placement
+            if (state.placingEmitter) {
+                state.placingEmitter = null;
+                setActiveTool('select');
+                return;
+            }
+
+            // Finalize hand-drawn stroke path
+            if (state.currentDrawingPoints.length > 1) {
+                const pts = state.currentDrawingPoints;
+
+                if (state.activeTool === 'drawMirrorFree') {
+                    state.objects.push(new FreehandMirror(pts));
+                    sound.playReflect();
+                } else if (state.activeTool === 'drawMirrorLine') {
+                    state.objects.push(new LineMirror(pts[0], pts[pts.length - 1]));
+                    sound.playReflect();
+                } else if (state.activeTool === 'drawLensFree') {
+                    state.objects.push(new PolygonLens(pts, state.currentRefractiveIndex, '手畫透鏡'));
+                    sound.playReflect();
+                }
+
+                state.currentDrawingPoints = [];
+                setActiveTool('select');
+            }
+
+            state.currentDrawingPoints = [];
+            state.dragState.target = null;
+            state.dragState.type = null;
+
+            if (e.touches && e.touches.length === 0) {
+                state.physicalRuler = null;
+                document.getElementById('physicalRulerBadge').classList.add('opacity-0');
+            }
+        }
+
+        // Window Event Listeners
+        window.addEventListener('mousedown', onPointerDown);
+        window.addEventListener('mousemove', onPointerMove);
+        window.addEventListener('mouseup', onPointerUp);
+
+        window.addEventListener('touchstart', onPointerDown, { passive: false });
+        window.addEventListener('touchmove', onPointerMove, { passive: false });
+        window.addEventListener('touchend', onPointerUp);
+
+        // Start Application
+        window.onload = function () {
+            initDefaultScene();
+            updateSelectedEmitterUI();
+            requestAnimationFrame(mainLoop);
+        };
+    </script>
+</body>
+</html>

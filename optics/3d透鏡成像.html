@@ -1,0 +1,1770 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>透鏡成像 3D 互動實驗室 (3D Lens Optics Simulator)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        cyan: { 400: '#22d3ee', 500: '#06b6d4', 950: '#083344' },
+                        amber: { 400: '#fbbf24', 500: '#f59e0b', 950: '#451a03' },
+                        emerald: { 400: '#34d399', 500: '#10b981' },
+                        rose: { 400: '#fb7185', 500: '#f43f5e' }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Three.js & OrbitControls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            overflow: hidden;
+            user-select: none;
+        }
+        /* Glassmorphism panel styling */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.82);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+        /* Custom scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.5);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(56, 189, 248, 0.3);
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(56, 189, 248, 0.6);
+        }
+        /* Range slider style */
+        input[type=range] {
+            accent-color: #38bdf8;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 h-screen w-screen relative overflow-hidden">
+
+    <!-- 3D WebGL Canvas Container -->
+    <div id="canvas-container" class="absolute inset-0 z-0"></div>
+
+    <!-- UI Overlay Grid -->
+    <div class="absolute inset-0 z-10 pointer-events-none flex flex-col justify-between p-3 md:p-5">
+
+        <!-- Header Bar -->
+        <header class="flex flex-wrap items-center justify-between gap-3 pointer-events-auto">
+            <div class="glass-panel px-4 py-2.5 rounded-xl flex items-center gap-3 shadow-lg shadow-cyan-950/30">
+                <div class="w-9 h-9 rounded-lg bg-cyan-500/20 border border-cyan-400/40 flex items-center justify-center text-cyan-400 text-lg">
+                    <i class="fa-solid fa-glasses"></i>
+                </div>
+                <div>
+                    <h1 class="text-base font-bold text-white tracking-wide flex items-center gap-2">
+                        透鏡成像 3D 互動光學實驗室
+                        <span class="text-xs font-normal px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">折射與成像物理</span>
+                    </h1>
+                    <p class="text-xs text-slate-400">3D Lens Optics & Thin Lens Ray Tracing Simulator</p>
+                </div>
+            </div>
+
+            <!-- Header Action Buttons -->
+            <div class="flex items-center gap-2">
+                <button id="btn-presets-modal" class="glass-panel px-3 py-2 rounded-xl text-xs font-medium text-slate-200 hover:text-cyan-300 hover:border-cyan-500/40 transition flex items-center gap-1.5 shadow">
+                    <i class="fa-solid fa-wand-magic-sparkles text-amber-400"></i>
+                    <span>經典成像情境</span>
+                </button>
+                <button id="btn-help" class="glass-panel px-3 py-2 rounded-xl text-xs font-medium text-slate-200 hover:text-cyan-300 hover:border-cyan-500/40 transition flex items-center gap-1.5 shadow">
+                    <i class="fa-solid fa-book-open text-cyan-400"></i>
+                    <span>物理原理與公式</span>
+                </button>
+                <button id="btn-reset-cam" class="glass-panel px-3 py-2 rounded-xl text-xs font-medium text-slate-200 hover:text-cyan-300 hover:border-cyan-500/40 transition flex items-center gap-1.5 shadow" title="重設 3D 視角">
+                    <i class="fa-solid fa-rotate-right text-slate-400"></i>
+                    <span class="hidden sm:inline">重設視角</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content Area: Control Panel (Left) & Realtime HUD / Screen Inset (Right) -->
+        <div class="flex-1 my-3 flex flex-col md:flex-row justify-between items-start gap-4 overflow-hidden pointer-events-none">
+
+            <!-- Control Sidebar (Left) -->
+            <aside class="w-full md:w-80 max-h-[calc(100vh-140px)] overflow-y-auto glass-panel rounded-2xl p-4 pointer-events-auto shadow-2xl flex flex-col gap-3.5">
+                
+                <!-- Section 1: Lens Type Switch -->
+                <div>
+                    <label class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5 mb-2">
+                        <i class="fa-solid fa-circle-dot text-cyan-400"></i> 透鏡種類選擇
+                    </label>
+                    <div class="grid grid-cols-2 gap-1.5 p-1 bg-slate-900/80 rounded-xl border border-slate-800">
+                        <button class="lens-type-btn py-1.5 rounded-lg text-xs font-medium transition text-center bg-cyan-500/20 text-cyan-300 border border-cyan-500/40" data-type="convex">
+                            凸透鏡 (Convex)
+                        </button>
+                        <button class="lens-type-btn py-1.5 rounded-lg text-xs font-medium transition text-center text-slate-400 hover:text-slate-200" data-type="concave">
+                            凹透鏡 (Concave)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Section 2: Light Source Object Selection -->
+                <div>
+                    <label class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5 mb-2">
+                        <i class="fa-solid fa-lightbulb text-amber-400"></i> 發光光源物體
+                    </label>
+                    <div class="grid grid-cols-3 gap-1.5 p-1 bg-slate-900/80 rounded-xl border border-slate-800">
+                        <button class="obj-btn px-2 py-1.5 rounded-lg text-xs font-medium transition text-center bg-cyan-500/20 text-cyan-300 border border-cyan-500/40" data-type="F">
+                            字母 F
+                        </button>
+                        <button class="obj-btn px-2 py-1.5 rounded-lg text-xs font-medium transition text-center text-slate-400 hover:text-slate-200" data-type="candle">
+                            蠟燭火焰
+                        </button>
+                        <button class="obj-btn px-2 py-1.5 rounded-lg text-xs font-medium transition text-center text-slate-400 hover:text-slate-200" data-type="arrow">
+                            三色箭頭
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Section 3: Optics Sliders (f, u, ho, D, v_screen) -->
+                <div class="space-y-3 pt-2 border-t border-slate-800">
+                    
+                    <!-- Focal Length f -->
+                    <div class="space-y-1">
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="font-bold text-slate-200 flex items-center gap-1.5">
+                                <i class="fa-solid fa-bullseye text-cyan-400"></i> 焦距 ($f$)
+                            </span>
+                            <span id="val-f" class="font-mono text-cyan-300 font-bold bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-800">15.0 cm</span>
+                        </div>
+                        <input type="range" id="slider-f" min="5" max="30" value="15" step="0.5" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer">
+                    </div>
+
+                    <!-- Object Distance u -->
+                    <div class="space-y-1">
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="font-bold text-slate-200 flex items-center gap-1.5">
+                                <i class="fa-solid fa-arrows-left-right text-amber-400"></i> 物距 ($u$)
+                            </span>
+                            <span id="val-u" class="font-mono text-amber-300 font-bold bg-amber-950/60 px-2 py-0.5 rounded border border-amber-800">40.0 cm</span>
+                        </div>
+                        <input type="range" id="slider-u" min="5" max="80" value="40" step="0.5" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer">
+                    </div>
+
+                    <!-- Object Height h_o -->
+                    <div class="space-y-1">
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="font-bold text-slate-200 flex items-center gap-1.5">
+                                <i class="fa-solid fa-arrows-up-down text-emerald-400"></i> 物高 ($h_o$)
+                            </span>
+                            <span id="val-ho" class="font-mono text-emerald-300 font-bold bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800">6.0 cm</span>
+                        </div>
+                        <input type="range" id="slider-ho" min="2" max="10" value="6" step="0.5" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer">
+                    </div>
+
+                    <!-- Lens Aperture Diameter D -->
+                    <div class="space-y-1">
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="font-bold text-slate-200 flex items-center gap-1.5">
+                                <i class="fa-solid fa-circle text-purple-400"></i> 透鏡孔徑 ($D$)
+                            </span>
+                            <span id="val-D" class="font-mono text-purple-300 font-bold bg-purple-950/60 px-2 py-0.5 rounded border border-purple-800">50 mm</span>
+                        </div>
+                        <input type="range" id="slider-D" min="20" max="80" value="50" step="2" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer">
+                    </div>
+
+                    <!-- Screen Distance v_screen & Auto-Focus Button -->
+                    <div class="space-y-1 pt-1">
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="font-bold text-slate-200 flex items-center gap-1.5">
+                                <i class="fa-solid fa-tv text-rose-400"></i> 屏幕位置 ($v_{screen}$)
+                            </span>
+                            <span id="val-vscreen" class="font-mono text-rose-300 font-bold bg-rose-950/60 px-2 py-0.5 rounded border border-rose-800">24.0 cm</span>
+                        </div>
+                        <input type="range" id="slider-vscreen" min="5" max="100" value="24" step="0.5" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer">
+
+                        <button id="btn-autofocus" class="w-full mt-1.5 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold text-xs shadow-md transition flex items-center justify-center gap-1.5">
+                            <i class="fa-solid fa-crosshairs"></i> 一鍵自動對焦 (Auto Focus)
+                        </button>
+                    </div>
+
+                </div>
+
+                <!-- Section 4: Visual Toggles & View Modes -->
+                <div class="space-y-2 pt-2 border-t border-slate-800">
+                    <label class="text-xs font-bold text-slate-300 uppercase tracking-wider block">光路視覺與顯示選項</label>
+
+                    <div class="grid grid-cols-2 gap-1.5 text-[11px]">
+                        <label class="flex items-center gap-1.5 p-1.5 rounded-lg bg-slate-900/60 border border-slate-800 cursor-pointer">
+                            <input type="checkbox" id="toggle-rays" checked class="accent-cyan-500 rounded">
+                            <span>三條主特徵光線</span>
+                        </label>
+                        <label class="flex items-center gap-1.5 p-1.5 rounded-lg bg-slate-900/60 border border-slate-800 cursor-pointer">
+                            <input type="checkbox" id="toggle-cone" checked class="accent-cyan-500 rounded">
+                            <span>滿孔徑聚焦光錐</span>
+                        </label>
+                        <label class="flex items-center gap-1.5 p-1.5 rounded-lg bg-slate-900/60 border border-slate-800 cursor-pointer">
+                            <input type="checkbox" id="toggle-virtual" checked class="accent-cyan-500 rounded">
+                            <span>虛像反向延長線</span>
+                        </label>
+                        <label class="flex items-center gap-1.5 p-1.5 rounded-lg bg-slate-900/60 border border-slate-800 cursor-pointer">
+                            <input type="checkbox" id="toggle-nodes" checked class="accent-cyan-500 rounded">
+                            <span>標註節點 (F, 2F, O)</span>
+                        </label>
+                    </div>
+
+                    <!-- Camera Views -->
+                    <div class="grid grid-cols-2 gap-1.5 text-xs pt-1">
+                        <button class="cam-btn px-2 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-200 transition text-left flex items-center gap-1.5" data-view="orbit">
+                            <i class="fa-solid fa-cube text-cyan-400"></i> 3D 自由視角
+                        </button>
+                        <button class="cam-btn px-2 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-200 transition text-left flex items-center gap-1.5" data-view="side">
+                            <i class="fa-solid fa-border-left text-amber-400"></i> 正側 2D 光路
+                        </button>
+                        <button class="cam-btn px-2 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-200 transition text-left flex items-center gap-1.5" data-view="top">
+                            <i class="fa-solid fa-border-top-left text-emerald-400"></i> 俯視圖
+                        </button>
+                        <button class="cam-btn px-2 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-200 transition text-left flex items-center gap-1.5" data-view="screen">
+                            <i class="fa-solid fa-tv text-purple-400"></i> 螢幕正視圖
+                        </button>
+                    </div>
+                </div>
+
+            </aside>
+
+            <!-- Real-time HUD & Screen Inset Box (Right) -->
+            <div class="w-full md:w-80 flex flex-col gap-3 pointer-events-auto">
+
+                <!-- 2D Screen Live Projection Box -->
+                <div class="glass-panel rounded-2xl p-3 shadow-2xl flex flex-col gap-2">
+                    <div class="flex justify-between items-center text-xs border-b border-slate-800 pb-2">
+                        <span class="font-bold text-slate-200 flex items-center gap-1.5">
+                            <i class="fa-solid fa-expand text-cyan-400"></i> 屏幕成像實時 2D 觀察
+                        </span>
+                        <span id="screen-status-tag" class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">已對焦</span>
+                    </div>
+
+                    <!-- Canvas Container for 2D Screen Inset -->
+                    <div class="relative w-full aspect-square rounded-xl overflow-hidden bg-slate-950 border border-slate-800 flex items-center justify-center">
+                        <canvas id="screen-inset-canvas" class="w-full h-full object-contain"></canvas>
+                        <!-- Center Crosshair overlay -->
+                        <div class="absolute inset-0 pointer-events-none flex items-center justify-center">
+                            <div class="w-full h-[1px] bg-slate-800/40"></div>
+                            <div class="h-full w-[1px] bg-slate-800/40 absolute"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Optics Physics HUD Panel -->
+                <div class="glass-panel rounded-2xl p-4 shadow-2xl flex flex-col gap-3 text-xs">
+                    <div class="font-bold text-slate-200 border-b border-slate-800 pb-2 flex items-center justify-between">
+                        <span class="flex items-center gap-1.5">
+                            <i class="fa-solid fa-calculator text-cyan-400"></i> 光學實時數據 (Physics HUD)
+                        </span>
+                        <span class="text-[10px] text-cyan-400 font-mono">\frac{1}{f} = \frac{1}{u} + \frac{1}{v}</span>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2 text-slate-300">
+                        <div class="bg-slate-900/60 p-2 rounded-xl border border-slate-800">
+                            <div class="text-[10px] text-slate-400">理論像距 ($v_{focus}$)</div>
+                            <div id="hud-v" class="text-base font-mono font-bold text-cyan-300">24.0 cm</div>
+                        </div>
+                        <div class="bg-slate-900/60 p-2 rounded-xl border border-slate-800">
+                            <div class="text-[10px] text-slate-400">放大率 ($m = -v/u$)</div>
+                            <div id="hud-m" class="text-base font-mono font-bold text-amber-300">-0.60 ×</div>
+                        </div>
+                    </div>
+
+                    <!-- Image Properties Badges -->
+                    <div class="space-y-1.5 pt-1">
+                        <div class="flex justify-between items-center bg-slate-900/60 p-2 rounded-xl border border-slate-800">
+                            <span class="text-slate-400">成像性質：</span>
+                            <span id="badge-nature" class="px-2 py-0.5 rounded font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
+                                倒立縮小實像
+                            </span>
+                        </div>
+
+                        <div class="flex justify-between items-center bg-slate-900/60 p-2 rounded-xl border border-slate-800">
+                            <span class="text-slate-400">像高 ($h_i$)：</span>
+                            <span id="hud-hi" class="font-mono font-bold text-emerald-400">-3.60 cm</span>
+                        </div>
+
+                        <div class="flex justify-between items-center bg-slate-900/60 p-2 rounded-xl border border-slate-800">
+                            <span class="text-slate-400">屏幕對焦狀態：</span>
+                            <span id="hud-focus-state" class="font-bold text-emerald-400">清晰對焦 (In Focus)</span>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Optical Insight Tip -->
+                    <div id="hud-insight-box" class="p-2.5 rounded-xl bg-cyan-950/40 border border-cyan-800/50 text-[11px] text-cyan-200 leading-relaxed">
+                        <i class="fa-solid fa-circle-info text-cyan-400 mr-1"></i>
+                        <span id="hud-insight-text">當物距 $u > 2f$ 時，光線經凸透鏡折射後會聚於另一側的 $f$ 與 $2f$ 之間，形成倒立縮小的實像。</span>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- Footer -->
+        <footer class="text-center text-[10px] text-slate-500 pointer-events-auto">
+            透鏡成像 3D 模擬器 &copy; 2026 | 光的折射與薄透鏡成像實驗
+        </footer>
+    </div>
+
+    <!-- Modal 1: Physics Help Modal -->
+    <div id="modal-help" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 hidden">
+        <div class="glass-panel w-full max-w-2xl rounded-2xl p-6 shadow-2xl border border-slate-700/60 flex flex-col max-h-[85vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3 mb-4">
+                <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-graduation-cap text-cyan-400"></i>
+                    透鏡成像 (Lens Optics) 物理原理與特徵光線
+                </h2>
+                <button id="btn-close-help" class="text-slate-400 hover:text-white transition text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="space-y-4 text-xs text-slate-300 leading-relaxed">
+                <div class="bg-slate-900/70 p-3.5 rounded-xl border border-slate-800">
+                    <h3 class="font-bold text-cyan-300 text-sm mb-1">1. 薄透鏡成像公式 (Thin Lens Equation)</h3>
+                    <p>物距 $u$（物體到鏡心距離）、像距 $v$（像到鏡心距離）與焦距 $f$ 的關係式：</p>
+                    <div class="my-2 p-2 bg-slate-950 rounded font-mono text-center text-cyan-300 text-sm">
+                        \frac{1}{f} = \frac{1}{u} + \frac{1}{v} \quad \implies \quad v = \frac{f \cdot u}{u - f}
+                    </div>
+                    <ul class="list-disc list-inside space-y-1 text-slate-400">
+                        <li><b>符號規定：</b>凸透鏡 $f > 0$；凹透鏡 $f < 0$。</li>
+                        <li><b>實像 (Real Image, $v > 0$)：</b>光線實際會聚，可在屏幕上接收。</li>
+                        <li><b>虛像 (Virtual Image, $v < 0$)：</b>光線發散，由發散光的反向延長線交會形成，無法在屏幕上接收，需眼睛透過透鏡觀察。</li>
+                    </ul>
+                </div>
+
+                <div class="bg-slate-900/70 p-3.5 rounded-xl border border-slate-800">
+                    <h3 class="font-bold text-amber-300 text-sm mb-1">2. 三條特徵光線 (Principal Rays)</h3>
+                    <ol class="list-decimal list-inside space-y-1.5 text-slate-300">
+                        <li><b>平行光軸線：</b>平行於主光軸射入的光線，經透鏡折射後通過像側焦點 $F'$（凹透鏡為沿物側焦點 $F$ 發散）。</li>
+                        <li><b>過鏡心線：</b>通過透鏡中心 $O$ 的光線，傳播方向不發生偏折。</li>
+                        <li><b>過焦點線：</b>通過（或指向）焦點 $F$ 射入的光線，經透鏡折射後平行於主光軸射出。</li>
+                    </ol>
+                </div>
+
+                <div class="bg-slate-900/70 p-3.5 rounded-xl border border-slate-800">
+                    <h3 class="font-bold text-emerald-300 text-sm mb-1">3. 彌散圈與景深模糊 (Circle of Confusion)</h3>
+                    <p>當屏幕位置 $v_{screen}$ 剛好等於理論焦距 $v_{focus}$ 時，成像最銳利。若屏幕偏離對焦點，會聚或發散的光錐在屏幕上截出一個圓形光斑（彌散圈 $r_{blur}$），孔徑 $D$ 越大，不對焦時的模糊程度越顯著。</p>
+                </div>
+            </div>
+
+            <div class="mt-5 pt-3 border-t border-slate-800 text-right">
+                <button id="btn-close-help-2" class="px-4 py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold rounded-xl transition text-xs">
+                    了解原理，開始實驗
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 2: Preset Scenarios Modal -->
+    <div id="modal-presets" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 hidden">
+        <div class="glass-panel w-full max-w-md rounded-2xl p-5 shadow-2xl border border-slate-700/60 flex flex-col">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3 mb-3">
+                <h2 class="text-base font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-wand-magic-sparkles text-amber-400"></i>
+                    快速選擇經典光學成像情境
+                </h2>
+                <button id="btn-close-presets" class="text-slate-400 hover:text-white transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="space-y-2 text-xs">
+                <button class="preset-card w-full p-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-800 text-left transition flex items-center justify-between group" data-preset="u-gt-2f">
+                    <div>
+                        <div class="font-bold text-cyan-300 group-hover:text-cyan-200">1. $u > 2f$ (倒立縮小實像)</div>
+                        <div class="text-[11px] text-slate-400">照相機原理：$u=40\text{cm}, f=15\text{cm} \implies v=24\text{cm}$</div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-slate-500 group-hover:text-cyan-400"></i>
+                </button>
+
+                <button class="preset-card w-full p-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-800 text-left transition flex items-center justify-between group" data-preset="u-eq-2f">
+                    <div>
+                        <div class="font-bold text-amber-300 group-hover:text-amber-200">2. $u = 2f$ (倒立等大實像)</div>
+                        <div class="text-[11px] text-slate-400">等大基準點：$u=30\text{cm}, f=15\text{cm} \implies v=30\text{cm}, m=-1.0$</div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-slate-500 group-hover:text-amber-400"></i>
+                </button>
+
+                <button class="preset-card w-full p-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-800 text-left transition flex items-center justify-between group" data-preset="f-lt-u-lt-2f">
+                    <div>
+                        <div class="font-bold text-emerald-300 group-hover:text-emerald-200">3. $f < u < 2f$ (倒立放大實像)</div>
+                        <div class="text-[11px] text-slate-400">投影機原理：$u=20\text{cm}, f=15\text{cm} \implies v=60\text{cm}, m=-3.0$</div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-slate-500 group-hover:text-emerald-400"></i>
+                </button>
+
+                <button class="preset-card w-full p-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-800 text-left transition flex items-center justify-between group" data-preset="u-eq-f">
+                    <div>
+                        <div class="font-bold text-rose-300 group-hover:text-rose-200">4. $u = f$ (不成像 / 平行光)</div>
+                        <div class="text-[11px] text-slate-400">探照燈原理：物體放在焦點上，折射光呈平行光束，無對焦點</div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-slate-500 group-hover:text-rose-400"></i>
+                </button>
+
+                <button class="preset-card w-full p-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-800 text-left transition flex items-center justify-between group" data-preset="u-lt-f">
+                    <div>
+                        <div class="font-bold text-purple-300 group-hover:text-purple-200">5. $u < f$ (正立放大虛像 / 放大鏡)</div>
+                        <div class="text-[11px] text-slate-400">放大鏡原理：$u=10\text{cm}, f=15\text{cm} \implies v=-30\text{cm}$ (虛像)</div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-slate-500 group-hover:text-purple-400"></i>
+                </button>
+
+                <button class="preset-card w-full p-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-800 text-left transition flex items-center justify-between group" data-preset="concave-lens">
+                    <div>
+                        <div class="font-bold text-cyan-300 group-hover:text-cyan-200">6. 凹透鏡成像 (正立縮小虛像)</div>
+                        <div class="text-[11px] text-slate-400">近視眼鏡原理：發散透鏡，永遠形成正立縮小的虛像</div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-slate-500 group-hover:text-cyan-400"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- JavaScript Physics Simulation Engine -->
+    <script>
+        // --- Global Simulation Parameters State ---
+        const params = {
+            lensType: 'convex', // 'convex' or 'concave'
+            f: 15.0,            // focal magnitude (cm)
+            u: 40.0,            // object distance u (cm)
+            ho: 6.0,            // object height h_o (cm)
+            aperture: 50.0,     // lens diameter D (mm)
+            vScreen: 24.0,      // screen position v_screen (cm)
+            objectType: 'F',    // 'F', 'candle', 'arrow'
+            showPrincipalRays: true,
+            showRayCone: true,
+            showVirtualExtensions: true,
+            showNodeMarkers: true,
+            activeView: 'orbit'
+        };
+
+        // Key point colors for multi-point ray tracing
+        const keyPointColors = [
+            0xff0055, // Red (Top Tip)
+            0x00ffcc, // Cyan (Mid)
+            0x0088ff  // Blue (Base)
+        ];
+
+        // Three.js Globals
+        let scene, camera, renderer, controls;
+        let opticalBenchGroup, objectGroup, lensGroup, screenGroup, virtualGhostGroup, nodeMarkersGroup;
+        let principalRaysMesh, rayConeMesh, virtualRaysMesh;
+        let screenCanvas, screenTexture, insetCanvas;
+        let candleFlameLight, candleFlameMesh;
+        let lensMesh;
+
+        // Calculated physics outcomes
+        let physics = {
+            signedF: 15.0,
+            vFocus: 24.0,
+            m: -0.6,
+            hi: -3.6,
+            isReal: true,
+            isUpright: false,
+            focusStatus: 'In Focus'
+        };
+
+        // Initialize App on Window Load
+        window.addEventListener('load', () => {
+            init2DScreenCanvas();
+            init3DScene();
+            setupUIEventListeners();
+            recalculatePhysics();
+            updateSimulation();
+            animate();
+        });
+
+        // --- 1. Offscreen Screen Canvas & Inset Setup ---
+        function init2DScreenCanvas() {
+            screenCanvas = document.createElement('canvas');
+            screenCanvas.width = 512;
+            screenCanvas.height = 512;
+
+            insetCanvas = document.getElementById('screen-inset-canvas');
+            insetCanvas.width = 300;
+            insetCanvas.height = 300;
+
+            screenTexture = new THREE.CanvasTexture(screenCanvas);
+            screenTexture.minFilter = THREE.LinearFilter;
+            screenTexture.magFilter = THREE.LinearFilter;
+        }
+
+        // --- 2. Three.js 3D Physics Scene Setup ---
+        function init3DScene() {
+            const container = document.getElementById('canvas-container');
+
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x080c14);
+            scene.fog = new THREE.FogExp2(0x080c14, 0.0015);
+
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(65, 45, 85);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(renderer.domElement);
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.maxDistance = 350;
+            controls.minDistance = 15;
+            controls.target.set(0, 16, 0);
+
+            // Lighting Setup
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
+            dirLight.position.set(40, 90, 50);
+            dirLight.castShadow = true;
+            scene.add(dirLight);
+
+            const rimLight1 = new THREE.PointLight(0x06b6d4, 1.2, 180);
+            rimLight1.position.set(-80, 50, -100);
+            scene.add(rimLight1);
+
+            const rimLight2 = new THREE.PointLight(0xf59e0b, 0.8, 180);
+            rimLight2.position.set(80, -20, 100);
+            scene.add(rimLight2);
+
+            // Build Groups
+            buildOpticalBench();
+            buildLensMeshGroup();
+            buildScreenMesh();
+            buildLightSourceObjects();
+            buildVirtualGhostObject();
+            buildNodeMarkers();
+            initRayLines();
+
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        // --- Optical Rail Bench & Cm Ruler ---
+        function buildOpticalBench() {
+            opticalBenchGroup = new THREE.Group();
+
+            // Track Base
+            const trackGeo = new THREE.BoxGeometry(26, 1.2, 360);
+            const trackTex = createTrackRulerTexture();
+            const trackMat = new THREE.MeshStandardMaterial({ map: trackTex, roughness: 0.4, metalness: 0.7 });
+            const trackMesh = new THREE.Mesh(trackGeo, trackMat);
+            trackMesh.position.y = -0.6;
+            trackMesh.receiveShadow = true;
+            opticalBenchGroup.add(trackMesh);
+
+            // Metallic Dual Rails
+            const railGeo = new THREE.CylinderGeometry(0.5, 0.5, 360, 16);
+            const railMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.9, roughness: 0.2 });
+
+            const railLeft = new THREE.Mesh(railGeo, railMat);
+            railLeft.rotation.x = Math.PI / 2;
+            railLeft.position.set(-9, 0.2, 0);
+            opticalBenchGroup.add(railLeft);
+
+            const railRight = new THREE.Mesh(railGeo, railMat);
+            railRight.rotation.x = Math.PI / 2;
+            railRight.position.set(9, 0.2, 0);
+            opticalBenchGroup.add(railRight);
+
+            // Floor Grid
+            const gridHelper = new THREE.GridHelper(500, 50, 0x1e293b, 0x0f172a);
+            gridHelper.position.y = -1.2;
+            opticalBenchGroup.add(gridHelper);
+
+            scene.add(opticalBenchGroup);
+        }
+
+        function createTrackRulerTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 2048;
+            const ctx = canvas.getContext('2d');
+
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Optical Axis Line
+            ctx.fillStyle = '#0284c7';
+            ctx.fillRect(canvas.width / 2 - 3, 0, 6, canvas.height);
+
+            const pxPerCm = canvas.height / 360.0;
+            const centerPx = canvas.height / 2; // Z = 0 Lens Center
+
+            ctx.fillStyle = '#38bdf8';
+            ctx.font = 'bold 22px monospace';
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+
+            for (let cm = -170; cm <= 170; cm += 1) {
+                const y = centerPx + cm * pxPerCm;
+
+                if (cm % 10 === 0) {
+                    ctx.fillStyle = '#38bdf8';
+                    ctx.fillRect(20, y - 1.5, 45, 3);
+                    ctx.fillRect(canvas.width - 65, y - 1.5, 45, 3);
+                    if (cm % 20 === 0) {
+                        ctx.fillText(`${cm > 0 ? '+' : ''}${cm} cm`, 130, y);
+                    }
+                } else if (cm % 5 === 0) {
+                    ctx.fillStyle = '#0284c7';
+                    ctx.fillRect(25, y - 1, 30, 2);
+                    ctx.fillRect(canvas.width - 55, y - 1, 30, 2);
+                }
+            }
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.wrapS = THREE.ClampToEdgeWrapping;
+            texture.wrapT = THREE.ClampToEdgeWrapping;
+            return texture;
+        }
+
+        // --- Lens Group & Glass Mesh ---
+        function buildLensMeshGroup() {
+            lensGroup = new THREE.Group();
+            lensGroup.position.set(0, 16, 0); // Optical axis height Y = 16
+
+            // Lens Holder Metallic Stand
+            const standBaseGeo = new THREE.BoxGeometry(22, 1.5, 6);
+            const standMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.85, roughness: 0.2 });
+            const standBase = new THREE.Mesh(standBaseGeo, standMat);
+            standBase.position.y = -15.25;
+            lensGroup.add(standBase);
+
+            const pillarGeo = new THREE.CylinderGeometry(0.7, 0.7, 14, 16);
+            const pillar = new THREE.Mesh(pillarGeo, standMat);
+            pillar.position.y = -8;
+            lensGroup.add(pillar);
+
+            scene.add(lensGroup);
+            update3DLensGeometry();
+        }
+
+        // Dynamically rebuild Biconvex or Biconcave Glass Mesh
+        function update3DLensGeometry() {
+            if (lensMesh) {
+                lensGroup.remove(lensMesh);
+                lensMesh.geometry.dispose();
+            }
+
+            const radius = (params.aperture / 10.0) / 2.0; // cm
+            const isConvex = (params.lensType === 'convex');
+
+            let points = [];
+            const segments = 24;
+
+            if (isConvex) {
+                // Biconvex Lens profile curve
+                const maxThickness = 0.8 + radius * 0.25;
+                const minThickness = 0.2;
+                for (let i = 0; i <= segments; i++) {
+                    const r = (i / segments) * radius;
+                    const cosVal = Math.cos((r / radius) * (Math.PI / 2));
+                    const t = minThickness + (maxThickness - minThickness) * cosVal;
+                    points.push(new THREE.Vector2(r, t / 2.0));
+                }
+                for (let i = segments; i >= 0; i--) {
+                    const r = (i / segments) * radius;
+                    const cosVal = Math.cos((r / radius) * (Math.PI / 2));
+                    const t = minThickness + (maxThickness - minThickness) * cosVal;
+                    points.push(new THREE.Vector2(r, -t / 2.0));
+                }
+            } else {
+                // Biconcave Lens profile curve
+                const centerThickness = 0.25;
+                const edgeThickness = 0.8 + radius * 0.25;
+                for (let i = 0; i <= segments; i++) {
+                    const r = (i / segments) * radius;
+                    const sinVal = Math.sin((r / radius) * (Math.PI / 2));
+                    const t = centerThickness + (edgeThickness - centerThickness) * sinVal;
+                    points.push(new THREE.Vector2(r, t / 2.0));
+                }
+                for (let i = segments; i >= 0; i--) {
+                    const r = (i / segments) * radius;
+                    const sinVal = Math.sin((r / radius) * (Math.PI / 2));
+                    const t = centerThickness + (edgeThickness - centerThickness) * sinVal;
+                    points.push(new THREE.Vector2(r, -t / 2.0));
+                }
+            }
+
+            const latheGeo = new THREE.LatheGeometry(points, 48);
+            latheGeo.computeVertexNormals();
+
+            // Glass Refraction Physical Material
+            const glassMat = new THREE.MeshPhysicalMaterial({
+                color: 0x38bdf8,
+                transmission: 0.92,
+                opacity: 1,
+                transparent: true,
+                roughness: 0.05,
+                metalness: 0.0,
+                ior: 1.5, // Refraction index of glass
+                thickness: radius * 0.5,
+                reflectivity: 0.9,
+                clearcoat: 1.0,
+                clearcoatRoughness: 0.1,
+                side: THREE.DoubleSide
+            });
+
+            lensMesh = new THREE.Mesh(latheGeo, glassMat);
+            lensMesh.rotation.x = Math.PI / 2; // Orient along Z optical axis
+            lensGroup.add(lensMesh);
+
+            // Ring frame around lens
+            const rimGeo = new THREE.TorusGeometry(radius + 0.2, 0.2, 16, 48);
+            const rimMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.8, roughness: 0.2 });
+            const rimMesh = new THREE.Mesh(rimGeo, rimMat);
+            lensMesh.add(rimMesh);
+        }
+
+        // --- Screen Mesh at Z = +v_screen ---
+        function buildScreenMesh() {
+            screenGroup = new THREE.Group();
+
+            const baseGeo = new THREE.BoxGeometry(24, 1.2, 8);
+            const baseMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.8, roughness: 0.3 });
+            const baseMesh = new THREE.Mesh(baseGeo, baseMat);
+            baseMesh.position.y = 0.6;
+            screenGroup.add(baseMesh);
+
+            const pillarGeo = new THREE.CylinderGeometry(0.8, 0.8, 12, 16);
+            const pillar = new THREE.Mesh(pillarGeo, baseMat);
+            pillar.position.set(0, 6, 0);
+            screenGroup.add(pillar);
+
+            const frameGeo = new THREE.BoxGeometry(32, 32, 0.6);
+            const frameMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.5 });
+            const frame = new THREE.Mesh(frameGeo, frameMat);
+            frame.position.set(0, 16, 0);
+            screenGroup.add(frame);
+
+            // Projection Fabric Face with CanvasTexture
+            const screenFaceGeo = new THREE.PlaneGeometry(30, 30);
+            const screenFaceMat = new THREE.MeshBasicMaterial({
+                map: screenTexture,
+                side: THREE.FrontSide
+            });
+            const screenFace = new THREE.Mesh(screenFaceGeo, screenFaceMat);
+            screenFace.position.set(0, 16, -0.32);
+            screenFace.rotation.y = Math.PI; // Face towards lens
+            screenGroup.add(screenFace);
+
+            screenGroup.position.z = params.vScreen;
+            scene.add(screenGroup);
+        }
+
+        // --- Light Source Objects at Z = -u ---
+        function buildLightSourceObjects() {
+            objectGroup = new THREE.Group();
+
+            const baseGeo = new THREE.BoxGeometry(20, 1.2, 8);
+            const baseMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.8 });
+            const baseMesh = new THREE.Mesh(baseGeo, baseMat);
+            baseMesh.position.y = 0.6;
+            objectGroup.add(baseMesh);
+
+            const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 10, 16), baseMat);
+            pillar.position.set(0, 5, 0);
+            objectGroup.add(pillar);
+
+            // Objects Subgroups
+            const fGroup = new THREE.Group(); fGroup.name = "obj_F";
+            buildLetterFMesh(fGroup); objectGroup.add(fGroup);
+
+            const candleGroup = new THREE.Group(); candleGroup.name = "obj_candle";
+            buildCandleMesh(candleGroup); objectGroup.add(candleGroup);
+
+            const arrowGroup = new THREE.Group(); arrowGroup.name = "obj_arrow";
+            buildArrowMesh(arrowGroup); objectGroup.add(arrowGroup);
+
+            objectGroup.position.z = -params.u;
+            scene.add(objectGroup);
+        }
+
+        function buildLetterFMesh(parent) {
+            const matCyan = new THREE.MeshStandardMaterial({ color: 0x06b6d4, emissive: 0x0891b2, emissiveIntensity: 0.8 });
+            const matAmber = new THREE.MeshStandardMaterial({ color: 0xf59e0b, emissive: 0xd97706, emissiveIntensity: 0.8 });
+
+            const spine = new THREE.Mesh(new THREE.BoxGeometry(1.4, 14, 1.4), matCyan);
+            spine.name = "spine";
+            spine.position.set(-3.5, 16 + 7, 0);
+            parent.add(spine);
+
+            const topArm = new THREE.Mesh(new THREE.BoxGeometry(7, 1.4, 1.4), matCyan);
+            topArm.name = "topArm";
+            topArm.position.set(0, 16 + 13.3, 0);
+            parent.add(topArm);
+
+            const midArm = new THREE.Mesh(new THREE.BoxGeometry(4.8, 1.4, 1.4), matAmber);
+            midArm.name = "midArm";
+            midArm.position.set(-1.1, 16 + 7, 0);
+            parent.add(midArm);
+
+            addKeyPointMarker(parent, "pt_top", 3.5, 16 + 13.3, 0, keyPointColors[0]);
+            addKeyPointMarker(parent, "pt_mid", 1.3, 16 + 7, 0, keyPointColors[1]);
+            addKeyPointMarker(parent, "pt_base", -3.5, 16 + 0.7, 0, keyPointColors[2]);
+        }
+
+        function buildCandleMesh(parent) {
+            const waxMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.3 });
+            const wax = new THREE.Mesh(new THREE.CylinderGeometry(1.8, 2.0, 10, 24), waxMat);
+            wax.name = "wax";
+            wax.position.set(0, 16 + 5, 0);
+            parent.add(wax);
+
+            const wickMat = new THREE.MeshStandardMaterial({ color: 0x1e293b });
+            const wick = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 1.2, 8), wickMat);
+            wick.name = "wick";
+            wick.position.set(0, 16 + 10.6, 0);
+            parent.add(wick);
+
+            const flameMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b });
+            candleFlameMesh = new THREE.Mesh(new THREE.ConeGeometry(1.5, 4.0, 16), flameMat);
+            candleFlameMesh.name = "flame";
+            candleFlameMesh.position.set(0, 16 + 12.5, 0);
+            parent.add(candleFlameMesh);
+
+            candleFlameLight = new THREE.PointLight(0xf59e0b, 1.8, 40);
+            candleFlameLight.position.set(0, 16 + 12.5, 0);
+            parent.add(candleFlameLight);
+
+            addKeyPointMarker(parent, "pt_top", 0, 16 + 14.5, 0, keyPointColors[0]);
+            addKeyPointMarker(parent, "pt_mid", 0, 16 + 10.0, 0, keyPointColors[1]);
+            addKeyPointMarker(parent, "pt_base", 0, 16 + 0.5, 0, keyPointColors[2]);
+        }
+
+        function buildArrowMesh(parent) {
+            const matRed = new THREE.MeshStandardMaterial({ color: 0xf43f5e, emissive: 0xe11d48, emissiveIntensity: 0.6 });
+            const matGreen = new THREE.MeshStandardMaterial({ color: 0x10b981, emissive: 0x059669, emissiveIntensity: 0.6 });
+            const matBlue = new THREE.MeshStandardMaterial({ color: 0x3b82f6, emissive: 0x2563eb, emissiveIntensity: 0.6 });
+
+            const head = new THREE.Mesh(new THREE.ConeGeometry(3.2, 4.5, 20), matRed);
+            head.name = "head";
+            head.position.set(0, 16 + 12.2, 0);
+            parent.add(head);
+
+            const shaft = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 8, 20), matGreen);
+            shaft.name = "shaft";
+            shaft.position.set(0, 16 + 6, 0);
+            parent.add(shaft);
+
+            const baseBar = new THREE.Mesh(new THREE.BoxGeometry(6.5, 1.4, 1.4), matBlue);
+            baseBar.name = "baseBar";
+            baseBar.position.set(0, 16 + 0.7, 0);
+            parent.add(baseBar);
+
+            addKeyPointMarker(parent, "pt_top", 0, 16 + 14.5, 0, keyPointColors[0]);
+            addKeyPointMarker(parent, "pt_mid", 0, 16 + 6.0, 0, keyPointColors[1]);
+            addKeyPointMarker(parent, "pt_base", 0, 16 + 0.7, 0, keyPointColors[2]);
+        }
+
+        function addKeyPointMarker(parent, nameStr, x, y, z, colorHex) {
+            const geo = new THREE.SphereGeometry(0.5, 16, 16);
+            const mat = new THREE.MeshBasicMaterial({ color: colorHex });
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.name = nameStr;
+            mesh.position.set(x, y, z);
+            parent.add(mesh);
+        }
+
+        // Dynamically scale light source object according to slider h_o
+        function updateObjectScaleAndPosition() {
+            const scaleY = params.ho / 14.0; // Reference height 14cm
+            const scaleXZ = Math.min(1.5, Math.max(0.6, scaleY));
+
+            ['F', 'candle', 'arrow'].forEach(type => {
+                const group = objectGroup.getObjectByName(`obj_${type}`);
+                if (!group) return;
+                group.visible = (type === params.objectType);
+
+                if (type === 'F') {
+                    const spine = group.getObjectByName("spine");
+                    const topArm = group.getObjectByName("topArm");
+                    const midArm = group.getObjectByName("midArm");
+                    if (spine) {
+                        spine.scale.set(scaleXZ, scaleY, scaleXZ);
+                        spine.position.y = 16 + 7 * scaleY;
+                    }
+                    if (topArm) {
+                        topArm.scale.set(scaleXZ, scaleXZ, scaleXZ);
+                        topArm.position.y = 16 + 13.3 * scaleY;
+                    }
+                    if (midArm) {
+                        midArm.scale.set(scaleXZ, scaleXZ, scaleXZ);
+                        midArm.position.y = 16 + 7 * scaleY;
+                    }
+                    setMarkerPos(group, "pt_top", 3.5 * scaleXZ, 16 + 13.3 * scaleY, 0);
+                    setMarkerPos(group, "pt_mid", 1.3 * scaleXZ, 16 + 7 * scaleY, 0);
+                    setMarkerPos(group, "pt_base", -3.5 * scaleXZ, 16 + 0.7 * scaleY, 0);
+                } else if (type === 'candle') {
+                    const wax = group.getObjectByName("wax");
+                    const wick = group.getObjectByName("wick");
+                    const flame = group.getObjectByName("flame");
+                    if (wax) { wax.scale.set(scaleXZ, scaleY, scaleXZ); wax.position.y = 16 + 5 * scaleY; }
+                    if (wick) { wick.scale.set(scaleXZ, scaleY, scaleXZ); wick.position.y = 16 + 10.6 * scaleY; }
+                    if (flame) { flame.scale.set(scaleXZ, scaleY, scaleXZ); flame.position.y = 16 + 12.5 * scaleY; }
+                    setMarkerPos(group, "pt_top", 0, 16 + 14.5 * scaleY, 0);
+                    setMarkerPos(group, "pt_mid", 0, 16 + 10.0 * scaleY, 0);
+                    setMarkerPos(group, "pt_base", 0, 16 + 0.5 * scaleY, 0);
+                } else {
+                    const head = group.getObjectByName("head");
+                    const shaft = group.getObjectByName("shaft");
+                    const baseBar = group.getObjectByName("baseBar");
+                    if (head) { head.scale.set(scaleXZ, scaleY, scaleXZ); head.position.y = 16 + 12.2 * scaleY; }
+                    if (shaft) { shaft.scale.set(scaleXZ, scaleY, scaleXZ); shaft.position.y = 16 + 6 * scaleY; }
+                    if (baseBar) { baseBar.scale.set(scaleXZ, scaleXZ, scaleXZ); baseBar.position.y = 16 + 0.7 * scaleY; }
+                    setMarkerPos(group, "pt_top", 0, 16 + 14.5 * scaleY, 0);
+                    setMarkerPos(group, "pt_mid", 0, 16 + 6.0 * scaleY, 0);
+                    setMarkerPos(group, "pt_base", 0, 16 + 0.7 * scaleY, 0);
+                }
+            });
+        }
+
+        function setMarkerPos(group, nameStr, x, y, z) {
+            const marker = group.getObjectByName(nameStr);
+            if (marker) marker.position.set(x, y, z);
+        }
+
+        // --- 3D Virtual Image Ghost Mesh ---
+        function buildVirtualGhostObject() {
+            virtualGhostGroup = new THREE.Group();
+
+            const fGroup = new THREE.Group(); fGroup.name = "vobj_F";
+            buildLetterFGhostMesh(fGroup); virtualGhostGroup.add(fGroup);
+
+            const candleGroup = new THREE.Group(); candleGroup.name = "vobj_candle";
+            buildCandleGhostMesh(candleGroup); virtualGhostGroup.add(candleGroup);
+
+            const arrowGroup = new THREE.Group(); arrowGroup.name = "vobj_arrow";
+            buildArrowGhostMesh(arrowGroup); virtualGhostGroup.add(arrowGroup);
+
+            virtualGhostGroup.visible = false;
+            scene.add(virtualGhostGroup);
+        }
+
+        function createGhostMat(colorHex) {
+            return new THREE.MeshStandardMaterial({
+                color: colorHex,
+                transparent: true,
+                opacity: 0.55,
+                emissive: colorHex,
+                emissiveIntensity: 0.5,
+                depthWrite: false
+            });
+        }
+
+        function buildLetterFGhostMesh(parent) {
+            const mat = createGhostMat(0x22d3ee);
+            const spine = new THREE.Mesh(new THREE.BoxGeometry(1.4, 14, 1.4), mat); spine.name = "spine"; spine.position.set(-3.5, 16 + 7, 0); parent.add(spine);
+            const topArm = new THREE.Mesh(new THREE.BoxGeometry(7, 1.4, 1.4), mat); topArm.name = "topArm"; topArm.position.set(0, 16 + 13.3, 0); parent.add(topArm);
+            const midArm = new THREE.Mesh(new THREE.BoxGeometry(4.8, 1.4, 1.4), mat); midArm.name = "midArm"; midArm.position.set(-1.1, 16 + 7, 0); parent.add(midArm);
+        }
+
+        function buildCandleGhostMesh(parent) {
+            const mat = createGhostMat(0xf59e0b);
+            const wax = new THREE.Mesh(new THREE.CylinderGeometry(1.8, 2.0, 10, 24), mat); wax.name = "wax"; wax.position.set(0, 16 + 5, 0); parent.add(wax);
+            const flame = new THREE.Mesh(new THREE.ConeGeometry(1.5, 4.0, 16), mat); flame.name = "flame"; flame.position.set(0, 16 + 12.5, 0); parent.add(flame);
+        }
+
+        function buildArrowGhostMesh(parent) {
+            const mat = createGhostMat(0x34d399);
+            const head = new THREE.Mesh(new THREE.ConeGeometry(3.2, 4.5, 20), mat); head.name = "head"; head.position.set(0, 16 + 12.2, 0); parent.add(head);
+            const shaft = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 8, 20), mat); shaft.name = "shaft"; shaft.position.set(0, 16 + 6, 0); parent.add(shaft);
+        }
+
+        function updateVirtualGhostMesh() {
+            if (physics.isReal || !isFinite(physics.vFocus)) {
+                virtualGhostGroup.visible = false;
+                return;
+            }
+
+            virtualGhostGroup.visible = true;
+            virtualGhostGroup.position.z = physics.vFocus; // Negative Z (object side)
+
+            const m = physics.m; // Positive for upright virtual image
+            const absM = Math.abs(m);
+            const scaleY = (params.ho / 14.0) * absM;
+            const scaleXZ = scaleY;
+
+            ['F', 'candle', 'arrow'].forEach(type => {
+                const group = virtualGhostGroup.getObjectByName(`vobj_${type}`);
+                if (!group) return;
+                group.visible = (type === params.objectType);
+
+                if (type === 'F') {
+                    const spine = group.getObjectByName("spine");
+                    const topArm = group.getObjectByName("topArm");
+                    const midArm = group.getObjectByName("midArm");
+                    if (spine) { spine.scale.set(scaleXZ, scaleY, scaleXZ); spine.position.y = 16 + 7 * scaleY; }
+                    if (topArm) { topArm.scale.set(scaleXZ, scaleXZ, scaleXZ); topArm.position.y = 16 + 13.3 * scaleY; }
+                    if (midArm) { midArm.scale.set(scaleXZ, scaleXZ, scaleXZ); midArm.position.y = 16 + 7 * scaleY; }
+                } else if (type === 'candle') {
+                    const wax = group.getObjectByName("wax");
+                    const flame = group.getObjectByName("flame");
+                    if (wax) { wax.scale.set(scaleXZ, scaleY, scaleXZ); wax.position.y = 16 + 5 * scaleY; }
+                    if (flame) { flame.scale.set(scaleXZ, scaleY, scaleXZ); flame.position.y = 16 + 12.5 * scaleY; }
+                } else {
+                    const head = group.getObjectByName("head");
+                    const shaft = group.getObjectByName("shaft");
+                    if (head) { head.scale.set(scaleXZ, scaleY, scaleXZ); head.position.y = 16 + 12.2 * scaleY; }
+                    if (shaft) { shaft.scale.set(scaleXZ, scaleY, scaleXZ); shaft.position.y = 16 + 6 * scaleY; }
+                }
+            });
+        }
+
+        // --- Optical Bench Node Markers (F, 2F, O, F', 2F') ---
+        function buildNodeMarkers() {
+            nodeMarkersGroup = new THREE.Group();
+            scene.add(nodeMarkersGroup);
+        }
+
+        function updateNodeMarkers() {
+            while(nodeMarkersGroup.children.length > 0) {
+                nodeMarkersGroup.remove(nodeMarkersGroup.children[0]);
+            }
+
+            if (!params.showNodeMarkers) return;
+
+            const fMag = params.f;
+            const isConvex = (params.lensType === 'convex');
+
+            // Nodes along Z axis:
+            // Object side: -2f, -f
+            // Lens center: 0
+            // Image side: +f, +2f
+            const nodes = [
+                { z: -2 * fMag, label: isConvex ? "2F" : "2F_1", color: 0xf59e0b },
+                { z: -fMag, label: isConvex ? "F" : "F_1 (虛焦點)", color: 0x38bdf8 },
+                { z: 0, label: "鏡心 O", color: 0x10b981 },
+                { z: fMag, label: isConvex ? "F'" : "F_2", color: 0x38bdf8 },
+                { z: 2 * fMag, label: isConvex ? "2F'" : "2F_2", color: 0xf59e0b }
+            ];
+
+            nodes.forEach(node => {
+                const pGroup = new THREE.Group();
+                pGroup.position.set(0, 0, node.z);
+
+                // Pillar
+                const pillarGeo = new THREE.CylinderGeometry(0.2, 0.2, 16, 12);
+                const pillarMat = new THREE.MeshBasicMaterial({ color: node.color, transparent: true, opacity: 0.6 });
+                const pillar = new THREE.Mesh(pillarGeo, pillarMat);
+                pillar.position.y = 8;
+                pGroup.add(pillar);
+
+                // Ring on axis Y = 16
+                const ringGeo = new THREE.RingGeometry(0.8, 1.2, 24);
+                const ringMat = new THREE.MeshBasicMaterial({ color: node.color, side: THREE.DoubleSide });
+                const ring = new THREE.Mesh(ringGeo, ringMat);
+                ring.position.y = 16;
+                pGroup.add(ring);
+
+                // 2D Text Sprite for Node Label
+                const sprite = createTextSprite(node.label, node.color);
+                sprite.position.set(0, 18.5, 0);
+                pGroup.add(sprite);
+
+                nodeMarkersGroup.add(pGroup);
+            });
+        }
+
+        function createTextSprite(text, colorHex) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256; canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#' + new THREE.Color(colorHex).getHexString();
+            ctx.font = 'bold 28px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(text, 128, 32);
+
+            const tex = new THREE.CanvasTexture(canvas);
+            const mat = new THREE.SpriteMaterial({ map: tex });
+            const sprite = new THREE.Sprite(mat);
+            sprite.scale.set(12, 3, 1);
+            return sprite;
+        }
+
+        // --- 3. Light Rays Setup (Principal Rays, Cone of Rays, Virtual Extensions) ---
+        function initRayLines() {
+            // Line Segment Meshes for Principal Rays
+            const principalGeo = new THREE.BufferGeometry();
+            principalGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(60 * 3), 3));
+            principalGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(60 * 3), 3));
+            principalRaysMesh = new THREE.LineSegments(principalGeo, new THREE.LineBasicMaterial({ vertexColors: true, linewidth: 2 }));
+            scene.add(principalRaysMesh);
+
+            // Cone of Rays Mesh
+            const coneGeo = new THREE.BufferGeometry();
+            coneGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(100 * 3), 3));
+            coneGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(100 * 3), 3));
+            rayConeMesh = new THREE.LineSegments(coneGeo, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.4, linewidth: 1 }));
+            scene.add(rayConeMesh);
+
+            // Virtual Extension Dashed Rays
+            const virtGeo = new THREE.BufferGeometry();
+            virtGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(60 * 3), 3));
+            virtGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(60 * 3), 3));
+            virtualRaysMesh = new THREE.LineSegments(virtGeo, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.8, linewidth: 1.5 }));
+            scene.add(virtualRaysMesh);
+        }
+
+        function updateRayLines() {
+            updatePrincipalRays();
+            updateRayCone();
+            updateVirtualRayExtensions();
+        }
+
+        // 1. Three Principal Rays Calculation
+        function updatePrincipalRays() {
+            if (!params.showPrincipalRays) {
+                principalRaysMesh.visible = false;
+                return;
+            }
+            principalRaysMesh.visible = true;
+
+            const posAttr = principalRaysMesh.geometry.attributes.position;
+            const colAttr = principalRaysMesh.geometry.attributes.color;
+            let idx = 0;
+
+            const objTip = getObjectTipWorldPos();
+            const u = params.u;
+            const fMag = params.f;
+            const signedF = physics.signedF;
+            const vFocus = physics.vFocus;
+            const m = physics.m;
+            const isConvex = (params.lensType === 'convex');
+
+            const addSeg = (p1, p2, colorHex) => {
+                const c = new THREE.Color(colorHex);
+                posAttr.setXYZ(idx, p1.x, p1.y, p1.z); colAttr.setXYZ(idx, c.r, c.g, c.b); idx++;
+                posAttr.setXYZ(idx, p2.x, p2.y, p2.z); colAttr.setXYZ(idx, c.r, c.g, c.b); idx++;
+            };
+
+            const cRed = keyPointColors[0];
+            const cCyan = 0x22d3ee;
+            const cYellow = 0xf59e0b;
+
+            // --- Ray 1: Parallel to axis -> Lens plane Z=0 ---
+            const pLens1 = new THREE.Vector3(objTip.x, objTip.y, 0);
+            addSeg(objTip, pLens1, cRed);
+
+            if (isConvex) {
+                if (u > fMag) {
+                    // Refracts through image focus F' (0, 16, +f) to real image tip
+                    const pImgTip = new THREE.Vector3(-m * objTip.x, 16 + physics.hi, vFocus);
+                    const pFar1 = new THREE.Vector3().lerpVectors(pLens1, pImgTip, 1.4);
+                    addSeg(pLens1, pFar1, cRed);
+                } else if (u < fMag) {
+                    // Refracts away from image focus
+                    const fPoint = new THREE.Vector3(0, 16, fMag);
+                    const dir = new THREE.Vector3().subVectors(pLens1, fPoint).normalize();
+                    const pFar1 = new THREE.Vector3().addVectors(pLens1, dir.clone().multiplyScalar(80));
+                    addSeg(pLens1, pFar1, cRed);
+                } else { // u == f
+                    const pFar1 = new THREE.Vector3(pLens1.x, pLens1.y, 120);
+                    addSeg(pLens1, pFar1, cRed);
+                }
+            } else { // Concave lens
+                // Refracts outward as if coming from object-side virtual focus F1 (0, 16, -fMag)
+                const fVirt = new THREE.Vector3(0, 16, -fMag);
+                const dir = new THREE.Vector3().subVectors(pLens1, fVirt).normalize();
+                const pFar1 = new THREE.Vector3().addVectors(pLens1, dir.clone().multiplyScalar(100));
+                addSeg(pLens1, pFar1, cRed);
+            }
+
+            // --- Ray 2: Straight through lens center O (0, 16, 0) ---
+            const centerO = new THREE.Vector3(0, 16, 0);
+            const dirO = new THREE.Vector3().subVectors(centerO, objTip).normalize();
+            const pFar2 = new THREE.Vector3().addVectors(objTip, dirO.clone().multiplyScalar(180));
+            addSeg(objTip, pFar2, cCyan);
+
+            // --- Ray 3: Through or directed towards Focus -> Lens Z=0 -> Parallel out ---
+            if (isConvex) {
+                if (u > fMag) {
+                    const yLens3 = 16 + physics.hi;
+                    const pLens3 = new THREE.Vector3(0, yLens3, 0);
+                    addSeg(objTip, pLens3, cYellow);
+                    const pFar3 = new THREE.Vector3(0, yLens3, Math.max(vFocus + 30, 120));
+                    addSeg(pLens3, pFar3, cYellow);
+                } else if (u < fMag) {
+                    const yLens3 = 16 + physics.hi;
+                    const pLens3 = new THREE.Vector3(0, yLens3, 0);
+                    addSeg(objTip, pLens3, cYellow);
+                    const pFar3 = new THREE.Vector3(0, yLens3, 120);
+                    addSeg(pLens3, pFar3, cYellow);
+                }
+            } else { // Concave lens directed towards image-side focus F2 (0, 16, +fMag)
+                const yLens3 = 16 + physics.hi;
+                const pLens3 = new THREE.Vector3(0, yLens3, 0);
+                addSeg(objTip, pLens3, cYellow);
+                const pFar3 = new THREE.Vector3(0, yLens3, 120);
+                addSeg(pLens3, pFar3, cYellow);
+            }
+
+            for (let i = idx; i < posAttr.count; i++) posAttr.setXYZ(i, 0, 0, 0);
+            posAttr.needsUpdate = true; colAttr.needsUpdate = true;
+        }
+
+        // 2. Full Aperture Ray Cone
+        function updateRayCone() {
+            if (!params.showRayCone) {
+                rayConeMesh.visible = false;
+                return;
+            }
+            rayConeMesh.visible = true;
+
+            const posAttr = rayConeMesh.geometry.attributes.position;
+            const colAttr = rayConeMesh.geometry.attributes.color;
+            let idx = 0;
+
+            const objTip = getObjectTipWorldPos();
+            const radius = (params.aperture / 10.0) / 2.0; // cm
+            const numRays = 12;
+            const cCone = new THREE.Color(0x38bdf8);
+
+            for (let i = 0; i < numRays; i++) {
+                const angle = (i / numRays) * Math.PI * 2;
+                const lx = Math.cos(angle) * radius;
+                const ly = 16 + Math.sin(angle) * radius;
+                const pLens = new THREE.Vector3(lx, ly, 0);
+
+                // Ray 1: Object Tip -> Lens Rim Point
+                posAttr.setXYZ(idx, objTip.x, objTip.y, objTip.z);
+                colAttr.setXYZ(idx, cCone.r, cCone.g, cCone.b); idx++;
+                posAttr.setXYZ(idx, pLens.x, pLens.y, pLens.z);
+                colAttr.setXYZ(idx, cCone.r, cCone.g, cCone.b); idx++;
+
+                // Ray 2: Lens Rim Point -> Focused or Divergent Path
+                let pEnd;
+                if (physics.isReal && isFinite(physics.vFocus)) {
+                    const pImgTip = new THREE.Vector3(-physics.m * objTip.x, 16 + physics.hi, physics.vFocus);
+                    pEnd = new THREE.Vector3().lerpVectors(pLens, pImgTip, 1.2);
+                } else if (!physics.isReal && isFinite(physics.vFocus)) {
+                    const pVirtTip = new THREE.Vector3(0, 16 + physics.hi, physics.vFocus);
+                    const dir = new THREE.Vector3().subVectors(pLens, pVirtTip).normalize();
+                    pEnd = new THREE.Vector3().addVectors(pLens, dir.multiplyScalar(80));
+                } else {
+                    pEnd = new THREE.Vector3(pLens.x, pLens.y, 120);
+                }
+
+                posAttr.setXYZ(idx, pLens.x, pLens.y, pLens.z);
+                colAttr.setXYZ(idx, cCone.r, cCone.g, cCone.b); idx++;
+                posAttr.setXYZ(idx, pEnd.x, pEnd.y, pEnd.z);
+                colAttr.setXYZ(idx, cCone.r, cCone.g, cCone.b); idx++;
+            }
+
+            for (let i = idx; i < posAttr.count; i++) posAttr.setXYZ(i, 0, 0, 0);
+            posAttr.needsUpdate = true; colAttr.needsUpdate = true;
+        }
+
+        // 3. Virtual Ray Extensions (Dashed extensions for virtual images)
+        function updateVirtualRayExtensions() {
+            if (!params.showVirtualExtensions || physics.isReal || !isFinite(physics.vFocus)) {
+                virtualRaysMesh.visible = false;
+                return;
+            }
+            virtualRaysMesh.visible = true;
+
+            const posAttr = virtualRaysMesh.geometry.attributes.position;
+            const colAttr = virtualRaysMesh.geometry.attributes.color;
+            let idx = 0;
+
+            const objTip = getObjectTipWorldPos();
+            const fMag = params.f;
+            const pVirtTip = new THREE.Vector3(0, 16 + physics.hi, physics.vFocus);
+            const cVirt = new THREE.Color(0xf43f5e);
+
+            const addDashedSeg = (p1, p2) => {
+                const segs = 12;
+                for (let i = 0; i < segs; i += 2) {
+                    const t1 = i / segs; const t2 = (i + 1) / segs;
+                    const ptA = new THREE.Vector3().lerpVectors(p1, p2, t1);
+                    const ptB = new THREE.Vector3().lerpVectors(p1, p2, t2);
+                    posAttr.setXYZ(idx, ptA.x, ptA.y, ptA.z); colAttr.setXYZ(idx, cVirt.r, cVirt.g, cVirt.b); idx++;
+                    posAttr.setXYZ(idx, ptB.x, ptB.y, ptB.z); colAttr.setXYZ(idx, cVirt.r, cVirt.g, cVirt.b); idx++;
+                }
+            };
+
+            // Ext 1: Lens Z=0 point back to virtual image tip
+            const pLens1 = new THREE.Vector3(objTip.x, objTip.y, 0);
+            addDashedSeg(pLens1, pVirtTip);
+
+            // Ext 2: Lens center straight back
+            addDashedSeg(new THREE.Vector3(0, 16, 0), pVirtTip);
+
+            for (let i = idx; i < posAttr.count; i++) posAttr.setXYZ(i, 0, 0, 0);
+            posAttr.needsUpdate = true; colAttr.needsUpdate = true;
+        }
+
+        function getObjectTipWorldPos() {
+            const zObj = -params.u;
+            const scaleY = params.ho / 14.0;
+            if (params.objectType === 'F') return new THREE.Vector3(3.5 * scaleY, 16 + 13.3 * scaleY, zObj);
+            if (params.objectType === 'candle') return new THREE.Vector3(0, 16 + 14.5 * scaleY, zObj);
+            return new THREE.Vector3(0, 16 + 14.5 * scaleY, zObj);
+        }
+
+        // --- 4. Render 2D Screen Texture with Blur Physics ---
+        function updateScreenTexture() {
+            const ctx = screenCanvas.getContext('2d');
+            const w = screenCanvas.width;
+            const h = screenCanvas.height;
+
+            ctx.fillStyle = '#060a12';
+            ctx.fillRect(0, 0, w, h);
+
+            // Fine Coordinate Grid
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+            ctx.lineWidth = 1;
+            for (let x = 0; x < w; x += 32) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
+            for (let y = 0; y < h; y += 32) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
+
+            // Crosshair
+            ctx.strokeStyle = 'rgba(56, 189, 248, 0.25)';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(w / 2, 0); ctx.lineTo(w / 2, h);
+            ctx.moveTo(0, h / 2); ctx.lineTo(w, h / 2);
+            ctx.stroke();
+
+            if (!physics.isReal || !isFinite(physics.vFocus)) {
+                // No real image on screen warning
+                ctx.fillStyle = '#f43f5e';
+                ctx.font = 'bold 20px system-ui';
+                ctx.textAlign = 'center';
+                ctx.fillText('【無對焦實像】', w / 2, h / 2 - 15);
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = '14px system-ui';
+                ctx.fillText('當前形成虛像或平行光束', w / 2, h / 2 + 15);
+                ctx.fillText('請使用眼睛透過透鏡觀察虛影', w / 2, h / 2 + 38);
+            } else {
+                // Circle of Confusion Blur Calculation:
+                // Blur spot radius r_blur_cm = (D_cm / 2) * |v_screen - v_focus| / v_focus
+                const D_cm = params.aperture / 10.0;
+                const deltaV = Math.abs(params.vScreen - physics.vFocus);
+                const blurRadiusCm = (D_cm / 2.0) * (deltaV / physics.vFocus);
+                const pxPerCm = w / 30.0;
+                const blurPx = blurRadiusCm * pxPerCm;
+
+                ctx.save();
+                ctx.translate(w / 2, h / 2);
+
+                // Set Filter Blur
+                ctx.filter = `blur(${Math.max(0.2, blurPx).toFixed(1)}px)`;
+
+                // Attenuate opacity when severely out of focus
+                const alpha = Math.max(0.15, 1.0 - Math.min(1.0, blurPx / 35.0));
+                ctx.globalAlpha = alpha;
+
+                // Transform by magnification m = -v/u
+                const m = physics.m;
+                ctx.scale(m, -m); // Flip vertical if inverted
+
+                draw2DObjectShape(ctx, params.objectType, pxPerCm, params.ho / 14.0);
+
+                ctx.restore();
+            }
+
+            // Copy offscreen canvas to Inset HUD Canvas
+            if (insetCanvas) {
+                const insetCtx = insetCanvas.getContext('2d');
+                insetCtx.drawImage(screenCanvas, 0, 0, insetCanvas.width, insetCanvas.height);
+            }
+
+            if (screenTexture) screenTexture.needsUpdate = true;
+        }
+
+        function draw2DObjectShape(ctx, objType, pxPerCm, scaleY) {
+            ctx.save();
+            ctx.lineWidth = 1.6 * pxPerCm * scaleY;
+            ctx.lineCap = 'round';
+
+            if (objType === 'F') {
+                ctx.strokeStyle = '#06b6d4';
+                ctx.beginPath(); ctx.moveTo(-3.5 * pxPerCm * scaleY, -6.6 * pxPerCm * scaleY); ctx.lineTo(-3.5 * pxPerCm * scaleY, 6.6 * pxPerCm * scaleY); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(-3.5 * pxPerCm * scaleY, 6.6 * pxPerCm * scaleY); ctx.lineTo(3.5 * pxPerCm * scaleY, 6.6 * pxPerCm * scaleY); ctx.stroke();
+                ctx.strokeStyle = '#f59e0b';
+                ctx.beginPath(); ctx.moveTo(-3.5 * pxPerCm * scaleY, 0.3 * pxPerCm * scaleY); ctx.lineTo(1.3 * pxPerCm * scaleY, 0.3 * pxPerCm * scaleY); ctx.stroke();
+            } else if (objType === 'candle') {
+                ctx.fillStyle = '#e2e8f0'; ctx.fillRect(-1.8 * pxPerCm * scaleY, -6.5 * pxPerCm * scaleY, 3.6 * pxPerCm * scaleY, 8.0 * pxPerCm * scaleY);
+                const grad = ctx.createRadialGradient(0, 3.5 * pxPerCm * scaleY, 0.2 * pxPerCm * scaleY, 0, 3.5 * pxPerCm * scaleY, 2.5 * pxPerCm * scaleY);
+                grad.addColorStop(0, '#ffffff'); grad.addColorStop(0.4, '#fbbf24'); grad.addColorStop(1, '#f97316');
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.moveTo(0, 7.5 * pxPerCm * scaleY);
+                ctx.quadraticCurveTo(1.8 * pxPerCm * scaleY, 4 * pxPerCm * scaleY, 0, 1.5 * pxPerCm * scaleY);
+                ctx.quadraticCurveTo(-1.8 * pxPerCm * scaleY, 4 * pxPerCm * scaleY, 0, 7.5 * pxPerCm * scaleY);
+                ctx.fill();
+            } else {
+                ctx.fillStyle = '#10b981'; ctx.fillRect(-1.1 * pxPerCm * scaleY, -5 * pxPerCm * scaleY, 2.2 * pxPerCm * scaleY, 8 * pxPerCm * scaleY);
+                ctx.fillStyle = '#f43f5e'; ctx.beginPath(); ctx.moveTo(0, 7.5 * pxPerCm * scaleY); ctx.lineTo(3.2 * pxPerCm * scaleY, 3 * pxPerCm * scaleY); ctx.lineTo(-3.2 * pxPerCm * scaleY, 3 * pxPerCm * scaleY); ctx.closePath(); ctx.fill();
+                ctx.fillStyle = '#3b82f6'; ctx.fillRect(-3.2 * pxPerCm * scaleY, -6.5 * pxPerCm * scaleY, 6.4 * pxPerCm * scaleY, 1.4 * pxPerCm * scaleY);
+            }
+
+            ctx.restore();
+        }
+
+        // --- 5. Main Optics Calculations & Physics HUD Update ---
+        function recalculatePhysics() {
+            const fMag = params.f;
+            const u = params.u;
+            const signedF = (params.lensType === 'convex') ? fMag : -fMag;
+            physics.signedF = signedF;
+
+            // Thin lens equation: 1/f = 1/u + 1/v => v = f*u / (u - f)
+            if (Math.abs(u - signedF) < 0.001) {
+                physics.vFocus = Infinity;
+                physics.m = Infinity;
+                physics.hi = Infinity;
+                physics.isReal = false;
+                physics.isUpright = false;
+            } else {
+                physics.vFocus = (signedF * u) / (u - signedF);
+                physics.m = -physics.vFocus / u;
+                physics.hi = physics.m * params.ho;
+                physics.isReal = (physics.vFocus > 0);
+                physics.isUpright = (physics.m > 0);
+            }
+
+            // Screen focus status
+            if (!physics.isReal || !isFinite(physics.vFocus)) {
+                physics.focusStatus = "無實像";
+            } else {
+                const deltaV = params.vScreen - physics.vFocus;
+                if (Math.abs(deltaV) < 0.8) physics.focusStatus = "清晰對焦";
+                else if (deltaV < -0.8) physics.focusStatus = "焦前模糊";
+                else physics.focusStatus = "焦後模糊";
+            }
+        }
+
+        function updateSimulation() {
+            recalculatePhysics();
+
+            // Update 3D Positions & Meshes
+            objectGroup.position.z = -params.u;
+            screenGroup.position.z = params.vScreen;
+
+            update3DLensGeometry();
+            updateObjectScaleAndPosition();
+            updateVirtualGhostMesh();
+            updateNodeMarkers();
+            updateRayLines();
+            updateScreenTexture();
+
+            updateHUDUI();
+        }
+
+        function updateHUDUI() {
+            document.getElementById('val-f').innerText = `${params.f.toFixed(1)} cm`;
+            document.getElementById('val-u').innerText = `${params.u.toFixed(1)} cm`;
+            document.getElementById('val-ho').innerText = `${params.ho.toFixed(1)} cm`;
+            document.getElementById('val-D').innerText = `${params.aperture.toFixed(0)} mm`;
+            document.getElementById('val-vscreen').innerText = `${params.vScreen.toFixed(1)} cm`;
+
+            const hudV = document.getElementById('hud-v');
+            const hudM = document.getElementById('hud-m');
+            const hudHi = document.getElementById('hud-hi');
+            const natureBadge = document.getElementById('badge-nature');
+            const focusState = document.getElementById('hud-focus-state');
+            const screenTag = document.getElementById('screen-status-tag');
+            const insightText = document.getElementById('hud-insight-text');
+
+            if (!isFinite(physics.vFocus)) {
+                hudV.innerText = "∞ (無窮遠)";
+                hudM.innerText = "N/A";
+                hudHi.innerText = "N/A";
+                natureBadge.innerText = "不成像 (平行光)";
+                natureBadge.className = "px-2 py-0.5 rounded font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40";
+                focusState.innerText = "無實像可接收";
+                focusState.className = "font-bold text-rose-400";
+                screenTag.innerText = "平行光束";
+                screenTag.className = "text-[10px] font-mono px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30";
+                insightText.innerText = `物體位於焦點 $u=f=${params.f}\\text{cm}$ 上，光線經折射後變為平行光束射出，於無窮遠處不成像。`;
+                return;
+            }
+
+            hudV.innerText = `${physics.vFocus.toFixed(1)} cm`;
+            hudM.innerText = `${physics.m.toFixed(2)} ×`;
+            hudHi.innerText = `${physics.hi.toFixed(2)} cm`;
+
+            // Image Nature Tag
+            let realStr = physics.isReal ? "實像" : "虛像";
+            let orientationStr = physics.isUpright ? "正立" : "倒立";
+            let sizeStr = "等大";
+            const absM = Math.abs(physics.m);
+            if (absM > 1.05) sizeStr = "放大";
+            else if (absM < 0.95) sizeStr = "縮小";
+
+            natureBadge.innerText = `${orientationStr}${sizeStr}${realStr}`;
+
+            if (physics.isReal) {
+                natureBadge.className = "px-2 py-0.5 rounded font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40";
+            } else {
+                natureBadge.className = "px-2 py-0.5 rounded font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40";
+            }
+
+            // Focus Status Text
+            if (physics.focusStatus === "清晰對焦") {
+                focusState.innerText = "清晰對焦 (In Focus)";
+                focusState.className = "font-bold text-emerald-400";
+                screenTag.innerText = "清晰對焦";
+                screenTag.className = "text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
+            } else if (physics.focusStatus === "焦前模糊") {
+                focusState.innerText = "焦前模糊 (Screen Too Close)";
+                focusState.className = "font-bold text-amber-400";
+                screenTag.innerText = "焦前散焦";
+                screenTag.className = "text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30";
+            } else if (physics.focusStatus === "焦後模糊") {
+                focusState.innerText = "焦後模糊 (Screen Too Far)";
+                focusState.className = "font-bold text-amber-400";
+                screenTag.innerText = "焦後散焦";
+                screenTag.className = "text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30";
+            } else {
+                focusState.innerText = "無實像 (Virtual Image)";
+                focusState.className = "font-bold text-rose-400";
+                screenTag.innerText = "無實像";
+                screenTag.className = "text-[10px] font-mono px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30";
+            }
+
+            // Dynamic Insight Tip
+            if (params.lensType === 'concave') {
+                insightText.innerText = `凹透鏡為發散透鏡，無論物距 $u$ 為何，永遠在物側形成正立縮小的虛像 ($v < 0$)。`;
+            } else if (params.u > 2 * params.f) {
+                insightText.innerText = `當物距 $u > 2f$ 時，折射光會聚於 $f < v < 2f$ 之間，形成倒立縮小的實像（相機原理）。`;
+            } else if (Math.abs(params.u - 2 * params.f) < 0.5) {
+                insightText.innerText = `當物距 $u = 2f$ 時，折射光會聚於 $v = 2f$ 處，形成等大的倒立實像 ($m = -1.0$)。`;
+            } else if (params.u > params.f) {
+                insightText.innerText = `當 $f < u < 2f$ 時，折射光會聚於 $v > 2f$ 處，形成倒立放大的實像（投影機原理）。`;
+            } else {
+                insightText.innerText = `當物距 $u < f$ 時，折射光呈發散狀態，反向延長線會聚於物側形成正立放大的虛像（放大鏡原理）。`;
+            }
+        }
+
+        // --- 6. Event Listeners Setup ---
+        function setupUIEventListeners() {
+            // Lens Type Buttons
+            document.querySelectorAll('.lens-type-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.lens-type-btn').forEach(b => {
+                        b.className = "lens-type-btn py-1.5 rounded-lg text-xs font-medium transition text-center text-slate-400 hover:text-slate-200";
+                    });
+                    btn.className = "lens-type-btn py-1.5 rounded-lg text-xs font-medium transition text-center bg-cyan-500/20 text-cyan-300 border border-cyan-500/40";
+                    params.lensType = btn.dataset.type;
+                    updateSimulation();
+                });
+            });
+
+            // Object Type Buttons
+            document.querySelectorAll('.obj-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.obj-btn').forEach(b => {
+                        b.className = "obj-btn px-2 py-1.5 rounded-lg text-xs font-medium transition text-center text-slate-400 hover:text-slate-200";
+                    });
+                    btn.className = "obj-btn px-2 py-1.5 rounded-lg text-xs font-medium transition text-center bg-cyan-500/20 text-cyan-300 border border-cyan-500/40";
+                    params.objectType = btn.dataset.type;
+                    updateSimulation();
+                });
+            });
+
+            // Sliders
+            document.getElementById('slider-f').addEventListener('input', (e) => { params.f = parseFloat(e.target.value); updateSimulation(); });
+            document.getElementById('slider-u').addEventListener('input', (e) => { params.u = parseFloat(e.target.value); updateSimulation(); });
+            document.getElementById('slider-ho').addEventListener('input', (e) => { params.ho = parseFloat(e.target.value); updateSimulation(); });
+            document.getElementById('slider-D').addEventListener('input', (e) => { params.aperture = parseFloat(e.target.value); updateSimulation(); });
+            document.getElementById('slider-vscreen').addEventListener('input', (e) => {
+                params.vScreen = parseFloat(e.target.value);
+                if (params.activeView === 'screen') setCameraPreset('screen');
+                updateSimulation();
+            });
+
+            // Auto Focus Button
+            document.getElementById('btn-autofocus').addEventListener('click', autoFocusScreen);
+
+            // Visual Toggles
+            document.getElementById('toggle-rays').addEventListener('change', (e) => { params.showPrincipalRays = e.target.checked; updateSimulation(); });
+            document.getElementById('toggle-cone').addEventListener('change', (e) => { params.showRayCone = e.target.checked; updateSimulation(); });
+            document.getElementById('toggle-virtual').addEventListener('change', (e) => { params.showVirtualExtensions = e.target.checked; updateSimulation(); });
+            document.getElementById('toggle-nodes').addEventListener('change', (e) => { params.showNodeMarkers = e.target.checked; updateSimulation(); });
+
+            // Camera Views
+            document.querySelectorAll('.cam-btn').forEach(btn => {
+                btn.addEventListener('click', () => setCameraPreset(btn.dataset.view));
+            });
+            document.getElementById('btn-reset-cam').addEventListener('click', () => setCameraPreset('orbit'));
+
+            // Modals
+            const helpModal = document.getElementById('modal-help');
+            document.getElementById('btn-help').addEventListener('click', () => helpModal.classList.remove('hidden'));
+            document.getElementById('btn-close-help').addEventListener('click', () => helpModal.classList.add('hidden'));
+            document.getElementById('btn-close-help-2').addEventListener('click', () => helpModal.classList.add('hidden'));
+
+            const presetsModal = document.getElementById('modal-presets');
+            document.getElementById('btn-presets-modal').addEventListener('click', () => presetsModal.classList.remove('hidden'));
+            document.getElementById('btn-close-presets').addEventListener('click', () => presetsModal.classList.add('hidden'));
+
+            // Presets Cards
+            document.querySelectorAll('.preset-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    applyPresetScenario(card.dataset.preset);
+                    presetsModal.classList.add('hidden');
+                });
+            });
+        }
+
+        // Auto Focus Animation Function
+        function autoFocusScreen() {
+            if (!physics.isReal || !isFinite(physics.vFocus)) {
+                return;
+            }
+
+            const targetV = Math.min(100, Math.max(5, physics.vFocus));
+            const startV = params.vScreen;
+            const startTime = performance.now();
+            const duration = 600;
+
+            function animateFocus() {
+                const now = performance.now();
+                const progress = Math.min((now - startTime) / duration, 1.0);
+                const ease = 1 - Math.pow(1 - progress, 3);
+
+                params.vScreen = startV + (targetV - startV) * ease;
+                document.getElementById('slider-vscreen').value = params.vScreen;
+                updateSimulation();
+
+                if (progress < 1.0) requestAnimationFrame(animateFocus);
+            }
+            animateFocus();
+        }
+
+        // Apply Optical Preset Scenarios
+        function applyPresetScenario(mode) {
+            params.lensType = 'convex';
+            params.f = 15.0;
+
+            if (mode === 'u-gt-2f') {
+                params.u = 40.0;
+                params.vScreen = 24.0;
+            } else if (mode === 'u-eq-2f') {
+                params.u = 30.0;
+                params.vScreen = 30.0;
+            } else if (mode === 'f-lt-u-lt-2f') {
+                params.u = 20.0;
+                params.vScreen = 60.0;
+            } else if (mode === 'u-eq-f') {
+                params.u = 15.0;
+                params.vScreen = 40.0;
+            } else if (mode === 'u-lt-f') {
+                params.u = 10.0;
+                params.vScreen = 30.0;
+            } else if (mode === 'concave-lens') {
+                params.lensType = 'concave';
+                params.u = 30.0;
+                params.vScreen = 30.0;
+            }
+
+            // Sync UI Buttons
+            document.querySelectorAll('.lens-type-btn').forEach(b => {
+                if (b.dataset.type === params.lensType) {
+                    b.className = "lens-type-btn py-1.5 rounded-lg text-xs font-medium transition text-center bg-cyan-500/20 text-cyan-300 border border-cyan-500/40";
+                } else {
+                    b.className = "lens-type-btn py-1.5 rounded-lg text-xs font-medium transition text-center text-slate-400 hover:text-slate-200";
+                }
+            });
+
+            document.getElementById('slider-f').value = params.f;
+            document.getElementById('slider-u').value = params.u;
+            document.getElementById('slider-vscreen').value = params.vScreen;
+
+            updateSimulation();
+        }
+
+        // Camera Preset Animation
+        function setCameraPreset(viewMode) {
+            params.activeView = viewMode;
+            let targetPos = new THREE.Vector3();
+            let targetLookAt = new THREE.Vector3(0, 16, 0);
+
+            if (viewMode === 'orbit') {
+                targetPos.set(65, 45, 85);
+                targetLookAt.set(0, 16, 0);
+            } else if (viewMode === 'side') {
+                targetPos.set(180, 16, 0);
+                targetLookAt.set(0, 16, 0);
+            } else if (viewMode === 'top') {
+                targetPos.set(0, 220, 0.001);
+                targetLookAt.set(0, 0, 0);
+            } else if (viewMode === 'screen') {
+                targetPos.set(0, 16, params.vScreen + 55);
+                targetLookAt.set(0, 16, params.vScreen);
+            }
+
+            animateCameraTo(targetPos, targetLookAt, 800);
+        }
+
+        function animateCameraTo(targetPos, targetLookAt, duration = 800) {
+            const startPos = camera.position.clone();
+            const startLookAt = controls.target.clone();
+            const startTime = performance.now();
+
+            function updateCam() {
+                const now = performance.now();
+                const progress = Math.min((now - startTime) / duration, 1.0);
+                const ease = 1 - Math.pow(1 - progress, 3);
+
+                camera.position.lerpVectors(startPos, targetPos, ease);
+                controls.target.lerpVectors(startLookAt, targetLookAt, ease);
+                controls.update();
+
+                if (progress < 1.0) requestAnimationFrame(updateCam);
+            }
+            updateCam();
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // --- 7. Main Animation Loop ---
+        function animate(time) {
+            requestAnimationFrame(animate);
+
+            // Candle flame flicker
+            if (candleFlameMesh && candleFlameLight && params.objectType === 'candle') {
+                const flicker = Math.sin(time * 0.01) * 0.15 + Math.cos(time * 0.025) * 0.1;
+                candleFlameMesh.scale.set(1 + flicker * 0.2, 1 + flicker * 0.3, 1 + flicker * 0.2);
+                candleFlameLight.intensity = 1.8 + flicker * 0.5;
+            }
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+</html>
