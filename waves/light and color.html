@@ -1,0 +1,1280 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>光與顏色物理互動實驗室 Light & Color Optics Lab</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'Noto Sans TC', 'sans-serif'],
+                    },
+                    colors: {
+                        optics: {
+                            dark: '#0b0f19',
+                            card: '#151c2e',
+                            border: '#2a364f',
+                            accent: '#3b82f6',
+                            glow: '#60a5fa'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #0b0f19;
+            color: #f3f4f6;
+            font-family: 'Inter', 'Noto Sans TC', sans-serif;
+            overflow-x: hidden;
+        }
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+        .glass-panel {
+            background: rgba(21, 28, 46, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased selection:bg-blue-500 selection:text-white">
+
+    <!-- Top Navigation Header -->
+    <header class="sticky top-0 z-50 glass-panel border-b border-slate-800 px-4 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-500 to-purple-500 flex items-center justify-center text-white shadow-lg shadow-blue-500/30">
+                <i class="fa-solid fa-lightbulb text-xl animate-pulse"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-black bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-indigo-300 to-purple-400">
+                    光與顏色物理互動實驗室
+                </h1>
+                <p class="text-xs text-slate-400 font-medium">Light & Color Optics Lab • 斜向反射與穿透色光專題</p>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <nav class="flex items-center space-x-1 bg-slate-900/80 p-1 rounded-xl border border-slate-800 overflow-x-auto max-w-full">
+            <button onclick="switchTab('sideview')" id="tab-sideview" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center space-x-2 whitespace-nowrap text-white bg-blue-600 shadow-md">
+                <i class="fa-solid fa-draw-polygon"></i>
+                <span>側視圖斜向光路模擬</span>
+            </button>
+            <button onclick="switchTab('blocks')" id="tab-blocks" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center space-x-2 whitespace-nowrap text-slate-400 hover:text-white hover:bg-slate-800">
+                <i class="fa-solid fa-cubes"></i>
+                <span>五色塊光源實驗室</span>
+            </button>
+            <button onclick="switchTab('freecanvas')" id="tab-freecanvas" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center space-x-2 whitespace-nowrap text-slate-400 hover:text-white hover:bg-slate-800">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                <span>神奇隱形畫布</span>
+            </button>
+            <button onclick="switchTab('guide')" id="tab-guide" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center space-x-2 whitespace-nowrap text-slate-400 hover:text-white hover:bg-slate-800">
+                <i class="fa-solid fa-book-open"></i>
+                <span>原理重點卡片</span>
+            </button>
+        </nav>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="flex-grow p-4 lg:p-6 max-w-7xl mx-auto w-full">
+
+        <!-- ========================================================================= -->
+        <!-- MODULE 1: Side View Oblique Optics Simulator                              -->
+        <!-- ========================================================================= -->
+        <section id="mod-sideview" class="space-y-6">
+            <!-- Header Card -->
+            <div class="glass-panel rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4 border-l-4 border-l-blue-500">
+                <div class="flex items-center space-x-3">
+                    <i class="fa-solid fa-route text-blue-400 text-xl"></i>
+                    <div>
+                        <h2 class="font-bold text-slate-200">側視圖斜向入射與反射模擬</h2>
+                        <p class="text-xs text-slate-400">光線從左上方斜向射出，穿越玻璃紙濾光片後抵達底面，符合<strong class="text-blue-300">反射定律（入射角 = 反射角）</strong>向右上方反射進入眼睛。</p>
+                    </div>
+                </div>
+
+                <!-- Angle Badge Indicator -->
+                <div class="bg-slate-900 border border-slate-700 px-4 py-2 rounded-xl flex items-center space-x-4 text-xs font-mono">
+                    <div>入射角 $\theta_i$ = <span id="badge-i-angle" class="text-amber-400 font-bold text-sm">35°</span></div>
+                    <div class="text-slate-600">|</div>
+                    <div>反射角 $\theta_r$ = <span id="badge-r-angle" class="text-emerald-400 font-bold text-sm">35°</span></div>
+                    <div class="text-slate-600">|</div>
+                    <div class="text-blue-400 font-bold">對稱反射 ✅</div>
+                </div>
+            </div>
+
+            <!-- Canvas & Controls Layout Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Canvas Render Box (Left 8 cols) -->
+                <div class="lg:col-span-8 flex flex-col space-y-4">
+                    <div class="relative glass-panel rounded-2xl p-2 overflow-hidden shadow-2xl border border-slate-700">
+                        <canvas id="opticsCanvas" class="w-full h-[470px] bg-slate-950 rounded-xl cursor-crosshair block"></canvas>
+                        
+                        <!-- Floating Live Status -->
+                        <div class="absolute top-4 left-4 bg-slate-900/90 backdrop-blur border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center space-x-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
+                            <span>光線斜向動態傳播中</span>
+                        </div>
+
+                        <div class="absolute top-4 right-4 bg-slate-900/80 backdrop-blur border border-slate-800 px-3 py-1.5 rounded-lg text-xs font-mono text-slate-300">
+                            垂直線：法線 (Normal Line)
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Optical Path Data Inspection Cards -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <div class="bg-slate-900/90 border border-slate-800 p-3 rounded-xl">
+                            <div class="text-[11px] text-slate-400 font-semibold mb-1">1. 左上光源發射</div>
+                            <div class="flex items-center space-x-2">
+                                <div id="card-src-swatch" class="w-4 h-4 rounded-full border border-white/20 bg-white"></div>
+                                <span id="card-src-text" class="text-xs font-mono font-bold">白光 (100%)</span>
+                            </div>
+                        </div>
+                        <div class="bg-slate-900/90 border border-slate-800 p-3 rounded-xl">
+                            <div class="text-[11px] text-slate-400 font-semibold mb-1">2. 穿越玻璃紙後</div>
+                            <div class="flex items-center space-x-2">
+                                <div id="card-f1-swatch" class="w-4 h-4 rounded-full border border-white/20 bg-white"></div>
+                                <span id="card-f1-text" class="text-xs font-mono font-bold">透射光 (100%)</span>
+                            </div>
+                        </div>
+                        <div class="bg-slate-900/90 border border-slate-800 p-3 rounded-xl">
+                            <div class="text-[11px] text-slate-400 font-semibold mb-1">3. 底面反射後</div>
+                            <div class="flex items-center space-x-2">
+                                <div id="card-refl-swatch" class="w-4 h-4 rounded-full border border-white/20 bg-white"></div>
+                                <span id="card-refl-text" class="text-xs font-mono font-bold">反射光 (100%)</span>
+                            </div>
+                        </div>
+                        <div class="bg-slate-900/90 border border-slate-800 p-3 rounded-xl border-l-2 border-l-amber-400">
+                            <div class="text-[11px] text-amber-400 font-semibold mb-1">4. 右上眼睛感知</div>
+                            <div class="flex items-center space-x-2">
+                                <div id="card-eye-swatch" class="w-4 h-4 rounded-full border border-white/20 bg-white"></div>
+                                <span id="card-eye-text" class="text-xs font-mono font-bold text-amber-300">白光 (100%)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Controls Sidebar (Right 4 cols) -->
+                <div class="lg:col-span-4 space-y-4 glass-panel rounded-2xl p-5 border border-slate-700">
+                    <h3 class="text-base font-bold text-slate-100 flex items-center space-x-2 border-b border-slate-800 pb-3">
+                        <i class="fa-solid fa-sliders text-blue-400"></i>
+                        <span>光學元件與斜角設定</span>
+                    </h3>
+
+                    <!-- 1. Incident Angle Slider -->
+                    <div class="space-y-2">
+                        <div class="flex justify-between items-center text-xs">
+                            <label class="text-slate-300 font-medium">斜向入射角度 ($\theta_i$)</label>
+                            <span id="angle-val-display" class="font-mono text-blue-400 font-bold bg-blue-950/60 border border-blue-800/50 px-2 py-0.5 rounded">35°</span>
+                        </div>
+                        <input id="slider-angle" type="range" min="20" max="50" value="35" step="1" 
+                               class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500">
+                        <div class="flex justify-between text-[10px] text-slate-500 font-mono">
+                            <span>20° (陡峭)</span>
+                            <span>35° (標準)</span>
+                            <span>50° (平緩)</span>
+                        </div>
+                    </div>
+
+                    <!-- 2. Light Source Selector -->
+                    <div class="space-y-2">
+                        <label class="text-xs text-slate-300 font-medium block">左上方光源顏色</label>
+                        <div class="grid grid-cols-4 gap-1.5" id="src-color-selector">
+                            <!-- JS Dynamic -->
+                        </div>
+                    </div>
+
+                    <!-- 3. Filter 1 Selector -->
+                    <div class="space-y-2">
+                        <label class="text-xs text-slate-300 font-medium block flex justify-between">
+                            <span>第一層玻璃紙 (Filter 1)</span>
+                            <span class="text-[10px] text-slate-400">上方橫置</span>
+                        </label>
+                        <select id="select-filter1" class="w-full bg-slate-900 border border-slate-700 text-slate-200 text-xs rounded-xl p-2.5 outline-none focus:border-blue-500">
+                            <option value="none">無 (透明空氣)</option>
+                            <option value="red">🔴 紅色玻璃紙 (透紅光)</option>
+                            <option value="green">🟢 綠色玻璃紙 (透綠光)</option>
+                            <option value="blue">🔵 藍色玻璃紙 (透藍光)</option>
+                            <option value="yellow">🟡 黃色玻璃紙 (透紅+綠)</option>
+                            <option value="magenta">🟣 洋紅玻璃紙 (透紅+藍)</option>
+                            <option value="cyan">🔷 青色玻璃紙 (透綠+藍)</option>
+                        </select>
+                    </div>
+
+                    <!-- 4. Filter 2 Selector -->
+                    <div class="space-y-2">
+                        <label class="text-xs text-slate-300 font-medium block flex justify-between">
+                            <span>第二層玻璃紙 (Filter 2)</span>
+                            <span class="text-[10px] text-slate-400">下方橫置</span>
+                        </label>
+                        <select id="select-filter2" class="w-full bg-slate-900 border border-slate-700 text-slate-200 text-xs rounded-xl p-2.5 outline-none focus:border-blue-500">
+                            <option value="none">無 (透明空氣)</option>
+                            <option value="red">🔴 紅色玻璃紙 (透紅光)</option>
+                            <option value="green">🟢 綠色玻璃紙 (透綠光)</option>
+                            <option value="blue">🔵 藍色玻璃紙 (透藍光)</option>
+                            <option value="yellow">🟡 黃色玻璃紙 (透紅+綠)</option>
+                            <option value="magenta">🟣 洋紅玻璃紙 (透紅+藍)</option>
+                            <option value="cyan">🔷 青色玻璃紙 (透綠+藍)</option>
+                        </select>
+                    </div>
+
+                    <!-- 5. Bottom Surface Selector -->
+                    <div class="space-y-2">
+                        <label class="text-xs text-slate-300 font-medium block">底部反射面材質 / 顏色</label>
+                        <select id="select-surface" class="w-full bg-slate-900 border border-slate-700 text-slate-200 text-xs rounded-xl p-2.5 outline-none focus:border-blue-500">
+                            <option value="mirror">🪞 完美平面鏡 (全反射 Mirror)</option>
+                            <option value="white">⚪ 白色塗層面 (全色反射)</option>
+                            <option value="red">🔴 紅色底板 (僅反射紅光)</option>
+                            <option value="green">🟢 綠色底板 (僅反射綠光)</option>
+                            <option value="blue">🔵 藍色底板 (僅反射藍光)</option>
+                            <option value="yellow">🟡 黃色底板 (反射紅+綠)</option>
+                            <option value="magenta">🟣 洋紅底板 (反射紅+藍)</option>
+                            <option value="cyan">🔷 青色底板 (反射綠+藍)</option>
+                            <option value="black">⬛ 黑色吸光面 (完全吸收)</option>
+                        </select>
+                    </div>
+
+                    <!-- Fast Teaching Presets -->
+                    <div class="pt-2 border-t border-slate-800 space-y-2">
+                        <label class="text-xs font-bold text-slate-400 block">⚡ 快速教學情境切換</label>
+                        <div class="grid grid-cols-1 gap-1.5 text-xs">
+                            <button onclick="applySidePreset(1)" class="w-full text-left bg-slate-900 hover:bg-slate-800 border border-slate-800 p-2 rounded-lg text-slate-300 transition flex justify-between items-center">
+                                <span>1. 🔴 紅光照綠玻璃紙 + 藍底</span>
+                                <span class="text-rose-400 font-mono text-[10px]">完全吸收</span>
+                            </button>
+                            <button onclick="applySidePreset(2)" class="w-full text-left bg-slate-900 hover:bg-slate-800 border border-slate-800 p-2 rounded-lg text-slate-300 transition flex justify-between items-center">
+                                <span>2. ⚪ 白光過黃+青玻璃紙照紅底</span>
+                                <span class="text-amber-300 font-mono text-[10px]">雙層過濾</span>
+                            </button>
+                            <button onclick="applySidePreset(3)" class="w-full text-left bg-slate-900 hover:bg-slate-800 border border-slate-800 p-2 rounded-lg text-slate-300 transition flex justify-between items-center">
+                                <span>3. 🪞 平面鏡對稱反射標準示範</span>
+                                <span class="text-emerald-400 font-mono text-[10px]">$\theta_i=\theta_r$</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ========================================================================= -->
+        <!-- MODULE 2: Five Color Blocks Light Lab                                   -->
+        <!-- ========================================================================= -->
+        <section id="mod-blocks" class="space-y-6 hidden">
+            <div class="glass-panel rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4 border-l-4 border-l-purple-500">
+                <div class="flex items-center space-x-3">
+                    <i class="fa-solid fa-cubes text-purple-400 text-xl"></i>
+                    <div>
+                        <h2 class="font-bold text-slate-200">五色塊光源實驗室 (Stage Lighting Lab)</h2>
+                        <p class="text-xs text-slate-400">切換不同光源，觀察紅、綠、藍、黑、白五色塊在舞台聚光燈下的物理真實顏色。</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center space-x-2 bg-slate-900 p-1.5 rounded-xl border border-slate-800 overflow-x-auto" id="blocks-light-btns">
+                    <!-- Dynamic Buttons -->
+                </div>
+            </div>
+
+            <div class="glass-panel rounded-2xl p-6 relative overflow-hidden border border-slate-700 shadow-2xl">
+                <div id="spotlight-cone" class="absolute inset-x-0 top-0 h-48 pointer-events-none transition-all duration-500 opacity-30 bg-gradient-to-b from-white via-white/20 to-transparent"></div>
+
+                <div class="text-center mb-6">
+                    <span class="inline-block bg-slate-900 border border-slate-700 px-4 py-1 rounded-full text-xs font-mono text-purple-300">
+                        當前照射光源：<strong id="stage-light-name" class="text-white text-sm">白色光源 (White Light)</strong>
+                    </span>
+                </div>
+
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-4 relative z-10">
+                    <!-- Red Block -->
+                    <div class="block-card bg-slate-900/90 border border-slate-800 rounded-2xl p-4 text-center flex flex-col items-center space-y-3 transition-all duration-300">
+                        <span class="text-xs font-bold text-slate-400">原色：紅色 (Red)</span>
+                        <div id="block-view-0" class="w-24 h-24 rounded-2xl shadow-inner transition-colors duration-300 border border-white/10 flex items-center justify-center font-bold text-xs text-white/70">色塊</div>
+                        <div class="text-[11px] font-mono text-slate-300 space-y-1">
+                            <div>感知：<span id="block-res-0" class="font-bold text-red-400">紅色</span></div>
+                            <div id="block-math-0" class="text-[10px] text-slate-500">RGB: (1,0,0)</div>
+                        </div>
+                    </div>
+
+                    <!-- Green Block -->
+                    <div class="block-card bg-slate-900/90 border border-slate-800 rounded-2xl p-4 text-center flex flex-col items-center space-y-3 transition-all duration-300">
+                        <span class="text-xs font-bold text-slate-400">原色：綠色 (Green)</span>
+                        <div id="block-view-1" class="w-24 h-24 rounded-2xl shadow-inner transition-colors duration-300 border border-white/10 flex items-center justify-center font-bold text-xs text-white/70">色塊</div>
+                        <div class="text-[11px] font-mono text-slate-300 space-y-1">
+                            <div>感知：<span id="block-res-1" class="font-bold text-green-400">綠色</span></div>
+                            <div id="block-math-1" class="text-[10px] text-slate-500">RGB: (0,1,0)</div>
+                        </div>
+                    </div>
+
+                    <!-- Blue Block -->
+                    <div class="block-card bg-slate-900/90 border border-slate-800 rounded-2xl p-4 text-center flex flex-col items-center space-y-3 transition-all duration-300">
+                        <span class="text-xs font-bold text-slate-400">原色：藍色 (Blue)</span>
+                        <div id="block-view-2" class="w-24 h-24 rounded-2xl shadow-inner transition-colors duration-300 border border-white/10 flex items-center justify-center font-bold text-xs text-white/70">色塊</div>
+                        <div class="text-[11px] font-mono text-slate-300 space-y-1">
+                            <div>感知：<span id="block-res-2" class="font-bold text-blue-400">藍色</span></div>
+                            <div id="block-math-2" class="text-[10px] text-slate-500">RGB: (0,0,1)</div>
+                        </div>
+                    </div>
+
+                    <!-- Black Block -->
+                    <div class="block-card bg-slate-900/90 border border-slate-800 rounded-2xl p-4 text-center flex flex-col items-center space-y-3 transition-all duration-300">
+                        <span class="text-xs font-bold text-slate-400">原色：黑色 (Black)</span>
+                        <div id="block-view-3" class="w-24 h-24 rounded-2xl shadow-inner transition-colors duration-300 border border-white/10 flex items-center justify-center font-bold text-xs text-white/70">色塊</div>
+                        <div class="text-[11px] font-mono text-slate-300 space-y-1">
+                            <div>感知：<span id="block-res-3" class="font-bold text-slate-400">黑色</span></div>
+                            <div id="block-math-3" class="text-[10px] text-slate-500">RGB: (0,0,0)</div>
+                        </div>
+                    </div>
+
+                    <!-- White Block -->
+                    <div class="block-card bg-slate-900/90 border border-slate-800 rounded-2xl p-4 text-center flex flex-col items-center space-y-3 transition-all duration-300 col-span-2 md:col-span-1">
+                        <span class="text-xs font-bold text-slate-400">原色：白色 (White)</span>
+                        <div id="block-view-4" class="w-24 h-24 rounded-2xl shadow-inner transition-colors duration-300 border border-white/10 flex items-center justify-center font-bold text-xs text-slate-800">色塊</div>
+                        <div class="text-[11px] font-mono text-slate-300 space-y-1">
+                            <div>感知：<span id="block-res-4" class="font-bold text-white">白色</span></div>
+                            <div id="block-math-4" class="text-[10px] text-slate-500">RGB: (1,1,1)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ========================================================================= -->
+        <!-- MODULE 3: Free Canvas & Hidden Art                                      -->
+        <!-- ========================================================================= -->
+        <section id="mod-freecanvas" class="space-y-6 hidden">
+            <div class="glass-panel rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4 border-l-4 border-l-emerald-500">
+                <div class="flex items-center space-x-3">
+                    <i class="fa-solid fa-wand-magic-sparkles text-emerald-400 text-xl"></i>
+                    <div>
+                        <h2 class="font-bold text-slate-200">自由畫布與神奇光學隱形藝術</h2>
+                        <p class="text-xs text-slate-400">自由塗鴉或載入光學隱形範例，切換燈光體驗「同色融入隱形、異色吸收顯影」。</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center space-x-2">
+                    <span class="text-xs text-slate-300 font-medium">照射光濾鏡：</span>
+                    <select id="canvas-light-filter" onchange="renderFreeCanvas()" class="bg-slate-900 border border-slate-700 text-xs rounded-xl p-2 text-emerald-300 font-bold outline-none focus:border-emerald-500">
+                        <option value="white">⚪ 自然白光 (White Light)</option>
+                        <option value="red">🔴 純紅光照射 (Red Light)</option>
+                        <option value="green">🟢 純綠光照射 (Green Light)</option>
+                        <option value="blue">🔵 純藍光照射 (Blue Light)</option>
+                        <option value="yellow">🟡 純黃光照射 (Yellow Light)</option>
+                        <option value="magenta">🟣 洋紅光照射 (Magenta Light)</option>
+                        <option value="cyan">🔷 青光照射 (Cyan Light)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div class="lg:col-span-8 space-y-4">
+                    <div class="relative glass-panel rounded-2xl p-2 border border-slate-700 overflow-hidden shadow-2xl">
+                        <canvas id="paintCanvas" class="w-full h-[460px] bg-white rounded-xl cursor-crosshair block touch-none"></canvas>
+                        
+                        <div class="absolute top-4 right-4 bg-slate-900/90 backdrop-blur border border-slate-700 p-2 rounded-xl flex items-center space-x-2">
+                            <button onclick="toggleSplitView()" id="btn-split-toggle" class="px-3 py-1.5 rounded-lg text-xs font-bold transition bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700">
+                                <i class="fa-solid fa-arrows-left-right me-1"></i>
+                                <span id="text-split-toggle">開啟左右對照模式</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4">
+                        <div class="flex items-center space-x-2">
+                            <span class="text-xs text-slate-400">畫筆顏色：</span>
+                            <div class="flex items-center space-x-1.5" id="pen-colors"></div>
+                        </div>
+
+                        <div class="flex items-center space-x-3">
+                            <span class="text-xs text-slate-400">筆刷粗細：</span>
+                            <input id="pen-size-slider" type="range" min="2" max="30" value="8" class="w-24 h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-500">
+                            <span id="pen-size-val" class="text-xs font-mono text-emerald-400 font-bold w-6">8px</span>
+                        </div>
+
+                        <button onclick="clearPaintCanvas()" class="px-3 py-1.5 bg-rose-950/80 hover:bg-rose-900 border border-rose-800 text-rose-300 text-xs font-bold rounded-xl transition flex items-center space-x-1">
+                            <i class="fa-solid fa-trash-can"></i>
+                            <span>清空畫布</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-4 glass-panel rounded-2xl p-5 border border-slate-700 space-y-4">
+                    <h3 class="text-sm font-bold text-slate-100 flex items-center space-x-2 border-b border-slate-800 pb-3">
+                        <i class="fa-solid fa-mask text-emerald-400"></i>
+                        <span>光學隱形範例載入</span>
+                    </h3>
+
+                    <div class="space-y-3">
+                        <div onclick="loadHiddenPreset(1)" class="p-3 bg-slate-900/90 border border-slate-800 hover:border-emerald-500/50 rounded-xl cursor-pointer transition group">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-xs font-bold text-emerald-400 group-hover:text-emerald-300">1. 會消失的密碼</span>
+                                <i class="fa-solid fa-eye-slash text-slate-500 text-xs"></i>
+                            </div>
+                            <p class="text-[11px] text-slate-400">紅光下紅字消失，切換至綠光/藍光時密碼浮現！</p>
+                        </div>
+
+                        <div onclick="loadHiddenPreset(2)" class="p-3 bg-slate-900/90 border border-slate-800 hover:border-emerald-500/50 rounded-xl cursor-pointer transition group">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-xs font-bold text-emerald-400 group-hover:text-emerald-300">2. 隱形紅蘋果與草地</span>
+                                <i class="fa-solid fa-apple-whole text-slate-500 text-xs"></i>
+                            </div>
+                            <p class="text-[11px] text-slate-400">綠光照射時紅蘋果吸收綠光變黑，紅光照射時蘋果顯現。</p>
+                        </div>
+
+                        <div onclick="loadHiddenPreset(3)" class="p-3 bg-slate-900/90 border border-slate-800 hover:border-emerald-500/50 rounded-xl cursor-pointer transition group">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-xs font-bold text-emerald-400 group-hover:text-emerald-300">3. RGB 魔法線條</span>
+                                <i class="fa-solid fa-cat text-slate-500 text-xs"></i>
+                            </div>
+                            <p class="text-[11px] text-slate-400">三原色疊加圖案，切換紅、綠、藍光分別呈現不同圖形。</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ========================================================================= -->
+        <!-- MODULE 4: Optics Guide & Formulas                                       -->
+        <!-- ========================================================================= -->
+        <section id="mod-guide" class="space-y-6 hidden">
+            <div class="glass-panel rounded-2xl p-4 border-l-4 border-l-indigo-500">
+                <h2 class="font-bold text-slate-200">光學重點總結卡片</h2>
+                <p class="text-xs text-slate-400">反射定律、減法色混合理論以及不透明物體吸收與反射機制。</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Card 1 -->
+                <div class="glass-panel rounded-2xl p-6 border border-slate-700 space-y-4">
+                    <div class="flex items-center space-x-3 border-b border-slate-800 pb-3">
+                        <div class="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold">1</div>
+                        <h3 class="font-bold text-slate-200 text-base">反射定律 (Law of Reflection)</h3>
+                    </div>
+                    <div class="text-xs leading-relaxed text-slate-300 space-y-3">
+                        <div class="bg-slate-900 p-3 rounded-xl font-mono text-center text-blue-300 border border-slate-800 font-bold text-sm">
+                            $\theta_i = \theta_r$ （入射角 = 反射角）
+                        </div>
+                        <ul class="list-disc list-inside space-y-1 text-slate-400">
+                            <li><strong class="text-slate-200">法線：</strong>過反射點且垂直於反射平面的虛線。</li>
+                            <li>入射光線、反射光線與法線位於同一平面上。</li>
+                            <li>入射角與反射角恆對稱相等。</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Card 2 -->
+                <div class="glass-panel rounded-2xl p-6 border border-slate-700 space-y-4">
+                    <div class="flex items-center space-x-3 border-b border-slate-800 pb-3">
+                        <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">2</div>
+                        <h3 class="font-bold text-slate-200 text-base">玻璃紙濾光原理（減法色）</h3>
+                    </div>
+                    <div class="text-xs leading-relaxed text-slate-300 space-y-3">
+                        <div class="bg-slate-900 p-3 rounded-xl font-mono text-center text-emerald-300 border border-slate-800 font-bold text-xs">
+                            $I_{trans} = I_{in} \odot C_{filter}$
+                        </div>
+                        <p class="text-slate-400">
+                            透明濾光片會選擇性透射特定顏色的光並吸收其餘色光。當多層玻璃紙疊加時，唯有各層皆能穿透的色光才能通過。
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="glass-panel border-t border-slate-800 py-4 px-6 text-center text-xs text-slate-500 mt-8">
+        <p>光與顏色物理互動實驗室 Light & Color Optics Lab • 適用於國高中物理光學教學</p>
+    </footer>
+
+
+    <!-- JavaScript Physics Logic Engine -->
+    <script>
+        // =========================================================================
+        // Global Color Registry & Physics Data
+        // =========================================================================
+        const COLOR_DATA = {
+            white:   { name: '白光/白色', rgb: [1, 1, 1], hex: '#ffffff', textClass: 'text-white' },
+            red:     { name: '紅色',     rgb: [1, 0, 0], hex: '#ef4444', textClass: 'text-red-400' },
+            green:   { name: '綠色',     rgb: [0, 1, 0], hex: '#22c55e', textClass: 'text-green-400' },
+            blue:    { name: '藍色',     rgb: [0, 0.4, 1], hex: '#3b82f6', textClass: 'text-blue-400' },
+            yellow:  { name: '黃色',     rgb: [1, 1, 0], hex: '#eab308', textClass: 'text-yellow-400' },
+            magenta: { name: '洋紅色',   rgb: [1, 0, 1], hex: '#ec4899', textClass: 'text-pink-400' },
+            cyan:    { name: '青色',     rgb: [0, 1, 1], hex: '#06b6d4', textClass: 'text-cyan-400' },
+            black:   { name: '黑色/無光', rgb: [0, 0, 0], hex: '#000000', textClass: 'text-slate-400' },
+            mirror:  { name: '鏡面反射', rgb: [1, 1, 1], hex: '#e2e8f0', textClass: 'text-slate-200' },
+            none:    { name: '無 (透明)', rgb: [1, 1, 1], hex: 'transparent', textClass: 'text-slate-400' }
+        };
+
+        function multiplyRGB(rgb1, rgb2) {
+            return [ rgb1[0] * rgb2[0], rgb1[1] * rgb2[1], rgb1[2] * rgb2[2] ];
+        }
+
+        function getIntensity(rgb) {
+            return Math.round(((rgb[0] + rgb[1] + rgb[2]) / 3) * 100);
+        }
+
+        function rgbToHex(rgb) {
+            const r = Math.round(rgb[0] * 255);
+            const g = Math.round(rgb[1] * 255);
+            const b = Math.round(rgb[2] * 255);
+            return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+        }
+
+        function getRGBName(rgb) {
+            const r = rgb[0] > 0.1 ? 1 : 0;
+            const g = rgb[1] > 0.1 ? 1 : 0;
+            const b = rgb[2] > 0.1 ? 1 : 0;
+
+            if (r === 1 && g === 1 && b === 1) return '白光';
+            if (r === 1 && g === 0 && b === 0) return '紅光';
+            if (r === 0 && g === 1 && b === 0) return '綠光';
+            if (r === 0 && g === 0 && b === 1) return '藍光';
+            if (r === 1 && g === 1 && b === 0) return '黃光';
+            if (r === 1 && g === 0 && b === 1) return '洋紅光';
+            if (r === 0 && g === 1 && b === 1) return '青光';
+            return '黑色 (無光)';
+        }
+
+        // =========================================================================
+        // Tab Navigation
+        // =========================================================================
+        function switchTab(tabId) {
+            ['sideview', 'blocks', 'freecanvas', 'guide'].forEach(id => {
+                const mod = document.getElementById(`mod-${id}`);
+                const btn = document.getElementById(`tab-${id}`);
+                if (id === tabId) {
+                    mod.classList.remove('hidden');
+                    btn.className = "tab-btn px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center space-x-2 whitespace-nowrap text-white bg-blue-600 shadow-md";
+                } else {
+                    mod.classList.add('hidden');
+                    btn.className = "tab-btn px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center space-x-2 whitespace-nowrap text-slate-400 hover:text-white hover:bg-slate-800";
+                }
+            });
+
+            if (tabId === 'sideview') resizeOpticsCanvas();
+            else if (tabId === 'freecanvas') resizePaintCanvas();
+        }
+
+
+        // =========================================================================
+        // MODULE 1: Side View Oblique Light Path Simulator
+        // =========================================================================
+        const opticsCanvas = document.getElementById('opticsCanvas');
+        const opticsCtx = opticsCanvas.getContext('2d');
+
+        let sideState = {
+            angle: 35, // Angle with normal in degrees
+            lightKey: 'white',
+            filter1Key: 'none',
+            filter2Key: 'none',
+            surfaceKey: 'mirror',
+            particles: []
+        };
+
+        function initSideControls() {
+            const container = document.getElementById('src-color-selector');
+            const keys = ['white', 'red', 'green', 'blue', 'yellow', 'magenta', 'cyan'];
+            container.innerHTML = keys.map(k => `
+                <button onclick="setSourceColor('${k}')" id="btn-src-${k}" 
+                        class="p-2 rounded-xl border border-slate-700 flex flex-col items-center justify-center space-y-1 transition text-[10px] font-bold ${k === sideState.lightKey ? 'ring-2 ring-blue-500 bg-slate-800' : 'bg-slate-900/80 hover:bg-slate-800'}">
+                    <span class="w-3 h-3 rounded-full border border-white/20" style="background-color: ${COLOR_DATA[k].hex}"></span>
+                    <span class="text-slate-300 truncate w-full text-center">${COLOR_DATA[k].name.split('/')[0]}</span>
+                </button>
+            `).join('');
+
+            document.getElementById('slider-angle').addEventListener('input', (e) => {
+                sideState.angle = parseInt(e.target.value);
+                document.getElementById('angle-val-display').innerText = `${sideState.angle}°`;
+                document.getElementById('badge-i-angle').innerText = `${sideState.angle}°`;
+                document.getElementById('badge-r-angle').innerText = `${sideState.angle}°`;
+            });
+
+            document.getElementById('select-filter1').addEventListener('change', (e) => { sideState.filter1Key = e.target.value; });
+            document.getElementById('select-filter2').addEventListener('change', (e) => { sideState.filter2Key = e.target.value; });
+            document.getElementById('select-surface').addEventListener('change', (e) => { sideState.surfaceKey = e.target.value; });
+
+            // Initialize Particles
+            for (let i = 0; i < 30; i++) {
+                sideState.particles.push({
+                    t: Math.random(),
+                    speed: 0.005 + Math.random() * 0.004
+                });
+            }
+        }
+
+        function setSourceColor(key) {
+            sideState.lightKey = key;
+            ['white', 'red', 'green', 'blue', 'yellow', 'magenta', 'cyan'].forEach(k => {
+                const btn = document.getElementById(`btn-src-${k}`);
+                if (k === key) {
+                    btn.className = "p-2 rounded-xl border border-blue-500 ring-2 ring-blue-500 bg-slate-800 flex flex-col items-center justify-center space-y-1 transition text-[10px] font-bold";
+                } else {
+                    btn.className = "p-2 rounded-xl border border-slate-700 bg-slate-900/80 hover:bg-slate-800 flex flex-col items-center justify-center space-y-1 transition text-[10px] font-bold";
+                }
+            });
+        }
+
+        function applySidePreset(num) {
+            if (num === 1) {
+                setSourceColor('red');
+                document.getElementById('select-filter1').value = 'green'; sideState.filter1Key = 'green';
+                document.getElementById('select-filter2').value = 'none'; sideState.filter2Key = 'none';
+                document.getElementById('select-surface').value = 'blue'; sideState.surfaceKey = 'blue';
+            } else if (num === 2) {
+                setSourceColor('white');
+                document.getElementById('select-filter1').value = 'yellow'; sideState.filter1Key = 'yellow';
+                document.getElementById('select-filter2').value = 'cyan'; sideState.filter2Key = 'cyan';
+                document.getElementById('select-surface').value = 'red'; sideState.surfaceKey = 'red';
+            } else if (num === 3) {
+                setSourceColor('white');
+                document.getElementById('select-filter1').value = 'none'; sideState.filter1Key = 'none';
+                document.getElementById('select-filter2').value = 'none'; sideState.filter2Key = 'none';
+                document.getElementById('select-surface').value = 'mirror'; sideState.surfaceKey = 'mirror';
+            }
+        }
+
+        function resizeOpticsCanvas() {
+            if (!opticsCanvas || !opticsCanvas.parentElement) return;
+            const rect = opticsCanvas.parentElement.getBoundingClientRect();
+            const w = Math.floor(rect.width || opticsCanvas.parentElement.clientWidth || 0);
+            if (w <= 0) return;
+            opticsCanvas.width = w;
+            opticsCanvas.height = 470;
+        }
+
+        function drawSideView() {
+            const W = opticsCanvas.width;
+            const H = opticsCanvas.height;
+
+            opticsCtx.clearRect(0, 0, W, H);
+
+            // Background Grid Lines
+            opticsCtx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+            opticsCtx.lineWidth = 1;
+            for (let x = 0; x < W; x += 30) {
+                opticsCtx.beginPath(); opticsCtx.moveTo(x, 0); opticsCtx.lineTo(x, H); opticsCtx.stroke();
+            }
+            for (let y = 0; y < H; y += 30) {
+                opticsCtx.beginPath(); opticsCtx.moveTo(0, y); opticsCtx.lineTo(W, y); opticsCtx.stroke();
+            }
+
+            // Key Geometry Coordinates
+            const yBot = H - 50;              // Surface Y
+            const yFilter1 = 170;              // Filter 1 Y
+            const yFilter2 = 290;              // Filter 2 Y
+            const xHit = W * 0.5;              // Reflection Point X (Center)
+            const yHit = yBot;
+
+            const angleRad = (sideState.angle * Math.PI) / 180;
+            const deltaY = yHit - 60;          // Height from source to surface
+            const deltaX = deltaY * Math.tan(angleRad);
+
+            const xSrc = xHit - deltaX;        // Source Spotlight X (Top Left)
+            const ySrc = 60;
+            const xEye = xHit + deltaX;        // Observer Eye X (Top Right)
+            const yEye = 60;
+
+            // Filter Intersection X Positions (Oblique line math)
+            const xF1_dn = xHit - (yHit - yFilter1) * Math.tan(angleRad);
+            const xF2_dn = xHit - (yHit - yFilter2) * Math.tan(angleRad);
+            const xF2_up = xHit + (yHit - yFilter2) * Math.tan(angleRad);
+            const xF1_up = xHit + (yHit - yFilter1) * Math.tan(angleRad);
+
+            // 1. Calculate Segment Colors
+            const srcRGB  = COLOR_DATA[sideState.lightKey].rgb;
+            
+            // Downward Through Filter 1
+            const f1RGB = COLOR_DATA[sideState.filter1Key].rgb;
+            const pass1RGB = sideState.filter1Key === 'none' ? srcRGB : multiplyRGB(srcRGB, f1RGB);
+
+            // Downward Through Filter 2
+            const f2RGB = COLOR_DATA[sideState.filter2Key].rgb;
+            const pass2RGB = sideState.filter2Key === 'none' ? pass1RGB : multiplyRGB(pass1RGB, f2RGB);
+
+            // Reflection Off Bottom Surface
+            const surfRGB = COLOR_DATA[sideState.surfaceKey].rgb;
+            const reflRGB = multiplyRGB(pass2RGB, surfRGB);
+
+            // Upward Through Filter 2
+            const pass3RGB = sideState.filter2Key === 'none' ? reflRGB : multiplyRGB(reflRGB, f2RGB);
+
+            // Upward Through Filter 1 -> Observer Eye
+            const eyeRGB = sideState.filter1Key === 'none' ? pass3RGB : multiplyRGB(pass3RGB, f1RGB);
+
+            // Update Badges
+            updateDataBadges(srcRGB, pass2RGB, reflRGB, eyeRGB);
+
+            // 2. Draw Bottom Reflection Surface
+            opticsCtx.save();
+            if (sideState.surfaceKey === 'mirror') {
+                const grad = opticsCtx.createLinearGradient(0, yBot, W, yBot + 30);
+                grad.addColorStop(0, '#64748b'); grad.addColorStop(0.5, '#f8fafc'); grad.addColorStop(1, '#475569');
+                opticsCtx.fillStyle = grad;
+            } else {
+                opticsCtx.fillStyle = COLOR_DATA[sideState.surfaceKey].hex;
+            }
+            opticsCtx.fillRect(40, yBot, W - 80, 20);
+            opticsCtx.strokeStyle = '#64748b';
+            opticsCtx.lineWidth = 2;
+            opticsCtx.strokeRect(40, yBot, W - 80, 20);
+
+            opticsCtx.fillStyle = '#f8fafc';
+            opticsCtx.font = 'bold 12px sans-serif';
+            opticsCtx.fillText(`反射底面：${COLOR_DATA[sideState.surfaceKey].name}`, 50, yBot + 14);
+            opticsCtx.restore();
+
+            // 3. Draw Normal Line (垂直法線)
+            opticsCtx.save();
+            opticsCtx.setLineDash([6, 6]);
+            opticsCtx.strokeStyle = '#38bdf8';
+            opticsCtx.lineWidth = 2;
+            opticsCtx.beginPath();
+            opticsCtx.moveTo(xHit, yHit + 10);
+            opticsCtx.lineTo(xHit, yHit - 180);
+            opticsCtx.stroke();
+
+            opticsCtx.fillStyle = '#38bdf8';
+            opticsCtx.font = 'bold 11px sans-serif';
+            opticsCtx.fillText('法線 (Normal Line)', xHit - 45, yHit - 188);
+            opticsCtx.restore();
+
+            // 4. Draw Angle Arcs (θi & θr)
+            opticsCtx.save();
+            const rArc = 50;
+            // Incident Angle Arc
+            opticsCtx.beginPath();
+            opticsCtx.arc(xHit, yHit, rArc, -Math.PI / 2 - angleRad, -Math.PI / 2);
+            opticsCtx.strokeStyle = '#f59e0b';
+            opticsCtx.lineWidth = 2;
+            opticsCtx.stroke();
+            opticsCtx.fillStyle = '#f59e0b';
+            opticsCtx.font = 'bold 11px sans-serif';
+            opticsCtx.fillText(`θi = ${sideState.angle}°`, xHit - 55, yHit - 55);
+
+            // Reflected Angle Arc
+            opticsCtx.beginPath();
+            opticsCtx.arc(xHit, yHit, rArc, -Math.PI / 2, -Math.PI / 2 + angleRad);
+            opticsCtx.strokeStyle = '#10b981';
+            opticsCtx.lineWidth = 2;
+            opticsCtx.stroke();
+            opticsCtx.fillStyle = '#10b981';
+            opticsCtx.fillText(`θr = ${sideState.angle}°`, xHit + 20, yHit - 55);
+            opticsCtx.restore();
+
+            // 5. Draw Filter Plates
+            drawFilterPlate(yFilter1, sideState.filter1Key, '第一層玻璃紙 (Filter 1)', W);
+            drawFilterPlate(yFilter2, sideState.filter2Key, '第二層玻璃紙 (Filter 2)', W);
+
+            // 6. Draw Oblique Light Rays (Segment by Segment)
+            // Seg 1: Source -> Filter 1
+            drawRaySegment(xSrc, ySrc, xF1_dn, yFilter1, srcRGB);
+
+            // Seg 2: Filter 1 -> Filter 2
+            if (getIntensity(pass1RGB) > 0) {
+                drawRaySegment(xF1_dn, yFilter1, xF2_dn, yFilter2, pass1RGB);
+            } else {
+                drawAbsorptionBadge(xF1_dn, yFilter1, '第一層玻璃紙完全吸收');
+            }
+
+            // Seg 3: Filter 2 -> Surface
+            if (getIntensity(pass1RGB) > 0 && getIntensity(pass2RGB) > 0) {
+                drawRaySegment(xF2_dn, yFilter2, xHit, yHit, pass2RGB);
+            } else if (getIntensity(pass1RGB) > 0 && getIntensity(pass2RGB) === 0) {
+                drawAbsorptionBadge(xF2_dn, yFilter2, '第二層玻璃紙完全吸收');
+            }
+
+            // Seg 4: Surface -> Filter 2 (Reflected)
+            if (getIntensity(pass2RGB) > 0 && getIntensity(reflRGB) > 0) {
+                drawRaySegment(xHit, yHit, xF2_up, yFilter2, reflRGB);
+            } else if (getIntensity(pass2RGB) > 0 && getIntensity(reflRGB) === 0) {
+                drawAbsorptionBadge(xHit, yHit, '底面完全吸收無反射');
+            }
+
+            // Seg 5: Filter 2 -> Filter 1 (Reflected Upwards)
+            if (getIntensity(reflRGB) > 0 && getIntensity(pass3RGB) > 0) {
+                drawRaySegment(xF2_up, yFilter2, xF1_up, yFilter1, pass3RGB);
+            }
+
+            // Seg 6: Filter 1 -> Observer Eye
+            if (getIntensity(pass3RGB) > 0 && getIntensity(eyeRGB) > 0) {
+                drawRaySegment(xF1_up, yFilter1, xEye, yEye, eyeRGB);
+            }
+
+            // 7. Draw Source Spotlight (Top Left)
+            drawSpotlightFixture(xSrc, ySrc, srcRGB, sideState.angle);
+
+            // 8. Draw Observer Eye (Top Right)
+            drawEyeObserver(xEye, yEye, eyeRGB);
+
+            // 9. Particles Flowing Animation
+            drawFlowParticles(xSrc, ySrc, xF1_dn, yFilter1, xF2_dn, yFilter2, xHit, yHit, xF2_up, yFilter2, xF1_up, yFilter1, xEye, yEye, srcRGB, pass1RGB, pass2RGB, reflRGB, pass3RGB, eyeRGB);
+
+            requestAnimationFrame(drawSideView);
+        }
+
+        // Helper: Filter Plate Visual
+        function drawFilterPlate(y, filterKey, label, W) {
+            if (filterKey === 'none') return;
+            opticsCtx.save();
+            const color = COLOR_DATA[filterKey];
+            opticsCtx.fillStyle = color.hex;
+            opticsCtx.globalAlpha = 0.4;
+            opticsCtx.fillRect(60, y - 6, W - 120, 12);
+
+            opticsCtx.globalAlpha = 1.0;
+            opticsCtx.strokeStyle = color.hex;
+            opticsCtx.lineWidth = 2;
+            opticsCtx.strokeRect(60, y - 6, W - 120, 12);
+
+            opticsCtx.fillStyle = '#f3f4f6';
+            opticsCtx.font = '10px sans-serif';
+            opticsCtx.fillText(`${label}: ${color.name}`, 70, y - 10);
+            opticsCtx.restore();
+        }
+
+        // Helper: Draw Ray Segment
+        function drawRaySegment(x1, y1, x2, y2, rgb) {
+            opticsCtx.save();
+            const hex = rgbToHex(rgb);
+            
+            // Outer Glow
+            opticsCtx.strokeStyle = hex;
+            opticsCtx.lineWidth = 8;
+            opticsCtx.globalAlpha = 0.35;
+            opticsCtx.beginPath(); opticsCtx.moveTo(x1, y1); opticsCtx.lineTo(x2, y2); opticsCtx.stroke();
+
+            // Core Ray
+            opticsCtx.lineWidth = 3;
+            opticsCtx.globalAlpha = 0.95;
+            opticsCtx.beginPath(); opticsCtx.moveTo(x1, y1); opticsCtx.lineTo(x2, y2); opticsCtx.stroke();
+
+            opticsCtx.restore();
+        }
+
+        // Helper: Absorption Callout
+        function drawAbsorptionBadge(x, y, text) {
+            opticsCtx.save();
+            opticsCtx.fillStyle = '#ef4444';
+            opticsCtx.beginPath(); opticsCtx.arc(x, y, 6, 0, Math.PI * 2); opticsCtx.fill();
+
+            opticsCtx.fillStyle = '#0f172a';
+            opticsCtx.fillRect(x - 65, y + 10, 130, 22);
+            opticsCtx.strokeStyle = '#f87171';
+            opticsCtx.strokeRect(x - 65, y + 10, 130, 22);
+
+            opticsCtx.fillStyle = '#fca5a5';
+            opticsCtx.font = 'bold 10px sans-serif';
+            opticsCtx.textAlign = 'center';
+            opticsCtx.fillText(`🚫 ${text}`, x, y + 25);
+            opticsCtx.restore();
+        }
+
+        // Helper: Spotlight Fixture (Top Left)
+        function drawSpotlightFixture(x, y, rgb, angle) {
+            opticsCtx.save();
+            opticsCtx.translate(x, y);
+            opticsCtx.rotate((angle * Math.PI) / 180);
+
+            opticsCtx.fillStyle = '#334155';
+            opticsCtx.strokeStyle = '#64748b';
+            opticsCtx.lineWidth = 2;
+            opticsCtx.beginPath(); opticsCtx.arc(0, 0, 16, 0, Math.PI * 2); opticsCtx.fill(); opticsCtx.stroke();
+
+            opticsCtx.fillStyle = rgbToHex(rgb);
+            opticsCtx.beginPath(); opticsCtx.arc(0, 0, 10, 0, Math.PI * 2); opticsCtx.fill();
+
+            opticsCtx.restore();
+
+            opticsCtx.save();
+            opticsCtx.fillStyle = '#f3f4f6';
+            opticsCtx.font = 'bold 11px sans-serif';
+            opticsCtx.textAlign = 'center';
+            opticsCtx.fillText('光源 Spotlight', x, y - 22);
+            opticsCtx.restore();
+        }
+
+        // Helper: Observer Eye (Top Right)
+        function drawEyeObserver(x, y, rgb) {
+            opticsCtx.save();
+            opticsCtx.translate(x, y);
+
+            // Eye White
+            opticsCtx.fillStyle = '#ffffff';
+            opticsCtx.beginPath();
+            opticsCtx.ellipse(0, 0, 22, 14, 0, 0, Math.PI * 2);
+            opticsCtx.fill();
+            opticsCtx.strokeStyle = '#475569'; opticsCtx.lineWidth = 2; opticsCtx.stroke();
+
+            // Iris
+            const irisColor = getIntensity(rgb) > 0 ? rgbToHex(rgb) : '#1e293b';
+            opticsCtx.fillStyle = irisColor;
+            opticsCtx.beginPath(); opticsCtx.arc(-4, 0, 8, 0, Math.PI * 2); opticsCtx.fill();
+
+            // Pupil
+            opticsCtx.fillStyle = '#000000';
+            opticsCtx.beginPath(); opticsCtx.arc(-4, 0, 4, 0, Math.PI * 2); opticsCtx.fill();
+
+            opticsCtx.restore();
+
+            opticsCtx.save();
+            opticsCtx.fillStyle = '#f3f4f6';
+            opticsCtx.font = 'bold 11px sans-serif';
+            opticsCtx.textAlign = 'center';
+            opticsCtx.fillText('觀察者 Observer', x, y - 22);
+            opticsCtx.restore();
+        }
+
+        // Helper: Particles Flow
+        function drawFlowParticles(x0, y0, x1, y1, x2, y2, x3, y3, x4, y4, x5, y5, x6, y6, rgb0, rgb1, rgb2, rgb3, rgb4, rgb5) {
+            const waypoints = [
+                { x: x0, y: y0, rgb: rgb0 },
+                { x: x1, y: y1, rgb: rgb1 },
+                { x: x2, y: y2, rgb: rgb2 },
+                { x: x3, y: y3, rgb: rgb3 },
+                { x: x4, y: y4, rgb: rgb4 },
+                { x: x5, y: y5, rgb: rgb5 },
+                { x: x6, y: y6, rgb: rgb5 }
+            ];
+
+            sideState.particles.forEach(p => {
+                p.t += p.speed;
+                if (p.t > 1) p.t = 0;
+
+                const totalSegs = 6;
+                const segFloat = p.t * totalSegs;
+                const segIdx = Math.floor(segFloat);
+                const segT = segFloat - segIdx;
+
+                if (segIdx < totalSegs) {
+                    const wpA = waypoints[segIdx];
+                    const wpB = waypoints[segIdx + 1];
+
+                    if (getIntensity(wpA.rgb) > 0) {
+                        const px = wpA.x + (wpB.x - wpA.x) * segT;
+                        const py = wpA.y + (wpB.y - wpA.y) * segT;
+
+                        opticsCtx.save();
+                        opticsCtx.fillStyle = '#ffffff';
+                        opticsCtx.shadowColor = rgbToHex(wpA.rgb);
+                        opticsCtx.shadowBlur = 8;
+                        opticsCtx.beginPath(); opticsCtx.arc(px, py, 3, 0, Math.PI * 2); opticsCtx.fill();
+                        opticsCtx.restore();
+                    }
+                }
+            });
+        }
+
+        function updateDataBadges(srcRGB, fRGB, reflRGB, eyeRGB) {
+            document.getElementById('card-src-swatch').style.backgroundColor = rgbToHex(srcRGB);
+            document.getElementById('card-src-text').innerText = `${getRGBName(srcRGB)} (${getIntensity(srcRGB)}%)`;
+
+            document.getElementById('card-f1-swatch').style.backgroundColor = rgbToHex(fRGB);
+            document.getElementById('card-f1-text').innerText = `${getRGBName(fRGB)} (${getIntensity(fRGB)}%)`;
+
+            document.getElementById('card-refl-swatch').style.backgroundColor = rgbToHex(reflRGB);
+            document.getElementById('card-refl-text').innerText = `${getRGBName(reflRGB)} (${getIntensity(reflRGB)}%)`;
+
+            document.getElementById('card-eye-swatch').style.backgroundColor = rgbToHex(eyeRGB);
+            document.getElementById('card-eye-text').innerText = `${getRGBName(eyeRGB)} (${getIntensity(eyeRGB)}%)`;
+        }
+
+
+        // =========================================================================
+        // MODULE 2: Five Color Blocks Stage Logic
+        // =========================================================================
+        let blocksLightKey = 'white';
+
+        function initBlocksModule() {
+            const container = document.getElementById('blocks-light-btns');
+            const lights = ['white', 'red', 'green', 'blue', 'yellow', 'magenta', 'cyan', 'black'];
+            container.innerHTML = lights.map(k => `
+                <button onclick="setBlocksLight('${k}')" id="btn-block-light-${k}" 
+                        class="px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-1.5 ${k === blocksLightKey ? 'bg-purple-600 text-white shadow-md' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}">
+                    <span class="w-2.5 h-2.5 rounded-full border border-white/20" style="background-color: ${COLOR_DATA[k].hex}"></span>
+                    <span>${COLOR_DATA[k].name.split('/')[0]}</span>
+                </button>
+            `).join('');
+
+            updateBlocksStage();
+        }
+
+        function setBlocksLight(key) {
+            blocksLightKey = key;
+            ['white', 'red', 'green', 'blue', 'yellow', 'magenta', 'cyan', 'black'].forEach(k => {
+                const btn = document.getElementById(`btn-block-light-${k}`);
+                if (k === key) {
+                    btn.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-1.5 bg-purple-600 text-white shadow-md";
+                } else {
+                    btn.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-1.5 bg-slate-800 text-slate-400 hover:bg-slate-700";
+                }
+            });
+            updateBlocksStage();
+        }
+
+        function updateBlocksStage() {
+            const lightColor = COLOR_DATA[blocksLightKey];
+            document.getElementById('stage-light-name').innerText = lightColor.name;
+            
+            const spotlight = document.getElementById('spotlight-cone');
+            spotlight.style.background = `linear-gradient(to bottom, ${lightColor.hex}, transparent)`;
+
+            const blockTypes = ['red', 'green', 'blue', 'black', 'white'];
+            blockTypes.forEach((bKey, idx) => {
+                const blockColor = COLOR_DATA[bKey];
+                const perceivedRGB = multiplyRGB(lightColor.rgb, blockColor.rgb);
+                const perceivedHex = rgbToHex(perceivedRGB);
+                const perceivedName = getRGBName(perceivedRGB);
+
+                document.getElementById(`block-view-${idx}`).style.backgroundColor = perceivedHex;
+                const res = document.getElementById(`block-res-${idx}`);
+                res.innerText = perceivedName;
+                res.className = `font-bold ${COLOR_DATA[bKey].textClass}`;
+                document.getElementById(`block-math-${idx}`).innerText = `RGB: (${perceivedRGB.join(',')})`;
+            });
+        }
+
+
+        // =========================================================================
+        // MODULE 3: Free Canvas & Hidden Art Engine
+        // =========================================================================
+        const paintCanvas = document.getElementById('paintCanvas');
+        const paintCtx = paintCanvas.getContext('2d');
+        const artBuffer = document.createElement('canvas');
+        const artCtx = artBuffer.getContext('2d');
+
+        let freeState = {
+            penColor: '#ef4444',
+            penSize: 8,
+            isDrawing: false,
+            lastX: 0, lastY: 0,
+            isSplit: false
+        };
+        let currentPresetNum = 1;
+
+        function initPaintCanvas() {
+            const penColors = ['#ef4444', '#22c55e', '#3b82f6', '#eab308', '#ec4899', '#06b6d4', '#ffffff', '#000000'];
+            const container = document.getElementById('pen-colors');
+            container.innerHTML = penColors.map(c => `
+                <button onclick="setPenColor('${c}')" id="btn-pen-${c.replace('#','')}" 
+                        class="w-6 h-6 rounded-full border border-white/20 transition transform hover:scale-110 ${c === freeState.penColor ? 'ring-2 ring-emerald-400 scale-110' : ''}" 
+                        style="background-color: ${c}">
+                </button>
+            `).join('');
+
+            document.getElementById('pen-size-slider').addEventListener('input', (e) => {
+                freeState.penSize = parseInt(e.target.value);
+                document.getElementById('pen-size-val').innerText = `${freeState.penSize}px`;
+            });
+
+            paintCanvas.addEventListener('mousedown', startDrawing);
+            paintCanvas.addEventListener('mousemove', draw);
+            paintCanvas.addEventListener('mouseup', stopDrawing);
+            paintCanvas.addEventListener('mouseleave', stopDrawing);
+
+            paintCanvas.addEventListener('touchstart', (e) => { e.preventDefault(); startDrawing(e.touches[0]); });
+            paintCanvas.addEventListener('touchmove', (e) => { e.preventDefault(); draw(e.touches[0]); });
+            paintCanvas.addEventListener('touchend', stopDrawing);
+
+            resizePaintCanvas();
+            loadHiddenPreset(1);
+        }
+
+        function setPenColor(color) {
+            freeState.penColor = color;
+            ['#ef4444', '#22c55e', '#3b82f6', '#eab308', '#ec4899', '#06b6d4', '#ffffff', '#000000'].forEach(c => {
+                const btn = document.getElementById(`btn-pen-${c.replace('#','')}`);
+                if (c === color) btn.className = "w-6 h-6 rounded-full border border-white/20 transition transform scale-110 ring-2 ring-emerald-400";
+                else btn.className = "w-6 h-6 rounded-full border border-white/20 transition transform hover:scale-110";
+            });
+        }
+
+        function resizePaintCanvas() {
+            if (!paintCanvas || !paintCanvas.parentElement) return;
+            const rect = paintCanvas.parentElement.getBoundingClientRect();
+            const w = Math.floor(rect.width || paintCanvas.parentElement.clientWidth || 0);
+            if (w <= 0) return;
+
+            const needRebuildPreset = (artBuffer.width <= 0);
+            if (w !== paintCanvas.width) {
+                paintCanvas.width = w;
+                paintCanvas.height = 460;
+                artBuffer.width = w;
+                artBuffer.height = 460;
+
+                if (needRebuildPreset) {
+                    loadHiddenPreset(currentPresetNum);
+                    return;
+                }
+            }
+            renderFreeCanvas();
+        }
+
+        function startDrawing(e) {
+            if (paintCanvas.width <= 0) return;
+            freeState.isDrawing = true;
+            const rect = paintCanvas.getBoundingClientRect();
+            freeState.lastX = e.clientX - rect.left; freeState.lastY = e.clientY - rect.top;
+        }
+
+        function draw(e) {
+            if (!freeState.isDrawing || paintCanvas.width <= 0) return;
+            const rect = paintCanvas.getBoundingClientRect();
+            const currX = e.clientX - rect.left;
+            const currY = e.clientY - rect.top;
+
+            artCtx.save();
+            artCtx.beginPath();
+            artCtx.moveTo(freeState.lastX, freeState.lastY);
+            artCtx.lineTo(currX, currY);
+            artCtx.strokeStyle = freeState.penColor;
+            artCtx.lineWidth = freeState.penSize;
+            artCtx.lineCap = 'round'; artCtx.lineJoin = 'round';
+            artCtx.stroke();
+            artCtx.restore();
+
+            freeState.lastX = currX; freeState.lastY = currY;
+            renderFreeCanvas();
+        }
+
+        function stopDrawing() { freeState.isDrawing = false; }
+
+        function clearPaintCanvas() {
+            const W = artBuffer.width;
+            const H = artBuffer.height;
+            if (W <= 0 || H <= 0) return;
+            artCtx.fillStyle = '#ffffff';
+            artCtx.fillRect(0, 0, W, H);
+            renderFreeCanvas();
+        }
+
+        function toggleSplitView() {
+            freeState.isSplit = !freeState.isSplit;
+            document.getElementById('text-split-toggle').innerText = freeState.isSplit ? '關閉左右對照' : '開啟左右對照模式';
+            renderFreeCanvas();
+        }
+
+        function renderFreeCanvas() {
+            const W = paintCanvas.width;
+            const H = paintCanvas.height;
+            if (W <= 0 || H <= 0) return;
+
+            const lightKey = document.getElementById('canvas-light-filter').value;
+            const filterRGB = COLOR_DATA[lightKey].rgb;
+
+            const rawData = artCtx.getImageData(0, 0, W, H);
+            const pixels = rawData.data;
+
+            const outData = paintCtx.createImageData(W, H);
+            const outPixels = outData.data;
+
+            const splitX = Math.floor(W / 2);
+
+            for (let i = 0; i < pixels.length; i += 4) {
+                const x = (i / 4) % W;
+                const r = pixels[i]; const g = pixels[i + 1]; const b = pixels[i + 2]; const a = pixels[i + 3];
+
+                let fr = filterRGB[0], fg = filterRGB[1], fb = filterRGB[2];
+                if (freeState.isSplit && x < splitX) {
+                    fr = 1.0; fg = 1.0; fb = 1.0;
+                }
+
+                outPixels[i]     = Math.round(r * fr);
+                outPixels[i + 1] = Math.round(g * fg);
+                outPixels[i + 2] = Math.round(b * fb);
+                outPixels[i + 3] = a;
+            }
+
+            paintCtx.putImageData(outData, 0, 0);
+
+            if (freeState.isSplit) {
+                paintCtx.save();
+                paintCtx.strokeStyle = '#3b82f6';
+                paintCtx.lineWidth = 2;
+                paintCtx.setLineDash([6, 6]);
+                paintCtx.beginPath(); paintCtx.moveTo(splitX, 0); paintCtx.lineTo(splitX, H); paintCtx.stroke();
+
+                paintCtx.fillStyle = '#1e293b';
+                paintCtx.font = 'bold 11px sans-serif';
+                paintCtx.fillText('自然白光', 10, 20);
+                paintCtx.fillText(`濾鏡光: ${COLOR_DATA[lightKey].name}`, splitX + 10, 20);
+                paintCtx.restore();
+            }
+        }
+
+        function loadHiddenPreset(num) {
+            currentPresetNum = num;
+            const W = artBuffer.width;
+            const H = artBuffer.height;
+            if (W <= 0 || H <= 0) return;
+
+            clearPaintCanvas();
+
+            if (num === 1) {
+                artCtx.fillStyle = '#ffffff'; artCtx.fillRect(0, 0, W, H);
+                artCtx.fillStyle = '#ff0000';
+                for (let i = 0; i < 150; i++) {
+                    artCtx.beginPath();
+                    artCtx.arc(Math.random() * W, Math.random() * H, 10 + Math.random() * 20, 0, Math.PI * 2);
+                    artCtx.globalAlpha = 0.3; artCtx.fill();
+                }
+                artCtx.globalAlpha = 1.0;
+                artCtx.fillStyle = '#ff0000'; artCtx.font = 'black 36px sans-serif'; artCtx.textAlign = 'center';
+                artCtx.fillText('SECRET CODE: 7788', W / 2, H / 2 - 20);
+                artCtx.fillStyle = '#00ffff'; artCtx.font = 'bold 28px sans-serif';
+                artCtx.fillText('PHYSICS OPTICS LAB', W / 2, H / 2 + 40);
+
+            } else if (num === 2) {
+                artCtx.fillStyle = '#ffffff'; artCtx.fillRect(0, 0, W, H);
+                artCtx.fillStyle = '#00ff00';
+                artCtx.beginPath(); artCtx.arc(W / 2, H + 100, 300, 0, Math.PI * 2); artCtx.fill();
+                artCtx.fillStyle = '#ff0000';
+                artCtx.beginPath(); artCtx.arc(W / 2, H / 2 - 30, 60, 0, Math.PI * 2); artCtx.fill();
+
+            } else if (num === 3) {
+                artCtx.fillStyle = '#ffffff'; artCtx.fillRect(0, 0, W, H);
+                artCtx.strokeStyle = '#ff0000'; artCtx.lineWidth = 6;
+                artCtx.strokeRect(W / 2 - 80, H / 2 - 60, 160, 120);
+                artCtx.fillStyle = '#00ff00';
+                artCtx.beginPath(); artCtx.arc(W / 2 - 30, H / 2 - 20, 15, 0, Math.PI * 2); artCtx.arc(W / 2 + 30, H / 2 - 20, 15, 0, Math.PI * 2); artCtx.fill();
+            }
+
+            renderFreeCanvas();
+        }
+
+        // Window Onload
+        window.onload = function () {
+            initSideControls();
+            initBlocksModule();
+            initPaintCanvas();
+
+            window.addEventListener('resize', () => {
+                resizeOpticsCanvas();
+                resizePaintCanvas();
+            });
+
+            requestAnimationFrame(drawSideView);
+        };
+    </script>
+</body>
+</html>
