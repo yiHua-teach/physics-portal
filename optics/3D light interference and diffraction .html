@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D 波動光學實驗室 - 干涉與繞射物理模擬</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Three.js CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <!-- OrbitControls CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    .glass-panel {
+      background: rgba(15, 23, 42, 0.88);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 h-full overflow-hidden font-sans select-none flex flex-col">
+
+  <!-- Header -->
+  <header class="h-14 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between px-6 flex-shrink-0 z-20">
+    <div class="flex items-center space-x-3">
+      <div class="p-2 bg-indigo-600/30 text-indigo-400 rounded-lg border border-indigo-500/30">
+        <i class="fa-solid fa-wave-square text-lg"></i>
+      </div>
+      <div>
+        <h1 class="font-bold text-base tracking-wide bg-gradient-to-r from-indigo-300 via-cyan-300 to-emerald-300 bg-clip-text text-transparent">
+          3D 波動光學實驗室 <span class="text-xs text-slate-400 font-normal ml-2">干涉與繞射視覺模擬</span>
+        </h1>
+      </div>
+    </div>
+    
+    <!-- Camera View Controls -->
+    <div class="flex items-center space-x-2">
+      <button id="btn-cam-persp" class="px-3 py-1.5 text-xs font-medium bg-indigo-600 hover:bg-indigo-500 text-white rounded-md transition flex items-center gap-1.5 shadow-sm">
+        <i class="fa-solid fa-cube"></i> 透視視角
+      </button>
+      <button id="btn-cam-top" class="px-3 py-1.5 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-md transition flex items-center gap-1.5 border border-slate-700">
+        <i class="fa-solid fa-arrows-up-to-line"></i> 正俯視圖
+      </button>
+      <button id="btn-cam-front" class="px-3 py-1.5 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-md transition flex items-center gap-1.5 border border-slate-700">
+        <i class="fa-solid fa-border-all"></i> 螢幕正面
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Content Layout -->
+  <div class="flex-1 flex min-h-0 relative">
+
+    <!-- Left Controls Panel -->
+    <aside class="w-80 glass-panel flex flex-col z-10 border-r border-slate-800 flex-shrink-0 overflow-y-auto">
+      <div class="p-4 space-y-6">
+
+        <!-- Experiment Mode Selection -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+            <i class="fa-solid fa-sliders text-indigo-400 mr-1"></i> 光學實驗模式
+          </label>
+          <div class="grid grid-cols-2 gap-2">
+            <button id="mode-double" class="mode-btn active p-2.5 rounded-lg border text-xs font-medium text-left flex items-center gap-2 transition bg-indigo-600/30 border-indigo-500 text-indigo-200">
+              <i class="fa-solid fa-grip-lines-vertical"></i> 雙狹縫干涉
+            </button>
+            <button id="mode-single" class="mode-btn p-2.5 rounded-lg border border-slate-800 text-xs font-medium text-left flex items-center gap-2 transition bg-slate-900/50 text-slate-400 hover:border-slate-700">
+              <i class="fa-solid fa-square"></i> 單狹縫繞射
+            </button>
+            <button id="mode-grating" class="mode-btn p-2.5 rounded-lg border border-slate-800 text-xs font-medium text-left flex items-center gap-2 transition bg-slate-900/50 text-slate-400 hover:border-slate-700">
+              <i class="fa-solid fa-barcode"></i> 多狹縫光柵
+            </button>
+            <button id="mode-circular" class="mode-btn p-2.5 rounded-lg border border-slate-800 text-xs font-medium text-left flex items-center gap-2 transition bg-slate-900/50 text-slate-400 hover:border-slate-700">
+              <i class="fa-solid fa-circle-notch"></i> 圓孔繞射 (Airy)
+            </button>
+          </div>
+        </div>
+
+        <!-- Light Source & Wavelength -->
+        <div class="space-y-3 pt-2 border-t border-slate-800">
+          <div class="flex items-center justify-between">
+            <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+              <i class="fa-solid fa-lightbulb text-amber-400 mr-1"></i> 光源波長與顏色
+            </label>
+            <button id="btn-white-light" class="px-2 py-1 text-[11px] rounded border border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 flex items-center gap-1 transition">
+              <i class="fa-solid fa-rainbow text-amber-300"></i> 切換白光
+            </button>
+          </div>
+
+          <div id="wavelength-slider-container">
+            <div class="flex justify-between text-xs text-slate-300 mb-1">
+              <span>波長 (&lambda;):</span>
+              <span id="val-wavelength" class="font-mono text-cyan-400 font-bold">650 nm</span>
+            </div>
+            <input type="range" id="slider-wavelength" min="380" max="750" value="650" class="w-full accent-cyan-500 bg-slate-800 rounded-lg h-2 cursor-pointer">
+            <div class="flex justify-between text-[10px] text-slate-500 mt-1">
+              <span>380nm (紫)</span>
+              <span>550nm (綠)</span>
+              <span>750nm (紅)</span>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between p-2 rounded-lg bg-slate-900/70 border border-slate-800">
+            <span class="text-xs text-slate-400">雷射色彩預覽</span>
+            <div class="flex items-center gap-2">
+              <div id="color-indicator" class="w-6 h-6 rounded-full border border-white/20 shadow-lg shadow-red-500/50 bg-red-600 transition-all"></div>
+              <span id="color-hex" class="text-xs font-mono text-slate-300">#FF0000</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Slit / Aperture Parameters -->
+        <div class="space-y-4 pt-2 border-t border-slate-800">
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider">
+            <i class="fa-solid fa-ruler-combined text-indigo-400 mr-1"></i> 狹縫幾何參數
+          </label>
+
+          <!-- Slit Width (a) -->
+          <div>
+            <div class="flex justify-between text-xs text-slate-300 mb-1">
+              <span id="lbl-slit-width">狹縫寬度 (a):</span>
+              <span id="val-slit-width" class="font-mono text-indigo-300 font-bold">0.040 mm</span>
+            </div>
+            <input type="range" id="slider-slit-width" min="0.01" max="0.20" step="0.005" value="0.040" class="w-full accent-indigo-500 bg-slate-800 rounded-lg h-2 cursor-pointer">
+          </div>
+
+          <!-- Slit Distance (d) -->
+          <div id="container-slit-distance">
+            <div class="flex justify-between text-xs text-slate-300 mb-1">
+              <span>狹縫間距 (d):</span>
+              <span id="val-slit-distance" class="font-mono text-indigo-300 font-bold">0.150 mm</span>
+            </div>
+            <input type="range" id="slider-slit-distance" min="0.05" max="0.50" step="0.01" value="0.150" class="w-full accent-indigo-500 bg-slate-800 rounded-lg h-2 cursor-pointer">
+          </div>
+
+          <!-- Number of Slits (N) -->
+          <div id="container-slit-count" class="hidden">
+            <div class="flex justify-between text-xs text-slate-300 mb-1">
+              <span>狹縫數量 (N):</span>
+              <span id="val-slit-count" class="font-mono text-indigo-300 font-bold">5 縫</span>
+            </div>
+            <input type="range" id="slider-slit-count" min="2" max="10" step="1" value="5" class="w-full accent-indigo-500 bg-slate-800 rounded-lg h-2 cursor-pointer">
+          </div>
+
+          <!-- Screen Distance (L) -->
+          <div>
+            <div class="flex justify-between text-xs text-slate-300 mb-1">
+              <span>狹縫至屏幕距離 (L):</span>
+              <span id="val-screen-dist" class="font-mono text-indigo-300 font-bold">1.20 m</span>
+            </div>
+            <input type="range" id="slider-screen-dist" min="0.5" max="2.5" step="0.05" value="1.20" class="w-full accent-indigo-500 bg-slate-800 rounded-lg h-2 cursor-pointer">
+          </div>
+        </div>
+
+        <!-- Dynamic Physical Calculations (HUD Data) -->
+        <div class="pt-2 border-t border-slate-800 space-y-2">
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider">
+            <i class="fa-solid fa-calculator text-emerald-400 mr-1"></i> 理論數據計算
+          </label>
+
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <div class="p-2 rounded bg-slate-900/80 border border-slate-800">
+              <div class="text-slate-400 text-[10px]" id="hud-title-1">亮光點間距 &Delta;x</div>
+              <div id="hud-val-1" class="font-mono text-emerald-400 font-bold text-sm">5.20 mm</div>
+            </div>
+            <div class="p-2 rounded bg-slate-900/80 border border-slate-800">
+              <div class="text-slate-400 text-[10px]" id="hud-title-2">中央亮紋寬度 W</div>
+              <div id="hud-val-2" class="font-mono text-emerald-400 font-bold text-sm">39.00 mm</div>
+            </div>
+            <div class="p-2 rounded bg-slate-900/80 border border-slate-800 col-span-2">
+              <div class="text-slate-400 text-[10px]" id="hud-title-3">首項暗紋繞射角 &theta;<sub>1</sub></div>
+              <div id="hud-val-3" class="font-mono text-cyan-300 font-bold text-xs">0.931&deg; (16.25 mrad)</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </aside>
+
+    <!-- Center 3D Viewport & Bottom Analytics -->
+    <main class="flex-1 flex flex-col relative min-w-0">
+      
+      <!-- 3D WebGL Canvas Container -->
+      <div id="canvas-container" class="flex-1 w-full relative bg-slate-950 cursor-grab active:cursor-grabbing">
+        
+        <!-- On-screen 3D Overlay Tag -->
+        <div class="absolute top-4 left-4 pointer-events-none glass-panel p-2.5 rounded-lg flex items-center gap-3">
+          <div class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></div>
+          <span class="text-xs font-semibold text-slate-200" id="mode-display-tag">雙狹縫干涉 (Young's Double Slit)</span>
+        </div>
+
+        <div class="absolute top-4 right-4 pointer-events-none glass-panel p-2 text-right rounded-lg text-[11px] text-slate-400 space-y-0.5">
+          <div><i class="fa-solid fa-mouse text-slate-500"></i> 左鍵拖拽：旋轉 3D 場景</div>
+          <div><i class="fa-solid fa-arrows-up-down-left-right text-slate-500"></i> 右鍵拖拽：平移位置</div>
+          <div><i class="fa-solid fa-magnifying-glass-plus text-slate-500"></i> 滾輪：放大 / 縮小</div>
+        </div>
+      </div>
+
+      <!-- Bottom Panel: 1D Intensity Plot & 2D Screen Pattern -->
+      <div class="h-60 bg-slate-900/95 border-t border-slate-800 flex flex-col p-3 gap-2 flex-shrink-0 z-10">
+        
+        <div class="flex items-center justify-between px-1">
+          <span class="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+            <i class="fa-solid fa-chart-area text-cyan-400"></i> 屏幕光強分佈曲線 I(x) 與 2D 雷射光斑成像
+          </span>
+          <span class="text-[11px] text-slate-500 font-mono" id="plot-scale-info">顯示範圍: [-30mm, +30mm]</span>
+        </div>
+
+        <!-- 1D Plot Canvas -->
+        <div class="flex-1 bg-slate-950 rounded-lg border border-slate-800 overflow-hidden relative">
+          <canvas id="intensityCanvas" class="w-full h-full block"></canvas>
+        </div>
+
+        <!-- 2D Photographic Screen Strip Canvas -->
+        <div class="h-10 bg-black rounded border border-slate-800 overflow-hidden relative">
+          <canvas id="fringeCanvas" class="w-full h-full block"></canvas>
+        </div>
+
+      </div>
+
+    </main>
+
+  </div>
+
+  <!-- Offscreen texture canvas for 3D Screen Surface -->
+  <canvas id="textureCanvas" width="1024" height="512" class="hidden"></canvas>
+
+  <!-- Physics & 3D Script Logic -->
+  <script>
+    // --- Global Parameters & State ---
+    const state = {
+      mode: 'double', // 'double', 'single', 'grating', 'circular'
+      wavelength: 650, // nm
+      isWhiteLight: false,
+      slitWidth: 0.040, // mm (a)
+      slitDistance: 0.150, // mm (d)
+      slitCount: 5, // N for grating
+      screenDistance: 1.20, // meters (L)
+      colorHex: '#FF0000',
+      rgb: [255, 0, 0]
+    };
+
+    // --- DOM Elements ---
+    const canvasContainer = document.getElementById('canvas-container');
+    const intensityCanvas = document.getElementById('intensityCanvas');
+    const fringeCanvas = document.getElementById('fringeCanvas');
+    const textureCanvas = document.getElementById('textureCanvas');
+
+    const intensityCtx = intensityCanvas.getContext('2d');
+    const fringeCtx = fringeCanvas.getContext('2d');
+    const textureCtx = textureCanvas.getContext('2d');
+
+    // UI Input Controls
+    const sliderWavelength = document.getElementById('slider-wavelength');
+    const sliderSlitWidth = document.getElementById('slider-slit-width');
+    const sliderSlitDistance = document.getElementById('slider-slit-distance');
+    const sliderSlitCount = document.getElementById('slider-slit-count');
+    const sliderScreenDist = document.getElementById('slider-screen-dist');
+    const btnWhiteLight = document.getElementById('btn-white-light');
+
+    // Display Labels
+    const valWavelength = document.getElementById('val-wavelength');
+    const valSlitWidth = document.getElementById('val-slit-width');
+    const valSlitDistance = document.getElementById('val-slit-distance');
+    const valSlitCount = document.getElementById('val-slit-count');
+    const valScreenDist = document.getElementById('val-screen-dist');
+    const colorIndicator = document.getElementById('color-indicator');
+    const colorHexLabel = document.getElementById('color-hex');
+    const wavelengthContainer = document.getElementById('wavelength-slider-container');
+
+    // HUD Data Elements
+    const hudTitle1 = document.getElementById('hud-title-1');
+    const hudVal1 = document.getElementById('hud-val-1');
+    const hudTitle2 = document.getElementById('hud-title-2');
+    const hudVal2 = document.getElementById('hud-val-2');
+    const hudTitle3 = document.getElementById('hud-title-3');
+    const hudVal3 = document.getElementById('hud-val-3');
+    const modeDisplayTag = document.getElementById('mode-display-tag');
+
+    // --- Color Physics Conversion (Wavelength -> RGB) ---
+    function wavelengthToRGB(wl) {
+      let r = 0, g = 0, b = 0;
+      if (wl >= 380 && wl < 440) {
+        r = -(wl - 440) / (440 - 380);
+        b = 1.0;
+      } else if (wl >= 440 && wl < 490) {
+        g = (wl - 440) / (490 - 440);
+        b = 1.0;
+      } else if (wl >= 490 && wl < 510) {
+        g = 1.0;
+        b = -(wl - 510) / (510 - 490);
+      } else if (wl >= 510 && wl < 580) {
+        r = (wl - 510) / (580 - 510);
+        g = 1.0;
+      } else if (wl >= 580 && wl < 645) {
+        r = 1.0;
+        g = -(wl - 645) / (645 - 580);
+      } else if (wl >= 645 && wl <= 750) {
+        r = 1.0;
+      }
+
+      // Intensity drop near vision limits
+      let factor = 1.0;
+      if (wl >= 380 && wl < 420) {
+        factor = 0.3 + 0.7 * (wl - 380) / (420 - 380);
+      } else if (wl >= 700 && wl <= 750) {
+        factor = 0.3 + 0.7 * (750 - wl) / (750 - 700);
+      }
+
+      const gamma = 0.8;
+      r = Math.round(255 * Math.pow(r * factor, gamma));
+      g = Math.round(255 * Math.pow(g * factor, gamma));
+      b = Math.round(255 * Math.pow(b * factor, gamma));
+
+      return [r, g, b];
+    }
+
+    function rgbToHex(r, g, b) {
+      return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase();
+    }
+
+    // --- Bessel J1 Approximation for Airy Disk ---
+    function besselJ1(x) {
+      if (Math.abs(x) < 1e-6) return 0;
+      let ax = Math.abs(x);
+      let y, ans;
+      if (ax < 3.75) {
+        y = (x / 3.75) * (x / 3.75);
+        ans = x * (0.5 + y * (-0.56249985 + y * (0.21093573 + y * (-0.03954289 + y * (0.00443319 + y * (-0.00031761 + y * 0.00001109))))));
+      } else {
+        y = 3.75 / ax;
+        let f1 = 0.79788456 + y * (-0.00000077 + y * (-0.00552740 + y * (0.00009512 + y * (0.00137237 + y * (-0.00072805)))));
+        let theta1 = ax - 2.35619449 + y * (0.04166397 + y * (-0.00003954 + y * (-0.00262573 + y * (0.00054125 + y * (-0.00029333)))));
+        ans = (Math.sqrt(1 / ax) * f1 * Math.cos(theta1));
+        if (x < 0) ans = -ans;
+      }
+      return ans;
+    }
+
+    // --- Physics Optical Intensity Functions ---
+    function getIntensity(x_mm, r_mm, wl_nmOverride = null) {
+      const lambda = (wl_nmOverride || state.wavelength) * 1e-6; // convert nm to mm
+      const L = state.screenDistance * 1000; // convert m to mm
+      const a = state.slitWidth; // mm
+      const d = state.slitDistance; // mm
+      const N = state.slitCount;
+
+      if (state.mode === 'circular') {
+        const theta = Math.atan(r_mm / L);
+        const sinTheta = Math.sin(theta);
+        if (sinTheta === 0) return 1.0;
+        const x = (Math.PI * a * sinTheta) / lambda;
+        const j1Val = besselJ1(x);
+        const val = (2 * j1Val) / x;
+        return val * val;
+      }
+
+      const theta = Math.atan(x_mm / L);
+      const sinTheta = Math.sin(theta);
+
+      // Single Slit Factor (Diffraction)
+      let beta = (Math.PI * a * sinTheta) / lambda;
+      let diffraction = (beta === 0) ? 1.0 : Math.pow(Math.sin(beta) / beta, 2);
+
+      if (state.mode === 'single') {
+        return diffraction;
+      } else if (state.mode === 'double') {
+        let alpha = (Math.PI * d * sinTheta) / lambda;
+        let interference = Math.pow(Math.cos(alpha), 2);
+        return diffraction * interference;
+      } else if (state.mode === 'grating') {
+        let alpha = (Math.PI * d * sinTheta) / lambda;
+        let sinAlpha = Math.sin(alpha);
+        let interference;
+        if (Math.abs(sinAlpha) < 1e-5) {
+          interference = N * N;
+        } else {
+          interference = Math.pow(Math.sin(N * alpha) / sinAlpha, 2);
+        }
+        // Normalize grating peak to 1.0
+        return diffraction * (interference / (N * N));
+      }
+      return 0;
+    }
+
+    // Multi-wavelength superposition for White Light Spectrum
+    function getWhiteLightRGB(x_mm, r_mm) {
+      let totalR = 0, totalG = 0, totalB = 0;
+      const samples = 15; // wavelength samples across 400nm - 700nm
+      for (let i = 0; i < samples; i++) {
+        let wl = 400 + (300 * i / (samples - 1));
+        let rgb = wavelengthToRGB(wl);
+        let I = getIntensity(x_mm, r_mm, wl);
+        totalR += rgb[0] * I;
+        totalG += rgb[1] * I;
+        totalB += rgb[2] * I;
+      }
+      return [
+        Math.min(255, Math.round(totalR / (samples * 0.4))),
+        Math.min(255, Math.round(totalG / (samples * 0.4))),
+        Math.min(255, Math.round(totalB / (samples * 0.4)))
+      ];
+    }
+
+    // --- Three.js 3D Scene Setup ---
+    let scene, camera, renderer, controls;
+    let laserBeamMesh, slitPlateMesh, screenMesh, screenTexture;
+    let wavefrontGroup, volumeLightGroup, rayMaximaGroup;
+
+    function init3D() {
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x070a12);
+      scene.fog = new THREE.FogExp2(0x070a12, 0.08);
+
+      camera = new THREE.PerspectiveCamera(45, canvasContainer.clientWidth / canvasContainer.clientHeight, 0.1, 100);
+      camera.position.set(-2.2, 1.4, 2.5);
+
+      renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+      renderer.setSize(canvasContainer.clientWidth, canvasContainer.clientHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.shadowMap.enabled = true;
+      canvasContainer.appendChild(renderer.domElement);
+
+      controls = new THREE.OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.05;
+      controls.maxPolarAngle = Math.PI / 2 + 0.05;
+
+      // Lighting
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+      scene.add(ambientLight);
+
+      const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      dirLight.position.set(5, 10, 7);
+      dirLight.castShadow = true;
+      scene.add(dirLight);
+
+      // Optical Rail (Bench)
+      const railGeo = new THREE.BoxGeometry(4.0, 0.08, 0.25);
+      const railMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.8, roughness: 0.2 });
+      const rail = new THREE.Mesh(railGeo, railMat);
+      rail.position.set(0, -0.04, 0);
+      scene.add(rail);
+
+      // Rail Ruler Markings
+      const grid = new THREE.GridHelper(4.0, 40, 0x64748b, 0x1e293b);
+      grid.position.set(0, 0.001, 0);
+      scene.add(grid);
+
+      // 1. Laser Emitter Assembly
+      const laserGroup = new THREE.Group();
+      const bodyGeo = new THREE.CylinderGeometry(0.1, 0.1, 0.6, 32);
+      bodyGeo.rotateZ(Math.PI / 2);
+      const bodyMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.9, roughness: 0.1 });
+      const laserBody = new THREE.Mesh(bodyGeo, bodyMat);
+      laserGroup.add(laserBody);
+
+      // Gold Nozzle Ring
+      const ringGeo = new THREE.TorusGeometry(0.1, 0.015, 16, 32);
+      ringGeo.rotateY(Math.PI / 2);
+      const ringMat = new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.9, roughness: 0.1 });
+      const ring = new THREE.Mesh(ringGeo, ringMat);
+      ring.position.x = 0.3;
+      laserGroup.add(ring);
+
+      laserGroup.position.set(-1.6, 0.3, 0);
+      scene.add(laserGroup);
+
+      // Laser Beam Mesh (Incident Ray)
+      const beamGeo = new THREE.CylinderGeometry(0.012, 0.012, 1.0, 16);
+      beamGeo.rotateZ(Math.PI / 2);
+      beamGeo.translate(0.5, 0, 0);
+      const beamMat = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.85 });
+      laserBeamMesh = new THREE.Mesh(beamGeo, beamMat);
+      laserBeamMesh.position.set(-1.3, 0.3, 0);
+      scene.add(laserBeamMesh);
+
+      // 2. Slit Mount & Plate
+      const mountGeo = new THREE.BoxGeometry(0.04, 0.7, 0.6);
+      const mountMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.5, roughness: 0.5 });
+      slitPlateMesh = new THREE.Mesh(mountGeo, mountMat);
+      slitPlateMesh.position.set(-0.3, 0.35, 0);
+      scene.add(slitPlateMesh);
+
+      // 3. Dynamic Wavefront & Light Sheet Groups
+      wavefrontGroup = new THREE.Group();
+      wavefrontGroup.position.set(-0.28, 0.3, 0);
+      scene.add(wavefrontGroup);
+
+      volumeLightGroup = new THREE.Group();
+      volumeLightGroup.position.set(-0.28, 0.3, 0);
+      scene.add(volumeLightGroup);
+
+      rayMaximaGroup = new THREE.Group();
+      rayMaximaGroup.position.set(-0.28, 0.3, 0);
+      scene.add(rayMaximaGroup);
+
+      // 4. Observation Screen Mesh
+      textureCanvas.width = 1024;
+      textureCanvas.height = 512;
+      screenTexture = new THREE.CanvasTexture(textureCanvas);
+      screenTexture.minFilter = THREE.LinearFilter;
+      screenTexture.magFilter = THREE.LinearFilter;
+
+      const screenGeo = new THREE.BoxGeometry(0.03, 0.8, 1.2);
+      const screenMat = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        roughness: 0.3,
+        metalness: 0.1,
+        map: screenTexture,
+        emissiveMap: screenTexture,
+        emissive: new THREE.Color(0xffffff),
+        emissiveIntensity: 0.95
+      });
+      screenMesh = new THREE.Mesh(screenGeo, screenMat);
+      screenMesh.position.set(1.2, 0.35, 0);
+      scene.add(screenMesh);
+
+      // Screen Stand
+      const standGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.35, 16);
+      const standMat = new THREE.MeshStandardMaterial({ color: 0x475569 });
+      const stand = new THREE.Mesh(standGeo, standMat);
+      stand.position.set(0, -0.22, 0);
+      screenMesh.add(stand);
+
+      window.addEventListener('resize', onWindowResize);
+      update3DScene();
+    }
+
+    // --- Dynamic 3D Wavefront & Interference Sheet Visualizers ---
+    function update3DVisuals() {
+      // Clear old 3D wave elements
+      while (wavefrontGroup.children.length > 0) wavefrontGroup.remove(wavefrontGroup.children[0]);
+      while (volumeLightGroup.children.length > 0) volumeLightGroup.remove(volumeLightGroup.children[0]);
+      while (rayMaximaGroup.children.length > 0) rayMaximaGroup.remove(rayMaximaGroup.children[0]);
+
+      const mainColor = state.isWhiteLight ? 0xffffff : (state.rgb[0] << 16 | state.rgb[1] << 8 | state.rgb[2]);
+      const L_3d = screenMesh.position.x - (-0.28); // distance from slit to screen in 3D
+
+      // Update incident laser beam length
+      laserBeamMesh.scale.set(0.7, 1, 1);
+      laserBeamMesh.material.color.setHex(mainColor);
+
+      if (state.mode === 'circular') {
+        // Airy Disk Conical Shell
+        const coneGeo = new THREE.ConeGeometry(0.35, L_3d, 32, 1, true);
+        coneGeo.rotateZ(-Math.PI / 2);
+        coneGeo.translate(L_3d / 2, 0, 0);
+        const coneMat = new THREE.MeshBasicMaterial({
+          color: mainColor,
+          transparent: true,
+          opacity: 0.18,
+          wireframe: true,
+          side: THREE.DoubleSide
+        });
+        const cone = new THREE.Mesh(coneGeo, coneMat);
+        volumeLightGroup.add(cone);
+        return;
+      }
+
+      // 1. Huygens Wavefront Arcs (Expanding cylindrical wave arcs)
+      const numRings = 10;
+      const maxRadius = L_3d;
+      
+      let slitPositionsZ = [0];
+      if (state.mode === 'double') {
+        let dz = Math.min(0.18, state.slitDistance * 0.8);
+        slitPositionsZ = [-dz, dz];
+      } else if (state.mode === 'grating') {
+        let count = state.slitCount;
+        let span = 0.3;
+        slitPositionsZ = [];
+        for (let i = 0; i < count; i++) {
+          slitPositionsZ.push(-span / 2 + (span * i / (count - 1)));
+        }
+      }
+
+      slitPositionsZ.forEach(sz => {
+        for (let r = 0.08; r <= maxRadius; r += maxRadius / numRings) {
+          const arcGeo = new THREE.BufferGeometry();
+          const points = [];
+          const segments = 24;
+          const maxAngle = Math.PI / 3; // 60 degree fan out
+
+          for (let i = 0; i <= segments; i++) {
+            let theta = -maxAngle / 2 + (maxAngle * i / segments);
+            let x = r * Math.cos(theta);
+            let z = r * Math.sin(theta);
+            points.push(new THREE.Vector3(x, 0, z + sz));
+          }
+          arcGeo.setFromPoints(points);
+
+          const arcMat = new THREE.LineBasicMaterial({
+            color: mainColor,
+            transparent: true,
+            opacity: Math.max(0.08, 0.45 * (1 - r / maxRadius))
+          });
+          const arcLine = new THREE.Line(arcGeo, arcMat);
+          wavefrontGroup.add(arcLine);
+        }
+      });
+
+      // 2. Volumetric Interference Sheets & Principal Maxima Rays
+      // Calculate angles for primary maxima
+      const lambda_mm = state.wavelength * 1e-6;
+      const d_mm = (state.mode === 'single') ? state.slitWidth : state.slitDistance;
+      
+      let orders = [0];
+      if (state.mode === 'double' || state.mode === 'grating') {
+        orders = [0, 1, -1, 2, -2];
+      } else if (state.mode === 'single') {
+        orders = [0, 1, -1]; // central peak and first diffraction lobes
+      }
+
+      orders.forEach(m => {
+        let sinTheta = (m * lambda_mm) / d_mm;
+        if (Math.abs(sinTheta) <= 0.8) {
+          let theta = Math.asin(sinTheta);
+          let targetZ = L_3d * Math.tan(theta);
+
+          // Draw Maxima Ray Centerlines
+          const rayGeo = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(0, 0, 0),
+            new THREE.Vector3(L_3d, 0, targetZ)
+          ]);
+          const rayMat = new THREE.LineBasicMaterial({
+            color: mainColor,
+            transparent: true,
+            opacity: (m === 0) ? 0.9 : 0.5
+          });
+          const ray = new THREE.Line(rayGeo, rayMat);
+          rayMaximaGroup.add(ray);
+
+          // Draw Volumetric Fan Sheet
+          const planeGeo = new THREE.PlaneGeometry(Math.sqrt(L_3d * L_3d + targetZ * targetZ), 0.4);
+          planeGeo.rotateY(-theta);
+          planeGeo.translate(L_3d / 2, 0, targetZ / 2);
+
+          const sheetMat = new THREE.MeshBasicMaterial({
+            color: mainColor,
+            transparent: true,
+            opacity: (m === 0) ? 0.22 : 0.12,
+            side: THREE.DoubleSide,
+            depthWrite: false
+          });
+          const sheet = new THREE.Mesh(planeGeo, sheetMat);
+          volumeLightGroup.add(sheet);
+        }
+      });
+    }
+
+    function update3DScene() {
+      // Position screen dynamically based on slider
+      screenMesh.position.x = -0.28 + state.screenDistance;
+      update3DVisuals();
+    }
+
+    // --- Render Offscreen Texture & 2D Graphs ---
+    function renderPlotsAndTexture() {
+      // 1. Render Texture Canvas (Mapped to 3D Screen Surface)
+      const tw = textureCanvas.width;
+      const th = textureCanvas.height;
+
+      textureCtx.fillStyle = '#05070f';
+      textureCtx.fillRect(0, 0, tw, th);
+
+      const xMax_mm = 35.0; // +/- 35mm horizontal range
+      const yMax_mm = 17.5; // +/- 17.5mm vertical range (1024x512 aspect ratio)
+      const centerX = tw / 2;
+      const centerY = th / 2;
+
+      const imgData = textureCtx.createImageData(tw, th);
+      const data = imgData.data;
+
+      if (state.mode === 'circular') {
+        // Render 2D Airy Ring Pattern (Circularly symmetric laser spot)
+        const mmPerPixelX = (xMax_mm * 2) / tw;
+        const mmPerPixelY = (yMax_mm * 2) / th;
+
+        for (let py = 0; py < th; py += 2) {
+          let y_mm = (py - centerY) * mmPerPixelY;
+          for (let px = 0; px < tw; px += 2) {
+            let x_mm = (px - centerX) * mmPerPixelX;
+            let r_mm = Math.sqrt(x_mm * x_mm + y_mm * y_mm);
+
+            // Laser beam spot Gaussian envelope
+            let beamSpot = Math.exp(-Math.pow(r_mm / 12.0, 2));
+
+            let r, g, b;
+            if (state.isWhiteLight) {
+              [r, g, b] = getWhiteLightRGB(0, r_mm);
+            } else {
+              let I = getIntensity(0, r_mm) * beamSpot;
+              r = Math.round(state.rgb[0] * I);
+              g = Math.round(state.rgb[1] * I);
+              b = Math.round(state.rgb[2] * I);
+            }
+
+            for (let dy = 0; dy < 2; dy++) {
+              for (let dx = 0; dx < 2; dx++) {
+                let idx = 4 * ((py + dy) * tw + (px + dx));
+                data[idx] = r;
+                data[idx + 1] = g;
+                data[idx + 2] = b;
+                data[idx + 3] = 255;
+              }
+            }
+          }
+        }
+      } else {
+        // Linear Slit Diffraction: Horizontal variation I(x) + Vertical Laser Beam Envelope I(y)
+        // Laser spot vertical waist size (Gaussian beam height)
+        const beamWaistY = 3.0; // mm
+
+        // Precalculate horizontal color profile
+        const color_x = new Array(tw);
+        for (let px = 0; px < tw; px++) {
+          let x_mm = ((px - centerX) / centerX) * xMax_mm;
+          if (state.isWhiteLight) {
+            color_x[px] = getWhiteLightRGB(x_mm, 0);
+          } else {
+            let I = getIntensity(x_mm, 0);
+            color_x[px] = [
+              state.rgb[0] * I,
+              state.rgb[1] * I,
+              state.rgb[2] * I
+            ];
+          }
+        }
+
+        // Precalculate vertical Gaussian beam envelope
+        const beam_y = new Float32Array(th);
+        for (let py = 0; py < th; py++) {
+          let y_mm = ((py - centerY) / centerY) * yMax_mm;
+          beam_y[py] = Math.exp(-Math.pow(y_mm / beamWaistY, 2));
+        }
+
+        // Combine horizontal diffraction profile with vertical laser spot profile -> Creates Laser Spots / Dots
+        for (let py = 0; py < th; py++) {
+          let vy = beam_y[py];
+          let rowOffset = py * tw * 4;
+          for (let px = 0; px < tw; px++) {
+            let cx = color_x[px];
+            let idx = rowOffset + px * 4;
+            data[idx]     = Math.min(255, Math.round(cx[0] * vy));
+            data[idx + 1] = Math.min(255, Math.round(cx[1] * vy));
+            data[idx + 2] = Math.min(255, Math.round(cx[2] * vy));
+            data[idx + 3] = 255;
+          }
+        }
+      }
+
+      textureCtx.putImageData(imgData, 0, 0);
+      screenTexture.needsUpdate = true;
+
+      // 2. Render Bottom Photographic 2D Fringe View Canvas (Laser Spots Strip)
+      const fw = fringeCanvas.width;
+      const fh = fringeCanvas.height;
+      fringeCtx.fillStyle = '#000000';
+      fringeCtx.fillRect(0, 0, fw, fh);
+
+      const fringeImgData = fringeCtx.createImageData(fw, fh);
+      const fData = fringeImgData.data;
+      const fCenterY = fh / 2;
+      const fYMax_mm = 6.0;
+
+      if (state.mode === 'circular') {
+        for (let py = 0; py < fh; py++) {
+          let y_mm = ((py - fCenterY) / fCenterY) * fYMax_mm;
+          for (let px = 0; px < fw; px++) {
+            let x_mm = ((px - fw / 2) / (fw / 2)) * xMax_mm;
+            let r_mm = Math.sqrt(x_mm * x_mm + y_mm * y_mm);
+            let r, g, b;
+            if (state.isWhiteLight) {
+              [r, g, b] = getWhiteLightRGB(0, r_mm);
+            } else {
+              let I = getIntensity(0, r_mm);
+              r = Math.round(state.rgb[0] * I);
+              g = Math.round(state.rgb[1] * I);
+              b = Math.round(state.rgb[2] * I);
+            }
+            let idx = 4 * (py * fw + px);
+            fData[idx] = r; fData[idx+1] = g; fData[idx+2] = b; fData[idx+3] = 255;
+          }
+        }
+      } else {
+        const fBeamWaistY = 2.5; // mm
+        const fColor_x = new Array(fw);
+        for (let px = 0; px < fw; px++) {
+          let x_mm = ((px - fw / 2) / (fw / 2)) * xMax_mm;
+          if (state.isWhiteLight) {
+            fColor_x[px] = getWhiteLightRGB(x_mm, 0);
+          } else {
+            let I = getIntensity(x_mm, 0);
+            fColor_x[px] = [state.rgb[0] * I, state.rgb[1] * I, state.rgb[2] * I];
+          }
+        }
+
+        for (let py = 0; py < fh; py++) {
+          let y_mm = ((py - fCenterY) / fCenterY) * fYMax_mm;
+          let vy = Math.exp(-Math.pow(y_mm / fBeamWaistY, 2));
+          let rowOffset = py * fw * 4;
+          for (let px = 0; px < fw; px++) {
+            let cx = fColor_x[px];
+            let idx = rowOffset + px * 4;
+            fData[idx]     = Math.min(255, Math.round(cx[0] * vy));
+            fData[idx + 1] = Math.min(255, Math.round(cx[1] * vy));
+            fData[idx + 2] = Math.min(255, Math.round(cx[2] * vy));
+            fData[idx + 3] = 255;
+          }
+        }
+      }
+      fringeCtx.putImageData(fringeImgData, 0, 0);
+
+      // 3. Render 1D Intensity Curve Canvas
+      const iw = intensityCanvas.width;
+      const ih = intensityCanvas.height;
+      intensityCtx.clearRect(0, 0, iw, ih);
+
+      // Draw Grid & Axes
+      intensityCtx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+      intensityCtx.lineWidth = 1;
+      intensityCtx.beginPath();
+      intensityCtx.moveTo(0, ih - 20);
+      intensityCtx.lineTo(iw, ih - 20); // X axis
+      intensityCtx.moveTo(iw / 2, 0);
+      intensityCtx.lineTo(iw / 2, ih); // Center Y axis
+      intensityCtx.stroke();
+
+      // Plot I(x) Curve
+      intensityCtx.beginPath();
+      intensityCtx.lineWidth = 2;
+      intensityCtx.strokeStyle = state.isWhiteLight ? '#e2e8f0' : state.colorHex;
+
+      for (let px = 0; px < iw; px++) {
+        let x_mm = ((px - iw / 2) / (iw / 2)) * xMax_mm;
+        let I = (state.mode === 'circular') ? getIntensity(0, Math.abs(x_mm)) : getIntensity(x_mm, 0);
+        let py = (ih - 25) - I * (ih - 35);
+
+        if (px === 0) intensityCtx.moveTo(px, py);
+        else intensityCtx.lineTo(px, py);
+      }
+      intensityCtx.stroke();
+
+      // Fill area under curve
+      intensityCtx.lineTo(iw, ih - 20);
+      intensityCtx.lineTo(0, ih - 20);
+      intensityCtx.closePath();
+      intensityCtx.fillStyle = state.isWhiteLight ? 'rgba(226, 232, 240, 0.15)' : `rgba(${state.rgb[0]},${state.rgb[1]},${state.rgb[2]},0.2)`;
+      intensityCtx.fill();
+
+      // Axis Ticks Labels
+      intensityCtx.fillStyle = '#94a3b8';
+      intensityCtx.font = '10px monospace';
+      intensityCtx.textAlign = 'center';
+      intensityCtx.fillText('-30mm', iw * 0.07, ih - 6);
+      intensityCtx.fillText('-15mm', iw * 0.28, ih - 6);
+      intensityCtx.fillText('0', iw / 2, ih - 6);
+      intensityCtx.fillText('+15mm', iw * 0.72, ih - 6);
+      intensityCtx.fillText('+30mm', iw * 0.93, ih - 6);
+    }
+
+    // --- Dynamic HUD & Calculations Update ---
+    function updateHUD() {
+      const lambda = state.wavelength * 1e-9; // m
+      const L = state.screenDistance; // m
+      const a = state.slitWidth * 1e-3; // m
+      const d = state.slitDistance * 1e-3; // m
+
+      if (state.mode === 'double') {
+        modeDisplayTag.innerText = "雙狹縫干涉 (Young's Double Slit)";
+        hudTitle1.innerText = "亮光點間距 Δx";
+        let deltaX = (lambda * L) / d; // m
+        hudVal1.innerText = (deltaX * 1000).toFixed(2) + " mm";
+
+        hudTitle2.innerText = "單縫包絡中央寬度 W";
+        let W = (2 * lambda * L) / a;
+        hudVal2.innerText = (W * 1000).toFixed(2) + " mm";
+
+        hudTitle3.innerText = "首項極小值角 θ₁";
+        let theta1 = Math.asin(Math.min(1.0, lambda / a));
+        hudVal3.innerText = (theta1 * 180 / Math.PI).toFixed(3) + "° (" + (theta1 * 1000).toFixed(2) + " mrad)";
+
+      } else if (state.mode === 'single') {
+        modeDisplayTag.innerText = "單狹縫繞射 (Single Slit Diffraction)";
+        hudTitle1.innerText = "次級極大值光強比例";
+        hudVal1.innerText = "4.71% (I₁/I₀)";
+
+        hudTitle2.innerText = "中央亮紋寬度 W";
+        let W = (2 * lambda * L) / a;
+        hudVal2.innerText = (W * 1000).toFixed(2) + " mm";
+
+        hudTitle3.innerText = "第一繞射暗紋角 θ₁";
+        let theta1 = Math.asin(Math.min(1.0, lambda / a));
+        hudVal3.innerText = (theta1 * 180 / Math.PI).toFixed(3) + "° (" + (theta1 * 1000).toFixed(2) + " mrad)";
+
+      } else if (state.mode === 'grating') {
+        modeDisplayTag.innerText = `多狹縫光柵 (Grating, N=${state.slitCount})`;
+        hudTitle1.innerText = "主極大光點間距 Δx";
+        let deltaX = (lambda * L) / d;
+        hudVal1.innerText = (deltaX * 1000).toFixed(2) + " mm";
+
+        hudTitle2.innerText = "主極大半峰寬 FWHM";
+        let fwhm = (lambda * L) / (state.slitCount * d);
+        hudVal2.innerText = (fwhm * 1000).toFixed(2) + " mm";
+
+        hudTitle3.innerText = "一階色散角 θ₁";
+        let theta1 = Math.asin(Math.min(1.0, lambda / d));
+        hudVal3.innerText = (theta1 * 180 / Math.PI).toFixed(3) + "° (" + (theta1 * 1000).toFixed(2) + " mrad)";
+
+      } else if (state.mode === 'circular') {
+        modeDisplayTag.innerText = "圓孔繞射 (Airy Disk Pattern)";
+        hudTitle1.innerText = "愛里斑 (Airy) 半徑 R";
+        let R = (1.22 * lambda * L) / a;
+        hudVal1.innerText = (R * 1000).toFixed(2) + " mm";
+
+        hudTitle2.innerText = "中央圓盤光能量占比";
+        hudVal2.innerText = "84.0%";
+
+        hudTitle3.innerText = "瑞利角 (Rayleigh Angle)";
+        let thetaR = 1.22 * lambda / a;
+        hudVal3.innerText = (thetaR * 180 / Math.PI).toFixed(3) + "° (" + (thetaR * 1000).toFixed(2) + " mrad)";
+      }
+    }
+
+    // --- UI Event Listeners ---
+    function setupUI() {
+      // Mode Selection Buttons
+      const modeBtns = {
+        'mode-double': 'double',
+        'mode-single': 'single',
+        'mode-grating': 'grating',
+        'mode-circular': 'circular'
+      };
+
+      Object.keys(modeBtns).forEach(id => {
+        document.getElementById(id).addEventListener('click', (e) => {
+          document.querySelectorAll('.mode-btn').forEach(btn => {
+            btn.className = "mode-btn p-2.5 rounded-lg border border-slate-800 text-xs font-medium text-left flex items-center gap-2 transition bg-slate-900/50 text-slate-400 hover:border-slate-700";
+          });
+          e.currentTarget.className = "mode-btn active p-2.5 rounded-lg border text-xs font-medium text-left flex items-center gap-2 transition bg-indigo-600/30 border-indigo-500 text-indigo-200";
+
+          state.mode = modeBtns[id];
+
+          // UI Visibility Tweaks for parameters
+          document.getElementById('container-slit-distance').style.display = (state.mode === 'single' || state.mode === 'circular') ? 'none' : 'block';
+          document.getElementById('container-slit-count').style.display = (state.mode === 'grating') ? 'block' : 'none';
+          document.getElementById('lbl-slit-width').innerText = (state.mode === 'circular') ? '圓孔直徑 (D):' : '狹縫寬度 (a):';
+
+          updateHUD();
+          update3DScene();
+          renderPlotsAndTexture();
+        });
+      });
+
+      // Wavelength Slider
+      sliderWavelength.addEventListener('input', (e) => {
+        state.wavelength = parseInt(e.target.value);
+        state.isWhiteLight = false;
+        valWavelength.innerText = state.wavelength + " nm";
+        state.rgb = wavelengthToRGB(state.wavelength);
+        state.colorHex = rgbToHex(state.rgb[0], state.rgb[1], state.rgb[2]);
+
+        colorIndicator.style.backgroundColor = state.colorHex;
+        colorIndicator.style.boxShadow = `0 0 12px ${state.colorHex}`;
+        colorHexLabel.innerText = state.colorHex;
+
+        updateHUD();
+        update3DScene();
+        renderPlotsAndTexture();
+      });
+
+      // Toggle White Light
+      btnWhiteLight.addEventListener('click', () => {
+        state.isWhiteLight = !state.isWhiteLight;
+        if (state.isWhiteLight) {
+          valWavelength.innerText = "白光全光譜";
+          colorIndicator.style.backgroundColor = '#ffffff';
+          colorIndicator.style.boxShadow = '0 0 12px #ffffff';
+          colorHexLabel.innerText = "RGB Spectrum";
+        } else {
+          sliderWavelength.dispatchEvent(new Event('input'));
+        }
+        updateHUD();
+        update3DScene();
+        renderPlotsAndTexture();
+      });
+
+      // Slit Width
+      sliderSlitWidth.addEventListener('input', (e) => {
+        state.slitWidth = parseFloat(e.target.value);
+        valSlitWidth.innerText = state.slitWidth.toFixed(3) + " mm";
+        updateHUD();
+        update3DScene();
+        renderPlotsAndTexture();
+      });
+
+      // Slit Distance
+      sliderSlitDistance.addEventListener('input', (e) => {
+        state.slitDistance = parseFloat(e.target.value);
+        valSlitDistance.innerText = state.slitDistance.toFixed(3) + " mm";
+        updateHUD();
+        update3DScene();
+        renderPlotsAndTexture();
+      });
+
+      // Slit Count (Grating)
+      sliderSlitCount.addEventListener('input', (e) => {
+        state.slitCount = parseInt(e.target.value);
+        valSlitCount.innerText = state.slitCount + " 縫";
+        updateHUD();
+        update3DScene();
+        renderPlotsAndTexture();
+      });
+
+      // Screen Distance
+      sliderScreenDist.addEventListener('input', (e) => {
+        state.screenDistance = parseFloat(e.target.value);
+        valScreenDist.innerText = state.screenDistance.toFixed(2) + " m";
+        updateHUD();
+        update3DScene();
+        renderPlotsAndTexture();
+      });
+
+      // Camera Presets
+      document.getElementById('btn-cam-persp').addEventListener('click', () => {
+        camera.position.set(-2.2, 1.4, 2.5);
+        controls.target.set(0, 0.3, 0);
+      });
+
+      document.getElementById('btn-cam-top').addEventListener('click', () => {
+        camera.position.set(0.2, 3.2, 0.001);
+        controls.target.set(0.2, 0.3, 0);
+      });
+
+      document.getElementById('btn-cam-front').addEventListener('click', () => {
+        let x = screenMesh.position.x;
+        camera.position.set(x + 2.0, 0.35, 0);
+        controls.target.set(x, 0.35, 0);
+      });
+    }
+
+    // Resize Handler
+    function onWindowResize() {
+      const w = canvasContainer.clientWidth;
+      const h = canvasContainer.clientHeight;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+
+      // Resize 2D Canvases
+      intensityCanvas.width = intensityCanvas.clientWidth * window.devicePixelRatio;
+      intensityCanvas.height = intensityCanvas.clientHeight * window.devicePixelRatio;
+      fringeCanvas.width = fringeCanvas.clientWidth * window.devicePixelRatio;
+      fringeCanvas.height = fringeCanvas.clientHeight * window.devicePixelRatio;
+
+      renderPlotsAndTexture();
+    }
+
+    // --- Animation Loop ---
+    function animate(time) {
+      requestAnimationFrame(animate);
+      controls.update();
+
+      // Subtle animation for Huygens Wavefront propagation
+      if (wavefrontGroup) {
+        wavefrontGroup.children.forEach((arc, i) => {
+          let scale = 1 + ((time * 0.001 + i * 0.1) % 0.5);
+          arc.scale.set(scale, 1, scale);
+        });
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    // --- Initialization Entry Point ---
+    window.addEventListener('DOMContentLoaded', () => {
+      init3D();
+      setupUI();
+
+      // Set Canvas Sizes
+      intensityCanvas.width = intensityCanvas.clientWidth * window.devicePixelRatio;
+      intensityCanvas.height = intensityCanvas.clientHeight * window.devicePixelRatio;
+      fringeCanvas.width = fringeCanvas.clientWidth * window.devicePixelRatio;
+      fringeCanvas.height = fringeCanvas.clientHeight * window.devicePixelRatio;
+
+      // Initial Sync
+      sliderWavelength.dispatchEvent(new Event('input'));
+      animate(0);
+    });
+  </script>
+</body>
+</html>
