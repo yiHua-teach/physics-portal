@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>針孔成像 3D 互動實驗室 (Pinhole Camera Optics 3D)</title>
+    <title>針孔成像 3D 互動光線實驗室 (Pinhole Optics 3D Lab)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -12,8 +12,8 @@
             theme: {
                 extend: {
                     colors: {
-                        cyan: { 400: '#22d3ee', 500: '#06b6d4', 900: '#164e63' },
-                        amber: { 400: '#fbbf24', 500: '#f59e0b' }
+                        cyan: { 400: '#22d3ee', 500: '#06b6d4', 950: '#083344' },
+                        amber: { 400: '#fbbf24', 500: '#f59e0b', 950: '#451a03' }
                     }
                 }
             }
@@ -30,34 +30,25 @@
             overflow: hidden;
             user-select: none;
         }
-        /* Glassmorphism panel styling */
+        /* Glassmorphism styling */
         .glass-panel {
-            background: rgba(15, 23, 42, 0.78);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
             border: 1px solid rgba(255, 255, 255, 0.12);
         }
-        .glass-panel-sm {
-            background: rgba(15, 23, 42, 0.65);
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-        }
-        /* Custom scrollbars */
+        /* Custom scrollbar */
         ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
+            width: 4px;
+            height: 4px;
         }
         ::-webkit-scrollbar-track {
             background: rgba(15, 23, 42, 0.5);
         }
         ::-webkit-scrollbar-thumb {
-            background: rgba(56, 189, 248, 0.3);
-            border-radius: 3px;
+            background: rgba(56, 189, 248, 0.4);
+            border-radius: 2px;
         }
-        ::-webkit-scrollbar-thumb:hover {
-            background: rgba(56, 189, 248, 0.6);
-        }
-        /* Custom slider thumb */
         input[type=range] {
             accent-color: #38bdf8;
         }
@@ -68,416 +59,428 @@
     <!-- 3D WebGL Canvas Container -->
     <div id="canvas-container" class="absolute inset-0 z-0"></div>
 
-    <!-- UI Overlay Grid -->
-    <div class="absolute inset-0 z-10 pointer-events-none flex flex-col justify-between p-3 md:p-5">
+    <!-- UI Overlay Layer -->
+    <div class="absolute inset-0 z-10 pointer-events-none flex flex-col justify-between p-2 md:p-4">
 
-        <!-- Header Bar -->
-        <header class="flex flex-wrap items-center justify-between gap-3 pointer-events-auto">
-            <div class="glass-panel px-4 py-2.5 rounded-xl flex items-center gap-3 shadow-lg shadow-cyan-950/30">
-                <div class="w-9 h-9 rounded-lg bg-cyan-500/20 border border-cyan-400/40 flex items-center justify-center text-cyan-400 text-lg">
+        <!-- Top Header Bar -->
+        <header class="flex flex-wrap items-center justify-between gap-2 pointer-events-auto">
+            <!-- App Title & Logo -->
+            <div class="glass-panel px-3 py-1.5 rounded-xl flex items-center gap-2.5 shadow-lg">
+                <div class="w-8 h-8 rounded-lg bg-cyan-500/20 border border-cyan-400/40 flex items-center justify-center text-cyan-400 text-base">
                     <i class="fa-solid fa-camera-retro"></i>
                 </div>
                 <div>
-                    <h1 class="text-base font-bold text-white tracking-wide flex items-center gap-2">
-                        針孔成像 3D 互動光學實驗室
-                        <span class="text-xs font-normal px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">光的直線傳播</span>
+                    <h1 class="text-xs md:text-sm font-bold text-white tracking-wide flex items-center gap-1.5">
+                        針孔成像 3D 實驗室
+                        <span class="text-[9px] font-semibold px-1.5 py-0.2 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">180°點對稱 (p ➔ d)</span>
                     </h1>
-                    <p class="text-xs text-slate-400">Pinhole Camera Optics & Ray Tracing Simulation</p>
+                </div>
+            </div>
+
+            <!-- Physics Status HUD Pill -->
+            <div class="glass-panel px-3 py-1.5 rounded-xl flex items-center gap-3 md:gap-4 text-xs font-mono shadow-lg border-cyan-500/20">
+                <div class="flex items-center gap-1">
+                    <span class="text-slate-400 text-[11px]">物距 u:</span>
+                    <span id="hud-u" class="text-cyan-300 font-bold">60 cm</span>
+                </div>
+                <div class="h-3 w-[1px] bg-slate-700"></div>
+                <div class="flex items-center gap-1">
+                    <span class="text-slate-400 text-[11px]">像距 v:</span>
+                    <span id="hud-v" class="text-amber-300 font-bold">60 cm</span>
+                </div>
+                <div class="h-3 w-[1px] bg-slate-700"></div>
+                <div class="flex items-center gap-1">
+                    <span class="text-slate-400 text-[11px]">放大率 m:</span>
+                    <span id="hud-m" class="text-emerald-300 font-bold">1.00×</span>
+                </div>
+                <div class="h-3 w-[1px] bg-slate-700 hidden sm:block"></div>
+                <div class="hidden sm:flex items-center gap-1.5">
+                    <span class="text-slate-400 text-[11px]">狀態:</span>
+                    <span id="hud-sharpness" class="text-emerald-400 font-sans font-semibold text-[11px]">清晰 (Crisp)</span>
                 </div>
             </div>
 
             <!-- Header Action Buttons -->
-            <div class="flex items-center gap-2">
-                <button id="btn-presets-modal" class="glass-panel px-3 py-2 rounded-xl text-xs font-medium text-slate-200 hover:text-cyan-300 hover:border-cyan-500/40 transition flex items-center gap-1.5 shadow">
+            <div class="flex items-center gap-1.5">
+                <button id="btn-presets" class="glass-panel px-2.5 py-1.5 rounded-xl text-xs text-slate-200 hover:text-cyan-300 hover:border-cyan-500/40 transition flex items-center gap-1 shadow">
                     <i class="fa-solid fa-wand-magic-sparkles text-amber-400"></i>
-                    <span>經典實驗情境</span>
+                    <span class="hidden md:inline">實驗情境</span>
                 </button>
-                <button id="btn-help" class="glass-panel px-3 py-2 rounded-xl text-xs font-medium text-slate-200 hover:text-cyan-300 hover:border-cyan-500/40 transition flex items-center gap-1.5 shadow">
-                    <i class="fa-solid fa-book-open text-cyan-400"></i>
-                    <span>物理原理說明</span>
+                <button id="btn-help" class="glass-panel px-2.5 py-1.5 rounded-xl text-xs text-slate-200 hover:text-cyan-300 hover:border-cyan-500/40 transition flex items-center gap-1 shadow">
+                    <i class="fa-solid fa-graduation-cap text-cyan-400"></i>
+                    <span class="hidden md:inline">物理原理</span>
                 </button>
-                <button id="btn-reset-cam" class="glass-panel px-3 py-2 rounded-xl text-xs font-medium text-slate-200 hover:text-cyan-300 hover:border-cyan-500/40 transition flex items-center gap-1.5 shadow" title="重設 3D 視角">
-                    <i class="fa-solid fa-rotate-right text-slate-400"></i>
-                    <span class="hidden sm:inline">重設視角</span>
+                <button id="btn-reset-cam" class="glass-panel p-1.5 rounded-xl text-xs text-slate-300 hover:text-white transition shadow" title="重設視角">
+                    <i class="fa-solid fa-rotate-right"></i>
                 </button>
             </div>
         </header>
 
-        <!-- Main Content Area: Control Panel (Left) & Realtime HUD / Inset (Right) -->
-        <div class="flex-1 my-3 flex flex-col md:flex-row justify-between items-start gap-4 overflow-hidden pointer-events-none">
+        <!-- Main Body Middle Zone -->
+        <div class="flex-1 my-2 relative pointer-events-none flex justify-between items-start">
 
-            <!-- Control Sidebar (Left) -->
-            <aside class="w-full md:w-80 max-h-[calc(100vh-140px)] overflow-y-auto glass-panel rounded-2xl p-4 pointer-events-auto shadow-2xl flex flex-col gap-4">
+            <!-- Collapsible Control Panel (Left Narrow Floating Panel) -->
+            <aside id="control-panel" class="w-72 md:w-80 max-h-[calc(100vh-130px)] glass-panel rounded-2xl p-3 pointer-events-auto shadow-2xl flex flex-col gap-3 transition-all duration-300 ease-in-out relative z-20">
                 
-                <!-- Section 1: Object Selection -->
-                <div>
-                    <label class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5 mb-2">
-                        <i class="fa-solid fa-lightbulb text-amber-400"></i> 發光光源物體
-                    </label>
-                    <div class="grid grid-cols-3 gap-1.5 p-1 bg-slate-900/80 rounded-xl border border-slate-800">
-                        <button class="obj-btn px-2 py-1.5 rounded-lg text-xs font-medium transition text-center bg-cyan-500/20 text-cyan-300 border border-cyan-500/40" data-type="F">
-                            字母 F
-                        </button>
-                        <button class="obj-btn px-2 py-1.5 rounded-lg text-xs font-medium transition text-center text-slate-400 hover:text-slate-200" data-type="candle">
-                            蠟燭火焰
-                        </button>
-                        <button class="obj-btn px-2 py-1.5 rounded-lg text-xs font-medium transition text-center text-slate-400 hover:text-slate-200" data-type="arrow">
-                            三色箭頭
-                        </button>
-                    </div>
+                <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <span class="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                        <i class="fa-solid fa-sliders text-cyan-400"></i> 光學控制選單
+                    </span>
+                    <button id="btn-collapse-panel" class="text-slate-400 hover:text-cyan-400 transition text-xs px-2 py-0.5 rounded bg-slate-800/60 border border-slate-700/50 flex items-center gap-1" title="隱藏選單">
+                        <i class="fa-solid fa-chevron-left"></i>
+                        <span>收合選單</span>
+                    </button>
                 </div>
 
-                <!-- Section 2: Distance Controls (u & v) -->
-                <div class="space-y-3 pt-2 border-t border-slate-800">
-                    <div class="flex justify-between items-center text-xs">
-                        <span class="font-bold text-slate-200 flex items-center gap-1.5">
-                            <i class="fa-solid fa-arrows-left-right text-cyan-400"></i> 物距 ($u$)
-                        </span>
-                        <span id="val-u" class="font-mono text-cyan-300 font-bold bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-800">60.0 cm</span>
-                    </div>
-                    <input type="range" id="slider-u" min="20" max="150" value="60" step="1" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer">
-
-                    <div class="flex justify-between items-center text-xs pt-1">
-                        <span class="font-bold text-slate-200 flex items-center gap-1.5">
-                            <i class="fa-solid fa-arrows-left-right text-amber-400"></i> 像距 / 螢幕距離 ($v$)
-                        </span>
-                        <span id="val-v" class="font-mono text-amber-300 font-bold bg-amber-950/60 px-2 py-0.5 rounded border border-amber-800">60.0 cm</span>
-                    </div>
-                    <input type="range" id="slider-v" min="20" max="150" value="60" step="1" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer">
+                <!-- Navigation Tabs -->
+                <div class="grid grid-cols-4 gap-1 p-1 bg-slate-900/90 rounded-xl border border-slate-800 text-[11px] font-medium">
+                    <button class="tab-btn py-1.5 rounded-lg transition text-center bg-cyan-500/20 text-cyan-300 border border-cyan-500/40" data-tab="distance">
+                        <i class="fa-solid fa-ruler-horizontal block text-xs mb-0.5"></i>距離
+                    </button>
+                    <button class="tab-btn py-1.5 rounded-lg transition text-center text-slate-400 hover:text-slate-200" data-tab="pinhole">
+                        <i class="fa-solid fa-circle-dot block text-xs mb-0.5"></i>針孔/圖案
+                    </button>
+                    <button class="tab-btn py-1.5 rounded-lg transition text-center text-slate-400 hover:text-slate-200" data-tab="view">
+                        <i class="fa-solid fa-eye block text-xs mb-0.5"></i>視角光線
+                    </button>
+                    <button class="tab-btn py-1.5 rounded-lg transition text-center text-slate-400 hover:text-slate-200" data-tab="physics">
+                        <i class="fa-solid fa-circle-info block text-xs mb-0.5"></i>數據
+                    </button>
                 </div>
 
-                <!-- Section 3: Pinhole Aperture Settings -->
-                <div class="space-y-3 pt-2 border-t border-slate-800">
-                    <div class="flex justify-between items-center text-xs">
-                        <span class="font-bold text-slate-200 flex items-center gap-1.5">
-                            <i class="fa-solid fa-circle-dot text-emerald-400"></i> 針孔直徑 ($d$)
-                        </span>
-                        <span id="val-d" class="font-mono text-emerald-300 font-bold bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800">1.5 mm</span>
-                    </div>
-                    <input type="range" id="slider-d" min="0.5" max="6.0" value="1.5" step="0.1" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer">
-                    <div class="flex justify-between text-[10px] text-slate-400 px-0.5">
-                        <span>小 (極清晰 / 較暗)</span>
-                        <span>大 (極模糊 / 較亮)</span>
-                    </div>
+                <!-- Tab Contents -->
+                <div class="flex-1 overflow-y-auto pr-1 space-y-3 text-xs">
 
-                    <div class="pt-2">
-                        <label class="text-xs font-bold text-slate-300 mb-1.5 block">針孔數量與排列</label>
-                        <div class="grid grid-cols-4 gap-1 p-1 bg-slate-900/80 rounded-xl border border-slate-800 text-xs">
-                            <button class="hole-btn py-1 rounded-lg font-medium transition text-center bg-emerald-500/20 text-emerald-300 border border-emerald-500/40" data-count="1">1 孔</button>
-                            <button class="hole-btn py-1 rounded-lg font-medium transition text-center text-slate-400 hover:text-slate-200" data-count="2">2 孔</button>
-                            <button class="hole-btn py-1 rounded-lg font-medium transition text-center text-slate-400 hover:text-slate-200" data-count="3">3 孔</button>
-                            <button class="hole-btn py-1 rounded-lg font-medium transition text-center text-slate-400 hover:text-slate-200" data-count="4">2x2 陣列</button>
+                    <!-- Tab 1: Optics Distances (u & v) -->
+                    <div id="tab-content-distance" class="tab-page space-y-3.5">
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-slate-200 font-bold flex items-center gap-1">
+                                    <i class="fa-solid fa-arrows-left-right text-cyan-400"></i> 物距 (u)
+                                </span>
+                                <span id="val-u" class="font-mono text-cyan-300 font-bold bg-cyan-950/60 px-1.5 py-0.5 rounded border border-cyan-800">60.0 cm</span>
+                            </div>
+                            <input type="range" id="slider-u" min="15" max="120" value="60" step="1" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer">
+                            <p class="text-[10px] text-slate-400 mt-1">物體發光標靶至針孔板之距離</p>
+                        </div>
+
+                        <div class="pt-2 border-t border-slate-800/80">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-slate-200 font-bold flex items-center gap-1">
+                                    <i class="fa-solid fa-arrows-left-right text-amber-400"></i> 像距 / 螢幕距離 (v)
+                                </span>
+                                <span id="val-v" class="font-mono text-amber-300 font-bold bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-800">60.0 cm</span>
+                            </div>
+                            <input type="range" id="slider-v" min="15" max="120" value="60" step="1" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer">
+                            <p class="text-[10px] text-slate-400 mt-1">針孔板至移動成像螢幕之距離</p>
                         </div>
                     </div>
 
-                    <!-- Pinhole Separation Slider (Visible if count > 1) -->
-                    <div id="sep-container" class="hidden pt-1 space-y-1">
-                        <div class="flex justify-between items-center text-xs">
-                            <span class="text-slate-300">針孔間距 ($s$)</span>
-                            <span id="val-sep" class="font-mono text-slate-300 font-bold">3.0 cm</span>
-                        </div>
-                        <input type="range" id="slider-sep" min="1.0" max="8.0" value="3.0" step="0.5" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer">
-                    </div>
-                </div>
-
-                <!-- Section 4: Display & Camera Options -->
-                <div class="space-y-2.5 pt-2 border-t border-slate-800">
-                    <label class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                        <i class="fa-solid fa-eye text-cyan-400"></i> 視覺與視角切換
-                    </label>
-
-                    <div class="flex items-center justify-between p-2 rounded-xl bg-slate-900/60 border border-slate-800 text-xs">
-                        <span class="text-slate-200 flex items-center gap-1.5">
-                            <i class="fa-solid fa-bolt text-amber-400"></i> 顯示幾何光線 (Ray Trace)
-                        </span>
-                        <input type="checkbox" id="toggle-rays" checked class="w-4 h-4 accent-cyan-500 cursor-pointer rounded">
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-1.5 text-xs pt-1">
-                        <button class="cam-btn px-2.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-200 transition text-left flex items-center gap-1.5" data-view="orbit">
-                            <i class="fa-solid fa-cube text-cyan-400"></i> 3D 自由視角
-                        </button>
-                        <button class="cam-btn px-2.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-200 transition text-left flex items-center gap-1.5" data-view="side">
-                            <i class="fa-solid fa-border-left text-amber-400"></i> 正側視圖
-                        </button>
-                        <button class="cam-btn px-2.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-200 transition text-left flex items-center gap-1.5" data-view="top">
-                            <i class="fa-solid fa-border-top-left text-emerald-400"></i> 俯視圖
-                        </button>
-                        <button class="cam-btn px-2.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-200 transition text-left flex items-center gap-1.5" data-view="screen">
-                            <i class="fa-solid fa-tv text-purple-400"></i> 螢幕正視圖
-                        </button>
-                    </div>
-                </div>
-
-            </aside>
-
-            <!-- Real-time HUD & Screen Inset Box (Right) -->
-            <div class="w-full md:w-80 flex flex-col gap-3 pointer-events-auto">
-
-                <!-- 2D Screen Live Projection Box -->
-                <div class="glass-panel rounded-2xl p-3 shadow-2xl flex flex-col gap-2">
-                    <div class="flex justify-between items-center text-xs border-b border-slate-800 pb-2">
-                        <span class="font-bold text-slate-200 flex items-center gap-1.5">
-                            <i class="fa-solid fa-expand text-cyan-400"></i> 螢幕成像實時 2D 觀察
-                        </span>
-                        <span class="text-[10px] text-slate-400 font-mono">180° 倒立實像</span>
-                    </div>
-
-                    <!-- Canvas Container for 2D Screen Inset -->
-                    <div class="relative w-full aspect-square rounded-xl overflow-hidden bg-slate-950 border border-slate-800 flex items-center justify-center">
-                        <canvas id="screen-inset-canvas" class="w-full h-full object-contain"></canvas>
-                        <!-- Center Crosshair overlay -->
-                        <div class="absolute inset-0 pointer-events-none flex items-center justify-center">
-                            <div class="w-full h-[1px] bg-slate-800/50"></div>
-                            <div class="h-full w-[1px] bg-slate-800/50 absolute"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Optics Physics Formula & Realtime HUD Card -->
-                <div class="glass-panel rounded-2xl p-4 shadow-2xl flex flex-col gap-3 text-xs">
-                    <div class="font-bold text-slate-200 border-b border-slate-800 pb-2 flex items-center justify-between">
-                        <span class="flex items-center gap-1.5">
-                            <i class="fa-solid fa-calculator text-cyan-400"></i> 光學實時數據 (Physics HUD)
-                        </span>
-                        <span class="text-[10px] text-cyan-400 font-mono">m = v / u</span>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-2 text-slate-300">
-                        <div class="bg-slate-900/60 p-2 rounded-xl border border-slate-800">
-                            <div class="text-[10px] text-slate-400">放大率 $m$</div>
-                            <div id="hud-m" class="text-base font-mono font-bold text-cyan-300">1.00 ×</div>
-                        </div>
-                        <div class="bg-slate-900/60 p-2 rounded-xl border border-slate-800">
-                            <div class="text-[10px] text-slate-400">成像高比 ($h'/h$)</div>
-                            <div id="hud-h-ratio" class="text-base font-mono font-bold text-amber-300">-1.00</div>
-                        </div>
-                    </div>
-
-                    <!-- Image Properties Badges -->
-                    <div class="space-y-1.5 pt-1">
-                        <div class="flex justify-between items-center bg-slate-900/60 p-2 rounded-xl border border-slate-800">
-                            <span class="text-slate-400">成像性質：</span>
-                            <span id="badge-type" class="px-2 py-0.5 rounded font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
-                                倒立實像 (等大)
-                            </span>
+                    <!-- Tab 2: Pinhole Aperture & Target Pattern -->
+                    <div id="tab-content-pinhole" class="tab-page space-y-3.5 hidden">
+                        <div>
+                            <label class="text-[11px] font-bold text-slate-300 uppercase tracking-wider block mb-1.5">發光物體標靶</label>
+                            <div class="grid grid-cols-2 gap-1.5 p-1 bg-slate-900/80 rounded-xl border border-slate-800">
+                                <button class="obj-btn px-2 py-1.5 rounded-lg text-left flex items-center gap-1.5 bg-cyan-500/20 text-cyan-300 border border-cyan-500/40" data-type="p">
+                                    <span class="font-bold font-mono text-amber-400">p</span> 字母 "p" ➔ "d"
+                                </button>
+                                <button class="obj-btn px-2 py-1.5 rounded-lg text-left flex items-center gap-1.5 text-slate-400 hover:text-slate-200" data-type="F">
+                                    <span class="font-bold font-mono text-cyan-400">F</span> 字母 "F"
+                                </button>
+                                <button class="obj-btn px-2 py-1.5 rounded-lg text-left flex items-center gap-1.5 text-slate-400 hover:text-slate-200" data-type="L">
+                                    <span class="font-bold font-mono text-emerald-400">L</span> 字母 "L"
+                                </button>
+                                <button class="obj-btn px-2 py-1.5 rounded-lg text-left flex items-center gap-1.5 text-slate-400 hover:text-slate-200" data-type="arrow">
+                                    <i class="fa-solid fa-location-arrow text-emerald-400"></i> 三色箭頭
+                                </button>
+                                <button class="obj-btn px-2 py-1.5 rounded-lg text-left flex items-center gap-1.5 text-slate-400 hover:text-slate-200" data-type="grid">
+                                    <i class="fa-solid fa-table-cells-large text-purple-400"></i> 四象限標靶
+                                </button>
+                            </div>
                         </div>
 
-                        <div class="flex justify-between items-center bg-slate-900/60 p-2 rounded-xl border border-slate-800">
-                            <span class="text-slate-400">相對清晰度：</span>
-                            <span id="hud-sharpness" class="font-bold text-emerald-400">極高 (Crisp)</span>
+                        <div class="pt-2 border-t border-slate-800/80">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-slate-200 font-bold flex items-center gap-1">
+                                    <i class="fa-solid fa-circle-dot text-emerald-400"></i> 針孔直徑 (d)
+                                </span>
+                                <span id="val-d" class="font-mono text-emerald-300 font-bold bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-800">1.5 mm</span>
+                            </div>
+                            <input type="range" id="slider-d" min="0.5" max="9.0" value="1.5" step="0.1" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer">
+                            <div class="flex justify-between text-[9px] text-slate-400 mt-0.5">
+                                <span>小孔 (清晰/暗)</span>
+                                <span>大孔 (發糊/亮)</span>
+                            </div>
                         </div>
 
-                        <div class="flex justify-between items-center bg-slate-900/60 p-2 rounded-xl border border-slate-800">
-                            <span class="text-slate-400">相對總亮度：</span>
-                            <div class="w-24 bg-slate-800 h-2 rounded-full overflow-hidden">
-                                <div id="hud-brightness-bar" class="bg-amber-400 h-full w-1/2 transition-all duration-300"></div>
+                        <div class="pt-2 border-t border-slate-800/80">
+                            <label class="text-[11px] font-bold text-slate-300 block mb-1.5">針孔數量與陣列</label>
+                            <div class="grid grid-cols-4 gap-1 p-1 bg-slate-900/80 rounded-xl border border-slate-800 text-[11px]">
+                                <button class="hole-btn py-1 rounded-lg font-medium text-center bg-emerald-500/20 text-emerald-300 border border-emerald-500/40" data-count="1">1 孔</button>
+                                <button class="hole-btn py-1 rounded-lg font-medium text-center text-slate-400 hover:text-slate-200" data-count="2">2 孔</button>
+                                <button class="hole-btn py-1 rounded-lg font-medium text-center text-slate-400 hover:text-slate-200" data-count="3">3 孔</button>
+                                <button class="hole-btn py-1 rounded-lg font-medium text-center text-slate-400 hover:text-slate-200" data-count="4">2x2</button>
+                            </div>
+
+                            <div id="sep-container" class="hidden pt-2 space-y-1">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-slate-300">針孔間距 (s)</span>
+                                    <span id="val-sep" class="font-mono text-slate-300 font-bold">3.5 cm</span>
+                                </div>
+                                <input type="range" id="slider-sep" min="1.5" max="8.0" value="3.5" step="0.5" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer">
                             </div>
                         </div>
                     </div>
 
-                    <!-- Dynamic Optical Insight Tip -->
-                    <div id="hud-insight-box" class="p-2.5 rounded-xl bg-cyan-950/40 border border-cyan-800/50 text-[11px] text-cyan-200 leading-relaxed">
-                        <i class="fa-solid fa-circle-info text-cyan-400 mr-1"></i>
-                        <span id="hud-insight-text">光線沿直線穿過針孔，物點與像點呈上下倒立、左右相反。</span>
+                    <!-- Tab 3: Views & Rays -->
+                    <div id="tab-content-view" class="tab-page space-y-3 hidden">
+                        <div class="flex items-center justify-between p-2 rounded-xl bg-slate-900/80 border border-slate-800">
+                            <span class="text-slate-200 font-medium flex items-center gap-1.5">
+                                <i class="fa-solid fa-bolt text-amber-400"></i> 直線光束追蹤 (Ray Tracing)
+                            </span>
+                            <input type="checkbox" id="toggle-rays" checked class="w-4 h-4 accent-cyan-500 cursor-pointer rounded">
+                        </div>
+
+                        <div>
+                            <label class="text-[11px] font-bold text-slate-300 block mb-1.5">視角切換預設</label>
+                            <div class="grid grid-cols-2 gap-1.5">
+                                <button class="cam-btn p-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-200 transition text-left flex items-center gap-1.5 border border-slate-800" data-view="orbit">
+                                    <i class="fa-solid fa-cube text-cyan-400"></i> 3D 自由視角
+                                </button>
+                                <button class="cam-btn p-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-200 transition text-left flex items-center gap-1.5 border border-slate-800" data-view="side">
+                                    <i class="fa-solid fa-border-left text-amber-400"></i> 正側視圖
+                                </button>
+                                <button class="cam-btn p-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-200 transition text-left flex items-center gap-1.5 border border-slate-800" data-view="front">
+                                    <i class="fa-solid fa-sun text-emerald-400"></i> 正視光源物體
+                                </button>
+                                <button class="cam-btn p-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-200 transition text-left flex items-center gap-1.5 border border-slate-800" data-view="screen">
+                                    <i class="fa-solid fa-tv text-purple-400"></i> 螢幕正視圖
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab 4: Physics Details -->
+                    <div id="tab-content-physics" class="tab-page space-y-2.5 hidden">
+                        <div class="bg-slate-900/80 p-2.5 rounded-xl border border-slate-800 space-y-1.5">
+                            <div class="flex justify-between">
+                                <span class="text-slate-400">像高比例 h'/h:</span>
+                                <span id="hud-h-ratio" class="font-mono text-amber-300 font-bold">-1.00</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-slate-400">成像性質:</span>
+                                <span id="badge-type" class="text-cyan-300 font-bold">180°倒立實像 (p ➔ d)</span>
+                            </div>
+                            <div class="space-y-1 pt-1">
+                                <span class="text-slate-400 block text-[10px]">相對進光亮度:</span>
+                                <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                                    <div id="hud-brightness-bar" class="bg-amber-400 h-full w-1/2 transition-all"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="p-2.5 rounded-xl bg-cyan-950/40 border border-cyan-800/50 text-[11px] text-cyan-200 leading-relaxed">
+                            <i class="fa-solid fa-circle-info text-cyan-400 mr-1"></i>
+                            <span id="hud-insight-text">光線沿直線穿過針孔，物點與像點呈嚴格的 180° 上下顛倒、左右相反實像。</span>
+                        </div>
                     </div>
 
                 </div>
+            </aside>
 
-            </div>
+            <!-- Re-expand Floating Panel Button -->
+            <button id="btn-expand-panel" class="glass-panel px-3 py-2 rounded-r-xl text-xs font-bold text-cyan-300 hover:text-white transition pointer-events-auto flex items-center gap-2 shadow-2xl border-l-0 hidden">
+                <i class="fa-solid fa-sliders text-amber-400"></i>
+                <span>⚙️ 展開選單</span>
+            </button>
 
         </div>
 
-        <!-- Footer / Credits -->
-        <footer class="text-center text-[10px] text-slate-500 pointer-events-auto">
-            針孔成像 3D 模擬器 &copy; 2026 | 光的直線傳播與幾何光學實驗
-        </footer>
-    </div>
-
-    <!-- Modal 1: Physics Principles Modal -->
-    <div id="modal-help" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 hidden">
-        <div class="glass-panel w-full max-w-2xl rounded-2xl p-6 shadow-2xl border border-slate-700/60 flex flex-col max-h-[85vh] overflow-y-auto">
-            <div class="flex justify-between items-center border-b border-slate-800 pb-3 mb-4">
-                <h2 class="text-lg font-bold text-white flex items-center gap-2">
-                    <i class="fa-solid fa-graduation-cap text-cyan-400"></i>
-                    針孔成像 (Pinhole Optics) 物理原理與科學要點
-                </h2>
-                <button id="btn-close-help" class="text-slate-400 hover:text-white transition text-lg">
-                    <i class="fa-solid fa-xmark"></i>
+        <!-- 2D Screen Preview Floating Box (Bottom Right) -->
+        <div id="preview-box" class="glass-panel rounded-2xl p-2.5 shadow-2xl pointer-events-auto transition-all duration-300 w-44 md:w-52 self-end border-cyan-500/20">
+            <div class="flex justify-between items-center pb-1.5 border-b border-slate-800 mb-1.5">
+                <span class="text-[11px] font-bold text-slate-200 flex items-center gap-1">
+                    <i class="fa-solid fa-expand text-cyan-400"></i> 成像預覽 (p ➔ d)
+                </span>
+                <button id="btn-toggle-preview" class="text-slate-400 hover:text-white transition px-1 text-xs" title="最小化成像預覽">
+                    <i class="fa-solid fa-minus"></i>
                 </button>
             </div>
 
-            <div class="space-y-4 text-xs text-slate-300 leading-relaxed">
-                <div class="bg-slate-900/70 p-3.5 rounded-xl border border-slate-800">
-                    <h3 class="font-bold text-cyan-300 text-sm mb-1">1. 光的直線傳播 (Rectilinear Propagation)</h3>
-                    <p>光在均勻介質中沿直線傳播。發光體頂端發出的光線穿過狹小針孔後，只能到達螢幕下方；發光體底部的光線穿過針孔後到達螢幕上方。因此，針孔成像永遠是<b>180° 倒立實像 (上下顛倒、左右相反)</b>。</p>
+            <div id="preview-canvas-wrap" class="relative w-full aspect-square rounded-xl overflow-hidden bg-slate-950 border border-slate-800 flex items-center justify-center">
+                <canvas id="screen-inset-canvas" class="w-full h-full object-contain"></canvas>
+                <div class="absolute inset-0 pointer-events-none flex items-center justify-center">
+                    <div class="w-full h-[1px] bg-slate-800/40"></div>
+                    <div class="h-full w-[1px] bg-slate-800/40 absolute"></div>
                 </div>
-
-                <div class="bg-slate-900/70 p-3.5 rounded-xl border border-slate-800">
-                    <h3 class="font-bold text-amber-300 text-sm mb-1">2. 相似三角形與放大率公式 ($m = v / u$)</h3>
-                    <p>設物體高度為 $h$、像高為 $h'$、物距為 $u$（物體到針孔距離）、像距為 $v$（針孔到螢幕距離）：</p>
-                    <div class="my-2 p-2 bg-slate-950 rounded font-mono text-center text-cyan-300 text-sm">
-                        放大率 m = \frac{h'}{h} = \frac{v}{u}
-                    </div>
-                    <ul class="list-disc list-inside space-y-1 text-slate-400">
-                        <li>當 $v > u$ ($m > 1$)：形成<b>放大</b>倒立實像。</li>
-                        <li>當 $v = u$ ($m = 1$)：形成<b>等大</b>倒立實像。</li>
-                        <li>當 $v < u$ ($m < 1$)：形成<b>縮小</b>倒立實像。</li>
-                        <li><b>重要特性：</b>成像大小<b>僅由距離比例決定</b>，與針孔大小無關！</li>
-                    </ul>
-                </div>
-
-                <div class="bg-slate-900/70 p-3.5 rounded-xl border border-slate-800">
-                    <h3 class="font-bold text-emerald-300 text-sm mb-1">3. 針孔大小對「清晰度」與「亮度」的折衷 (Aperture Trade-off)</h3>
-                    <p>每個物點發出的光線通過圓孔時，在螢幕上會形成一個圓形光斑 (Circle of Confusion)。</p>
-                    <ul class="list-disc list-inside space-y-1 text-slate-400 mt-1">
-                        <li><b>小針孔 (Small $d$)：</b>進光量小，成像<b>較暗</b>；但光斑交疊範圍小，成像<b>極清晰</b>。</li>
-                        <li><b>大針孔 (Large $d$)：</b>進光量大，成像<b>極亮</b>；但光斑擴散極大，造成影像<b>嚴重模糊重疊</b>。</li>
-                    </ul>
-                </div>
-
-                <div class="bg-slate-900/70 p-3.5 rounded-xl border border-slate-800">
-                    <h3 class="font-bold text-purple-300 text-sm mb-1">4. 多針孔成像與樹蔭太陽光斑</h3>
-                    <p>每一個針孔都會獨立在螢幕上形成一個完整的倒立實像。當有 2 個或更多針孔時，螢幕上會出現多個重疊的像。生活中「陽光透過樹葉縫隙在地面形成許多圓形太陽光斑」就是無數針孔成像的經典例子。</p>
-                </div>
-            </div>
-
-            <div class="mt-5 pt-3 border-t border-slate-800 text-right">
-                <button id="btn-close-help-2" class="px-4 py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold rounded-xl transition text-xs">
-                    了解原理，開始實驗
-                </button>
             </div>
         </div>
+
+        <!-- Restore Preview Pill Button -->
+        <button id="btn-restore-preview" class="glass-panel px-3 py-1.5 rounded-xl text-xs font-bold text-slate-200 hover:text-cyan-300 transition pointer-events-auto self-end flex items-center gap-1.5 shadow-lg hidden">
+            <i class="fa-solid fa-tv text-cyan-400"></i>
+            <span>🖼️ 成像預覽</span>
+        </button>
+
     </div>
 
-    <!-- Modal 2: Preset Scenarios Modal -->
+    <!-- Modal 1: Presets Selector -->
     <div id="modal-presets" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 hidden">
-        <div class="glass-panel w-full max-w-md rounded-2xl p-5 shadow-2xl border border-slate-700/60 flex flex-col">
-            <div class="flex justify-between items-center border-b border-slate-800 pb-3 mb-3">
+        <div class="glass-panel w-full max-w-lg rounded-2xl p-5 shadow-2xl border border-slate-700/60 flex flex-col max-h-[85vh]">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-2.5 mb-3">
                 <h2 class="text-base font-bold text-white flex items-center gap-2">
                     <i class="fa-solid fa-wand-magic-sparkles text-amber-400"></i>
-                    快速選擇經典光學實驗情境
+                    快速實驗情境選擇
                 </h2>
-                <button id="btn-close-presets" class="text-slate-400 hover:text-white transition">
+                <button id="btn-close-presets" class="text-slate-400 hover:text-white transition text-base">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
 
-            <div class="space-y-2 text-xs">
-                <button class="preset-card w-full p-3 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-800 text-left transition flex items-center justify-between group" data-preset="1to1">
-                    <div>
-                        <div class="font-bold text-cyan-300 group-hover:text-cyan-200">1. 等大成像 ($u = v = 60\text{cm}$)</div>
-                        <div class="text-[11px] text-slate-400">物距等於像距，放大率 $m = 1.0$，經典基準觀察。</div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 my-2">
+                <button class="preset-card p-3 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-cyan-500/50 text-left transition group" data-preset="equal">
+                    <div class="text-xs font-bold text-cyan-300 group-hover:text-cyan-200 flex items-center gap-1.5 mb-1">
+                        <i class="fa-solid fa-equals"></i> 1. 等大倒立像 (1:1)
                     </div>
-                    <i class="fa-solid fa-chevron-right text-slate-500 group-hover:text-cyan-400"></i>
+                    <div class="text-[11px] text-slate-400">物距 u = 60cm, 像距 v = 60cm, 放大率 m = 1.0×</div>
                 </button>
 
-                <button class="preset-card w-full p-3 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-800 text-left transition flex items-center justify-between group" data-preset="magnified">
-                    <div>
-                        <div class="font-bold text-amber-300 group-hover:text-amber-200">2. 2倍放大像 ($u = 40\text{cm}, v = 80\text{cm}$)</div>
-                        <div class="text-[11px] text-slate-400">螢幕拉遠，放大率 $m = 2.0$，實像明顯變大。</div>
+                <button class="preset-card p-3 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-amber-500/50 text-left transition group" data-preset="magnified">
+                    <div class="text-xs font-bold text-amber-300 group-hover:text-amber-200 flex items-center gap-1.5 mb-1">
+                        <i class="fa-solid fa-up-right-and-down-left-from-center"></i> 2. 放大倒立像 (3:1)
                     </div>
-                    <i class="fa-solid fa-chevron-right text-slate-500 group-hover:text-amber-400"></i>
+                    <div class="text-[11px] text-slate-400">物距 u = 30cm, 像距 v = 90cm, 放大率 m = 3.0×</div>
                 </button>
 
-                <button class="preset-card w-full p-3 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-800 text-left transition flex items-center justify-between group" data-preset="reduced">
-                    <div>
-                        <div class="font-bold text-emerald-300 group-hover:text-emerald-200">3. 0.5倍縮小像 ($u = 80\text{cm}, v = 40\text{cm}$)</div>
-                        <div class="text-[11px] text-slate-400">光源拉遠，放大率 $m = 0.5$，實像精巧縮小。</div>
+                <button class="preset-card p-3 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-emerald-500/50 text-left transition group" data-preset="minified">
+                    <div class="text-xs font-bold text-emerald-300 group-hover:text-emerald-200 flex items-center gap-1.5 mb-1">
+                        <i class="fa-solid fa-down-left-and-up-right-to-center"></i> 3. 縮小倒立像 (1:3)
                     </div>
-                    <i class="fa-solid fa-chevron-right text-slate-500 group-hover:text-emerald-400"></i>
+                    <div class="text-[11px] text-slate-400">物距 u = 90cm, 像距 v = 30cm, 放大率 m = 0.33×</div>
                 </button>
 
-                <button class="preset-card w-full p-3 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-800 text-left transition flex items-center justify-between group" data-preset="large-pinhole">
-                    <div>
-                        <div class="font-bold text-rose-300 group-hover:text-rose-200">4. 大針孔模糊實驗 ($d = 5.0\text{mm}$)</div>
-                        <div class="text-[11px] text-slate-400">觀察大孔徑導致光斑擴散，影像變亮但極模糊。</div>
+                <button class="preset-card p-3 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-purple-500/50 text-left transition group" data-preset="double-hole">
+                    <div class="text-xs font-bold text-purple-300 group-hover:text-purple-200 flex items-center gap-1.5 mb-1">
+                        <i class="fa-solid fa-clone"></i> 4. 雙針孔重疊複像
                     </div>
-                    <i class="fa-solid fa-chevron-right text-slate-500 group-hover:text-rose-400"></i>
+                    <div class="text-[11px] text-slate-400">2 個針孔，觀察雙像重疊與間距連動</div>
                 </button>
 
-                <button class="preset-card w-full p-3 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-800 text-left transition flex items-center justify-between group" data-preset="multi-pinhole">
-                    <div>
-                        <div class="font-bold text-purple-300 group-hover:text-purple-200">5. 雙孔與四孔複像實驗</div>
-                        <div class="text-[11px] text-slate-400">觀察多個針孔各自產生獨立且相互重疊的倒立實像。</div>
+                <button class="preset-card p-3 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-rose-500/50 text-left transition group sm:col-span-2" data-preset="large-hole">
+                    <div class="text-xs font-bold text-rose-300 group-hover:text-rose-200 flex items-center gap-1.5 mb-1">
+                        <i class="fa-solid fa-sun"></i> 5. 大孔徑 Blur 彌散圈對比
                     </div>
-                    <i class="fa-solid fa-chevron-right text-slate-500 group-hover:text-purple-400"></i>
+                    <div class="text-[11px] text-slate-400">針孔 d = 6.0mm, 亮度提升但圖像重疊發糊</div>
                 </button>
             </div>
         </div>
     </div>
 
+    <!-- Modal 2: Physics Help Modal -->
+    <div id="modal-help" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 hidden">
+        <div class="glass-panel w-full max-w-xl rounded-2xl p-5 shadow-2xl border border-slate-700/60 flex flex-col max-h-[85vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-2.5 mb-3">
+                <h2 class="text-base font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-graduation-cap text-cyan-400"></i>
+                    針孔成像 物理幾何原理
+                </h2>
+                <button id="btn-close-help" class="text-slate-400 hover:text-white transition text-base">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
 
-    <!-- JavaScript Simulation Engine -->
+            <div class="space-y-3 text-xs text-slate-300 leading-relaxed">
+                <div class="bg-slate-900/70 p-3 rounded-xl border border-slate-800">
+                    <h3 class="font-bold text-amber-300 mb-1">1. 為何字母 'p' 成像會變成 'd'？</h3>
+                    <p>光在均勻介質中嚴格沿<b>直線傳播</b>。設發光物體上的任意點座標為 (X, Y)，經過原點針孔直線投影後，螢幕上的對應成像點座標為：</p>
+                    <div class="font-mono text-cyan-300 my-1 bg-slate-950 p-1.5 rounded border border-slate-800 text-center">
+                        (X', Y') = (-m · X, -m · Y), &nbsp; 其中 m = v/u
+                    </div>
+                    <p class="mt-1">對於小寫字母 <b>'p'</b>（豎直線在左側，圓環在右上角）：</p>
+                    <ul class="list-disc pl-4 space-y-0.5 mt-1 text-slate-300">
+                        <li><b>Y 軸顛倒（上下鏡像）</b>：圓環由右上角移至右下角（呈現字母 'b' 輪廓）。</li>
+                        <li><b>X 軸相反（左右鏡像）</b>：豎直線由左側移至右側，圓環由右側移至左側（呈現字母 'd' 輪廓）。</li>
+                        <li><b>物理結論</b>：兩者組合即為 180° 點對稱旋轉，字母 <b>'p' 投影後必然呈現精確的 'd'</b>！</li>
+                    </ul>
+                </div>
+
+                <div class="bg-slate-900/70 p-3 rounded-xl border border-slate-800">
+                    <h3 class="font-bold text-cyan-300 mb-1">2. 光線直射邏輯 (Straight Ray Tracing)</h3>
+                    <p>右上角紅點發出的光線，穿過針孔後直射至螢幕左下角；右下角綠點發出的光線，穿過針孔後直射至螢幕左上角。光路全程為無折射的直線。</p>
+                </div>
+
+                <div class="bg-slate-900/70 p-3 rounded-xl border border-slate-800">
+                    <h3 class="font-bold text-emerald-300 mb-1">3. 放大率公式 (m = v / u)</h3>
+                    <p>相似三角形性質：放大率 m = h'/h = v/u。<b>像的大小僅與物距 u 與像距 v 有關，與針孔直徑 d 無關。</b></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Physics Simulation Engine -->
     <script>
-        // --- Global Simulation Parameters State ---
+        // Global Simulation Parameters
         const params = {
             u: 60.0,         // Object Distance u (cm)
             v: 60.0,         // Screen Distance v (cm)
             d: 1.5,          // Pinhole Diameter d (mm)
             pinholeCount: 1, // 1, 2, 3, or 4
-            pinholeSep: 3.0, // Separation distance between pinholes (cm)
-            objectType: 'F', // 'F', 'candle', 'arrow'
-            showRays: true,  // Toggle light rays
+            pinholeSep: 3.5, // Separation distance between pinholes (cm)
+            objectType: 'p', // 'p', 'F', 'L', 'arrow', 'grid'
+            showRays: true,  // Toggle ray trace lines
             activeView: 'orbit'
         };
 
-        // --- Three.js Globals ---
+        // Three.js & Canvas Globals
         let scene, camera, renderer, controls;
         let opticalTrackGroup, objectGroup, pinholePlateGroup, screenGroup;
-        let rayLinesMesh;
+        let rayLinesMesh, rayMarkersGroup;
         let screenCanvas, screenTexture, insetCanvas;
-        let candleFlameLight, candleFlameMesh;
 
-        // Colors for Light Source points and Rays
         const keyPointColors = [
-            0xff0055, // Red / Magenta (Top tip)
-            0x00ffcc, // Cyan / Green (Middle)
-            0x0088ff, // Blue (Bottom tip)
-            0xffaa00, // Amber / Yellow (Extra)
-            0xcc00ff  // Purple (Extra)
+            0xef4444, // Red (Top-Right)
+            0xeab308, // Yellow (Top-Left)
+            0x10b981, // Green (Bottom-Right)
+            0x3b82f6  // Blue (Bottom-Left)
         ];
 
-        // --- Initialize Everything on Window Load ---
         window.addEventListener('load', () => {
             init2DScreenCanvas();
             init3DScene();
-            setupUIEventListeners();
+            setupUIEventListeners(); // Attached UI event handlers
             updateSimulation();
             animate();
         });
 
-        // --- 1. Offscreen & Inset 2D Screen Texture Setup ---
+        // 1. Offscreen 2D Canvas & Screen Texture
         function init2DScreenCanvas() {
-            // Main high-res offscreen canvas used as Three.js texture
             screenCanvas = document.createElement('canvas');
             screenCanvas.width = 512;
             screenCanvas.height = 512;
 
-            // Inset preview canvas in UI HUD
             insetCanvas = document.getElementById('screen-inset-canvas');
-            insetCanvas.width = 300;
-            insetCanvas.height = 300;
+            insetCanvas.width = 256;
+            insetCanvas.height = 256;
 
             screenTexture = new THREE.CanvasTexture(screenCanvas);
             screenTexture.minFilter = THREE.LinearFilter;
             screenTexture.magFilter = THREE.LinearFilter;
+
+            screenTexture.repeat.set(-1, 1);
+            screenTexture.offset.set(1, 0);
         }
 
-        // --- 2. Three.js 3D Physics Scene Setup ---
+        // 2. Three.js 3D Physics Scene
         function init3DScene() {
             const container = document.getElementById('canvas-container');
-            
-            // Scene
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x080c14);
-            scene.fog = new THREE.FogExp2(0x080c14, 0.0018);
 
-            // Camera
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x060911);
+            scene.fog = new THREE.FogExp2(0x060911, 0.0015);
+
             camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
             camera.position.set(65, 45, 85);
 
-            // Renderer
             renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -485,13 +488,12 @@
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             container.appendChild(renderer.domElement);
 
-            // OrbitControls
             controls = new THREE.OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
             controls.dampingFactor = 0.05;
             controls.maxDistance = 350;
             controls.minDistance = 15;
-            controls.target.set(0, 5, 0);
+            controls.target.set(0, 16, 0);
 
             // Lighting
             const ambientLight = new THREE.AmbientLight(0xffffff, 0.45);
@@ -500,20 +502,16 @@
             const dirLight = new THREE.DirectionalLight(0xffffff, 0.85);
             dirLight.position.set(40, 80, 50);
             dirLight.castShadow = true;
-            dirLight.shadow.mapSize.width = 1024;
-            dirLight.shadow.mapSize.height = 1024;
             scene.add(dirLight);
 
-            // Subtle colored rim lights for futuristic lab atmosphere
-            const rimLight1 = new THREE.PointLight(0x06b6d4, 1.2, 150);
-            rimLight1.position.set(-60, 40, -100);
-            scene.add(rimLight1);
+            const rim1 = new THREE.PointLight(0x06b6d4, 1.2, 160);
+            rim1.position.set(-70, 40, -100);
+            scene.add(rim1);
 
-            const rimLight2 = new THREE.PointLight(0xf59e0b, 0.8, 150);
-            rimLight2.position.set(60, -20, 100);
-            scene.add(rimLight2);
+            const rim2 = new THREE.PointLight(0xf59e0b, 0.8, 160);
+            rim2.position.set(70, -20, 100);
+            scene.add(rim2);
 
-            // Build 3D World Components
             buildOpticalTrack();
             buildPinholePlate();
             buildScreenMesh();
@@ -523,70 +521,59 @@
             window.addEventListener('resize', onWindowResize);
         }
 
-        // --- Build Optical Rail Bench & Ruler Markings ---
         function buildOpticalTrack() {
             opticalTrackGroup = new THREE.Group();
 
-            // Track Base Plate
-            const trackGeo = new THREE.BoxGeometry(28, 1.2, 360);
+            const trackGeo = new THREE.BoxGeometry(28, 1.2, 380);
             const trackTex = createTrackRulerTexture();
-            const trackMat = new THREE.MeshStandardMaterial({
-                map: trackTex,
-                roughness: 0.4,
-                metalness: 0.7
-            });
+            const trackMat = new THREE.MeshStandardMaterial({ map: trackTex, roughness: 0.4, metalness: 0.7 });
             const trackMesh = new THREE.Mesh(trackGeo, trackMat);
             trackMesh.position.y = -0.6;
             trackMesh.receiveShadow = true;
             opticalTrackGroup.add(trackMesh);
 
-            // Dual Metal Rails along Z
-            const railGeo = new THREE.CylinderGeometry(0.5, 0.5, 360, 16);
+            const railGeo = new THREE.CylinderGeometry(0.5, 0.5, 380, 16);
             const railMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.9, roughness: 0.2 });
-            
-            const railLeft = new THREE.Mesh(railGeo, railMat);
-            railLeft.rotation.x = Math.PI / 2;
-            railLeft.position.set(-10, 0.2, 0);
-            opticalTrackGroup.add(railLeft);
 
-            const railRight = new THREE.Mesh(railGeo, railMat);
-            railRight.rotation.x = Math.PI / 2;
-            railRight.position.set(10, 0.2, 0);
-            opticalTrackGroup.add(railRight);
+            const railL = new THREE.Mesh(railGeo, railMat);
+            railL.rotation.x = Math.PI / 2;
+            railL.position.set(-10, 0.2, 0);
+            opticalTrackGroup.add(railL);
 
-            // Lab Floor Grid
-            const gridHelper = new THREE.GridHelper(500, 50, 0x1e293b, 0x0f172a);
-            gridHelper.position.y = -1.2;
-            opticalTrackGroup.add(gridHelper);
+            const railR = new THREE.Mesh(railGeo, railMat);
+            railR.rotation.x = Math.PI / 2;
+            railR.position.set(10, 0.2, 0);
+            opticalTrackGroup.add(railR);
+
+            const grid = new THREE.GridHelper(500, 50, 0x1e293b, 0x0f172a);
+            grid.position.y = -1.2;
+            opticalTrackGroup.add(grid);
 
             scene.add(opticalTrackGroup);
         }
 
-        // Texture Generator for Ruler Marks on Optical Rail
         function createTrackRulerTexture() {
             const canvas = document.createElement('canvas');
             canvas.width = 256;
             canvas.height = 2048;
             const ctx = canvas.getContext('2d');
 
-            ctx.fillStyle = '#0f172a';
+            ctx.fillStyle = '#0b1329';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Center rail line
             ctx.fillStyle = '#0284c7';
             ctx.fillRect(canvas.width / 2 - 4, 0, 8, canvas.height);
 
-            const pxPerCm = canvas.height / 360.0;
-            const centerPx = canvas.height / 2; // Z = 0
+            const pxPerCm = canvas.height / 380.0;
+            const centerPx = canvas.height / 2;
 
             ctx.fillStyle = '#38bdf8';
             ctx.font = 'bold 22px monospace';
             ctx.textAlign = 'right';
             ctx.textBaseline = 'middle';
 
-            for (let cm = -170; cm <= 170; cm += 1) {
+            for (let cm = -180; cm <= 180; cm += 1) {
                 const y = centerPx + cm * pxPerCm;
-
                 if (cm % 10 === 0) {
                     ctx.fillStyle = '#38bdf8';
                     ctx.fillRect(20, y - 1.5, 45, 3);
@@ -601,30 +588,23 @@
                 }
             }
 
-            const texture = new THREE.CanvasTexture(canvas);
-            texture.wrapS = THREE.ClampToEdgeWrapping;
-            texture.wrapT = THREE.ClampToEdgeWrapping;
-            return texture;
+            return new THREE.CanvasTexture(canvas);
         }
 
-        // --- Build Pinhole Plate at Z = 0 ---
         function buildPinholePlate() {
             pinholePlateGroup = new THREE.Group();
 
-            // Support Stand base
-            const standBaseGeo = new THREE.BoxGeometry(22, 1.5, 8);
-            const standMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.8, roughness: 0.3 });
-            const standBase = new THREE.Mesh(standBaseGeo, standMat);
-            standBase.position.y = 0.75;
-            pinholePlateGroup.add(standBase);
+            const baseGeo = new THREE.BoxGeometry(22, 1.5, 8);
+            const baseMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.8, roughness: 0.3 });
+            const base = new THREE.Mesh(baseGeo, baseMat);
+            base.position.y = 0.75;
+            pinholePlateGroup.add(base);
 
-            // Vertical Pillar
             const pillarGeo = new THREE.CylinderGeometry(0.8, 0.8, 12, 16);
-            const pillar = new THREE.Mesh(pillarGeo, standMat);
+            const pillar = new THREE.Mesh(pillarGeo, baseMat);
             pillar.position.set(0, 6, 0);
             pinholePlateGroup.add(pillar);
 
-            // Black Anodized Aluminum Plate Frame
             const plateGeo = new THREE.BoxGeometry(28, 28, 0.4);
             const plateMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.6, metalness: 0.4 });
             const plate = new THREE.Mesh(plateGeo, plateMat);
@@ -632,40 +612,34 @@
             plate.castShadow = true;
             pinholePlateGroup.add(plate);
 
-            // Golden Rim Frame around Plate
             const borderGeo = new THREE.BoxGeometry(28.6, 28.6, 0.2);
             const borderMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.3, metalness: 0.8 });
             const border = new THREE.Mesh(borderGeo, borderMat);
             border.position.set(0, 16, -0.15);
             pinholePlateGroup.add(border);
 
-            // Dynamic Pinholes Mesh Subgroup
-            const pinholeHolesGroup = new THREE.Group();
-            pinholeHolesGroup.name = "pinholeHolesGroup";
-            pinholePlateGroup.add(pinholeHolesGroup);
+            const holesGroup = new THREE.Group();
+            holesGroup.name = "pinholeHolesGroup";
+            pinholePlateGroup.add(holesGroup);
 
             scene.add(pinholePlateGroup);
         }
 
-        // Update physical pinhole geometry visuals on the plate
         function update3DPinholeVisuals() {
             const group = pinholePlateGroup.getObjectByName("pinholeHolesGroup");
-            while(group.children.length > 0) { 
-                group.remove(group.children[0]); 
-            }
+            while(group.children.length > 0) { group.remove(group.children[0]); }
 
             const positions = getPinholePositionsCm();
             positions.forEach(pos => {
-                // Hole visual ring
-                const holeRadius = Math.max(0.3, params.d / 2.0 * 0.2);
-                const holeGeo = new THREE.RingGeometry(holeRadius, holeRadius + 0.3, 32);
-                const holeMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide });
-                const holeMesh = new THREE.Mesh(holeGeo, holeMat);
-                holeMesh.position.set(pos.x, 16 + pos.y, 0.22);
-                group.add(holeMesh);
+                const holeRadius = Math.max(0.35, (params.d / 2.0) * 0.22);
 
-                // Small center glowing dot
-                const centerGeo = new THREE.CircleGeometry(holeRadius, 16);
+                const ringGeo = new THREE.RingGeometry(holeRadius, holeRadius + 0.35, 32);
+                const ringMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide });
+                const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+                ringMesh.position.set(pos.x, 16 + pos.y, 0.22);
+                group.add(ringMesh);
+
+                const centerGeo = new THREE.CircleGeometry(holeRadius, 24);
                 const centerMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
                 const centerMesh = new THREE.Mesh(centerGeo, centerMat);
                 centerMesh.position.set(pos.x, 16 + pos.y, 0.21);
@@ -673,50 +647,40 @@
             });
         }
 
-        // --- Build Projection Screen at Z = +v ---
         function buildScreenMesh() {
             screenGroup = new THREE.Group();
 
-            // Sliding Base
             const baseGeo = new THREE.BoxGeometry(24, 1.2, 8);
             const baseMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.8, roughness: 0.3 });
             const baseMesh = new THREE.Mesh(baseGeo, baseMat);
             baseMesh.position.y = 0.6;
             screenGroup.add(baseMesh);
 
-            // Vertical Pillar
             const pillarGeo = new THREE.CylinderGeometry(0.8, 0.8, 12, 16);
             const pillar = new THREE.Mesh(pillarGeo, baseMat);
             pillar.position.set(0, 6, 0);
             screenGroup.add(pillar);
 
-            // Screen Frame
             const frameGeo = new THREE.BoxGeometry(32, 32, 0.6);
             const frameMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.5 });
             const frame = new THREE.Mesh(frameGeo, frameMat);
             frame.position.set(0, 16, 0);
             screenGroup.add(frame);
 
-            // Screen Surface Front (Matte white projection fabric with dynamic CanvasTexture)
             const screenFaceGeo = new THREE.PlaneGeometry(30, 30);
-            const screenFaceMat = new THREE.MeshBasicMaterial({
-                map: screenTexture,
-                side: THREE.FrontSide
-            });
+            const screenFaceMat = new THREE.MeshBasicMaterial({ map: screenTexture, side: THREE.FrontSide });
             const screenFace = new THREE.Mesh(screenFaceGeo, screenFaceMat);
-            screenFace.position.set(0, 16, -0.32); // Facing Z negative towards pinhole
-            screenFace.rotation.y = Math.PI; // Rotate to face pinhole origin
+            screenFace.position.set(0, 16, -0.32);
+            screenFace.rotation.y = Math.PI;
             screenGroup.add(screenFace);
 
             screenGroup.position.z = params.v;
             scene.add(screenGroup);
         }
 
-        // --- Build Light Source Objects at Z = -u ---
         function buildLightSourceObjects() {
             objectGroup = new THREE.Group();
 
-            // Base stand for object
             const baseGeo = new THREE.BoxGeometry(20, 1.2, 8);
             const baseMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.8 });
             const baseMesh = new THREE.Mesh(baseGeo, baseMat);
@@ -728,130 +692,98 @@
             pillar.position.set(0, 5, 0);
             objectGroup.add(pillar);
 
-            // Subgroups for selectable objects
-            const fMeshGroup = new THREE.Group();
-            fMeshGroup.name = "obj_F";
-            buildLetterFMesh(fMeshGroup);
-            objectGroup.add(fMeshGroup);
-
-            const candleGroup = new THREE.Group();
-            candleGroup.name = "obj_candle";
-            buildCandleMesh(candleGroup);
-            objectGroup.add(candleGroup);
-
-            const arrowGroup = new THREE.Group();
-            arrowGroup.name = "obj_arrow";
-            buildArrowMesh(arrowGroup);
-            objectGroup.add(arrowGroup);
+            const pGroup = new THREE.Group(); pGroup.name = "obj_p"; build3DLetterP(pGroup); objectGroup.add(pGroup);
+            const fGroup = new THREE.Group(); fGroup.name = "obj_F"; build3DLetterF(fGroup); objectGroup.add(fGroup);
+            const lGroup = new THREE.Group(); lGroup.name = "obj_L"; build3DLetterL(lGroup); objectGroup.add(lGroup);
+            const arrowGroup = new THREE.Group(); arrowGroup.name = "obj_arrow"; build3DArrow(arrowGroup); objectGroup.add(arrowGroup);
+            const gridGroup = new THREE.Group(); gridGroup.name = "obj_grid"; build3DGrid(gridGroup); objectGroup.add(gridGroup);
 
             objectGroup.position.z = -params.u;
             scene.add(objectGroup);
         }
 
-        // 3D Mesh for Letter 'F'
-        function buildLetterFMesh(parent) {
-            const matCyan = new THREE.MeshStandardMaterial({ color: 0x06b6d4, emissive: 0x0891b2, emissiveIntensity: 0.8, roughness: 0.2 });
-            const matAmber = new THREE.MeshStandardMaterial({ color: 0xf59e0b, emissive: 0xd97706, emissiveIntensity: 0.8, roughness: 0.2 });
+        function build3DLetterP(parent) {
+            const matCyan = new THREE.MeshStandardMaterial({ color: 0x06b6d4, emissive: 0x0891b2, emissiveIntensity: 0.8 });
+            const matAmber = new THREE.MeshStandardMaterial({ color: 0xf59e0b, emissive: 0xd97706, emissiveIntensity: 0.8 });
 
-            // Vertical Spine
-            const spine = new THREE.Mesh(new THREE.BoxGeometry(1.6, 14, 1.6), matCyan);
-            spine.position.set(-3.5, 16, 0);
+            const spine = new THREE.Mesh(new THREE.BoxGeometry(1.6, 10.4, 1.6), matCyan);
+            spine.position.set(-2.4, 15.9, 0);
             parent.add(spine);
 
-            // Top Arm
-            const topArm = new THREE.Mesh(new THREE.BoxGeometry(7, 1.6, 1.6), matCyan);
-            topArm.position.set(0, 22.2, 0);
+            const torusGeo = new THREE.TorusGeometry(2.1, 0.8, 16, 32);
+            const loopMesh = new THREE.Mesh(torusGeo, matAmber);
+            loopMesh.position.set(-0.2, 18.8, 0);
+            parent.add(loopMesh);
+        }
+
+        function build3DLetterF(parent) {
+            const matCyan = new THREE.MeshStandardMaterial({ color: 0x06b6d4, emissive: 0x0891b2, emissiveIntensity: 0.8 });
+            const matAmber = new THREE.MeshStandardMaterial({ color: 0xf59e0b, emissive: 0xd97706, emissiveIntensity: 0.8 });
+
+            const spine = new THREE.Mesh(new THREE.BoxGeometry(1.6, 12, 1.6), matCyan);
+            spine.position.set(-2.4, 16, 0);
+            parent.add(spine);
+
+            const topArm = new THREE.Mesh(new THREE.BoxGeometry(6.4, 1.6, 1.6), matCyan);
+            topArm.position.set(0.8, 21.2, 0);
             parent.add(topArm);
 
-            // Middle Arm
-            const midArm = new THREE.Mesh(new THREE.BoxGeometry(5, 1.6, 1.6), matAmber);
-            midArm.position.set(-1.0, 16, 0);
+            const midArm = new THREE.Mesh(new THREE.BoxGeometry(3.9, 1.6, 1.6), matAmber);
+            midArm.position.set(-0.45, 16.8, 0);
             parent.add(midArm);
-
-            // Glowing spheres at key light points
-            addKeyPointMarker(parent, 3.5, 22.2, 0, keyPointColors[0]); // Top Right Tip (Red)
-            addKeyPointMarker(parent, 1.5, 16.0, 0, keyPointColors[1]); // Middle Tip (Green)
-            addKeyPointMarker(parent, -3.5, 9.0, 0, keyPointColors[2]); // Bottom Spine (Blue)
         }
 
-        // 3D Mesh for Candle
-        function buildCandleMesh(parent) {
-            // Candle Wax Stick
-            const waxMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.3 });
-            const wax = new THREE.Mesh(new THREE.CylinderGeometry(2, 2.2, 10, 24), waxMat);
-            wax.position.set(0, 14, 0);
-            parent.add(wax);
+        function build3DLetterL(parent) {
+            const matGreen = new THREE.MeshStandardMaterial({ color: 0x10b981, emissive: 0x059669, emissiveIntensity: 0.8 });
+            const matAmber = new THREE.MeshStandardMaterial({ color: 0xf59e0b, emissive: 0xd97706, emissiveIntensity: 0.8 });
 
-            // Wick
-            const wickMat = new THREE.MeshStandardMaterial({ color: 0x1e293b });
-            const wick = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 1.5, 8), wickMat);
-            wick.position.set(0, 19.5, 0);
-            parent.add(wick);
+            const spine = new THREE.Mesh(new THREE.BoxGeometry(1.6, 12, 1.6), matGreen);
+            spine.position.set(-2.4, 16, 0);
+            parent.add(spine);
 
-            // Flame Mesh
-            const flameMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b });
-            candleFlameMesh = new THREE.Mesh(new THREE.ConeGeometry(1.6, 4.5, 16), flameMat);
-            candleFlameMesh.position.set(0, 21.5, 0);
-            parent.add(candleFlameMesh);
-
-            // Flame PointLight
-            candleFlameLight = new THREE.PointLight(0xf59e0b, 1.8, 40);
-            candleFlameLight.position.set(0, 21.5, 0);
-            parent.add(candleFlameLight);
-
-            // Glowing markers
-            addKeyPointMarker(parent, 0, 23.5, 0, keyPointColors[0]); // Flame Peak
-            addKeyPointMarker(parent, 0, 19.0, 0, keyPointColors[1]); // Wick Base
-            addKeyPointMarker(parent, 0, 9.0, 0, keyPointColors[2]);  // Candle Base
+            const baseArm = new THREE.Mesh(new THREE.BoxGeometry(6.4, 1.6, 1.6), matAmber);
+            baseArm.position.set(0.8, 10.8, 0);
+            parent.add(baseArm);
         }
 
-        // 3D Mesh for Arrow
-        function buildArrowMesh(parent) {
-            const matRed = new THREE.MeshStandardMaterial({ color: 0xf43f5e, emissive: 0xe11d48, emissiveIntensity: 0.6 });
-            const matGreen = new THREE.MeshStandardMaterial({ color: 0x10b981, emissive: 0x059669, emissiveIntensity: 0.6 });
-            const matBlue = new THREE.MeshStandardMaterial({ color: 0x3b82f6, emissive: 0x2563eb, emissiveIntensity: 0.6 });
+        function build3DArrow(parent) {
+            const matRed = new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0xd97706 });
+            const matGreen = new THREE.MeshStandardMaterial({ color: 0x10b981, emissive: 0x059669 });
+            const matBlue = new THREE.MeshStandardMaterial({ color: 0x3b82f6, emissive: 0x2563eb });
 
-            // Arrow Cone Head
             const head = new THREE.Mesh(new THREE.ConeGeometry(3.5, 5, 20), matRed);
-            head.position.set(0, 21.5, 0);
+            head.position.set(2.5, 21.5, 0);
+            head.rotation.z = -Math.PI / 4;
             parent.add(head);
 
-            // Arrow Shaft
-            const shaft = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 8, 20), matGreen);
-            shaft.position.set(0, 15, 0);
+            const shaft = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 9, 20), matGreen);
+            shaft.position.set(0, 16, 0);
+            shaft.rotation.z = -Math.PI / 4;
             parent.add(shaft);
 
-            // Base Bar
-            const baseBar = new THREE.Mesh(new THREE.BoxGeometry(7, 1.5, 1.5), matBlue);
-            baseBar.position.set(0, 9.8, 0);
-            parent.add(baseBar);
-
-            // Markers
-            addKeyPointMarker(parent, 0, 24.0, 0, keyPointColors[0]); // Arrow Tip
-            addKeyPointMarker(parent, 0, 15.0, 0, keyPointColors[1]); // Shaft Mid
-            addKeyPointMarker(parent, 0, 9.0, 0, keyPointColors[2]);  // Base
+            const tail = new THREE.Mesh(new THREE.BoxGeometry(6, 1.5, 1.5), matBlue);
+            tail.position.set(-2.5, 10.5, 0);
+            tail.rotation.z = -Math.PI / 4;
+            parent.add(tail);
         }
 
-        // Helper to add glowing marker sphere at key source points
-        function addKeyPointMarker(parent, x, y, z, colorHex) {
-            const geo = new THREE.SphereGeometry(0.6, 16, 16);
-            const mat = new THREE.MeshBasicMaterial({ color: colorHex });
-            const mesh = new THREE.Mesh(geo, mat);
-            mesh.position.set(x, y, z);
-            parent.add(mesh);
+        function build3DGrid(parent) {
+            const boardMat = new THREE.MeshStandardMaterial({ color: 0x1e1b4b, emissive: 0x312e81, roughness: 0.3 });
+            const board = new THREE.Mesh(new THREE.BoxGeometry(14, 14, 1), boardMat);
+            board.position.set(0, 16, 0);
+            parent.add(board);
         }
 
-        // Switch visible 3D object
         function updateVisibleObject() {
-            ['F', 'candle', 'arrow'].forEach(type => {
+            ['p', 'F', 'L', 'arrow', 'grid'].forEach(type => {
                 const obj = objectGroup.getObjectByName(`obj_${type}`);
                 if (obj) obj.visible = (type === params.objectType);
             });
         }
 
-        // --- 3. Light Rays Buffer Setup ---
+        // 3. Ray Tracing System
         function initRayTraceLines() {
-            const maxSegments = 100;
+            const maxSegments = 120;
             const geometry = new THREE.BufferGeometry();
             const positions = new Float32Array(maxSegments * 2 * 3);
             const colors = new Float32Array(maxSegments * 2 * 3);
@@ -859,19 +791,19 @@
             geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
             geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
-            const material = new THREE.LineBasicMaterial({
-                vertexColors: true,
-                transparent: true,
-                opacity: 0.7,
-                linewidth: 2
-            });
-
+            const material = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.85, linewidth: 2 });
             rayLinesMesh = new THREE.LineSegments(geometry, material);
             scene.add(rayLinesMesh);
+
+            rayMarkersGroup = new THREE.Group();
+            scene.add(rayMarkersGroup);
         }
 
-        // Recompute dynamic 3D light ray paths
         function updateRayTraceLines() {
+            while(rayMarkersGroup.children.length > 0) {
+                rayMarkersGroup.remove(rayMarkersGroup.children[0]);
+            }
+
             if (!params.showRays) {
                 rayLinesMesh.visible = false;
                 return;
@@ -889,42 +821,35 @@
             let idx = 0;
 
             keyPoints.forEach((pt, pIdx) => {
-                const c = new THREE.Color(keyPointColors[pIdx % keyPointColors.length]);
+                const colorHex = keyPointColors[pIdx % keyPointColors.length];
+                const c = new THREE.Color(colorHex);
+
+                addSphereMarker(rayMarkersGroup, pt.x, pt.y, pt.z, colorHex, 0.65);
 
                 pinholes.forEach(ph => {
-                    // Object point in world space
                     const pObj = pt.clone();
-
-                    // Pinhole center on plate (Y offset is 16cm)
                     const pHole = new THREE.Vector3(ph.x, 16 + ph.y, 0);
 
-                    // Screen Hit Point at Z = +v
-                    // Screen hit formula: P_screen = P_hole + (v/u)*(P_hole - P_obj)
                     const pScreen = new THREE.Vector3(
-                        ph.x + m * (ph.x - pObj.x),
-                        (16 + ph.y) + m * ((16 + ph.y) - pObj.y),
+                        pObj.x + (1 + m) * (pHole.x - pObj.x),
+                        pObj.y + (1 + m) * (pHole.y - pObj.y),
                         v
                     );
 
-                    // Ray Segment 1: Object -> Pinhole
-                    posAttr.setXYZ(idx, pObj.x, pObj.y, pObj.z);
-                    colAttr.setXYZ(idx, c.r, c.g, c.b);
-                    idx++;
-                    posAttr.setXYZ(idx, pHole.x, pHole.y, pHole.z);
-                    colAttr.setXYZ(idx, c.r, c.g, c.b);
-                    idx++;
+                    addSphereMarker(rayMarkersGroup, pScreen.x, pScreen.y, pScreen.z - 0.2, colorHex, 0.55);
 
-                    // Ray Segment 2: Pinhole -> Screen
+                    posAttr.setXYZ(idx, pObj.x, pObj.y, pObj.z);
+                    colAttr.setXYZ(idx, c.r, c.g, c.b); idx++;
                     posAttr.setXYZ(idx, pHole.x, pHole.y, pHole.z);
-                    colAttr.setXYZ(idx, c.r, c.g, c.b);
-                    idx++;
+                    colAttr.setXYZ(idx, c.r, c.g, c.b); idx++;
+
+                    posAttr.setXYZ(idx, pHole.x, pHole.y, pHole.z);
+                    colAttr.setXYZ(idx, c.r, c.g, c.b); idx++;
                     posAttr.setXYZ(idx, pScreen.x, pScreen.y, pScreen.z);
-                    colAttr.setXYZ(idx, c.r, c.g, c.b);
-                    idx++;
+                    colAttr.setXYZ(idx, c.r, c.g, c.b); idx++;
                 });
             });
 
-            // Zero out remaining unused segments
             for (let i = idx; i < posAttr.count; i++) {
                 posAttr.setXYZ(i, 0, 0, 0);
             }
@@ -933,37 +858,58 @@
             colAttr.needsUpdate = true;
         }
 
-        // Get key points coordinates based on active object type
+        function addSphereMarker(parent, x, y, z, colorHex, radius) {
+            const geo = new THREE.SphereGeometry(radius, 16, 16);
+            const mat = new THREE.MeshBasicMaterial({ color: colorHex });
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.set(x, y, z);
+            parent.add(mesh);
+        }
+
         function getObjectKeyPointsWorld() {
             const zObj = -params.u;
-            if (params.objectType === 'F') {
+            if (params.objectType === 'p') {
                 return [
-                    new THREE.Vector3(3.5, 22.2, zObj), // Top arm tip
-                    new THREE.Vector3(1.5, 16.0, zObj), // Middle arm tip
-                    new THREE.Vector3(-3.5, 9.0, zObj)  // Spine bottom
+                    new THREE.Vector3(2.0, 16 + 5.0, zObj),   // Top-Right Loop (Red)
+                    new THREE.Vector3(-2.4, 16 + 5.0, zObj),  // Top-Left Stem (Yellow)
+                    new THREE.Vector3(2.0, 16 + 0.6, zObj),   // Bottom-Right Loop (Green)
+                    new THREE.Vector3(-2.4, 16 - 5.2, zObj)   // Bottom-Left Stem Base (Blue)
                 ];
-            } else if (params.objectType === 'candle') {
+            } else if (params.objectType === 'F') {
                 return [
-                    new THREE.Vector3(0, 23.5, zObj), // Flame tip
-                    new THREE.Vector3(0, 19.0, zObj), // Wick base
-                    new THREE.Vector3(0, 9.0, zObj)   // Candle bottom
+                    new THREE.Vector3(4.0, 16 + 5.2, zObj),  // Top-Right Arm Tip (Red)
+                    new THREE.Vector3(-2.4, 16 + 5.2, zObj), // Top-Left Corner (Yellow)
+                    new THREE.Vector3(1.5, 16 + 0.8, zObj),  // Mid-Right Arm Tip (Green)
+                    new THREE.Vector3(-2.4, 16 - 5.2, zObj)  // Bottom Stem Base (Blue)
                 ];
-            } else { // 'arrow'
+            } else if (params.objectType === 'L') {
                 return [
-                    new THREE.Vector3(0, 24.0, zObj), // Arrow head
-                    new THREE.Vector3(0, 15.0, zObj), // Shaft center
-                    new THREE.Vector3(0, 9.0, zObj)   // Base
+                    new THREE.Vector3(-2.4, 16 + 5.2, zObj),
+                    new THREE.Vector3(4.0, 16 - 5.2, zObj),
+                    new THREE.Vector3(-2.4, 16 - 5.2, zObj)
+                ];
+            } else if (params.objectType === 'arrow') {
+                return [
+                    new THREE.Vector3(4.2, 16 + 4.2, zObj),
+                    new THREE.Vector3(0.0, 16 + 0.0, zObj),
+                    new THREE.Vector3(-4.2, 16 - 4.2, zObj)
+                ];
+            } else { // 'grid'
+                return [
+                    new THREE.Vector3(3.5, 16 + 3.5, zObj),
+                    new THREE.Vector3(-3.5, 16 + 3.5, zObj),
+                    new THREE.Vector3(-3.5, 16 - 3.5, zObj),
+                    new THREE.Vector3(3.5, 16 - 3.5, zObj)
                 ];
             }
         }
 
-        // Get pinhole array in relative cm offset
         function getPinholePositionsCm() {
             const count = params.pinholeCount;
             const s = params.pinholeSep;
             if (count === 1) return [{ x: 0, y: 0 }];
             if (count === 2) return [{ x: -s / 2, y: 0 }, { x: s / 2, y: 0 }];
-            if (count === 3) return [{ x: -s / 2, y: -s / 3 }, { x: s / 2, y: -s / 3 }, { x: 0, y: (2 / 3) * s }];
+            if (count === 3) return [{ x: -s, y: 0 }, { x: 0, y: 0 }, { x: s, y: 0 }];
             if (count === 4) return [
                 { x: -s / 2, y: -s / 2 }, { x: s / 2, y: -s / 2 },
                 { x: -s / 2, y: s / 2 }, { x: s / 2, y: s / 2 }
@@ -971,17 +917,15 @@
             return [{ x: 0, y: 0 }];
         }
 
-        // --- 4. Render Realistic Screen Texture with Physics Blur ---
+        // 4. Render Inverted Texture on Screen ('p' -> 'd')
         function updateScreenTexture() {
             const ctx = screenCanvas.getContext('2d');
             const w = screenCanvas.width;
             const h = screenCanvas.height;
 
-            // Clear Canvas
-            ctx.fillStyle = '#060a12';
+            ctx.fillStyle = '#050811';
             ctx.fillRect(0, 0, w, h);
 
-            // Draw Fine Measurement Coordinate Grid
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
             ctx.lineWidth = 1;
             const gridStep = 32;
@@ -992,8 +936,7 @@
                 ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
             }
 
-            // Draw Axes lines
-            ctx.strokeStyle = 'rgba(56, 189, 248, 0.25)';
+            ctx.strokeStyle = 'rgba(56, 189, 248, 0.3)';
             ctx.lineWidth = 1.5;
             ctx.beginPath();
             ctx.moveTo(w / 2, 0); ctx.lineTo(w / 2, h);
@@ -1001,45 +944,36 @@
             ctx.stroke();
 
             const m = params.v / params.u;
-
-            // Physics Circle of Confusion & Blur Calculation
-            // Physical blur spot diameter on screen D_blur = d * (1 + m)
-            // Scale: Screen width = 30cm -> 512px / 30cm = 17.06 px/cm
             const pxPerCm = w / 30.0;
-            const blurSpotRadiusCm = (params.d / 10.0 / 2.0) * (1 + m); // params.d is in mm
-            const blurPx = blurSpotRadiusCm * pxPerCm;
 
-            // Physical Brightness scaling factor:
-            // Aperture light intake ~ d^2
-            // Area dilution ~ (1 + m)^2
+            const cocRadiusCm = ((params.d / 10.0) / 2.0) * (1 + m);
+            const blurPx = cocRadiusCm * pxPerCm;
+
             const refD = 1.5;
             const refM = 1.0;
-            const brightnessIntake = Math.pow(params.d / refD, 1.8) * Math.pow((1 + refM) / (1 + m), 1.2);
-            const globalAlpha = Math.min(1.0, Math.max(0.2, brightnessIntake));
+            const brightness = Math.pow(params.d / refD, 1.8) * Math.pow((1 + refM) / (1 + m), 1.2);
+            const globalAlpha = Math.min(1.0, Math.max(0.18, brightness));
 
             ctx.save();
-            ctx.globalCompositeOperation = 'lighter'; // Light additive blending for overlapping pinholes!
-            ctx.filter = `blur(${Math.max(0.4, blurPx).toFixed(1)}px)`;
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.filter = `blur(${Math.max(0.3, blurPx).toFixed(1)}px)`;
             ctx.globalAlpha = globalAlpha;
 
             const pinholes = getPinholePositionsCm();
 
             pinholes.forEach(ph => {
-                // Projection displacement center on physical screen (cm)
                 const projX_cm = (1 + m) * ph.x;
                 const projY_cm = (1 + m) * ph.y;
 
-                // Canvas Pixel position (Canvas origin at center)
-                const projX_px = w / 2 + projX_cm * pxPerCm;
-                const projY_px = h / 2 - projY_cm * pxPerCm; // Invert Canvas Y axis
+                const cx = w / 2 + projX_cm * pxPerCm;
+                const cy = h / 2 - projY_cm * pxPerCm;
 
                 ctx.save();
-                ctx.translate(projX_px, projY_px);
+                ctx.translate(cx, cy);
 
-                // Perform exact 180° inversion: Scale by (-m, -m)
-                ctx.scale(-m, -m);
+                // Scale by (-m, m) in Canvas 2D produces true 180° point-symmetry inverted image ('p' -> 'd')
+                ctx.scale(-m, m);
 
-                // Draw Object Shape centered at local (0,0) with physical dimensions in cm
                 draw2DObjectShape(ctx, params.objectType, pxPerCm);
 
                 ctx.restore();
@@ -1047,7 +981,6 @@
 
             ctx.restore();
 
-            // Copy to Inset Box Canvas
             if (insetCanvas) {
                 const insetCtx = insetCanvas.getContext('2d');
                 insetCtx.drawImage(screenCanvas, 0, 0, insetCanvas.width, insetCanvas.height);
@@ -1058,112 +991,137 @@
             }
         }
 
-        // Draw 2D vector shapes for Screen Texture Projection
-        function draw2DObjectShape(ctx, objType, pxPerCm) {
+        function draw2DObjectShape(ctx, type, pxPerCm) {
             ctx.save();
 
-            if (objType === 'F') {
-                // Letter 'F' centered at (0,0)
-                // Height = 13.2 cm, Width = 7 cm
+            if (type === 'p') {
                 ctx.lineWidth = 1.6 * pxPerCm;
                 ctx.lineCap = 'round';
 
-                // Vertical Stem
                 ctx.strokeStyle = '#06b6d4';
                 ctx.beginPath();
-                ctx.moveTo(-3.5 * pxPerCm, -6.6 * pxPerCm);
-                ctx.lineTo(-3.5 * pxPerCm, 6.6 * pxPerCm);
+                ctx.moveTo(-2.4 * pxPerCm, -5.2 * pxPerCm);
+                ctx.lineTo(-2.4 * pxPerCm, 5.2 * pxPerCm);
                 ctx.stroke();
 
-                // Top Arm
-                ctx.strokeStyle = '#06b6d4';
-                ctx.beginPath();
-                ctx.moveTo(-3.5 * pxPerCm, 6.6 * pxPerCm);
-                ctx.lineTo(3.5 * pxPerCm, 6.6 * pxPerCm);
-                ctx.stroke();
-
-                // Middle Arm
                 ctx.strokeStyle = '#f59e0b';
                 ctx.beginPath();
-                ctx.moveTo(-3.5 * pxPerCm, 0.4 * pxPerCm);
-                ctx.lineTo(1.5 * pxPerCm, 0.4 * pxPerCm);
+                ctx.arc(-0.2 * pxPerCm, 2.8 * pxPerCm, 2.1 * pxPerCm, 0, Math.PI * 2);
                 ctx.stroke();
 
-                // Colored dots at key tips
-                drawGlowingDot(ctx, 3.5 * pxPerCm, 6.6 * pxPerCm, '#ff0055', 0.8 * pxPerCm);
-                drawGlowingDot(ctx, 1.5 * pxPerCm, 0.4 * pxPerCm, '#00ffcc', 0.8 * pxPerCm);
-                drawGlowingDot(ctx, -3.5 * pxPerCm, -6.6 * pxPerCm, '#0088ff', 0.8 * pxPerCm);
+                drawDot(ctx, 2.0 * pxPerCm, 5.0 * pxPerCm, '#ef4444', 0.8 * pxPerCm);   // Top-Right (Red)
+                drawDot(ctx, -2.4 * pxPerCm, 5.0 * pxPerCm, '#eab308', 0.8 * pxPerCm);  // Top-Left (Yellow)
+                drawDot(ctx, 2.0 * pxPerCm, 0.6 * pxPerCm, '#10b981', 0.8 * pxPerCm);   // Bottom-Right (Green)
+                drawDot(ctx, -2.4 * pxPerCm, -5.2 * pxPerCm, '#3b82f6', 0.8 * pxPerCm); // Bottom-Left (Blue)
 
-            } else if (objType === 'candle') {
-                // Candle Wax body
-                ctx.fillStyle = '#e2e8f0';
-                ctx.fillRect(-2 * pxPerCm, -6.5 * pxPerCm, 4 * pxPerCm, 8 * pxPerCm);
+            } else if (type === 'F') {
+                ctx.lineWidth = 1.6 * pxPerCm;
+                ctx.lineCap = 'round';
 
-                // Flame Shape
-                const gradient = ctx.createRadialGradient(0, 3.5 * pxPerCm, 0.2 * pxPerCm, 0, 3.5 * pxPerCm, 2.5 * pxPerCm);
-                gradient.addColorStop(0, '#ffffff');
-                gradient.addColorStop(0.4, '#fbbf24');
-                gradient.addColorStop(1, '#f97316');
-
-                ctx.fillStyle = gradient;
+                ctx.strokeStyle = '#06b6d4';
                 ctx.beginPath();
-                ctx.moveTo(0, 7.5 * pxPerCm);
-                ctx.quadraticCurveTo(2 * pxPerCm, 4 * pxPerCm, 0, 1.5 * pxPerCm);
-                ctx.quadraticCurveTo(-2 * pxPerCm, 4 * pxPerCm, 0, 7.5 * pxPerCm);
-                ctx.fill();
+                ctx.moveTo(-2.4 * pxPerCm, -5.2 * pxPerCm);
+                ctx.lineTo(-2.4 * pxPerCm, 5.2 * pxPerCm);
+                ctx.stroke();
 
-                drawGlowingDot(ctx, 0, 7.5 * pxPerCm, '#ff0055', 0.8 * pxPerCm);
-                drawGlowingDot(ctx, 0, 1.5 * pxPerCm, '#00ffcc', 0.8 * pxPerCm);
-                drawGlowingDot(ctx, 0, -6.5 * pxPerCm, '#0088ff', 0.8 * pxPerCm);
-
-            } else { // 'arrow'
-                // Arrow Shaft
-                ctx.fillStyle = '#10b981';
-                ctx.fillRect(-1.2 * pxPerCm, -5 * pxPerCm, 2.4 * pxPerCm, 8 * pxPerCm);
-
-                // Head
-                ctx.fillStyle = '#f43f5e';
                 ctx.beginPath();
-                ctx.moveTo(0, 7.5 * pxPerCm);
-                ctx.lineTo(3.5 * pxPerCm, 3 * pxPerCm);
-                ctx.lineTo(-3.5 * pxPerCm, 3 * pxPerCm);
+                ctx.moveTo(-2.4 * pxPerCm, 5.2 * pxPerCm);
+                ctx.lineTo(4.0 * pxPerCm, 5.2 * pxPerCm);
+                ctx.stroke();
+
+                ctx.strokeStyle = '#f59e0b';
+                ctx.beginPath();
+                ctx.moveTo(-2.4 * pxPerCm, 0.8 * pxPerCm);
+                ctx.lineTo(1.5 * pxPerCm, 0.8 * pxPerCm);
+                ctx.stroke();
+
+                drawDot(ctx, 4.0 * pxPerCm, 5.2 * pxPerCm, '#ef4444', 0.8 * pxPerCm);
+                drawDot(ctx, -2.4 * pxPerCm, 5.2 * pxPerCm, '#eab308', 0.8 * pxPerCm);
+                drawDot(ctx, 1.5 * pxPerCm, 0.8 * pxPerCm, '#10b981', 0.8 * pxPerCm);
+                drawDot(ctx, -2.4 * pxPerCm, -5.2 * pxPerCm, '#3b82f6', 0.8 * pxPerCm);
+
+            } else if (type === 'L') {
+                ctx.lineWidth = 1.6 * pxPerCm;
+                ctx.lineCap = 'round';
+
+                ctx.strokeStyle = '#10b981';
+                ctx.beginPath();
+                ctx.moveTo(-2.4 * pxPerCm, 5.2 * pxPerCm);
+                ctx.lineTo(-2.4 * pxPerCm, -5.2 * pxPerCm);
+                ctx.stroke();
+
+                ctx.strokeStyle = '#f59e0b';
+                ctx.beginPath();
+                ctx.moveTo(-2.4 * pxPerCm, -5.2 * pxPerCm);
+                ctx.lineTo(4.0 * pxPerCm, -5.2 * pxPerCm);
+                ctx.stroke();
+
+                drawDot(ctx, -2.4 * pxPerCm, 5.2 * pxPerCm, '#ef4444', 0.8 * pxPerCm);
+                drawDot(ctx, 4.0 * pxPerCm, -5.2 * pxPerCm, '#10b981', 0.8 * pxPerCm);
+                drawDot(ctx, -2.4 * pxPerCm, -5.2 * pxPerCm, '#3b82f6', 0.8 * pxPerCm);
+
+            } else if (type === 'arrow') {
+                ctx.lineWidth = 2.2 * pxPerCm;
+                ctx.lineCap = 'round';
+
+                ctx.strokeStyle = '#10b981';
+                ctx.beginPath();
+                ctx.moveTo(-4.2 * pxPerCm, -4.2 * pxPerCm);
+                ctx.lineTo(4.2 * pxPerCm, 4.2 * pxPerCm);
+                ctx.stroke();
+
+                ctx.fillStyle = '#ef4444';
+                ctx.beginPath();
+                ctx.moveTo(4.2 * pxPerCm, 4.2 * pxPerCm);
+                ctx.lineTo(1.2 * pxPerCm, 3.8 * pxPerCm);
+                ctx.lineTo(3.8 * pxPerCm, 1.2 * pxPerCm);
                 ctx.closePath();
                 ctx.fill();
 
-                // Tail Base
-                ctx.fillStyle = '#3b82f6';
-                ctx.fillRect(-3.5 * pxPerCm, -6.5 * pxPerCm, 7 * pxPerCm, 1.5 * pxPerCm);
+                ctx.fillStyle = '#ffffff';
+                ctx.font = `bold ${Math.round(2.0 * pxPerCm)}px sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.fillText('UP', 0, 3.5 * pxPerCm);
 
-                drawGlowingDot(ctx, 0, 7.5 * pxPerCm, '#ff0055', 0.8 * pxPerCm);
-                drawGlowingDot(ctx, 0, 0, '#00ffcc', 0.8 * pxPerCm);
-                drawGlowingDot(ctx, 0, -6.5 * pxPerCm, '#0088ff', 0.8 * pxPerCm);
+                drawDot(ctx, 4.2 * pxPerCm, 4.2 * pxPerCm, '#ef4444', 0.8 * pxPerCm);
+                drawDot(ctx, 0, 0, '#eab308', 0.8 * pxPerCm);
+                drawDot(ctx, -4.2 * pxPerCm, -4.2 * pxPerCm, '#3b82f6', 0.8 * pxPerCm);
+
+            } else { // 'grid'
+                const size = 6.0 * pxPerCm;
+                ctx.strokeStyle = '#4338ca';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(-size, -size, size * 2, size * 2);
+
+                ctx.font = `bold ${Math.round(3.2 * pxPerCm)}px monospace`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                ctx.fillStyle = '#ef4444'; ctx.fillText('1', 3.0 * pxPerCm, 3.0 * pxPerCm);
+                ctx.fillStyle = '#eab308'; ctx.fillText('2', -3.0 * pxPerCm, 3.0 * pxPerCm);
+                ctx.fillStyle = '#10b981'; ctx.fillText('3', -3.0 * pxPerCm, -3.0 * pxPerCm);
+                ctx.fillStyle = '#3b82f6'; ctx.fillText('4', 3.0 * pxPerCm, -3.0 * pxPerCm);
             }
 
             ctx.restore();
         }
 
-        function drawGlowingDot(ctx, x, y, colorStr, radius) {
+        function drawDot(ctx, x, y, colorStr, radius) {
             ctx.fillStyle = colorStr;
             ctx.beginPath();
             ctx.arc(x, y, radius, 0, Math.PI * 2);
             ctx.fill();
         }
 
-        // --- 5. Main Physics & UI Update Loop ---
+        // 5. Main Simulation Engine & HUD Update
         function updateSimulation() {
-            // Update 3D Positions
             objectGroup.position.z = -params.u;
             screenGroup.position.z = params.v;
 
-            // Update 3D Pinhole plate visuals
             update3DPinholeVisuals();
             updateVisibleObject();
-
-            // Update Light Rays & Screen Texture
             updateRayTraceLines();
             updateScreenTexture();
-
-            // Update Realtime Physics HUD UI Text
             updateHUDUI();
         }
 
@@ -1171,209 +1129,300 @@
             const m = params.v / params.u;
             const hRatio = -m;
 
+            document.getElementById('hud-u').innerText = `${params.u.toFixed(0)} cm`;
+            document.getElementById('hud-v').innerText = `${params.v.toFixed(0)} cm`;
+            document.getElementById('hud-m').innerText = `${m.toFixed(2)}×`;
+
             document.getElementById('val-u').innerText = `${params.u.toFixed(1)} cm`;
             document.getElementById('val-v').innerText = `${params.v.toFixed(1)} cm`;
             document.getElementById('val-d').innerText = `${params.d.toFixed(1)} mm`;
             document.getElementById('val-sep').innerText = `${params.pinholeSep.toFixed(1)} cm`;
 
-            document.getElementById('hud-m').innerText = `${m.toFixed(2)} ×`;
             document.getElementById('hud-h-ratio').innerText = hRatio.toFixed(2);
 
-            // Image Type Callout Badge
-            const badge = document.getElementById('badge-type');
-            let sizeText = "等大";
-            if (m > 1.05) sizeText = "放大";
-            else if (m < 0.95) sizeText = "縮小";
+            const resultSymbol = (params.objectType === 'p') ? " (p ➔ d)" : "";
+            document.getElementById('badge-type').innerText = `180°倒立實像${resultSymbol}`;
 
-            badge.innerText = `倒立實像 (${sizeText})`;
-
-            // Sharpness Metrics
             const pxPerCm = 512 / 30.0;
-            const blurSpotRadiusCm = (params.d / 10.0 / 2.0) * (1 + m);
-            const blurPx = blurSpotRadiusCm * pxPerCm;
+            const cocRadiusCm = ((params.d / 10.0) / 2.0) * (1 + m);
+            const blurPx = cocRadiusCm * pxPerCm;
 
             const sharpnessEl = document.getElementById('hud-sharpness');
-            if (blurPx < 3.0) {
-                sharpnessEl.innerText = "極高 (Crisp)";
-                sharpnessEl.className = "font-bold text-emerald-400";
-            } else if (blurPx < 6.5) {
+            if (blurPx < 3.2) {
+                sharpnessEl.innerText = "清晰 (Crisp)";
+                sharpnessEl.className = "text-emerald-400 font-sans font-semibold text-[11px]";
+            } else if (blurPx < 7.0) {
                 sharpnessEl.innerText = "良好 (Clear)";
-                sharpnessEl.className = "font-bold text-cyan-400";
-            } else if (blurPx < 12.0) {
-                sharpnessEl.innerText = "中等模糊 (Soft)";
-                sharpnessEl.className = "font-bold text-amber-400";
+                sharpnessEl.className = "text-cyan-400 font-sans font-semibold text-[11px]";
+            } else if (blurPx < 13.0) {
+                sharpnessEl.innerText = "發糊 (Soft)";
+                sharpnessEl.className = "text-amber-400 font-sans font-semibold text-[11px]";
             } else {
-                sharpnessEl.innerText = "極度模糊 (Blurry)";
-                sharpnessEl.className = "font-bold text-rose-400";
+                sharpnessEl.innerText = "模糊 (Blurry)";
+                sharpnessEl.className = "text-rose-400 font-sans font-semibold text-[11px]";
             }
 
-            // Brightness bar
             const refD = 1.5;
             const refM = 1.0;
-            const brightnessIntake = Math.pow(params.d / refD, 1.8) * Math.pow((1 + refM) / (1 + m), 1.2);
-            const brightnessPct = Math.min(100, Math.max(10, brightnessIntake * 45));
+            const brightness = Math.pow(params.d / refD, 1.8) * Math.pow((1 + refM) / (1 + m), 1.2) * params.pinholeCount;
+            const brightnessPct = Math.min(100, Math.max(10, brightness * 35));
             document.getElementById('hud-brightness-bar').style.width = `${brightnessPct}%`;
 
-            // Insight Tip text
             const insightText = document.getElementById('hud-insight-text');
-            if (params.pinholeCount > 1) {
-                insightText.innerText = `目前選擇了 ${params.pinholeCount} 個針孔。螢幕上形成 ${params.pinholeCount} 個獨立倒立實像，重疊範圍取決於像距與孔間距。`;
-            } else if (params.d >= 4.0) {
-                insightText.innerText = `孔徑直徑 $d=${params.d.toFixed(1)}\\text{mm}$ 較大，進入光線極多（高亮度），但光斑嚴重擴散交疊導致影像模糊。`;
-            } else if (m >= 1.8) {
-                insightText.innerText = `螢幕距離 $v=${params.v.toFixed(0)}\\text{cm}$ 遠大於物距 $u$，相似三角形 $v/u$ 使成像顯著放大。`;
+            if (params.objectType === 'p') {
+                insightText.innerText = `物體為字母 'p'，經直線傳播與 180° 點對稱投影後，在螢幕上呈現為精確的倒立像 'd'。`;
+            } else if (params.pinholeCount > 1) {
+                insightText.innerText = `目前有 ${params.pinholeCount} 個針孔，螢幕上呈現 ${params.pinholeCount} 個獨立倒立像。位移取決於孔距 s 與放大率 1+v/u。`;
+            } else if (params.d >= 4.5) {
+                insightText.innerText = `孔徑 d=${params.d.toFixed(1)}mm 較大，進光量高畫面亮，但彌散圈重疊導致邊緣模糊。`;
             } else {
-                insightText.innerText = `光線沿直線穿過小針孔，物點與像點呈現標準 180° 上下倒立、左右相反的實像。`;
+                insightText.innerText = `光線沿直線穿過針孔，物點與像點呈嚴格的 180° 上下顛倒、左右相反實像。`;
             }
         }
 
-        // --- 6. Event Listeners Setup ---
+        // 6. Complete UI Event Listeners Handler
         function setupUIEventListeners() {
-            // Object Type Selector Buttons
-            document.querySelectorAll('.obj-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    document.querySelectorAll('.obj-btn').forEach(b => {
-                        b.className = "obj-btn px-2 py-1.5 rounded-lg text-xs font-medium transition text-center text-slate-400 hover:text-slate-200";
+            // Sliders
+            const sliderU = document.getElementById('slider-u');
+            if (sliderU) {
+                sliderU.addEventListener('input', (e) => {
+                    params.u = parseFloat(e.target.value);
+                    updateSimulation();
+                });
+            }
+
+            const sliderV = document.getElementById('slider-v');
+            if (sliderV) {
+                sliderV.addEventListener('input', (e) => {
+                    params.v = parseFloat(e.target.value);
+                    updateSimulation();
+                });
+            }
+
+            const sliderD = document.getElementById('slider-d');
+            if (sliderD) {
+                sliderD.addEventListener('input', (e) => {
+                    params.d = parseFloat(e.target.value);
+                    updateSimulation();
+                });
+            }
+
+            const sliderSep = document.getElementById('slider-sep');
+            if (sliderSep) {
+                sliderSep.addEventListener('input', (e) => {
+                    params.pinholeSep = parseFloat(e.target.value);
+                    updateSimulation();
+                });
+            }
+
+            // Tabs
+            const tabBtns = document.querySelectorAll('.tab-btn');
+            tabBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const tabName = btn.getAttribute('data-tab');
+                    tabBtns.forEach(b => {
+                        b.className = "tab-btn py-1.5 rounded-lg transition text-center text-slate-400 hover:text-slate-200";
                     });
-                    btn.className = "obj-btn px-2 py-1.5 rounded-lg text-xs font-medium transition text-center bg-cyan-500/20 text-cyan-300 border border-cyan-500/40";
-                    params.objectType = btn.dataset.type;
+                    btn.className = "tab-btn py-1.5 rounded-lg transition text-center bg-cyan-500/20 text-cyan-300 border border-cyan-500/40";
+
+                    document.querySelectorAll('.tab-page').forEach(page => page.classList.add('hidden'));
+                    const targetPage = document.getElementById(`tab-content-${tabName}`);
+                    if (targetPage) targetPage.classList.remove('hidden');
+                });
+            });
+
+            // Target Object Selection
+            const objBtns = document.querySelectorAll('.obj-btn');
+            objBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    params.objectType = btn.getAttribute('data-type');
+                    objBtns.forEach(b => {
+                        b.className = "obj-btn px-2 py-1.5 rounded-lg text-left flex items-center gap-1.5 text-slate-400 hover:text-slate-200";
+                    });
+                    btn.className = "obj-btn px-2 py-1.5 rounded-lg text-left flex items-center gap-1.5 bg-cyan-500/20 text-cyan-300 border border-cyan-500/40";
                     updateSimulation();
                 });
             });
 
-            // Sliders
-            document.getElementById('slider-u').addEventListener('input', (e) => {
-                params.u = parseFloat(e.target.value);
-                updateSimulation();
-            });
-
-            document.getElementById('slider-v').addEventListener('input', (e) => {
-                params.v = parseFloat(e.target.value);
-                if (params.activeView === 'screen') {
-                    setCameraPreset('screen');
-                }
-                updateSimulation();
-            });
-
-            document.getElementById('slider-d').addEventListener('input', (e) => {
-                params.d = parseFloat(e.target.value);
-                updateSimulation();
-            });
-
-            document.getElementById('slider-sep').addEventListener('input', (e) => {
-                params.pinholeSep = parseFloat(e.target.value);
-                updateSimulation();
-            });
-
-            // Pinhole Count Buttons
-            document.querySelectorAll('.hole-btn').forEach(btn => {
+            // Pinhole Count Selection
+            const holeBtns = document.querySelectorAll('.hole-btn');
+            const sepContainer = document.getElementById('sep-container');
+            holeBtns.forEach(btn => {
                 btn.addEventListener('click', () => {
-                    document.querySelectorAll('.hole-btn').forEach(b => {
-                        b.className = "hole-btn py-1 rounded-lg font-medium transition text-center text-slate-400 hover:text-slate-200";
+                    params.pinholeCount = parseInt(btn.getAttribute('data-count'), 10);
+                    holeBtns.forEach(b => {
+                        b.className = "hole-btn py-1 rounded-lg font-medium text-center text-slate-400 hover:text-slate-200";
                     });
-                    btn.className = "hole-btn py-1 rounded-lg font-medium transition text-center bg-emerald-500/20 text-emerald-300 border border-emerald-500/40";
-                    params.pinholeCount = parseInt(btn.dataset.count);
-
-                    const sepContainer = document.getElementById('sep-container');
+                    btn.className = "hole-btn py-1 rounded-lg font-medium text-center bg-emerald-500/20 text-emerald-300 border border-emerald-500/40";
+                    
                     if (params.pinholeCount > 1) {
-                        sepContainer.classList.remove('hidden');
+                        if (sepContainer) sepContainer.classList.remove('hidden');
                     } else {
-                        sepContainer.classList.add('hidden');
+                        if (sepContainer) sepContainer.classList.add('hidden');
                     }
                     updateSimulation();
                 });
             });
 
-            // Toggle Light Rays
-            document.getElementById('toggle-rays').addEventListener('change', (e) => {
-                params.showRays = e.target.checked;
-                updateSimulation();
-            });
+            // Toggle Ray Lines
+            const toggleRays = document.getElementById('toggle-rays');
+            if (toggleRays) {
+                toggleRays.addEventListener('change', (e) => {
+                    params.showRays = e.target.checked;
+                    updateSimulation();
+                });
+            }
 
-            // Camera Preset Buttons
-            document.querySelectorAll('.cam-btn').forEach(btn => {
+            // Camera Views
+            const camBtns = document.querySelectorAll('.cam-btn');
+            camBtns.forEach(btn => {
                 btn.addEventListener('click', () => {
-                    setCameraPreset(btn.dataset.view);
+                    const viewMode = btn.getAttribute('data-view');
+                    setCameraPreset(viewMode);
                 });
             });
 
-            document.getElementById('btn-reset-cam').addEventListener('click', () => {
-                setCameraPreset('orbit');
-            });
+            // Left Control Panel Collapse/Expand
+            const btnCollapse = document.getElementById('btn-collapse-panel');
+            const btnExpand = document.getElementById('btn-expand-panel');
+            const controlPanel = document.getElementById('control-panel');
 
-            // Modals Logic
-            const helpModal = document.getElementById('modal-help');
-            document.getElementById('btn-help').addEventListener('click', () => helpModal.classList.remove('hidden'));
-            document.getElementById('btn-close-help').addEventListener('click', () => helpModal.classList.add('hidden'));
-            document.getElementById('btn-close-help-2').addEventListener('click', () => helpModal.classList.add('hidden'));
+            if (btnCollapse && controlPanel && btnExpand) {
+                btnCollapse.addEventListener('click', () => {
+                    controlPanel.classList.add('hidden');
+                    btnExpand.classList.remove('hidden');
+                });
 
-            const presetsModal = document.getElementById('modal-presets');
-            document.getElementById('btn-presets-modal').addEventListener('click', () => presetsModal.classList.remove('hidden'));
-            document.getElementById('btn-close-presets').addEventListener('click', () => presetsModal.classList.add('hidden'));
+                btnExpand.addEventListener('click', () => {
+                    controlPanel.classList.remove('hidden');
+                    btnExpand.classList.add('hidden');
+                });
+            }
 
-            // Preset Cards logic
-            document.querySelectorAll('.preset-card').forEach(card => {
+            // 2D Preview Box Collapse/Restore
+            const btnTogglePreview = document.getElementById('btn-toggle-preview');
+            const btnRestorePreview = document.getElementById('btn-restore-preview');
+            const previewBox = document.getElementById('preview-box');
+
+            if (btnTogglePreview && previewBox && btnRestorePreview) {
+                btnTogglePreview.addEventListener('click', () => {
+                    previewBox.classList.add('hidden');
+                    btnRestorePreview.classList.remove('hidden');
+                });
+
+                btnRestorePreview.addEventListener('click', () => {
+                    previewBox.classList.remove('hidden');
+                    btnRestorePreview.classList.add('hidden');
+                });
+            }
+
+            // Camera Reset
+            const btnResetCam = document.getElementById('btn-reset-cam');
+            if (btnResetCam) {
+                btnResetCam.addEventListener('click', () => {
+                    setCameraPreset('orbit');
+                });
+            }
+
+            // Help Modal
+            const btnHelp = document.getElementById('btn-help');
+            const btnCloseHelp = document.getElementById('btn-close-help');
+            const modalHelp = document.getElementById('modal-help');
+
+            if (btnHelp && modalHelp) {
+                btnHelp.addEventListener('click', () => modalHelp.classList.remove('hidden'));
+            }
+            if (btnCloseHelp && modalHelp) {
+                btnCloseHelp.addEventListener('click', () => modalHelp.classList.add('hidden'));
+            }
+
+            // Presets Modal
+            const btnPresets = document.getElementById('btn-presets');
+            const modalPresets = document.getElementById('modal-presets');
+            const btnClosePresets = document.getElementById('btn-close-presets');
+
+            if (btnPresets && modalPresets) {
+                btnPresets.addEventListener('click', () => modalPresets.classList.remove('hidden'));
+            }
+            if (btnClosePresets && modalPresets) {
+                btnClosePresets.addEventListener('click', () => modalPresets.classList.add('hidden'));
+            }
+
+            // Preset Cards
+            const presetCards = document.querySelectorAll('.preset-card');
+            presetCards.forEach(card => {
                 card.addEventListener('click', () => {
-                    const mode = card.dataset.preset;
-                    applyScenarioPreset(mode);
-                    presetsModal.classList.add('hidden');
+                    const presetKey = card.getAttribute('data-preset');
+                    applyPresetScenario(presetKey);
+                    if (modalPresets) modalPresets.classList.add('hidden');
                 });
             });
         }
 
-        // Apply Preset Scenarios
-        function applyScenarioPreset(mode) {
-            if (mode === '1to1') {
+        // Quick Preset Scenario Launcher
+        function applyPresetScenario(key) {
+            if (key === 'equal') {
                 params.u = 60.0;
                 params.v = 60.0;
                 params.d = 1.5;
                 params.pinholeCount = 1;
-            } else if (mode === 'magnified') {
-                params.u = 40.0;
-                params.v = 80.0;
+                params.objectType = 'p';
+            } else if (key === 'magnified') {
+                params.u = 30.0;
+                params.v = 90.0;
                 params.d = 1.5;
                 params.pinholeCount = 1;
-            } else if (mode === 'reduced') {
-                params.u = 80.0;
-                params.v = 40.0;
+                params.objectType = 'p';
+            } else if (key === 'minified') {
+                params.u = 90.0;
+                params.v = 30.0;
                 params.d = 1.5;
                 params.pinholeCount = 1;
-            } else if (mode === 'large-pinhole') {
+                params.objectType = 'p';
+            } else if (key === 'double-hole') {
                 params.u = 60.0;
                 params.v = 60.0;
-                params.d = 5.2;
-                params.pinholeCount = 1;
-            } else if (mode === 'multi-pinhole') {
-                params.u = 60.0;
-                params.v = 70.0;
                 params.d = 1.5;
                 params.pinholeCount = 2;
                 params.pinholeSep = 3.5;
+                params.objectType = 'p';
+            } else if (key === 'large-hole') {
+                params.u = 60.0;
+                params.v = 60.0;
+                params.d = 6.0;
+                params.pinholeCount = 1;
+                params.objectType = 'p';
             }
 
-            // Sync Slider inputs
             document.getElementById('slider-u').value = params.u;
             document.getElementById('slider-v').value = params.v;
             document.getElementById('slider-d').value = params.d;
             document.getElementById('slider-sep').value = params.pinholeSep;
 
-            // Sync Pinhole buttons
-            document.querySelectorAll('.hole-btn').forEach(b => {
-                if (parseInt(b.dataset.count) === params.pinholeCount) {
-                    b.className = "hole-btn py-1 rounded-lg font-medium transition text-center bg-emerald-500/20 text-emerald-300 border border-emerald-500/40";
-                } else {
-                    b.className = "hole-btn py-1 rounded-lg font-medium transition text-center text-slate-400 hover:text-slate-200";
-                }
+            document.querySelectorAll('.obj-btn').forEach(btn => {
+                const isMatch = btn.getAttribute('data-type') === params.objectType;
+                btn.className = isMatch ? 
+                    "obj-btn px-2 py-1.5 rounded-lg text-left flex items-center gap-1.5 bg-cyan-500/20 text-cyan-300 border border-cyan-500/40" : 
+                    "obj-btn px-2 py-1.5 rounded-lg text-left flex items-center gap-1.5 text-slate-400 hover:text-slate-200";
             });
 
             const sepContainer = document.getElementById('sep-container');
-            if (params.pinholeCount > 1) sepContainer.classList.remove('hidden');
-            else sepContainer.classList.add('hidden');
+            document.querySelectorAll('.hole-btn').forEach(btn => {
+                const count = parseInt(btn.getAttribute('data-count'), 10);
+                const isMatch = count === params.pinholeCount;
+                btn.className = isMatch ? 
+                    "hole-btn py-1 rounded-lg font-medium text-center bg-emerald-500/20 text-emerald-300 border border-emerald-500/40" : 
+                    "hole-btn py-1 rounded-lg font-medium text-center text-slate-400 hover:text-slate-200";
+            });
+            if (sepContainer) {
+                if (params.pinholeCount > 1) sepContainer.classList.remove('hidden');
+                else sepContainer.classList.add('hidden');
+            }
 
             updateSimulation();
         }
 
-        // Camera Preset Animation
+        // Camera Animation Helpers
         function setCameraPreset(viewMode) {
             params.activeView = viewMode;
             let targetPos = new THREE.Vector3();
@@ -1381,22 +1430,22 @@
 
             if (viewMode === 'orbit') {
                 targetPos.set(65, 45, 85);
-                targetLookAt.set(0, 10, 0);
+                targetLookAt.set(0, 12, 0);
             } else if (viewMode === 'side') {
                 targetPos.set(160, 16, 0);
                 targetLookAt.set(0, 16, 0);
-            } else if (viewMode === 'top') {
-                targetPos.set(0, 210, 0.001);
-                targetLookAt.set(0, 0, 0);
+            } else if (viewMode === 'front') {
+                targetPos.set(0, 16, -params.u - 55);
+                targetLookAt.set(0, 16, 0);
             } else if (viewMode === 'screen') {
-                targetPos.set(0, 16, params.v + 55);
+                targetPos.set(0, 16, params.v + 50);
                 targetLookAt.set(0, 16, params.v);
             }
 
-            animateCameraTo(targetPos, targetLookAt, 800);
+            animateCameraTo(targetPos, targetLookAt, 700);
         }
 
-        function animateCameraTo(targetPos, targetLookAt, duration = 800) {
+        function animateCameraTo(targetPos, targetLookAt, duration = 700) {
             const startPos = camera.position.clone();
             const startLookAt = controls.target.clone();
             const startTime = performance.now();
@@ -1404,15 +1453,13 @@
             function updateCam() {
                 const now = performance.now();
                 const progress = Math.min((now - startTime) / duration, 1.0);
-                const ease = 1 - Math.pow(1 - progress, 3); // Ease out cubic
+                const ease = 1 - Math.pow(1 - progress, 3);
 
                 camera.position.lerpVectors(startPos, targetPos, ease);
                 controls.target.lerpVectors(startLookAt, targetLookAt, ease);
                 controls.update();
 
-                if (progress < 1.0) {
-                    requestAnimationFrame(updateCam);
-                }
+                if (progress < 1.0) requestAnimationFrame(updateCam);
             }
             updateCam();
         }
@@ -1423,17 +1470,8 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
 
-        // --- 7. Main Animation Loop ---
-        function animate(time) {
+        function animate() {
             requestAnimationFrame(animate);
-
-            // Candle Flame Flicker Effect
-            if (candleFlameMesh && candleFlameLight && params.objectType === 'candle') {
-                const flicker = Math.sin(time * 0.01) * 0.15 + Math.cos(time * 0.025) * 0.1;
-                candleFlameMesh.scale.set(1 + flicker * 0.2, 1 + flicker * 0.3, 1 + flicker * 0.2);
-                candleFlameLight.intensity = 1.8 + flicker * 0.5;
-            }
-
             controls.update();
             renderer.render(scene, camera);
         }
