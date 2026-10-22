@@ -62,11 +62,20 @@
         input[type=range] {
             accent-color: #06b6d4;
         }
+        .toast-popup {
+            animation: fadeInOut 2.2s forwards ease-in-out;
+        }
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: translateY(-10px); }
+            15% { opacity: 1; transform: translateY(0); }
+            80% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-10px); }
+        }
     </style>
 </head>
 <body class="h-full text-slate-100 font-sans antialiased">
 
-    <!-- Primary Canvas Layer -->
+    <!-- Main Canvas Layer -->
     <div class="canvas-container">
         <canvas id="opticsCanvas" class="w-full h-full block"></canvas>
     </div>
@@ -84,19 +93,22 @@
                 </div>
                 <div>
                     <h1 class="text-base md:text-lg font-bold text-white tracking-wide flex items-center gap-2">
-                        大屏互動光學實驗室 <span class="text-xs font-mono bg-cyan-950 text-cyan-300 border border-cyan-800 px-2 py-0.5 rounded-full">複數光源與幾何透鏡版</span>
+                        大屏互動光學實驗室 <span class="text-xs font-mono bg-cyan-950 text-cyan-300 border border-cyan-800 px-2 py-0.5 rounded-full">雙指手勢統合版</span>
                     </h1>
-                    <p class="text-[11px] text-slate-400">Multi-Source Laser Reflection, Refraction & Dispersion Lab</p>
+                    <p class="text-[11px] text-slate-400">Unified Two-Touch Optics Whiteboard Lab</p>
                 </div>
             </div>
 
-            <!-- Active Mode Action Banner -->
+            <!-- Mode Guidance Banner -->
             <div id="drawingModeBanner" class="hidden glass-panel px-6 py-2.5 rounded-2xl flex items-center gap-3 border border-amber-500/50 bg-amber-950/40 animate-pulse">
-                <i id="drawingModeIcon" class="fa-solid fa-lightbulb text-amber-400 text-lg"></i>
-                <span id="drawingModeText" class="text-xs md:text-sm font-bold text-amber-300 font-mono">請點擊螢幕放置光源位置，接著拖曳設定發射角度...</span>
+                <i id="drawingModeIcon" class="fa-solid fa-hand-holding-hand text-amber-400 text-lg"></i>
+                <span id="drawingModeText" class="text-xs md:text-sm font-bold text-amber-300 font-mono">雙指觸控放置模式：雙指設定位置、大小與方向，放開後可連續直接放置下一個！</span>
             </div>
 
-            <!-- Global Quick Action Controls -->
+            <!-- Toast Alert Container -->
+            <div id="toastContainer" class="fixed top-20 left-1/2 -translate-x-1/2 pointer-events-none z-50 flex flex-col gap-2"></div>
+
+            <!-- Global Action Controls -->
             <div class="glass-panel p-2 rounded-2xl flex items-center space-x-2">
                 <button id="undoBtn" onclick="undoLastObject()" title="復原 (Undo)" class="touch-btn w-11 h-11 rounded-xl glass-panel flex items-center justify-center text-slate-200 hover:text-cyan-400">
                     <i class="fa-solid fa-rotate-left text-lg"></i>
@@ -116,25 +128,25 @@
             </div>
         </header>
 
-        <!-- Middle Screen Area (Floating Badges & Selected Emitter Control HUD) -->
+        <!-- Middle Screen Diagnostics HUD -->
         <div class="flex justify-between items-start my-auto pointer-events-none">
-            <!-- Physical Ruler Detection Notification -->
+            <!-- Physical Touch Ruler Badge -->
             <div id="physicalRulerBadge" class="opacity-0 transition-opacity duration-300 glass-panel border-l-4 border-l-emerald-400 px-4 py-3 rounded-2xl flex items-center gap-3 bg-emerald-950/40">
                 <div class="relative flex h-3 w-3">
                     <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                     <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
                 </div>
                 <div>
-                    <div class="text-xs font-bold text-emerald-400 tracking-wider">大屏實體接觸感應 (PHYSICAL RULER SENSING)</div>
-                    <div id="physicalRulerDetails" class="text-xs text-slate-200 font-mono">實體尺/導電棒置於螢幕 → 自動生成反射邊界</div>
+                    <div class="text-xs font-bold text-emerald-400 tracking-wider">實體接觸感應 (PHYSICAL RULER SENSING)</div>
+                    <div id="physicalRulerDetails" class="text-xs text-slate-200 font-mono">實體尺/導電棒置於螢幕 → 自動生成動態反射面</div>
                 </div>
             </div>
 
-            <!-- Physics Telemetry & Selected Emitter Settings Panel -->
+            <!-- Diagnostics Panel -->
             <div id="physicsHUD" class="glass-panel p-4 rounded-2xl w-80 pointer-events-auto space-y-3 border-r-2 border-r-cyan-400 text-xs">
                 <div class="flex justify-between items-center border-b border-slate-700/60 pb-2">
                     <span class="font-bold text-cyan-300 flex items-center gap-2">
-                        <i class="fa-solid fa-chart-line"></i> 光學數據診斷 (Physics HUD)
+                        <i class="fa-solid fa-chart-line"></i> 光學診斷 (Physics HUD)
                     </span>
                     <span id="fpsDisplay" class="font-mono text-emerald-400 font-bold">60 FPS</span>
                 </div>
@@ -149,7 +161,7 @@
                         <div id="hudReflectAngle" class="text-sm font-mono font-bold text-emerald-400">--°</div>
                     </div>
                     <div class="bg-slate-900/60 p-2 rounded-xl border border-slate-800">
-                        <div class="text-[10px] text-slate-400">光源總數 / 反射次數</div>
+                        <div class="text-[10px] text-slate-400">光源數 / 反射次數</div>
                         <div id="hudSourceCount" class="text-sm font-mono font-bold text-cyan-400">1 個 / 0 次</div>
                     </div>
                     <div class="bg-slate-900/60 p-2 rounded-xl border border-slate-800">
@@ -161,7 +173,7 @@
                 <!-- Refractive Index Slider Control -->
                 <div class="space-y-1.5 pt-1 border-t border-slate-700/60">
                     <div class="flex justify-between items-center">
-                        <span class="text-[11px] text-slate-300">透鏡折射率 ( Refractive Index n )</span>
+                        <span class="text-[11px] text-slate-300">透鏡折射率 (Refractive Index n)</span>
                         <span id="refractiveIndexVal" class="font-mono text-purple-400 font-bold">1.50 (玻璃)</span>
                     </div>
                     <input type="range" id="refractiveIndexSlider" min="1.00" max="2.42" step="0.01" value="1.50" oninput="updateRefractiveIndex(this.value)" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer">
@@ -173,14 +185,14 @@
                     </div>
                 </div>
 
-                <!-- Active Emitter Controls (Shows when an emitter is selected) -->
+                <!-- Selected Emitter Controls -->
                 <div id="selectedEmitterControls" class="space-y-2 pt-2 border-t border-slate-700/60">
                     <div class="flex justify-between items-center">
                         <span class="text-[11px] font-bold text-amber-300 flex items-center gap-1.5">
-                            <i class="fa-solid fa-sliders"></i> 所選光源設定 (Emitter)
+                            <i class="fa-solid fa-sliders"></i> 所選光源設定
                         </span>
                         <button onclick="deleteSelectedEmitter()" class="text-rose-400 hover:text-rose-300 text-xs px-2 py-0.5 rounded bg-rose-950/60 border border-rose-800">
-                            <i class="fa-solid fa-trash-can"></i> 刪除此光源
+                            <i class="fa-solid fa-trash-can"></i> 刪除光源
                         </button>
                     </div>
 
@@ -213,79 +225,87 @@
             </div>
         </div>
 
-        <!-- Bottom Touch Interactive Toolbar -->
+        <!-- Bottom Interactive Toolbar -->
         <footer class="w-full flex justify-center items-end pointer-events-auto">
-            <div class="glass-panel px-4 py-3 rounded-3xl flex flex-wrap items-center justify-center gap-2 md:gap-3 border-t-2 border-t-cyan-400/60 shadow-2xl">
+            <div class="glass-panel px-3 py-2.5 rounded-3xl flex flex-wrap items-center justify-center gap-1.5 md:gap-2.5 border-t-2 border-t-cyan-400/60 shadow-2xl">
 
-                <!-- Primary Tool Selector -->
-                <button id="toolSelectBtn" onclick="setActiveTool('select')" class="touch-btn px-3.5 py-2 rounded-2xl bg-cyan-500/30 text-cyan-300 border border-cyan-500/60 flex items-center gap-2">
-                    <i class="fa-solid fa-hand-pointer text-base"></i>
+                <!-- Selection & Drag Tool -->
+                <button id="toolSelectBtn" onclick="setActiveTool('select')" class="touch-btn px-3 py-2 rounded-2xl bg-cyan-500/30 text-cyan-300 border border-cyan-500/60 flex items-center gap-1.5">
+                    <i class="fa-solid fa-hand-pointer text-sm"></i>
                     <span class="text-xs font-bold">選擇 / 移動</span>
                 </button>
 
-                <!-- Add Light Source Mode Button -->
-                <button id="toolAddEmitterBtn" onclick="setActiveTool('addEmitter')" class="touch-btn px-3.5 py-2 rounded-2xl bg-slate-800 hover:bg-amber-950/50 border border-amber-500/40 text-amber-300 flex items-center gap-2">
-                    <i class="fa-solid fa-lightbulb text-base"></i>
-                    <span class="text-xs font-bold">新增光源 (點擊拖曳)</span>
+                <!-- Add Light Source -->
+                <button id="toolAddEmitterBtn" onclick="setActiveTool('addEmitter')" class="touch-btn px-3 py-2 rounded-2xl bg-slate-800 hover:bg-amber-950/50 border border-amber-500/40 text-amber-300 flex items-center gap-1.5">
+                    <i class="fa-solid fa-lightbulb text-sm"></i>
+                    <span class="text-xs font-bold">新增光源</span>
                 </button>
 
-                <!-- Lens Preset Submenu -->
+                <!-- Mirrors Unified Submenu -->
                 <div class="flex items-center space-x-1 border-l border-r border-slate-700 px-2">
-                    <span class="text-[10px] text-purple-400 font-bold px-1 hidden lg:inline">透鏡:</span>
-                    <button id="toolLensCircleBtn" onclick="addPresetLens('circle')" class="touch-btn px-2.5 py-2 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-purple-300 flex items-center gap-1">
-                        <i class="fa-regular fa-circle text-purple-400"></i>
-                        <span class="text-xs">圓形</span>
+                    <span class="text-[10px] text-cyan-400 font-bold px-1 hidden xl:inline">雙指面鏡:</span>
+                    <button id="toolMirrorPlaneBtn" onclick="setActiveTool('gestureMirror_plane')" class="touch-btn px-2.5 py-1.5 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-cyan-300 flex items-center gap-1">
+                        <i class="fa-solid fa-minus text-cyan-400"></i>
+                        <span class="text-xs">平面鏡</span>
                     </button>
-                    <button id="toolLensTriangleBtn" onclick="addPresetLens('triangle')" class="touch-btn px-2.5 py-2 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-purple-300 flex items-center gap-1">
-                        <i class="fa-solid fa-play -rotate-90 text-purple-400"></i>
-                        <span class="text-xs">三角形稜鏡</span>
+                    <button id="toolMirrorConcaveBtn" onclick="setActiveTool('gestureMirror_concave')" class="touch-btn px-2.5 py-1.5 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-cyan-300 flex items-center gap-1">
+                        <i class="fa-solid fa-ghost text-cyan-400"></i>
+                        <span class="text-xs">凹面鏡</span>
                     </button>
-                    <button id="toolLensRectBtn" onclick="addPresetLens('rectangle')" class="touch-btn px-2.5 py-2 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-purple-300 flex items-center gap-1">
-                        <i class="fa-regular fa-square text-purple-400"></i>
-                        <span class="text-xs">長方形玻璃磚</span>
+                    <button id="toolMirrorConvexBtn" onclick="setActiveTool('gestureMirror_convex')" class="touch-btn px-2.5 py-1.5 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-cyan-300 flex items-center gap-1">
+                        <i class="fa-solid fa-shield text-cyan-400"></i>
+                        <span class="text-xs">凸面鏡</span>
                     </button>
-                    <button id="toolLensConvexBtn" onclick="addPresetLens('biconvex')" class="touch-btn px-2.5 py-2 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-purple-300 flex items-center gap-1">
-                        <i class="fa-solid fa-circle text-purple-400"></i>
-                        <span class="text-xs">雙凸</span>
-                    </button>
-                    <button id="toolLensConcaveBtn" onclick="addPresetLens('biconcave')" class="touch-btn px-2.5 py-2 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-purple-300 flex items-center gap-1">
-                        <i class="fa-solid fa-hourglass-half text-purple-400"></i>
-                        <span class="text-xs">雙凹</span>
-                    </button>
-                    <button id="toolLensFreeBtn" onclick="setActiveTool('drawLensFree')" class="touch-btn px-2.5 py-2 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-purple-300 flex items-center gap-1">
-                        <i class="fa-solid fa-draw-polygon text-purple-400"></i>
-                        <span class="text-xs">手畫閉合</span>
-                    </button>
-                </div>
-
-                <!-- Mirror Drawing Submenu -->
-                <div class="flex items-center space-x-1 border-r border-slate-700 pr-2">
-                    <span class="text-[10px] text-cyan-400 font-bold px-1 hidden lg:inline">反射鏡:</span>
-                    <button id="toolMirrorFreeBtn" onclick="setActiveTool('drawMirrorFree')" class="touch-btn px-2.5 py-2 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 flex items-center gap-1">
+                    <button id="toolMirrorFreeBtn" onclick="setActiveTool('drawMirrorFree')" class="touch-btn px-2.5 py-1.5 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-cyan-300 flex items-center gap-1">
                         <i class="fa-solid fa-signature text-cyan-400"></i>
                         <span class="text-xs">手畫鏡</span>
                     </button>
-                    <button id="toolMirrorLineBtn" onclick="setActiveTool('drawMirrorLine')" class="touch-btn px-2.5 py-2 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 flex items-center gap-1">
-                        <i class="fa-solid fa-minus text-cyan-400"></i>
-                        <span class="text-xs">直線鏡</span>
+                </div>
+
+                <!-- Lenses Unified Submenu -->
+                <div class="flex items-center space-x-1 border-r border-slate-700 pr-2">
+                    <span class="text-[10px] text-purple-400 font-bold px-1 hidden xl:inline">雙指透鏡:</span>
+                    <button id="toolLensCircleBtn" onclick="setActiveTool('gestureLens_circle')" class="touch-btn px-2 py-1.5 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-purple-300 flex items-center gap-1">
+                        <i class="fa-regular fa-circle text-purple-400"></i>
+                        <span class="text-xs">圓形</span>
+                    </button>
+                    <button id="toolLensTriangleBtn" onclick="setActiveTool('gestureLens_triangle')" class="touch-btn px-2 py-1.5 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-purple-300 flex items-center gap-1">
+                        <i class="fa-solid fa-play -rotate-90 text-purple-400"></i>
+                        <span class="text-xs">三稜鏡</span>
+                    </button>
+                    <button id="toolLensRectBtn" onclick="setActiveTool('gestureLens_rectangle')" class="touch-btn px-2 py-1.5 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-purple-300 flex items-center gap-1">
+                        <i class="fa-regular fa-square text-purple-400"></i>
+                        <span class="text-xs">長方形</span>
+                    </button>
+                    <button id="toolLensConvexBtn" onclick="setActiveTool('gestureLens_biconvex')" class="touch-btn px-2 py-1.5 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-purple-300 flex items-center gap-1">
+                        <i class="fa-solid fa-circle text-purple-400"></i>
+                        <span class="text-xs">雙凸</span>
+                    </button>
+                    <button id="toolLensConcaveBtn" onclick="setActiveTool('gestureLens_biconcave')" class="touch-btn px-2 py-1.5 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-purple-300 flex items-center gap-1">
+                        <i class="fa-solid fa-hourglass-half text-purple-400"></i>
+                        <span class="text-xs">雙凹</span>
+                    </button>
+                    <button id="toolLensFreeBtn" onclick="setActiveTool('drawLensFree')" class="touch-btn px-2 py-1.5 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-purple-300 flex items-center gap-1">
+                        <i class="fa-solid fa-draw-polygon text-purple-400"></i>
+                        <span class="text-xs">手畫透鏡</span>
                     </button>
                 </div>
 
-                <!-- Eraser -->
-                <button id="toolEraserBtn" onclick="setActiveTool('eraser')" class="touch-btn px-3.5 py-2 rounded-2xl bg-slate-800 hover:bg-rose-950/50 border border-slate-700 text-rose-300 flex items-center gap-1.5">
+                <!-- Eraser Tool -->
+                <button id="toolEraserBtn" onclick="setActiveTool('eraser')" class="touch-btn px-3 py-2 rounded-2xl bg-slate-800 hover:bg-rose-950/50 border border-slate-700 text-rose-300 flex items-center gap-1.5">
                     <i class="fa-solid fa-eraser"></i>
                     <span class="text-xs font-medium">橡皮擦</span>
                 </button>
 
                 <!-- Annotation Toggles -->
                 <div class="flex items-center space-x-1 pl-1">
-                    <button id="toggleNormalBtn" onclick="toggleHUDSetting('showNormal')" class="touch-btn px-2.5 py-2 rounded-xl bg-cyan-950/60 border border-cyan-500/50 text-cyan-300 text-xs flex items-center gap-1">
+                    <button id="toggleNormalBtn" onclick="toggleHUDSetting('showNormal')" class="touch-btn px-2.5 py-1.5 rounded-xl bg-cyan-950/60 border border-cyan-500/50 text-cyan-300 text-xs flex items-center gap-1">
                         <i class="fa-solid fa-vector-square"></i> 法線
                     </button>
-                    <button id="toggleAnglesBtn" onclick="toggleHUDSetting('showAngles')" class="touch-btn px-2.5 py-2 rounded-xl bg-cyan-950/60 border border-cyan-500/50 text-cyan-300 text-xs flex items-center gap-1">
+                    <button id="toggleAnglesBtn" onclick="toggleHUDSetting('showAngles')" class="touch-btn px-2.5 py-1.5 rounded-xl bg-cyan-950/60 border border-cyan-500/50 text-cyan-300 text-xs flex items-center gap-1">
                         <i class="fa-solid fa-angle-left"></i> 角度
                     </button>
-                    <button id="toggleGridBtn" onclick="toggleHUDSetting('showGrid')" class="touch-btn px-2.5 py-2 rounded-xl bg-cyan-950/60 border border-cyan-500/50 text-cyan-300 text-xs flex items-center gap-1">
+                    <button id="toggleGridBtn" onclick="toggleHUDSetting('showGrid')" class="touch-btn px-2.5 py-1.5 rounded-xl bg-cyan-950/60 border border-cyan-500/50 text-cyan-300 text-xs flex items-center gap-1">
                         <i class="fa-solid fa-border-all"></i> 網格
                     </button>
                 </div>
@@ -295,7 +315,7 @@
 
     </div>
 
-    <!-- Web Audio Engine & Core Optics Physics JS -->
+    <!-- Application Script -->
     <script>
         /**
          * Synthesizer Sound Engine (Web Audio API)
@@ -335,6 +355,10 @@
             playClick() { this.playTone(800, 0.05, 'sine'); }
             playReflect() { this.playTone(1200, 0.04, 'sawtooth'); }
             playAddSource() { this.playTone(950, 0.08, 'sine'); }
+            playPlaceElement() { 
+                this.playTone(520, 0.08, 'sine');
+                setTimeout(() => this.playTone(880, 0.12, 'sine'), 50);
+            }
         }
 
         const sound = new SoundEngine();
@@ -362,57 +386,71 @@
         }
 
         /**
-         * Light Emitter Class (Multiple Light Sources Support)
+         * Light Emitter Class
          */
         class Emitter {
             constructor(x, y, angle = 0) {
                 this.id = 'emitter_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
                 this.pos = new Vec2(x, y);
-                this.angle = angle; // Radians
+                this.angle = angle;
                 this.type = 'single'; // 'single', 'parallel3', 'parallel5', 'fan', 'dispersion'
                 this.color = '#00ff66';
-                this.wavelength = 532; // Green laser default
+                this.wavelength = 532;
             }
         }
 
         /**
-         * Application Global State
+         * Scene Mirror & Lens Object Definitions
          */
-        const state = {
-            activeTool: 'select', // 'select', 'addEmitter', 'drawMirrorFree', 'drawMirrorLine', 'drawLensFree', 'eraser'
-            currentRefractiveIndex: 1.50,
-            emitters: [], // Array of Emitter instances
-            selectedEmitterId: null,
-            hud: {
-                showNormal: true,
-                showAngles: true,
-                showGrid: true,
-                showTools: false
-            },
-            objects: [], // Scene Mirrors & Polygon Lenses
-            currentDrawingPoints: [], // Touch path buffer
-            placingEmitter: null, // Temporary placement state
-            physicalRuler: null,
-            dragState: {
-                target: null,
-                type: null, // 'emitter_move', 'emitter_rotate', 'object_move'
-                startPos: null
-            },
-            lastStats: {
-                incidentAngle: null,
-                reflectAngle: null,
-                bounces: 0,
-                hasTIR: false
+        class LineMirror {
+            constructor(p1, p2, name = '平面鏡') {
+                this.type = 'line_mirror';
+                this.p1 = p1;
+                this.p2 = p2;
+                this.shapeName = name;
             }
-        };
+            getSegments() {
+                return [{ p1: this.p1, p2: this.p2, parent: this, isMirror: true }];
+            }
+            getCenter() { return this.p1.add(this.p2).mult(0.5); }
+        }
 
-        /**
-         * Optical Scene Objects Definitions
-         */
+        class CurvedMirror {
+            constructor(p1, p2, curvature = 'concave', name = '曲面鏡') {
+                this.type = 'curved_mirror';
+                this.p1 = p1;
+                this.p2 = p2;
+                this.curvature = curvature; // 'concave' or 'convex'
+                this.shapeName = name;
+            }
+            getSegments() {
+                const segs = [];
+                const steps = 20;
+                const mid = this.p1.add(this.p2).mult(0.5);
+                const dir = this.p2.sub(this.p1);
+                const len = dir.mag();
+                const normal = new Vec2(-dir.y, dir.x).norm();
+                const sag = (this.curvature === 'concave' ? 0.35 : -0.35) * len;
+
+                let lastPt = this.p1;
+                for (let i = 1; i <= steps; i++) {
+                    const t = i / steps;
+                    const basePt = this.p1.add(dir.mult(t));
+                    const arch = Math.sin(t * Math.PI) * sag;
+                    const pt = basePt.add(normal.mult(arch));
+                    segs.push({ p1: lastPt, p2: pt, parent: this, isMirror: true });
+                    lastPt = pt;
+                }
+                return segs;
+            }
+            getCenter() { return this.p1.add(this.p2).mult(0.5); }
+        }
+
         class FreehandMirror {
             constructor(points) {
                 this.type = 'freehand_mirror';
                 this.points = points;
+                this.shapeName = '手畫鏡';
             }
             getSegments() {
                 const segs = [];
@@ -428,22 +466,10 @@
             }
         }
 
-        class LineMirror {
-            constructor(p1, p2) {
-                this.type = 'line_mirror';
-                this.p1 = p1;
-                this.p2 = p2;
-            }
-            getSegments() {
-                return [{ p1: this.p1, p2: this.p2, parent: this, isMirror: true }];
-            }
-            getCenter() { return this.p1.add(this.p2).mult(0.5); }
-        }
-
         class PolygonLens {
-            constructor(points, n = 1.50, shapeName = 'custom') {
+            constructor(points, n = 1.50, shapeName = '透鏡') {
                 this.type = 'polygon_lens';
-                this.points = points; // Closed polygon contour of Vec2
+                this.points = points;
                 this.n = n;
                 this.shapeName = shapeName;
             }
@@ -463,7 +489,6 @@
                 return new Vec2(sx / this.points.length, sy / this.points.length);
             }
             containsPoint(p) {
-                // Ray casting point-in-polygon algorithm
                 let inside = false;
                 const len = this.points.length;
                 for (let i = 0, j = len - 1; i < len; j = i++) {
@@ -478,7 +503,44 @@
         }
 
         /**
-         * Canvas Setup & Resize Handler
+         * Global Application State
+         */
+        const state = {
+            activeTool: 'select', 
+            currentRefractiveIndex: 1.50,
+            emitters: [],
+            selectedEmitterId: null,
+            hud: {
+                showNormal: true,
+                showAngles: true,
+                showGrid: true,
+                showTools: false
+            },
+            objects: [],
+            currentDrawingPoints: [],
+            placingEmitter: null,
+            physicalRuler: null,
+            
+            // Unified Gesture Preview State
+            gesturePreviewElement: null,
+            gestureActive: false,
+            gestureStartPoints: null,
+
+            dragState: {
+                target: null,
+                type: null,
+                startPos: null
+            },
+            lastStats: {
+                incidentAngle: null,
+                reflectAngle: null,
+                bounces: 0,
+                hasTIR: false
+            }
+        };
+
+        /**
+         * Canvas Setup
          */
         const canvas = document.getElementById('opticsCanvas');
         const ctx = canvas.getContext('2d');
@@ -490,9 +552,6 @@
             height = canvas.height = window.innerHeight;
         });
 
-        /**
-         * Initialize Default Emitter Light Source
-         */
         function initDefaultScene() {
             const defaultEmitter = new Emitter(220, height / 2, 0);
             state.emitters.push(defaultEmitter);
@@ -500,86 +559,106 @@
         }
 
         /**
-         * Preset Lens Generators (Circle, Triangle, Rectangle, Biconvex, Biconcave)
+         * Unified Two-Point Element Generator
+         * Works seamlessly for Plane Mirrors, Concave/Convex Curved Mirrors AND all Lenses!
          */
-        function addPresetLens(shapeType) {
-            sound.playClick();
-            const center = new Vec2(width / 2, height / 2);
-            let lensObj = null;
+        function generateElementFromTwoPoints(toolType, p1, p2, n = state.currentRefractiveIndex) {
+            const center = p1.add(p2).mult(0.5);
+            const dist = Math.max(35, p1.dist(p2));
+            const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
 
-            if (shapeType === 'circle') {
-                // Smooth circular polygon (32 vertices)
-                const pts = [];
-                const steps = 32, radius = 70;
+            // 1. Mirrors
+            if (toolType === 'gestureMirror_plane') {
+                const mirror = new LineMirror(p1, p2, '平面鏡');
+                mirror.gestureData = { p1, p2, center };
+                return mirror;
+            }
+            if (toolType === 'gestureMirror_concave') {
+                const mirror = new CurvedMirror(p1, p2, 'concave', '凹面鏡');
+                mirror.gestureData = { p1, p2, center };
+                return mirror;
+            }
+            if (toolType === 'gestureMirror_convex') {
+                const mirror = new CurvedMirror(p1, p2, 'convex', '凸面鏡');
+                mirror.gestureData = { p1, p2, center };
+                return mirror;
+            }
+
+            // 2. Lenses
+            let rawPoints = [];
+            let name = '透鏡';
+
+            if (toolType === 'gestureLens_circle') {
+                name = '圓形透鏡';
+                const radius = dist / 2;
+                const steps = 32;
                 for (let i = 0; i < steps; i++) {
                     const a = (i / steps) * Math.PI * 2;
-                    pts.push(new Vec2(center.x + Math.cos(a) * radius, center.y + Math.sin(a) * radius));
+                    rawPoints.push(new Vec2(Math.cos(a) * radius, Math.sin(a) * radius));
                 }
-                lensObj = new PolygonLens(pts, state.currentRefractiveIndex, '圓形透鏡');
-
-            } else if (shapeType === 'triangle') {
-                // Triangular Prism
-                const size = 140;
-                const pts = [
-                    new Vec2(center.x, center.y - size / 1.1),
-                    new Vec2(center.x + size / 1.1, center.y + size / 1.5),
-                    new Vec2(center.x - size / 1.1, center.y + size / 1.5)
+            } else if (toolType === 'gestureLens_triangle') {
+                name = '三稜鏡';
+                const h = dist * 0.866;
+                const w = dist;
+                rawPoints = [
+                    new Vec2(0, -h / 1.5),
+                    new Vec2(w / 2, h / 3),
+                    new Vec2(-w / 2, h / 3)
                 ];
-                lensObj = new PolygonLens(pts, state.currentRefractiveIndex, '三角形稜鏡');
-
-            } else if (shapeType === 'rectangle') {
-                // Rectangular Glass Block
-                const w = 180, h = 100;
-                const pts = [
-                    new Vec2(center.x - w / 2, center.y - h / 2),
-                    new Vec2(center.x + w / 2, center.y - h / 2),
-                    new Vec2(center.x + w / 2, center.y + h / 2),
-                    new Vec2(center.x - w / 2, center.y + h / 2)
+            } else if (toolType === 'gestureLens_rectangle') {
+                name = '長方形玻璃磚';
+                const w = dist;
+                const h = dist * 0.5;
+                rawPoints = [
+                    new Vec2(-w / 2, -h / 2),
+                    new Vec2(w / 2, -h / 2),
+                    new Vec2(w / 2, h / 2),
+                    new Vec2(-w / 2, h / 2)
                 ];
-                lensObj = new PolygonLens(pts, state.currentRefractiveIndex, '長方形玻璃磚');
-
-            } else if (shapeType === 'biconvex') {
-                // FIXED Biconvex Lens (Complete seamless curved contour)
-                const pts = [];
-                const steps = 24, w = 70, h = 180;
-                // Right arc (t from -PI/2 to PI/2)
+            } else if (toolType === 'gestureLens_biconvex') {
+                name = '雙凸透鏡';
+                const steps = 24;
+                const w = dist * 0.45;
+                const h = dist * 1.1;
                 for (let i = 0; i <= steps; i++) {
                     const t = -Math.PI / 2 + (Math.PI * i / steps);
-                    const x = center.x + Math.cos(t) * (w / 2);
-                    const y = center.y + Math.sin(t) * (h / 2);
-                    pts.push(new Vec2(x, y));
+                    rawPoints.push(new Vec2(Math.cos(t) * (w / 2), Math.sin(t) * (h / 2)));
                 }
-                // Left arc (t from PI/2 to 3*PI/2)
                 for (let i = 0; i <= steps; i++) {
                     const t = Math.PI / 2 + (Math.PI * i / steps);
-                    const x = center.x + Math.cos(t) * (w / 2);
-                    const y = center.y + Math.sin(t) * (h / 2);
-                    pts.push(new Vec2(x, y));
+                    rawPoints.push(new Vec2(Math.cos(t) * (w / 2), Math.sin(t) * (h / 2)));
                 }
-                lensObj = new PolygonLens(pts, state.currentRefractiveIndex, '雙凸透鏡');
-
-            } else if (shapeType === 'biconcave') {
-                // Biconcave Lens
-                const w = 60, h = 180;
-                const pts = [
-                    new Vec2(center.x - w / 2, center.y - h / 2),
-                    new Vec2(center.x + w / 2, center.y - h / 2),
-                    new Vec2(center.x + w / 4, center.y),
-                    new Vec2(center.x + w / 2, center.y + h / 2),
-                    new Vec2(center.x - w / 2, center.y + h / 2),
-                    new Vec2(center.x - w / 4, center.y)
+            } else if (toolType === 'gestureLens_biconcave') {
+                name = '雙凹透鏡';
+                const w = dist * 0.5;
+                const h = dist * 1.1;
+                rawPoints = [
+                    new Vec2(-w / 2, -h / 2),
+                    new Vec2(w / 2, -h / 2),
+                    new Vec2(w / 4, 0),
+                    new Vec2(w / 2, h / 2),
+                    new Vec2(-w / 2, h / 2),
+                    new Vec2(-w / 4, 0)
                 ];
-                lensObj = new PolygonLens(pts, state.currentRefractiveIndex, '雙凹透鏡');
             }
 
-            if (lensObj) {
-                state.objects.push(lensObj);
-                setActiveTool('select');
-            }
+            const transformedPoints = rawPoints.map(pt => pt.rotate(angle).add(center));
+            const lens = new PolygonLens(transformedPoints, n, name);
+            lens.gestureData = { p1, p2, center };
+            return lens;
+        }
+
+        function showToast(msg) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = 'toast-popup glass-panel px-5 py-2.5 rounded-2xl border border-emerald-500/60 bg-emerald-950/80 text-emerald-300 font-bold text-xs flex items-center gap-2 shadow-xl';
+            toast.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400 text-sm"></i> ${msg}`;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 2200);
         }
 
         /**
-         * Tool & Interface Controls
+         * Tool & Toolbar Manager
          */
         function setActiveTool(tool) {
             state.activeTool = tool;
@@ -589,7 +668,11 @@
             const bannerIcon = document.getElementById('drawingModeIcon');
             const bannerText = document.getElementById('drawingModeText');
 
-            if (tool === 'addEmitter') {
+            if (tool.startsWith('gesture')) {
+                banner.classList.remove('hidden');
+                bannerIcon.className = 'fa-solid fa-hand-holding-hand text-amber-400 text-lg';
+                bannerText.innerText = '連續雙指放置模式：雙指設定位置/大小/方向，放開後可直接繼續放置下一個！';
+            } else if (tool === 'addEmitter') {
                 banner.classList.remove('hidden');
                 bannerIcon.className = 'fa-solid fa-lightbulb text-amber-400 text-lg';
                 bannerText.innerText = '請點擊螢幕放置光源位置，接著拖曳設定發射角度...';
@@ -597,14 +680,10 @@
                 banner.classList.remove('hidden');
                 bannerIcon.className = 'fa-solid fa-signature text-cyan-400 text-lg';
                 bannerText.innerText = '請用手指/觸控筆在螢幕上手畫自由鏡面...';
-            } else if (tool === 'drawMirrorLine') {
-                banner.classList.remove('hidden');
-                bannerIcon.className = 'fa-solid fa-minus text-cyan-400 text-lg';
-                bannerText.innerText = '請在螢幕上拖曳繪製直線平面鏡...';
             } else if (tool === 'drawLensFree') {
                 banner.classList.remove('hidden');
                 bannerIcon.className = 'fa-solid fa-draw-polygon text-purple-400 text-lg';
-                bannerText.innerText = '請在螢幕上手畫一圈閉合透鏡/稜鏡...';
+                bannerText.innerText = '請在螢幕上手畫閉合透鏡/稜鏡...';
             } else if (tool === 'eraser') {
                 banner.classList.remove('hidden');
                 bannerIcon.className = 'fa-solid fa-eraser text-rose-400 text-lg';
@@ -613,12 +692,18 @@
                 banner.classList.add('hidden');
             }
 
-            // Button active states UI highlighting
             const toolBtns = {
                 select: 'toolSelectBtn',
                 addEmitter: 'toolAddEmitterBtn',
+                gestureMirror_plane: 'toolMirrorPlaneBtn',
+                gestureMirror_concave: 'toolMirrorConcaveBtn',
+                gestureMirror_convex: 'toolMirrorConvexBtn',
                 drawMirrorFree: 'toolMirrorFreeBtn',
-                drawMirrorLine: 'toolMirrorLineBtn',
+                gestureLens_circle: 'toolLensCircleBtn',
+                gestureLens_triangle: 'toolLensTriangleBtn',
+                gestureLens_rectangle: 'toolLensRectBtn',
+                gestureLens_biconvex: 'toolLensConvexBtn',
+                gestureLens_biconcave: 'toolLensConcaveBtn',
                 drawLensFree: 'toolLensFreeBtn',
                 eraser: 'toolEraserBtn'
             };
@@ -639,7 +724,6 @@
 
         function updateRefractiveIndex(val) {
             state.currentRefractiveIndex = parseFloat(val);
-            // Update refractive index on existing scene lenses
             state.objects.forEach(obj => {
                 if (obj.type === 'polygon_lens') obj.n = state.currentRefractiveIndex;
             });
@@ -691,7 +775,6 @@
             }
             panel.classList.remove('opacity-40', 'pointer-events-none');
 
-            // Highlight active beam type button
             ['single', 'parallel3', 'parallel5', 'fan', 'dispersion'].forEach(t => {
                 const btn = document.getElementById(`beam${t.charAt(0).toUpperCase() + t.slice(1)}Btn`);
                 if (btn) {
@@ -758,7 +841,7 @@
         }
 
         /**
-         * Optics Engine: Raycaster & Snell's Law Math
+         * Raycaster & Optical Physics Core Engine
          */
         function raySegmentIntersection(rayOrigin, rayDir, p1, p2) {
             const v1 = rayOrigin.sub(p1);
@@ -778,23 +861,25 @@
         }
 
         function traceSingleRay(origin, dir, wavelength = 532, refractiveIndex = 1.0, depth = 0) {
-            if (depth >= 16) return []; // Ray bounce depth limit
+            if (depth >= 16) return [];
 
             let closestHit = null;
             let closestDist = Infinity;
             let hitSegment = null;
 
-            // Collect all collision boundaries
             const segments = [];
             state.objects.forEach(obj => {
                 if (obj.getSegments) segments.push(...obj.getSegments());
             });
 
+            if (state.gesturePreviewElement) {
+                segments.push(...state.gesturePreviewElement.getSegments());
+            }
+
             if (state.physicalRuler) {
                 segments.push(...state.physicalRuler.getSegments());
             }
 
-            // Raycaster hit check
             segments.forEach(seg => {
                 const hit = raySegmentIntersection(origin, dir, seg.p1, seg.p2);
                 if (hit && hit.dist < closestDist) {
@@ -804,7 +889,6 @@
                 }
             });
 
-            // Ray exits into infinite space
             if (!closestHit) {
                 let rayColor = state.laser.color || '#00ff66';
                 if (wavelength === 650) rayColor = '#ff2255';
@@ -843,7 +927,7 @@
             }
 
             // Mirror Specular Reflection
-            if (hitSegment.isMirror || hitSegment.parent.type === 'line_mirror' || hitSegment.parent.type === 'freehand_mirror') {
+            if (hitSegment.isMirror) {
                 const reflectDir = dir.sub(normal.mult(2 * dir.dot(normal))).norm();
                 if (depth === 0) state.lastStats.reflectAngle = state.lastStats.incidentAngle;
 
@@ -867,7 +951,7 @@
                 const cosI = -dir.dot(normal);
                 const sinT2 = eta * eta * (1.0 - cosI * cosI);
 
-                // Check Total Internal Reflection (TIR)
+                // Total Internal Reflection (TIR)
                 if (sinT2 > 1.0) {
                     state.lastStats.hasTIR = true;
                     const reflectDir = dir.sub(normal.mult(2 * dir.dot(normal))).norm();
@@ -891,7 +975,7 @@
         }
 
         /**
-         * Canvas Rendering Pipeline
+         * Rendering Functions
          */
         function drawGrid() {
             if (!state.hud.showGrid) return;
@@ -913,18 +997,14 @@
                 ctx.translate(em.pos.x, em.pos.y);
                 ctx.rotate(em.angle);
 
-                // Selected Outer Glow Ring
                 if (isSelected) {
                     ctx.strokeStyle = '#f59e0b';
                     ctx.lineWidth = 2;
                     ctx.setLineDash([4, 4]);
-                    ctx.beginPath();
-                    ctx.arc(0, 0, 32, 0, Math.PI * 2);
-                    ctx.stroke();
+                    ctx.beginPath(); ctx.arc(0, 0, 32, 0, Math.PI * 2); ctx.stroke();
                     ctx.setLineDash([]);
                 }
 
-                // Laser Body Housing
                 ctx.fillStyle = '#1e293b';
                 ctx.strokeStyle = isSelected ? '#f59e0b' : (em.color || '#00ff66');
                 ctx.lineWidth = 2.5;
@@ -932,26 +1012,16 @@
                 ctx.roundRect(-24, -14, 48, 28, 6);
                 ctx.fill(); ctx.stroke();
 
-                // Emitter Front Lens Lens Tip
                 ctx.fillStyle = em.color || '#00ff66';
                 ctx.shadowColor = em.color || '#00ff66';
                 ctx.shadowBlur = 10;
                 ctx.fillRect(24, -5, 6, 10);
 
-                // Angle Direction Arrow Line Handle
                 ctx.strokeStyle = '#38bdf8';
                 ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.moveTo(30, 0);
-                ctx.lineTo(55, 0);
-                ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(30, 0); ctx.lineTo(55, 0); ctx.stroke();
+                ctx.beginPath(); ctx.arc(55, 0, 5, 0, Math.PI * 2); ctx.fillStyle = '#38bdf8'; ctx.fill();
 
-                ctx.beginPath();
-                ctx.arc(55, 0, 5, 0, Math.PI * 2);
-                ctx.fillStyle = '#38bdf8';
-                ctx.fill();
-
-                // Selected Delete Button Icon (X)
                 if (isSelected && state.emitters.length > 1) {
                     ctx.translate(0, -32);
                     ctx.fillStyle = '#f43f5e';
@@ -965,7 +1035,6 @@
                 ctx.restore();
             });
 
-            // Draw Emitter Placement Direction Line Preview
             if (state.placingEmitter) {
                 const em = state.placingEmitter;
                 ctx.save();
@@ -982,8 +1051,8 @@
 
         function drawSceneObjects() {
             state.objects.forEach(obj => {
-                if (obj.type === 'freehand_mirror' || obj.type === 'line_mirror') {
-                    const pts = obj.points || [obj.p1, obj.p2];
+                if (obj.type === 'line_mirror' || obj.type === 'curved_mirror' || obj.type === 'freehand_mirror') {
+                    const segs = obj.getSegments();
                     ctx.save();
                     ctx.strokeStyle = '#38bdf8';
                     ctx.lineWidth = 5;
@@ -993,21 +1062,26 @@
                     ctx.shadowBlur = 12;
 
                     ctx.beginPath();
-                    ctx.moveTo(pts[0].x, pts[0].y);
-                    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+                    ctx.moveTo(segs[0].p1.x, segs[0].p1.y);
+                    segs.forEach(s => ctx.lineTo(s.p2.x, s.p2.y));
                     ctx.stroke();
 
-                    // White Specular Highlight
                     ctx.strokeStyle = '#ffffff';
                     ctx.lineWidth = 1.5;
                     ctx.stroke();
+
+                    const center = obj.getCenter();
+                    ctx.fillStyle = '#38bdf8';
+                    ctx.font = 'bold 10px JetBrains Mono';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(obj.shapeName || '平面鏡', center.x, center.y - 12);
                     ctx.restore();
 
                 } else if (obj.type === 'polygon_lens') {
                     ctx.save();
                     ctx.fillStyle = 'rgba(192, 132, 252, 0.22)';
                     ctx.strokeStyle = '#c084fc';
-                    ctx.lineWidth = 3.0; // FIXED COMPLETE BORDER
+                    ctx.lineWidth = 3.0;
                     ctx.lineCap = 'round';
                     ctx.lineJoin = 'round';
                     ctx.shadowColor = '#c084fc';
@@ -1016,11 +1090,10 @@
                     ctx.beginPath();
                     ctx.moveTo(obj.points[0].x, obj.points[0].y);
                     for (let i = 1; i < obj.points.length; i++) ctx.lineTo(obj.points[i].x, obj.points[i].y);
-                    ctx.closePath(); // Complete seamless closure
+                    ctx.closePath();
                     ctx.fill();
                     ctx.stroke();
 
-                    // Shape Title & Refractive Index Tag
                     const center = obj.getCenter();
                     ctx.fillStyle = '#e9d5ff';
                     ctx.font = 'bold 11px JetBrains Mono';
@@ -1030,7 +1103,56 @@
                 }
             });
 
-            // Draw Active Drawing Stroke
+            // GESTURE PREVIEW ELEMENT HOVER (LIVE INTERACTION)
+            if (state.gesturePreviewElement) {
+                const el = state.gesturePreviewElement;
+                ctx.save();
+                ctx.fillStyle = 'rgba(245, 158, 11, 0.25)';
+                ctx.strokeStyle = '#f59e0b';
+                ctx.lineWidth = 3.5;
+                ctx.setLineDash([6, 4]);
+                ctx.shadowColor = '#f59e0b';
+                ctx.shadowBlur = 20;
+
+                if (el.points) {
+                    ctx.beginPath();
+                    ctx.moveTo(el.points[0].x, el.points[0].y);
+                    for (let i = 1; i < el.points.length; i++) ctx.lineTo(el.points[i].x, el.points[i].y);
+                    ctx.closePath();
+                    ctx.fill(); ctx.stroke();
+                } else if (el.getSegments) {
+                    const segs = el.getSegments();
+                    ctx.beginPath();
+                    ctx.moveTo(segs[0].p1.x, segs[0].p1.y);
+                    segs.forEach(s => ctx.lineTo(s.p2.x, s.p2.y));
+                    ctx.stroke();
+                }
+
+                if (el.gestureData) {
+                    const { p1, p2, center } = el.gestureData;
+                    ctx.setLineDash([2, 4]);
+                    ctx.strokeStyle = '#38bdf8';
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+
+                    [p1, p2].forEach((p, idx) => {
+                        ctx.fillStyle = '#f59e0b';
+                        ctx.beginPath(); ctx.arc(p.x, p.y, 14, 0, Math.PI * 2); ctx.fill();
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = 'bold 10px sans-serif';
+                        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                        ctx.fillText(`P${idx+1}`, p.x, p.y);
+                    });
+
+                    ctx.fillStyle = '#fbbf24';
+                    ctx.font = 'bold 12px JetBrains Mono';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(`【雙指手勢】${el.shapeName} (放開即可連續放置)`, center.x, center.y - 25);
+                }
+                ctx.restore();
+            }
+
+            // Freehand Drawing Stroke
             if (state.currentDrawingPoints.length > 1) {
                 ctx.save();
                 ctx.lineWidth = 4;
@@ -1047,7 +1169,7 @@
                 ctx.restore();
             }
 
-            // Draw Physical Touch Ruler
+            // Physical Ruler Touch Mirror
             if (state.physicalRuler) {
                 const r = state.physicalRuler;
                 ctx.save();
@@ -1062,7 +1184,7 @@
                 const mid = r.p1.add(r.p2).mult(0.5);
                 ctx.fillStyle = '#10b981';
                 ctx.font = 'bold 11px JetBrains Mono';
-                ctx.fillText('實體接觸感應邊界 (PHYSICAL RULER)', mid.x - 90, mid.y - 12);
+                ctx.fillText('實體接觸反射面 (PHYSICAL RULER)', mid.x - 90, mid.y - 12);
                 ctx.restore();
             }
         }
@@ -1104,7 +1226,6 @@
                 ctx.stroke();
                 ctx.restore();
 
-                // Surface normal dashed annotations
                 if (ray.normal && state.hud.showNormal) {
                     ctx.save();
                     ctx.strokeStyle = 'rgba(56, 189, 248, 0.6)';
@@ -1117,7 +1238,6 @@
                     ctx.restore();
                 }
 
-                // Angle values text annotations
                 if (ray.normal && state.hud.showAngles && state.lastStats.incidentAngle) {
                     ctx.save();
                     ctx.fillStyle = '#fbbf24';
@@ -1133,7 +1253,7 @@
         }
 
         /**
-         * Core Engine Loop
+         * Main Render Loop
          */
         let lastFPS = performance.now();
         let frames = 0;
@@ -1143,12 +1263,11 @@
 
             drawGrid();
 
-            // Fire Laser Rays from ALL Active Light Source Emitters
             let allRays = [];
             state.lastStats.hasTIR = false;
 
             state.emitters.forEach(em => {
-                state.laser = em; // Temporary reference context
+                state.laser = em;
                 const dir = new Vec2(Math.cos(em.angle), Math.sin(em.angle));
 
                 if (em.type === 'single') {
@@ -1167,7 +1286,7 @@
 
                 } else if (em.type === 'fan') {
                     const count = 5;
-                    const spreadAngle = 0.35; // ~20 degrees fan
+                    const spreadAngle = 0.35;
                     for (let i = 0; i < count; i++) {
                         const deltaA = -spreadAngle / 2 + (spreadAngle * i / (count - 1));
                         const fanDir = dir.rotate(deltaA);
@@ -1175,7 +1294,6 @@
                     }
 
                 } else if (em.type === 'dispersion') {
-                    // White light dispersion into RGB
                     allRays.push(...traceSingleRay(em.pos, dir, 650));
                     allRays.push(...traceSingleRay(em.pos, dir, 532));
                     allRays.push(...traceSingleRay(em.pos, dir, 450));
@@ -1187,7 +1305,6 @@
             drawEmitters();
             drawOverlayTools();
 
-            // Update Physics HUD Values
             document.getElementById('hudIncidentAngle').innerText = state.lastStats.incidentAngle ? `${state.lastStats.incidentAngle}°` : '--°';
             document.getElementById('hudReflectAngle').innerText = state.lastStats.reflectAngle ? `${state.lastStats.reflectAngle}°` : '--°';
             document.getElementById('hudSourceCount').innerText = `${state.emitters.length} 個 / ${state.lastStats.bounces} 次`;
@@ -1201,7 +1318,6 @@
                 tirEl.className = 'text-sm font-mono font-bold text-slate-400';
             }
 
-            // FPS Counter
             frames++;
             const now = performance.now();
             if (now - lastFPS >= 1000) {
@@ -1214,7 +1330,7 @@
         }
 
         /**
-         * Touch & Pointer Interaction Logic
+         * Touch & Mouse Event Handlers
          */
         function getEventPos(e) {
             if (e.touches && e.touches.length > 0) {
@@ -1223,18 +1339,19 @@
             return new Vec2(e.clientX, e.clientY);
         }
 
-        function handleMultiTouchRuler(e) {
+        function handlePhysicalRulerCheck(e) {
             const badge = document.getElementById('physicalRulerBadge');
             const details = document.getElementById('physicalRulerDetails');
 
-            if (e.touches && e.touches.length >= 2) {
+            // Physical Ruler activates in 'select' mode or neutral screen touches
+            if (e.touches && e.touches.length >= 2 && state.activeTool === 'select') {
                 const p1 = new Vec2(e.touches[0].clientX, e.touches[0].clientY);
                 const p2 = new Vec2(e.touches[1].clientX, e.touches[1].clientY);
-                state.physicalRuler = new LineMirror(p1, p2);
+                state.physicalRuler = new LineMirror(p1, p2, '實體尺');
                 const len = p1.dist(p2).toFixed(0);
                 details.innerText = `雙點實體接觸感應中: 長度 ${len}px`;
                 badge.classList.remove('opacity-0');
-            } else if (e.touches && e.touches.length < 2) {
+            } else if (e.touches && e.touches.length < 2 && state.activeTool === 'select') {
                 state.physicalRuler = null;
                 badge.classList.add('opacity-0');
             }
@@ -1242,13 +1359,28 @@
 
         function onPointerDown(e) {
             sound.init();
-            handleMultiTouchRuler(e);
 
+            // 1. Unified Gesture Placement for Lenses & Mirrors
+            if (state.activeTool.startsWith('gesture')) {
+                if (e.touches && e.touches.length >= 2) {
+                    const p1 = new Vec2(e.touches[0].clientX, e.touches[0].clientY);
+                    const p2 = new Vec2(e.touches[1].clientX, e.touches[1].clientY);
+                    state.gesturePreviewElement = generateElementFromTwoPoints(state.activeTool, p1, p2);
+                    state.gestureActive = true;
+                    sound.playDraw();
+                    return;
+                } else {
+                    const p1 = getEventPos(e);
+                    state.gestureStartPoints = { p1 };
+                    return;
+                }
+            }
+
+            handlePhysicalRulerCheck(e);
             const pos = getEventPos(e);
 
-            // 1. Eraser Tool Mode
+            // 2. Eraser Tool
             if (state.activeTool === 'eraser') {
-                // Check Emitters delete
                 for (let i = state.emitters.length - 1; i >= 0; i--) {
                     if (pos.dist(state.emitters[i].pos) < 35) {
                         state.emitters.splice(i, 1);
@@ -1259,9 +1391,8 @@
                         return;
                     }
                 }
-                // Check Scene Objects delete
                 for (let i = state.objects.length - 1; i >= 0; i--) {
-                    if (pos.dist(state.objects[i].getCenter()) < 45) {
+                    if (pos.dist(state.objects[i].getCenter()) < 50) {
                         state.objects.splice(i, 1);
                         sound.playClick();
                         return;
@@ -1269,7 +1400,7 @@
                 }
             }
 
-            // 2. Add Light Source Mode (Point-and-drag angle placement)
+            // 3. Add Emitter Mode
             if (state.activeTool === 'addEmitter') {
                 const newEmitter = new Emitter(pos.x, pos.y, 0);
                 state.emitters.push(newEmitter);
@@ -1280,16 +1411,15 @@
                 return;
             }
 
-            // 3. Drawing Tools Mode
+            // 4. Freehand Drawing Tools
             if (state.activeTool.startsWith('draw')) {
                 state.currentDrawingPoints = [pos];
                 sound.playDraw();
                 return;
             }
 
-            // 4. Select / Move Emitters or Objects Mode
+            // 5. Move Emitters & Scene Objects
             for (let em of state.emitters) {
-                // Delete X button hit check
                 if (em.id === state.selectedEmitterId && state.emitters.length > 1) {
                     const delPos = em.pos.add(new Vec2(0, -32).rotate(em.angle));
                     if (pos.dist(delPos) < 16) {
@@ -1298,7 +1428,6 @@
                     }
                 }
 
-                // Rotation handle hit check
                 const rotHandle = em.pos.add(new Vec2(55, 0).rotate(em.angle));
                 if (pos.dist(rotHandle) < 22) {
                     state.selectedEmitterId = em.id;
@@ -1308,7 +1437,6 @@
                     return;
                 }
 
-                // Emitter body hit check
                 if (pos.dist(em.pos) < 32) {
                     state.selectedEmitterId = em.id;
                     state.dragState.target = em;
@@ -1318,7 +1446,6 @@
                 }
             }
 
-            // Move Scene Mirrors & Lenses
             for (let obj of state.objects) {
                 if (pos.dist(obj.getCenter()) < 60) {
                     state.dragState.target = obj;
@@ -1330,16 +1457,32 @@
         }
 
         function onPointerMove(e) {
-            handleMultiTouchRuler(e);
+            if (state.activeTool.startsWith('gesture')) {
+                if (e.touches && e.touches.length >= 2) {
+                    const p1 = new Vec2(e.touches[0].clientX, e.touches[0].clientY);
+                    const p2 = new Vec2(e.touches[1].clientX, e.touches[1].clientY);
+                    state.gesturePreviewElement = generateElementFromTwoPoints(state.activeTool, p1, p2);
+                    state.gestureActive = true;
+                    return;
+                } else if (state.gestureStartPoints) {
+                    const p1 = state.gestureStartPoints.p1;
+                    const p2 = getEventPos(e);
+                    if (p1.dist(p2) > 15) {
+                        state.gesturePreviewElement = generateElementFromTwoPoints(state.activeTool, p1, p2);
+                        state.gestureActive = true;
+                    }
+                    return;
+                }
+            }
+
+            handlePhysicalRulerCheck(e);
             const pos = getEventPos(e);
 
-            // Active placement angle dragging
             if (state.placingEmitter) {
                 state.placingEmitter.angle = Math.atan2(pos.y - state.placingEmitter.pos.y, pos.x - state.placingEmitter.pos.x);
                 return;
             }
 
-            // Active path stroke drawing
             if (state.currentDrawingPoints.length > 0) {
                 const lastPt = state.currentDrawingPoints[state.currentDrawingPoints.length - 1];
                 if (pos.dist(lastPt) > 8) {
@@ -1348,7 +1491,6 @@
                 return;
             }
 
-            // Active object / emitter dragging
             if (state.dragState.target) {
                 const { target, type } = state.dragState;
                 if (type === 'emitter_move') {
@@ -1369,22 +1511,42 @@
         }
 
         function onPointerUp(e) {
-            // Finalize light emitter placement
+            // CONTINUOUS PLACEMENT MODE: Lock preview object without switching active tool!
+            if (state.gestureActive && state.gesturePreviewElement) {
+                const prev = state.gesturePreviewElement;
+                
+                if (prev.type === 'line_mirror') {
+                    state.objects.push(new LineMirror(prev.p1, prev.p2, prev.shapeName));
+                } else if (prev.type === 'curved_mirror') {
+                    state.objects.push(new CurvedMirror(prev.p1, prev.p2, prev.curvature, prev.shapeName));
+                } else if (prev.type === 'polygon_lens') {
+                    const finalPoints = prev.points.map(p => new Vec2(p.x, p.y));
+                    state.objects.push(new PolygonLens(finalPoints, state.currentRefractiveIndex, prev.shapeName));
+                }
+
+                sound.playPlaceElement();
+                showToast(`已放置 ${prev.shapeName}！可直接繼續雙指放置下一個...`);
+
+                state.gesturePreviewElement = null;
+                state.gestureActive = false;
+                state.gestureStartPoints = null;
+                // KEEP ACTIVE TOOL ACTIVE FOR CONTINUOUS PLACEMENT!
+                return;
+            }
+
+            state.gestureStartPoints = null;
+
             if (state.placingEmitter) {
                 state.placingEmitter = null;
                 setActiveTool('select');
                 return;
             }
 
-            // Finalize hand-drawn stroke path
             if (state.currentDrawingPoints.length > 1) {
                 const pts = state.currentDrawingPoints;
 
                 if (state.activeTool === 'drawMirrorFree') {
                     state.objects.push(new FreehandMirror(pts));
-                    sound.playReflect();
-                } else if (state.activeTool === 'drawMirrorLine') {
-                    state.objects.push(new LineMirror(pts[0], pts[pts.length - 1]));
                     sound.playReflect();
                 } else if (state.activeTool === 'drawLensFree') {
                     state.objects.push(new PolygonLens(pts, state.currentRefractiveIndex, '手畫透鏡'));
@@ -1405,7 +1567,7 @@
             }
         }
 
-        // Window Event Listeners
+        // Window Listeners
         window.addEventListener('mousedown', onPointerDown);
         window.addEventListener('mousemove', onPointerMove);
         window.addEventListener('mouseup', onPointerUp);
@@ -1414,7 +1576,7 @@
         window.addEventListener('touchmove', onPointerMove, { passive: false });
         window.addEventListener('touchend', onPointerUp);
 
-        // Start Application
+        // Application Startup
         window.onload = function () {
             initDefaultScene();
             updateSelectedEmitterUI();

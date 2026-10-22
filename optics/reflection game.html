@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>光學繪鏡打靶闖關實驗室 (獨立版)</title>
+    <title>光學平面鏡與三稜鏡打靶闖關實驗室 (正確折射版)</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
@@ -47,6 +47,7 @@
         .glow-cyan { box-shadow: 0 0 15px rgba(6, 182, 212, 0.35); }
         .glow-pink { box-shadow: 0 0 15px rgba(244, 63, 94, 0.35); }
         .glow-green { box-shadow: 0 0 15px rgba(16, 185, 129, 0.35); }
+        .glow-yellow { box-shadow: 0 0 15px rgba(245, 158, 11, 0.35); }
 
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: #080c14; }
@@ -62,14 +63,14 @@
     <header class="bg-cyber-card/90 backdrop-blur border-b border-cyber-border sticky top-0 z-40 px-4 py-3">
         <div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
             <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-pink-500 flex items-center justify-center text-white font-bold text-xl glow-cyan">
-                    <i class="fa-solid fa-bullseye"></i>
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 via-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-xl glow-cyan">
+                    <i class="fa-solid fa-shapes"></i>
                 </div>
                 <div>
                     <h1 class="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 via-teal-300 to-pink-500">
-                        光學平面鏡打靶闖關實驗室
+                        光學繪鏡與三稜鏡打靶實驗室
                     </h1>
-                    <p class="text-xs text-slate-400">反射折射 ✕ 多色光源標靶 ✕ 貫穿多靶 ✕ 即時法線預覽</p>
+                    <p class="text-xs text-slate-400">真實真空折射 ✕ 雙指召喚三稜鏡 ✕ 貫穿多靶 ✕ 多色光學擊靶</p>
                 </div>
             </div>
 
@@ -104,12 +105,12 @@
                 </button>
 
                 <!-- Undo Button (復原) -->
-                <button onclick="undoPlayerMirror()" class="px-3 py-1.5 rounded-lg bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 hover:bg-indigo-500/30 text-xs font-semibold flex items-center gap-1 transition active:scale-95">
+                <button onclick="undoPlayerObject()" class="px-3 py-1.5 rounded-lg bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 hover:bg-indigo-500/30 text-xs font-semibold flex items-center gap-1 transition active:scale-95">
                     <i class="fa-solid fa-rotate-left"></i> 復原 (Undo)
                 </button>
 
                 <button onclick="clearPlayerDrawnGameObjects()" class="px-3 py-1.5 rounded-lg bg-rose-500/20 border border-rose-500/30 text-rose-300 hover:bg-rose-500/30 text-xs font-semibold flex items-center gap-1">
-                    <i class="fa-solid fa-trash-can"></i> 清除平面鏡
+                    <i class="fa-solid fa-trash-can"></i> 清除鏡面/三稜鏡
                 </button>
 
                 <button id="game-test-launch-btn" onclick="triggerGameTestLaunch()" class="px-5 py-1.5 rounded-lg bg-gradient-to-r from-cyan-500 to-pink-500 hover:from-cyan-400 hover:to-pink-400 text-white font-bold text-xs glow-pink flex items-center gap-1.5 transition transform active:scale-95">
@@ -124,8 +125,8 @@
             <div class="lg:col-span-3 bg-cyber-card border border-cyber-border rounded-2xl p-2 relative flex flex-col items-center">
                 <canvas id="gameCanvas" width="840" height="480" class="w-full h-auto bg-[#070a12] rounded-xl border border-slate-800/80 cursor-crosshair"></canvas>
                 <div id="game-canvas-status-tip" class="absolute bottom-4 left-6 bg-slate-900/90 border border-slate-800 text-slate-300 text-xs px-3 py-1.5 rounded-lg pointer-events-none flex items-center gap-2">
-                    <i class="fa-solid fa-pen text-cyan-400"></i>
-                    【畫平面鏡模式】：拖曳畫鏡，繪製時即時顯示法線與直角符號！
+                    <i class="fa-solid fa-hand-pointer text-yellow-400"></i>
+                    【單指】：畫平面鏡或擦除｜【雙指按住觸控】：召喚三稜鏡，張開/縮小/旋轉雙指以調整尺寸與角度！
                 </div>
             </div>
 
@@ -141,7 +142,7 @@
                             <i class="fa-solid fa-pen-nib text-lg"></i>
                             <div class="text-left">
                                 <div>✏️ 畫平面鏡 (Flat Mirror)</div>
-                                <div class="text-[10px] text-cyan-400/70 font-normal">拖曳畫線，即時呈現法線</div>
+                                <div class="text-[10px] text-cyan-400/70 font-normal">單指拖曳畫線，即時呈現法線</div>
                             </div>
                         </button>
 
@@ -149,9 +150,22 @@
                             <i class="fa-solid fa-eraser text-lg text-rose-400"></i>
                             <div class="text-left">
                                 <div>🧹 橡皮擦 (Eraser)</div>
-                                <div class="text-[10px] text-slate-400 font-normal">點擊或拖曳擦除已畫鏡面</div>
+                                <div class="text-[10px] text-slate-400 font-normal">擦除已劃出之平面鏡或三稜鏡</div>
                             </div>
                         </button>
+                    </div>
+
+                    <!-- Prism Touch Gesture Tip Card -->
+                    <div class="bg-amber-950/40 border border-amber-500/30 rounded-xl p-3 text-xs text-amber-300 space-y-1">
+                        <div class="font-bold flex items-center gap-1.5">
+                            <i class="fa-solid fa-hand-pinch text-amber-400"></i> 雙指手勢召喚三稜鏡:
+                        </div>
+                        <ul class="text-[11px] text-amber-200/80 space-y-0.5 list-disc list-inside">
+                            <li><b>雙指按住</b>：出現三稜鏡預覽</li>
+                            <li><b>雙指張開/閉合</b>：放大/縮小三稜鏡</li>
+                            <li><b>雙指旋轉</b>：旋轉三稜鏡角度</li>
+                            <li><b>放開雙指</b>：放置三稜鏡到場景中</li>
+                        </ul>
                     </div>
                 </div>
 
@@ -168,10 +182,10 @@
 
                 <!-- Level Mirror Stats -->
                 <div class="bg-cyber-card border border-cyber-border rounded-2xl p-4 space-y-2 text-xs">
-                    <div class="font-bold text-slate-200 border-b border-cyber-border pb-1">鏡面統計:</div>
+                    <div class="font-bold text-slate-200 border-b border-cyber-border pb-1">元件統計:</div>
                     <div class="flex justify-between bg-slate-900 p-2 rounded border border-slate-800">
-                        <span class="text-slate-400">本關已畫鏡面:</span>
-                        <span id="game-mirrors-count" class="text-cyan-400 font-mono font-bold">0 面</span>
+                        <span class="text-slate-400">已放置鏡面/三稜鏡:</span>
+                        <span id="game-mirrors-count" class="text-cyan-400 font-mono font-bold">0 個</span>
                     </div>
                 </div>
             </div>
@@ -208,8 +222,8 @@
 
             <div class="grid grid-cols-2 gap-3">
                 <div class="bg-slate-900/90 p-3 rounded-xl border border-slate-800 text-center">
-                    <div class="text-[11px] text-slate-400">本關卡繪製平面鏡</div>
-                    <div id="victory-this-count" class="text-xl font-bold font-mono text-cyan-400">1 面</div>
+                    <div class="text-[11px] text-slate-400">本關卡放置元件</div>
+                    <div id="victory-this-count" class="text-xl font-bold font-mono text-cyan-400">1 個</div>
                 </div>
                 <div class="bg-slate-900/90 p-3 rounded-xl border border-slate-800 text-center">
                     <div class="text-[11px] text-slate-400">標靶完全命中</div>
@@ -237,7 +251,7 @@
         </div>
     </div>
 
-    <!-- JavaScript Optics Target Game Engine -->
+    <!-- JavaScript Optics Game Engine -->
     <script>
         /* ==========================================================================
            1. Audio Synthesizer (Web Audio API)
@@ -310,7 +324,7 @@
         }
 
         /* ==========================================================================
-           2. Vector Math & Optics Physics Engine
+           2. Vector Math & Optics Physics Engine (Corrected Snell's Refraction)
            ========================================================================== */
         const Vec = {
             add: (v1, v2) => ({ x: v1.x + v2.x, y: v1.y + v2.y }),
@@ -353,8 +367,13 @@
             return Vec.dist(P, proj);
         }
 
-        function computeRefraction(I, N, n1, n2) {
-            let normal = { ...N };
+        /* 
+           Snell's Law Vector Refraction
+           I: Incoming ray vector (normalized)
+           N_face: Normal facing the incoming ray (pointing into medium 1, opposite to I)
+        */
+        function computeRefraction(I, N_face, n1, n2) {
+            let normal = { ...N_face };
             let cosI = -Vec.dot(I, normal);
             if (cosI < 0) {
                 cosI = -cosI;
@@ -364,6 +383,7 @@
             const k = 1 - eta * eta * (1 - cosI * cosI);
 
             if (k < 0) {
+                // Total Internal Reflection (TIR)
                 const R = Vec.sub(I, Vec.mult(normal, 2 * Vec.dot(I, normal)));
                 return { dir: Vec.norm(R), isTIR: true };
             } else {
@@ -373,17 +393,33 @@
             }
         }
 
+        /* Generate counter-clockwise polygon vertices on canvas (y down) */
         function getPolygonEdges(obj) {
             let pts = [];
             if (obj.shape === 'rect') {
                 const w = obj.w, h = obj.h;
                 const rad = (obj.angle || 0) * Math.PI / 180;
+                // Counter-clockwise order on screen canvas
                 const localPts = [
-                    { x: -w/2, y: -h/2 }, { x: w/2, y: -h/2 },
-                    { x: w/2, y: h/2 }, { x: -w/2, y: h/2 }
+                    { x: -w/2, y: -h/2 }, // Top-Left
+                    { x: -w/2, y: h/2 },  // Bottom-Left
+                    { x: w/2, y: h/2 },   // Bottom-Right
+                    { x: w/2, y: -h/2 }   // Top-Right
+                ];
+                pts = localPts.map(p => Vec.add(obj.center, Vec.rot(p, rad)));
+            } else if (obj.shape === 'prism') {
+                const size = obj.size || 90;
+                const rad = (obj.angle || 0) * Math.PI / 180;
+                const h = size * Math.sqrt(3) / 2;
+                // Counter-clockwise equilateral triangle
+                const localPts = [
+                    { x: 0, y: -h * (2/3) },            // Top vertex
+                    { x: -size / 2, y: h * (1/3) },      // Bottom left
+                    { x: size / 2, y: h * (1/3) }        // Bottom right
                 ];
                 pts = localPts.map(p => Vec.add(obj.center, Vec.rot(p, rad)));
             }
+
             const edges = [];
             for (let i = 0; i < pts.length; i++) {
                 edges.push({ p1: pts[i], p2: pts[(i + 1) % pts.length] });
@@ -391,17 +427,17 @@
             return edges;
         }
 
-        /* Multi-Color Multi-Target Ray Tracing Engine */
+        /* Full Physical Ray Tracing Engine */
         function traceRayPathFull(origin, direction, rayColor, objects, targets, maxBounces = 25) {
             let currentOrigin = { ...origin };
             let currentDir = Vec.norm(direction);
-            let currentMediumN = 1.0;
+            let currentMediumN = 1.0; // Default Air/Vacuum (n = 1.00)
             const steps = [];
 
             for (let bounce = 0; bounce < maxBounces; bounce++) {
                 let closestHit = null;
 
-                // Check mirrors, walls, glasses
+                // Check mirrors, walls, glasses, prisms
                 objects.forEach(obj => {
                     if (obj.type === 'mirror') {
                         const hit = intersectRaySegment(currentOrigin, currentDir, obj.p1, obj.p2);
@@ -424,8 +460,9 @@
                             const hit = intersectRaySegment(currentOrigin, currentDir, edge.p1, edge.p2);
                             if (hit && (!closestHit || hit.t < closestHit.t)) {
                                 const seg = Vec.sub(edge.p2, edge.p1);
-                                const norm = Vec.norm({ x: -seg.y, y: seg.x });
-                                closestHit = { ...hit, object: obj, type: 'glass', normal: norm };
+                                // Outward facing normal from polygon shape
+                                const normOut = Vec.norm({ x: -seg.y, y: seg.x });
+                                closestHit = { ...hit, object: obj, type: 'glass', normal: normOut };
                             }
                         });
                     }
@@ -441,11 +478,10 @@
                     hitInfo = closestHit;
                 }
 
-                // Check if this ray segment passes through any targets (Color-Matching)
+                // Check target hits
                 targets.forEach(target => {
                     const dist = distToSegment(target.center, currentOrigin, nextOrigin);
                     if (dist <= target.radius) {
-                        // Check color matching!
                         if (target.color.toLowerCase() === rayColor.toLowerCase()) {
                             target.hit = true;
                         }
@@ -471,16 +507,22 @@
                     currentDir = refDir;
                     currentOrigin = Vec.add(nextOrigin, Vec.mult(currentDir, 0.1));
                 } else if (closestHit.type === 'glass') {
-                    let N = closestHit.normal;
-                    let n1 = currentMediumN;
-                    let n2 = closestHit.object.n || 1.5;
+                    const N_out = closestHit.normal; // Outward facing normal
+                    let n1, n2, N_face;
 
-                    if (Vec.dot(currentDir, N) > 0) {
-                        N = Vec.mult(N, -1);
-                        n1 = closestHit.object.n || 1.5;
-                        n2 = 1.0;
+                    // If ray points inward against outward normal (dot product < 0): ENTERING GLASS
+                    if (Vec.dot(currentDir, N_out) < 0) {
+                        n1 = currentMediumN; // Air / Vacuum (1.00)
+                        n2 = closestHit.object.n || 1.52; // Glass/Prism (1.52)
+                        N_face = N_out; // N_out faces incoming ray
+                    } else {
+                        // Ray points outward in same direction as N_out (dot product > 0): EXITING GLASS
+                        n1 = closestHit.object.n || 1.52; // Glass/Prism (1.52)
+                        n2 = 1.00; // Air / Vacuum
+                        N_face = Vec.mult(N_out, -1); // Flip normal to face ray inside glass
                     }
-                    const refr = computeRefraction(currentDir, N, n1, n2);
+
+                    const refr = computeRefraction(currentDir, N_face, n1, n2);
                     currentDir = refr.dir;
                     currentMediumN = refr.isTIR ? n1 : n2;
                     currentOrigin = Vec.add(nextOrigin, Vec.mult(currentDir, 0.2));
@@ -491,7 +533,7 @@
         }
 
         /* ==========================================================================
-           3. Game Levels & Setup
+           3. Game Levels Setup
            ========================================================================== */
         const GAME_LEVELS = [
             {
@@ -526,15 +568,15 @@
                 ]
             },
             {
-                title: "關卡 3: 【新機制】一箭雙雕 (貫穿雙靶)",
-                desc: "單一光源！請利用平面鏡引導光束，連續貫穿 2 個青色標靶才能通關！",
-                hint: "標靶為可穿透感應環！讓光線穿過第一個標靶後，利用第二面鏡子反射穿過第二個標靶。",
-                physics: "光線傳播為直線，只要光路經過感應區域即可連續觸發多個標靶。",
+                title: "關卡 3: 【手勢試煉】三稜鏡折射貫穿雙靶",
+                desc: "請使用雙手指觸控召喚三稜鏡！將光束精確折射，連續穿過兩個標靶。",
+                hint: "雙手指同時按住螢幕，張開/閉合手勢調大小，旋轉雙指調角度，放開即可放置三稜鏡！",
+                physics: "光線由真空 (n=1) 穿入三稜鏡 (n=1.52) 時偏向法線，穿出時偏離法線，產生精確偏轉角。",
                 emitters: [
-                    { center: { x: 100, y: 100 }, angle: 30, color: '#06b6d4' }
+                    { center: { x: 100, y: 120 }, angle: 30, color: '#06b6d4' }
                 ],
                 targets: [
-                    { id: 'T1', name: '青標靶 1', center: { x: 400, y: 280 }, radius: 22, color: '#06b6d4', hit: false },
+                    { id: 'T1', name: '青標靶 1', center: { x: 420, y: 280 }, radius: 22, color: '#06b6d4', hit: false },
                     { id: 'T2', name: '青標靶 2', center: { x: 750, y: 120 }, radius: 22, color: '#06b6d4', hit: false }
                 ],
                 fixedObjects: [
@@ -543,9 +585,9 @@
                 ]
             },
             {
-                title: "關卡 4: 【新機制】雙色共演 (同色對決)",
+                title: "關卡 4: 雙色共演 (同色對決)",
                 desc: "紅色與綠色雙光源！紅光必須命中紅靶，綠光必須命中綠靶才能獲勝！",
-                hint: "注意光源與標靶的顏色顏色必須對應！畫鏡時盡量避免阻擋到另一條光路。",
+                hint: "注意光源與標靶的顏色必須對應！畫鏡或放置三稜鏡時避免阻擋另一光路。",
                 physics: "不同顏色的光在同種介質中的折射與反射遵循獨立光路傳播原理。",
                 emitters: [
                     { center: { x: 100, y: 120 }, angle: 35, color: '#f43f5e' }, // Red
@@ -561,8 +603,8 @@
             },
             {
                 title: "關卡 5: 水下水箱折射擊靶",
-                desc: "目標標靶位於水箱 ($n=1.33$) 中，畫鏡面將光線反射進入水中並利用折射命中！",
-                hint: "光線由空氣進入水中會向法線偏轉，計算折射角度後設定鏡面角度。",
+                desc: "目標標靶位於水箱 ($n=1.33$) 中，可畫鏡或放置三稜鏡折射進入水中擊靶！",
+                hint: "光線由空氣進入水中會向法線偏轉，計算折射角度後設定角度。",
                 physics: "光從空氣進入水 ($n_1 < n_2$) 時會偏向法線，折射角 $\\theta_2$ 小於入射角 $\\theta_1$。",
                 emitters: [
                     { center: { x: 100, y: 120 }, angle: 20, color: '#06b6d4' }
@@ -576,10 +618,10 @@
                 ]
             },
             {
-                title: "關卡 6: 【新機制】三原色雙靶交響曲",
+                title: "關卡 6: 三原色雙靶交響曲",
                 desc: "紅光需連續貫穿 2 個紅靶，青光需貫穿 2 個青靶！極致光路交錯考驗！",
-                hint: "先處理紅色光路使其連貫穿過兩紅靶，再設置鏡面引導青色光路。",
-                physics: "透過精心設計的鏡面角度，可以在有限的空間中使多條光束交叉而不互相干擾。",
+                hint: "可運用雙指召喚三稜鏡折射青光，並劃平面鏡引導紅光。",
+                physics: "透過精心設計的鏡面與三稜鏡角度，能在有限空間中使多條光束交叉通關。",
                 emitters: [
                     { center: { x: 80, y: 100 }, angle: 25, color: '#f43f5e' },  // Red
                     { center: { x: 80, y: 380 }, angle: -25, color: '#06b6d4' }  // Cyan
@@ -594,41 +636,6 @@
                     { type: 'wall', shape: 'rect', center: { x: 240, y: 240 }, w: 30, h: 200 },
                     { type: 'wall', shape: 'rect', center: { x: 560, y: 240 }, w: 30, h: 200 }
                 ]
-            },
-            {
-                title: "關卡 7: 玻璃磚偏轉考驗",
-                desc: "高密度玻璃磚 ($n=1.52$) 擋在路上，畫鏡面引導光束側向平行位移擊中標靶。",
-                hint: "光線穿過平行玻璃磚會產生平行位移，調整進入玻璃磚的入射角。",
-                physics: "平行玻璃磚使出射光與入射光保持平行，但會產生一小段平行側移距離。",
-                emitters: [
-                    { center: { x: 100, y: 240 }, angle: 0, color: '#06b6d4' }
-                ],
-                targets: [
-                    { id: 'T1', name: '青標靶', center: { x: 780, y: 240 }, radius: 24, color: '#06b6d4', hit: false }
-                ],
-                fixedObjects: [
-                    { type: 'glass', shape: 'rect', center: { x: 420, y: 240 }, w: 100, h: 200, angle: 15, n: 1.52 },
-                    { type: 'wall', shape: 'rect', center: { x: 580, y: 240 }, w: 40, h: 180 }
-                ]
-            },
-            {
-                title: "關卡 8: 終極複合介質迷宮",
-                desc: "終極挑戰！結合多重障礙物與水/玻璃介質，將紅光與青光引導至相應標靶！",
-                hint: "利用多重反射將光束射入玻璃磚，精準計算出射光方向與折射率。",
-                physics: "恭喜！您已成功掌握光學幾何反射、斯奈爾折射與多色光路系統！",
-                emitters: [
-                    { center: { x: 80, y: 440 }, angle: -50, color: '#f43f5e' },
-                    { center: { x: 80, y: 80 }, angle: 50, color: '#06b6d4' }
-                ],
-                targets: [
-                    { id: 'T1', name: '紅標靶', center: { x: 420, y: 80 }, radius: 22, color: '#f43f5e', hit: false },
-                    { id: 'T2', name: '青標靶', center: { x: 740, y: 240 }, radius: 22, color: '#06b6d4', hit: false }
-                ],
-                fixedObjects: [
-                    { type: 'wall', shape: 'rect', center: { x: 280, y: 320 }, w: 30, h: 280 },
-                    { type: 'glass', shape: 'rect', center: { x: 500, y: 220 }, w: 160, h: 220, angle: 0, n: 1.52 },
-                    { type: 'wall', shape: 'rect', center: { x: 650, y: 160 }, w: 30, h: 280 }
-                ]
             }
         ];
 
@@ -642,7 +649,7 @@
         let gameEmitters = [];
         let gameTargets = [];
         let gameFixedObjects = [];
-        let gamePlayerObjects = []; // Mirror history stack
+        let gamePlayerObjects = [];
         let gameActiveTool = 'draw_mirror';
 
         let isDrawingMirror = false;
@@ -651,6 +658,14 @@
 
         let isErasing = false;
         let eraserPos = { x: 0, y: 0 };
+
+        // Dual-touch Prism Pinch Gesture State
+        let isPinchingPrism = false;
+        let pinchPrismData = null;
+        let touchInitialDist = 0;
+        let touchInitialAngle = 0;
+        let touchInitialPrismSize = 80;
+        let touchInitialPrismAngle = 0;
 
         let calculatedRays = [];
 
@@ -691,16 +706,15 @@
             if (tool === 'draw_mirror') {
                 drawBtn.className = "p-3 rounded-xl border bg-cyan-950/60 border-cyan-500 text-cyan-300 text-xs font-bold flex items-center gap-3 transition glow-cyan";
                 eraseBtn.className = "p-3 rounded-xl border bg-slate-900 border-slate-700 text-slate-300 text-xs font-bold flex items-center gap-3 hover:border-slate-500 transition";
-                document.getElementById('game-canvas-status-tip').innerHTML = `<i class="fa-solid fa-pen text-cyan-400"></i> 【畫平面鏡模式】：拖曳畫鏡，繪製時即時顯示法線與直角符號！`;
+                document.getElementById('game-canvas-status-tip').innerHTML = `<i class="fa-solid fa-pen text-cyan-400"></i> 【畫平面鏡模式】：單指畫線；雙指按住召喚三稜鏡！`;
             } else {
                 eraseBtn.className = "p-3 rounded-xl border bg-rose-950/60 border-rose-500 text-rose-300 text-xs font-bold flex items-center gap-3 transition glow-pink";
                 drawBtn.className = "p-3 rounded-xl border bg-slate-900 border-slate-700 text-slate-300 text-xs font-bold flex items-center gap-3 hover:border-slate-500 transition";
-                document.getElementById('game-canvas-status-tip').innerHTML = `<i class="fa-solid fa-eraser text-rose-400"></i> 【橡皮擦模式】：點擊或拖曳擦除已畫出的鏡面！`;
+                document.getElementById('game-canvas-status-tip').innerHTML = `<i class="fa-solid fa-eraser text-rose-400"></i> 【橡皮擦模式】：點擊擦除平面鏡或三稜鏡！`;
             }
         }
 
-        /* Undo Feature (復原) */
-        function undoPlayerMirror() {
+        function undoPlayerObject() {
             if (gamePlayerObjects.length > 0) {
                 gamePlayerObjects.pop();
                 playClickSound();
@@ -717,12 +731,11 @@
         }
 
         function updateGameStats() {
-            document.getElementById('game-mirrors-count').textContent = `${gamePlayerObjects.length} 面`;
+            document.getElementById('game-mirrors-count').textContent = `${gamePlayerObjects.length} 個`;
 
             const hitCount = gameTargets.filter(t => t.hit).length;
             document.getElementById('game-target-progress').textContent = `${hitCount} / ${gameTargets.length} 命中`;
 
-            // Render Target Status Badges
             const list = document.getElementById('targets-status-list');
             list.innerHTML = '';
             gameTargets.forEach(t => {
@@ -742,10 +755,21 @@
         }
 
         function recalcGameRay() {
-            // Reset Target Hit states
             gameTargets.forEach(t => t.hit = false);
 
-            const allObjs = [...gameFixedObjects, ...gamePlayerObjects];
+            let allObjs = [...gameFixedObjects, ...gamePlayerObjects];
+
+            if (isPinchingPrism && pinchPrismData) {
+                allObjs.push({
+                    type: 'glass',
+                    shape: 'prism',
+                    center: pinchPrismData.center,
+                    size: pinchPrismData.size,
+                    angle: pinchPrismData.angle,
+                    n: 1.52
+                });
+            }
+
             calculatedRays = [];
 
             gameEmitters.forEach(emitter => {
@@ -762,7 +786,6 @@
             playLaserSound();
             recalcGameRay();
 
-            // Check victory condition
             const allTargetsHit = gameTargets.length > 0 && gameTargets.every(t => t.hit);
             if (allTargetsHit) {
                 playWinSound();
@@ -788,7 +811,7 @@
             if (show) {
                 document.getElementById('victory-level-name').textContent = GAME_LEVELS[currentGameLevelIdx].title;
                 document.getElementById('victory-physics-explain').textContent = GAME_LEVELS[currentGameLevelIdx].physics;
-                document.getElementById('victory-this-count').textContent = `${gamePlayerObjects.length} 面`;
+                document.getElementById('victory-this-count').textContent = `${gamePlayerObjects.length} 個`;
 
                 if (currentGameLevelIdx === GAME_LEVELS.length - 1) {
                     document.getElementById('victory-header-text').textContent = "🎉 恭喜通關全部關卡！Grand Master!";
@@ -804,7 +827,14 @@
 
         function eraseAtPos(pos) {
             const beforeLen = gamePlayerObjects.length;
-            gamePlayerObjects = gamePlayerObjects.filter(obj => distToSegment(pos, obj.p1, obj.p2) > 18);
+            gamePlayerObjects = gamePlayerObjects.filter(obj => {
+                if (obj.type === 'mirror') {
+                    return distToSegment(pos, obj.p1, obj.p2) > 18;
+                } else if (obj.type === 'glass') {
+                    return Vec.dist(pos, obj.center) > (obj.size || 50) / 2 + 10;
+                }
+                return true;
+            });
             if (gamePlayerObjects.length !== beforeLen) {
                 playClickSound();
                 updateGameStats();
@@ -812,8 +842,9 @@
             }
         }
 
-        /* Canvas Event Handlers */
+        /* Mouse Event Handlers */
         gameCanvas.addEventListener('pointerdown', (e) => {
+            if (e.pointerType === 'touch') return;
             const rect = gameCanvas.getBoundingClientRect();
             const mx = (e.clientX - rect.left) * (gameCanvas.width / rect.width);
             const my = (e.clientY - rect.top) * (gameCanvas.height / rect.height);
@@ -830,6 +861,7 @@
         });
 
         gameCanvas.addEventListener('pointermove', (e) => {
+            if (e.pointerType === 'touch') return;
             const rect = gameCanvas.getBoundingClientRect();
             const mx = (e.clientX - rect.left) * (gameCanvas.width / rect.width);
             const my = (e.clientY - rect.top) * (gameCanvas.height / rect.height);
@@ -842,7 +874,8 @@
             }
         });
 
-        window.addEventListener('pointerup', () => {
+        window.addEventListener('pointerup', (e) => {
+            if (e.pointerType === 'touch') return;
             if (isDrawingMirror && drawStartPt && drawCurrentPt) {
                 const len = Vec.len(Vec.sub(drawCurrentPt, drawStartPt));
                 if (len > 15) {
@@ -857,7 +890,6 @@
                     updateGameStats();
                     recalcGameRay();
 
-                    // Real-time check victory when drawing
                     if (gameTargets.length > 0 && gameTargets.every(t => t.hit)) {
                         playWinSound();
                         setTimeout(() => toggleVictoryModal(true), 300);
@@ -869,6 +901,146 @@
             drawStartPt = null;
             drawCurrentPt = null;
         });
+
+        /* Dual-Touch Touch Event Handlers (Prism Pinch Gesture) */
+        function getCanvasTouchPos(touch) {
+            const rect = gameCanvas.getBoundingClientRect();
+            return {
+                x: (touch.clientX - rect.left) * (gameCanvas.width / rect.width),
+                y: (touch.clientY - rect.top) * (gameCanvas.height / rect.height)
+            };
+        }
+
+        gameCanvas.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) {
+                e.preventDefault();
+                isDrawingMirror = false;
+                isErasing = false;
+                drawStartPt = null;
+                drawCurrentPt = null;
+
+                const p1 = getCanvasTouchPos(e.touches[0]);
+                const p2 = getCanvasTouchPos(e.touches[1]);
+
+                const center = Vec.mult(Vec.add(p1, p2), 0.5);
+                const dist = Vec.dist(p1, p2);
+                const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180 / Math.PI;
+
+                isPinchingPrism = true;
+                touchInitialDist = dist;
+                touchInitialAngle = angle;
+                touchInitialPrismSize = Math.max(60, dist);
+                touchInitialPrismAngle = 0;
+
+                pinchPrismData = {
+                    center: center,
+                    size: touchInitialPrismSize,
+                    angle: 0
+                };
+
+                playClickSound();
+                recalcGameRay();
+            } else if (e.touches.length === 1 && !isPinchingPrism) {
+                const p = getCanvasTouchPos(e.touches[0]);
+                if (gameActiveTool === 'draw_mirror') {
+                    isDrawingMirror = true;
+                    drawStartPt = p;
+                    drawCurrentPt = p;
+                } else if (gameActiveTool === 'eraser') {
+                    isErasing = true;
+                    eraserPos = p;
+                    eraseAtPos(eraserPos);
+                }
+            }
+        }, { passive: false });
+
+        gameCanvas.addEventListener('touchmove', (e) => {
+            if (isPinchingPrism && e.touches.length === 2) {
+                e.preventDefault();
+                const p1 = getCanvasTouchPos(e.touches[0]);
+                const p2 = getCanvasTouchPos(e.touches[1]);
+
+                const currentCenter = Vec.mult(Vec.add(p1, p2), 0.5);
+                const currentDist = Vec.dist(p1, p2);
+                const currentAngle = Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180 / Math.PI;
+
+                const scaleRatio = touchInitialDist > 0 ? (currentDist / touchInitialDist) : 1;
+                const newSize = Math.max(35, Math.min(260, touchInitialPrismSize * scaleRatio));
+                const angleDelta = currentAngle - touchInitialAngle;
+                const newAngle = (touchInitialPrismAngle + angleDelta + 360) % 360;
+
+                pinchPrismData = {
+                    center: currentCenter,
+                    size: newSize,
+                    angle: newAngle
+                };
+
+                recalcGameRay();
+            } else if (e.touches.length === 1 && !isPinchingPrism) {
+                const p = getCanvasTouchPos(e.touches[0]);
+                if (isDrawingMirror) {
+                    drawCurrentPt = p;
+                } else if (isErasing) {
+                    eraserPos = p;
+                    eraseAtPos(eraserPos);
+                }
+            }
+        }, { passive: false });
+
+        const handleTouchEnd = (e) => {
+            if (isPinchingPrism) {
+                if (e.touches.length < 2) {
+                    if (pinchPrismData) {
+                        gamePlayerObjects.push({
+                            id: Date.now(),
+                            type: 'glass',
+                            shape: 'prism',
+                            center: pinchPrismData.center,
+                            size: pinchPrismData.size,
+                            angle: pinchPrismData.angle,
+                            n: 1.52,
+                            isPlayer: true
+                        });
+                        playClickSound();
+                    }
+                    isPinchingPrism = false;
+                    pinchPrismData = null;
+                    updateGameStats();
+                    recalcGameRay();
+
+                    if (gameTargets.length > 0 && gameTargets.every(t => t.hit)) {
+                        playWinSound();
+                        setTimeout(() => toggleVictoryModal(true), 300);
+                    }
+                }
+            } else if (isDrawingMirror && drawStartPt && drawCurrentPt) {
+                const len = Vec.len(Vec.sub(drawCurrentPt, drawStartPt));
+                if (len > 15) {
+                    gamePlayerObjects.push({
+                        id: Date.now(),
+                        type: 'mirror',
+                        p1: drawStartPt,
+                        p2: drawCurrentPt,
+                        isPlayer: true
+                    });
+                    playClickSound();
+                    updateGameStats();
+                    recalcGameRay();
+
+                    if (gameTargets.length > 0 && gameTargets.every(t => t.hit)) {
+                        playWinSound();
+                        setTimeout(() => toggleVictoryModal(true), 300);
+                    }
+                }
+                isDrawingMirror = false;
+                drawStartPt = null;
+                drawCurrentPt = null;
+            }
+            isErasing = false;
+        };
+
+        gameCanvas.addEventListener('touchend', handleTouchEnd);
+        gameCanvas.addEventListener('touchcancel', handleTouchEnd);
 
         /* ==========================================================================
            5. Main Render Loop
@@ -886,12 +1058,38 @@
                 gameCtx.beginPath(); gameCtx.moveTo(0, y); gameCtx.lineTo(gameCanvas.width, y); gameCtx.stroke();
             }
 
-            // Draw Fixed Objects & Player Mirrors
+            // Draw Fixed Objects & Player Objects
             [...gameFixedObjects, ...gamePlayerObjects].forEach(obj => {
                 if (obj.type === 'wall') drawWall(gameCtx, obj);
                 else if (obj.type === 'mirror') drawMirror(gameCtx, obj);
                 else if (obj.type === 'glass') drawGlass(gameCtx, obj);
             });
+
+            // Render Preview of Pinching Prism
+            if (isPinchingPrism && pinchPrismData) {
+                const tempObj = {
+                    type: 'glass',
+                    shape: 'prism',
+                    center: pinchPrismData.center,
+                    size: pinchPrismData.size,
+                    angle: pinchPrismData.angle
+                };
+                drawGlass(gameCtx, tempObj);
+
+                gameCtx.save();
+                gameCtx.strokeStyle = '#f59e0b';
+                gameCtx.lineWidth = 1.5;
+                gameCtx.setLineDash([4, 4]);
+                gameCtx.beginPath();
+                gameCtx.arc(pinchPrismData.center.x, pinchPrismData.center.y, pinchPrismData.size / 2 + 15, 0, Math.PI * 2);
+                gameCtx.stroke();
+
+                gameCtx.fillStyle = '#f59e0b';
+                gameCtx.font = 'bold 12px Noto Sans TC';
+                gameCtx.textAlign = 'center';
+                gameCtx.fillText(`📐 尺寸: ${Math.round(pinchPrismData.size)}px | 角度: ${Math.round(pinchPrismData.angle)}°`, pinchPrismData.center.x, pinchPrismData.center.y - pinchPrismData.size / 2 - 20);
+                gameCtx.restore();
+            }
 
             // Draw Targets
             gameTargets.forEach(t => drawTarget(gameCtx, t));
@@ -906,7 +1104,7 @@
                 });
             });
 
-            // Real-time Mirror Preview when Drawing
+            // Real-time Mirror Drawing Preview
             if (isDrawingMirror && drawStartPt && drawCurrentPt) {
                 gameCtx.save();
                 gameCtx.strokeStyle = '#22d3ee';
@@ -916,7 +1114,6 @@
                 gameCtx.lineTo(drawCurrentPt.x, drawCurrentPt.y);
                 gameCtx.stroke();
 
-                // Real-time Normal Preview
                 const midP = Vec.mult(Vec.add(drawStartPt, drawCurrentPt), 0.5);
                 const segVec = Vec.sub(drawCurrentPt, drawStartPt);
                 const segLen = Vec.len(segVec);
@@ -933,26 +1130,11 @@
                     gameCtx.lineTo(midP.x + normVec.x * normLen, midP.y + normVec.y * normLen);
                     gameCtx.stroke();
                     gameCtx.setLineDash([]);
-
-                    // Right angle indicator
-                    const dirU = Vec.norm(segVec);
-                    const sqSize = 8;
-                    const pA = Vec.add(midP, Vec.mult(dirU, sqSize));
-                    const pB = Vec.add(pA, Vec.mult(normVec, sqSize));
-                    const pC = Vec.add(midP, Vec.mult(normVec, sqSize));
-
-                    gameCtx.strokeStyle = '#f59e0b';
-                    gameCtx.lineWidth = 1.2;
-                    gameCtx.beginPath();
-                    gameCtx.moveTo(pA.x, pA.y);
-                    gameCtx.lineTo(pB.x, pB.y);
-                    gameCtx.lineTo(pC.x, pC.y);
-                    gameCtx.stroke();
                 }
                 gameCtx.restore();
             }
 
-            // Eraser Cursor Indicator
+            // Eraser Indicator
             if (gameActiveTool === 'eraser' && eraserPos) {
                 gameCtx.save();
                 gameCtx.strokeStyle = '#f43f5e';
@@ -967,7 +1149,7 @@
         }
 
         /* ==========================================================================
-           6. Graphics Drawing Helpers
+           6. Graphics Rendering Helpers
            ========================================================================== */
         function drawGlowingRay(ctx, p1, p2, color, width) {
             ctx.save();
@@ -1023,9 +1205,12 @@
         function drawGlass(ctx, obj) {
             ctx.save();
             const edges = getPolygonEdges(obj);
+            if (edges.length === 0) return;
             ctx.fillStyle = 'rgba(6, 182, 212, 0.22)';
             ctx.strokeStyle = '#22d3ee';
             ctx.lineWidth = 2;
+            ctx.shadowColor = '#06b6d4';
+            ctx.shadowBlur = 8;
             ctx.beginPath();
             ctx.moveTo(edges[0].p1.x, edges[0].p1.y);
             edges.forEach(e => ctx.lineTo(e.p2.x, e.p2.y));
@@ -1056,7 +1241,6 @@
 
             const color = obj.color || '#06b6d4';
 
-            // Target Outer Ring
             ctx.strokeStyle = color;
             ctx.lineWidth = obj.hit ? 4 : 2.5;
             ctx.shadowColor = color;
@@ -1065,14 +1249,12 @@
             ctx.arc(0, 0, obj.radius, 0, Math.PI * 2);
             ctx.stroke();
 
-            // Inner Ring
             ctx.strokeStyle = color;
             ctx.lineWidth = 1.5;
             ctx.beginPath();
             ctx.arc(0, 0, obj.radius * 0.5, 0, Math.PI * 2);
             ctx.stroke();
 
-            // Center Point / Checkmark
             if (obj.hit) {
                 ctx.fillStyle = '#10b981';
                 ctx.shadowColor = '#10b981';
@@ -1096,7 +1278,7 @@
             ctx.restore();
         }
 
-        /* App Initialization */
+        /* Initialization */
         window.onload = function () {
             initLevelSelect();
             loadGameLevel(0);
