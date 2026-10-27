@@ -1,1366 +1,1490 @@
 <!DOCTYPE html>
-<html lang="zh-TW" class="dark">
+<html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>物理光學實驗室 - 幾何光學與成像快照對比</title>
-  <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <title>互動式光學實驗室 - 單鏡與複數透鏡二次成像模擬</title>
+  <style>
+    :root {
+      --bg-dark: #121826;
+      --panel-bg: #1e293b;
+      --panel-border: #334155;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent-blue: #38bdf8;
+      --accent-green: #34d399;
+      --accent-amber: #fbbf24;
+      --accent-purple: #c084fc;
+      --accent-pink: #f472b6;
+      --accent-red: #f87171;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    header {
+      background-color: var(--panel-bg);
+      border-bottom: 1px solid var(--panel-border);
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 10;
+    }
+
+    .title-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    h1 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--accent-blue);
+    }
+
+    .mode-tabs {
+      display: flex;
+      background: #0f172a;
+      padding: 3px;
+      border-radius: 8px;
+      border: 1px solid var(--panel-border);
+    }
+
+    .tab-btn {
+      padding: 6px 14px;
+      font-size: 0.85rem;
+      border-radius: 6px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s;
+      font-weight: 500;
+    }
+
+    .tab-btn.active {
+      background: var(--accent-blue);
+      color: #0f172a;
+      font-weight: 700;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .controls-bar {
+      background-color: #1a2234;
+      border-bottom: 1px solid var(--panel-border);
+      padding: 8px 20px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: center;
+      font-size: 0.85rem;
+    }
+
+    .ctrl-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    label {
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    select, button, input[type="range"] {
+      background-color: var(--panel-bg);
+      color: var(--text-main);
+      border: 1px solid var(--panel-border);
+      padding: 5px 10px;
+      border-radius: 6px;
+      outline: none;
+      font-size: 0.85rem;
+    }
+
+    select:focus, button:hover {
+      border-color: var(--accent-blue);
+    }
+
+    button {
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    button.primary {
+      background-color: var(--accent-blue);
+      color: #0f172a;
+      font-weight: 600;
+      border: none;
+    }
+
+    button.primary:hover {
+      background-color: #7dd3fc;
+    }
+
+    .main-container {
+      display: flex;
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .canvas-container {
+      flex: 1;
+      position: relative;
+      background-color: #0b0f19;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .side-panel {
+      width: 320px;
+      background-color: var(--panel-bg);
+      border-left: 1px solid var(--panel-border);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 12px;
+      overflow-y: auto;
+    }
+
+    .card {
+      background-color: #0f172a;
+      border: 1px solid var(--panel-border);
+      border-radius: 8px;
+      padding: 12px;
+    }
+
+    .card-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--accent-blue);
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .viewport-box {
+      width: 100%;
+      height: 130px;
+      background: #000;
+      border-radius: 6px;
+      border: 1px solid var(--panel-border);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .data-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      font-size: 0.8rem;
+    }
+
+    .data-item {
+      background-color: #1a2234;
+      padding: 6px 8px;
+      border-radius: 4px;
+    }
+
+    .data-label {
+      color: var(--text-muted);
+      font-size: 0.7rem;
+    }
+
+    .data-value {
+      font-weight: 600;
+      margin-top: 2px;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-size: 0.75rem;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .color-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    /* Table for snapshots */
+    .table-container {
+      max-height: 140px;
+      overflow-y: auto;
+      font-size: 0.75rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+
+    th, td {
+      padding: 4px 6px;
+      border-bottom: 1px solid var(--panel-border);
+    }
+
+    th {
+      color: var(--text-muted);
+      position: sticky;
+      top: 0;
+      background: #0f172a;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 600;
+    }
+    .badge-real { background: rgba(52, 211, 153, 0.2); color: var(--accent-green); }
+    .badge-virtual { background: rgba(244, 114, 182, 0.2); color: var(--accent-pink); }
+
+    .help-tip {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="title-group">
+      <h1>光學實驗室 Optics Lab</h1>
+      <div class="mode-tabs">
+        <button class="tab-btn active" id="tabSingle" onclick="switchSystemMode('single')">單元件實驗 (Single)</button>
+        <button class="tab-btn" id="tabMulti" onclick="switchSystemMode('multi')">複數透鏡二次成像 (Multi-Lens)</button>
+      </div>
+    </div>
+    <div style="font-size: 0.8rem; color: var(--text-muted);">
+      拖曳物體/透鏡/屏幕/眼睛即可互動
+    </div>
+  </header>
+
+  <!-- Control Bar for Single Mode -->
+  <div class="controls-bar" id="controlsSingle">
+    <div class="ctrl-group">
+      <label>元件類型：</label>
+      <select id="optType" onchange="onSingleOpticChange()">
+        <option value="convex_lens">凸透鏡 (Convex Lens)</option>
+        <option value="concave_lens">凹透鏡 (Concave Lens)</option>
+        <option value="concave_mirror">凹面鏡 (Concave Mirror)</option>
+        <option value="convex_mirror">凸面鏡 (Convex Mirror)</option>
+      </select>
+    </div>
+
+    <div class="ctrl-group">
+      <label>焦距 f：</label>
+      <input type="range" id="focalSlider" min="30" max="150" value="80" oninput="onFocalSliderInput(this.value)">
+      <span id="focalVal" style="min-width: 35px;">80 px</span>
+    </div>
+
+    <div class="ctrl-group">
+      <label>光路顯示：</label>
+      <select id="rayMode" onchange="render()">
+        <option value="none">1. 隱藏光路與像 (屏幕尋像挑戰)</option>
+        <option value="principal">2. 作圖三主光線 (Principal Rays)</option>
+        <option value="cone">3. 發散/聚焦光束 (Divergent Cone)</option>
+      </select>
+    </div>
+
+    <div class="ctrl-group">
+      <label>經典情境：</label>
+      <select id="presetSingle" onchange="applySinglePreset(this.value)">
+        <option value="custom">自訂物距</option>
+        <option value="do_2f">物距 do > 2f (縮小實像)</option>
+        <option value="do_eq_2f">物距 do = 2f (等大實像)</option>
+        <option value="do_between">f < do < 2f (放大實像)</option>
+        <option value="do_f">物距 do = f (不成像/平行光)</option>
+        <option value="do_inside_f">物距 do < f (放大虛像)</option>
+      </select>
+    </div>
+
+    <div class="ctrl-group">
+      <button id="snapToggleBtn" onclick="toggleAutoSnapshot()">📷 開啟 0.5s 動態快照殘影</button>
+      <button onclick="clearSnapshots()">清空快照</button>
+    </div>
+  </div>
+
+  <!-- Control Bar for Multi Mode -->
+  <div class="controls-bar" id="controlsMulti" style="display: none;">
+    <div class="ctrl-group">
+      <label>複數透鏡系統預設：</label>
+      <select id="presetMulti" onchange="applyMultiPreset(this.value)">
+        <option value="microscope">🔬 顯微鏡 (Microscope System)</option>
+        <option value="keplerian">🔭 克普勒望遠鏡 (Keplerian Telescope)</option>
+        <option value="galilean">🔭 伽利略望遠鏡 (Galilean Telescope)</option>
+        <option value="custom">⚙️ 自訂雙透鏡 (Custom Dual-Lens)</option>
+      </select>
+    </div>
+
+    <div class="ctrl-group">
+      <label>物鏡 L₁ 焦距 f₁：</label>
+      <input type="range" id="f1Slider" min="20" max="150" value="45" oninput="onMultiF1Input(this.value)">
+      <span id="f1Val">45 px</span>
+    </div>
+
+    <div class="ctrl-group">
+      <label>目鏡 L₂ 焦距 f₂：</label>
+      <input type="range" id="f2Slider" min="-120" max="150" value="80" oninput="onMultiF2Input(this.value)">
+      <span id="f2Val">80 px</span>
+    </div>
+  </div>
+
+  <div class="main-container">
+    <div class="canvas-container" id="canvasHolder">
+      <canvas id="opticsCanvas"></canvas>
+    </div>
+
+    <div class="side-panel">
+      <!-- Legend Card -->
+      <div class="card">
+        <div class="card-title">圖例與說明</div>
+        <div class="legend" id="legendContainer">
+          <!-- Filled dynamically -->
+        </div>
+      </div>
+
+      <!-- Real Image Screen Viewport (For Single Mode) -->
+      <div class="card" id="cardScreenViewport">
+        <div class="card-title">
+          <span>屏幕接收影像 (Screen View)</span>
+          <span id="screenBlurTag" class="status-badge" style="background:#334155;">聚焦中</span>
+        </div>
+        <div class="viewport-box">
+          <canvas id="screenCanvas" width="280" height="120"></canvas>
+        </div>
+        <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 4px;">
+          提示：移動屏幕至正確像距處，影像才會清晰。
+        </div>
+      </div>
+
+      <!-- Observer Eye Viewport -->
+      <div class="card">
+        <div class="card-title">
+          <span>觀察者視野 (Observer View)</span>
+          <span id="eyeStatusBadge" class="status-badge badge-virtual">視野外</span>
+        </div>
+        <div class="viewport-box">
+          <canvas id="eyeCanvas" width="280" height="120"></canvas>
+        </div>
+        <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 4px;" id="eyeTipText">
+          將「眼睛」拖至折射/反射光束範圍內即可看見像。
+        </div>
+      </div>
+
+      <!-- Live Numerical Physics Data -->
+      <div class="card">
+        <div class="card-title">物理數據與成像性質</div>
+        <div class="data-grid" id="dataGrid">
+          <!-- Dynamic -->
+        </div>
+      </div>
+
+      <!-- Snapshots Table (Single Mode) -->
+      <div class="card" id="cardSnapshots">
+        <div class="card-title">
+          <span>0.5s 快照比較表</span>
+          <span id="snapCountTag" style="font-size:0.7rem; color:var(--accent-amber)">0 筆</span>
+        </div>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>物距 do</th>
+                <th>像距 di</th>
+                <th>放大率 m</th>
+                <th>成像性質</th>
+              </tr>
+            </thead>
+            <tbody id="snapshotTableBody">
+              <tr><td colspan="4" style="text-align:center; color:var(--text-muted)">無記錄，請開啟動態快照並移動物體</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="help-tip" id="teachingTip">
+          <b>💡 尋像教學體驗提示：</b><br>
+          1. 預設選取「隱藏光路與像」，畫面上不預先顯示像距位置。<br>
+          2. 請拖曳「屏幕」左右尋找最清晰的像素影像（觀察「屏幕接收影像」視窗）。<br>
+          3. 切換至「作圖三主光線」即可顯示精確交點與像，驗證學生尋找成果。
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          colors: {
-            brand: {
-              50: '#f0f9ff',
-              100: '#e0f2fe',
-              500: '#0ea5e9',
-              600: '#0284c7',
-              700: '#0369a1',
-              800: '#075985',
-              900: '#0c4a6e',
+    // --- Global State & Optics Engine ---
+    let systemMode = 'single'; // 'single' or 'multi'
+
+    // Canvas & Contexts
+    const canvas = document.getElementById('opticsCanvas');
+    const ctx = canvas.getContext('2d');
+    const screenCanvas = document.getElementById('screenCanvas');
+    const screenCtx = screenCanvas.getContext('2d');
+    const eyeCanvas = document.getElementById('eyeCanvas');
+    const eyeCtx = eyeCanvas.getContext('2d');
+
+    // Layout geometry
+    let axisY = 0;
+    let canvasW = 0, canvasH = 0;
+
+    // Single Optics State
+    const singleState = {
+      type: 'convex_lens', // convex_lens, concave_lens, concave_mirror, convex_mirror
+      f: 80,
+      obj: { x: 250, h: 50 },
+      opticX: 450,
+      screenX: 650,
+      eye: { x: 780, y: 0 },
+      rayMode: 'none',
+      autoSnap: false,
+      snapshots: []
+    };
+
+    // Multi-Lens State
+    const multiState = {
+      preset: 'microscope',
+      obj: { x: 195, h: 35 },
+      l1: { x: 250, f: 45 },
+      l2: { x: 540, f: 80 },
+      eye: { x: 750, y: 0 }
+    };
+
+    // Dragging
+    let draggingTarget = null; // 'obj', 'screen', 'eye', 'l1', 'l2'
+    let dragOffsetX = 0, dragOffsetY = 0;
+    let lastSnapTime = 0;
+
+    // Window Resize Handler
+    function resizeCanvas() {
+      const holder = document.getElementById('canvasHolder');
+      canvasW = holder.clientWidth;
+      canvasH = holder.clientHeight;
+      canvas.width = canvasW;
+      canvas.height = canvasH;
+      axisY = canvasH / 2;
+
+      // Ensure eyes stay within bound
+      if (!singleState.eye.y) singleState.eye.y = axisY;
+      if (!multiState.eye.y) multiState.eye.y = axisY;
+
+      render();
+    }
+    window.addEventListener('resize', resizeCanvas);
+
+    // --- Mode Switching ---
+    function switchSystemMode(mode) {
+      systemMode = mode;
+      document.getElementById('tabSingle').classList.toggle('active', mode === 'single');
+      document.getElementById('tabMulti').classList.toggle('active', mode === 'multi');
+      document.getElementById('controlsSingle').style.display = mode === 'single' ? 'flex' : 'none';
+      document.getElementById('controlsMulti').style.display = mode === 'multi' ? 'flex' : 'none';
+      document.getElementById('cardScreenViewport').style.display = mode === 'single' ? 'block' : 'none';
+      document.getElementById('cardSnapshots').style.display = mode === 'single' ? 'block' : 'none';
+
+      updateLegend();
+      if (mode === 'multi') {
+        applyMultiPreset(multiState.preset);
+      } else {
+        render();
+      }
+    }
+
+    function updateLegend() {
+      const container = document.getElementById('legendContainer');
+      if (systemMode === 'single') {
+        container.innerHTML = `
+          <div class="legend-item"><div class="color-dot" style="background:#34d399"></div> 物體 O</div>
+          <div class="legend-item"><div class="color-dot" style="background:#38bdf8"></div> 光學鏡片/面鏡</div>
+          <div class="legend-item"><div class="color-dot" style="background:#f472b6"></div> 成線/像 I</div>
+          <div class="legend-item"><div class="color-dot" style="background:#e2e8f0"></div> 屏幕/焦點 F</div>
+          <div class="legend-item"><div class="color-dot" style="background:#fbbf24"></div> 觀察者眼睛</div>
+        `;
+      } else {
+        container.innerHTML = `
+          <div class="legend-item"><div class="color-dot" style="background:#34d399"></div> 物體 O</div>
+          <div class="legend-item"><div class="color-dot" style="background:#38bdf8"></div> 物鏡 L₁</div>
+          <div class="legend-item"><div class="color-dot" style="background:#fbbf24"></div> 中間像 I₁</div>
+          <div class="legend-item"><div class="color-dot" style="background:#c084fc"></div> 目鏡 L₂</div>
+          <div class="legend-item"><div class="color-dot" style="background:#f472b6"></div> 最終像 I₂</div>
+        `;
+      }
+    }
+
+    // --- Single Mode Optics Controls ---
+    function onSingleOpticChange() {
+      singleState.type = document.getElementById('optType').value;
+      singleState.snapshots = [];
+      updateSnapshotTable();
+      render();
+    }
+
+    function onFocalSliderInput(val) {
+      singleState.f = parseFloat(val);
+      document.getElementById('focalVal').innerText = val + ' px';
+      render();
+    }
+
+    function applySinglePreset(preset) {
+      if (preset === 'custom') return;
+      const f = singleState.f;
+      const opticX = singleState.opticX;
+
+      if (preset === 'do_2f') singleState.obj.x = opticX - (2.5 * f);
+      else if (preset === 'do_eq_2f') singleState.obj.x = opticX - (2.0 * f);
+      else if (preset === 'do_between') singleState.obj.x = opticX - (1.5 * f);
+      else if (preset === 'do_f') singleState.obj.x = opticX - (1.0 * f);
+      else if (preset === 'do_inside_f') singleState.obj.x = opticX - (0.5 * f);
+
+      render();
+    }
+
+    function toggleAutoSnapshot() {
+      singleState.autoSnap = !singleState.autoSnap;
+      const btn = document.getElementById('snapToggleBtn');
+      if (singleState.autoSnap) {
+        btn.classList.add('primary');
+        btn.innerText = '📸 自動快照中 (每 0.5s)';
+      } else {
+        btn.classList.remove('primary');
+        btn.innerText = '📷 開啟 0.5s 動態快照殘影';
+      }
+    }
+
+    function clearSnapshots() {
+      singleState.snapshots = [];
+      updateSnapshotTable();
+      render();
+    }
+
+    // --- Multi Mode Optics Controls ---
+    function applyMultiPreset(preset) {
+      multiState.preset = preset;
+      if (preset === 'microscope') {
+        // Microscope: L1 objective (f=45), L2 eyepiece (f=80)
+        multiState.l1 = { x: 250, f: 45 };
+        multiState.l2 = { x: 540, f: 80 };
+        multiState.obj = { x: 195, h: 35 };
+        multiState.eye = { x: 720, y: axisY };
+      } else if (preset === 'keplerian') {
+        // Keplerian Telescope: L1 objective (f=120), L2 eyepiece (f=60)
+        multiState.l1 = { x: 220, f: 120 };
+        multiState.l2 = { x: 570, f: 60 };
+        multiState.obj = { x: 20, h: 50 };
+        multiState.eye = { x: 730, y: axisY };
+      } else if (preset === 'galilean') {
+        // Galilean Telescope: L1 convex (f=120), L2 concave (f=-60)
+        multiState.l1 = { x: 220, f: 120 };
+        multiState.l2 = { x: 440, f: -60 };
+        multiState.obj = { x: 20, h: 50 };
+        multiState.eye = { x: 680, y: axisY };
+      } else if (preset === 'custom') {
+        multiState.l1 = { x: 260, f: 60 };
+        multiState.l2 = { x: 580, f: 60 };
+        multiState.obj = { x: 160, h: 40 };
+        multiState.eye = { x: 750, y: axisY };
+      }
+
+      document.getElementById('f1Slider').value = multiState.l1.f;
+      document.getElementById('f1Val').innerText = multiState.l1.f + ' px';
+      document.getElementById('f2Slider').value = multiState.l2.f;
+      document.getElementById('f2Val').innerText = multiState.l2.f + ' px';
+
+      render();
+    }
+
+    function onMultiF1Input(val) {
+      multiState.l1.f = parseFloat(val);
+      document.getElementById('f1Val').innerText = val + ' px';
+      render();
+    }
+
+    function onMultiF2Input(val) {
+      multiState.l2.f = parseFloat(val);
+      document.getElementById('f2Val').innerText = val + ' px';
+      render();
+    }
+
+
+    // --- Physics Computation Engines ---
+
+    function calcSinglePhysics() {
+      const { type, f, obj, opticX } = singleState;
+      const doVal = opticX - obj.x;
+      let focalSign = f;
+
+      if (type === 'concave_lens' || type === 'convex_mirror') {
+        focalSign = -Math.abs(f);
+      } else {
+        focalSign = Math.abs(f);
+      }
+
+      let diVal = 0;
+      let isParallel = false;
+
+      if (Math.abs(doVal - focalSign) < 0.001) {
+        isParallel = true;
+        diVal = Infinity;
+      } else {
+        diVal = (doVal * focalSign) / (doVal - focalSign);
+      }
+
+      const isLens = (type === 'convex_lens' || type === 'concave_lens');
+      let imgX = 0;
+
+      if (isLens) {
+        imgX = opticX + diVal;
+      } else {
+        imgX = opticX - diVal;
+      }
+
+      const m = isParallel ? Infinity : -diVal / doVal;
+      const imgH = obj.h * m;
+      const isReal = (diVal > 0 && !isParallel);
+
+      return { doVal, diVal, focalSign, imgX, imgH, m, isReal, isParallel, isLens };
+    }
+
+    function calcMultiPhysics() {
+      const { obj, l1, l2 } = multiState;
+
+      // Lens 1 Calculations
+      const do1 = l1.x - obj.x;
+      const f1 = l1.f;
+      let di1 = 0, isParallel1 = false;
+      if (Math.abs(do1 - f1) < 0.001) {
+        isParallel1 = true;
+        di1 = Infinity;
+      } else {
+        di1 = (do1 * f1) / (do1 - f1);
+      }
+      const x_i1 = l1.x + di1;
+      const m1 = isParallel1 ? Infinity : -di1 / do1;
+      const h_i1 = obj.h * m1;
+      const isReal1 = (di1 > 0 && !isParallel1);
+
+      // Lens 2 Calculations
+      const do2 = l2.x - x_i1;
+      const f2 = l2.f;
+      let di2 = 0, isParallel2 = false;
+      if (Math.abs(do2 - f2) < 0.001) {
+        isParallel2 = true;
+        di2 = Infinity;
+      } else {
+        di2 = (do2 * f2) / (do2 - f2);
+      }
+      const x_i2 = l2.x + di2;
+      const m2 = isParallel2 ? Infinity : -di2 / do2;
+      const h_i2 = h_i1 * m2;
+      const mTotal = m1 * m2;
+      const isReal2 = (di2 > 0 && !isParallel2);
+
+      return {
+        do1, di1, x_i1, h_i1, m1, isReal1, isParallel1,
+        do2, di2, x_i2, h_i2, m2, isReal2, isParallel2,
+        mTotal
+      };
+    }
+
+
+    // --- Main Canvas Drawing ---
+    function render() {
+      ctx.clearRect(0, 0, canvasW, canvasH);
+
+      // Background Grid
+      drawGrid();
+
+      // Optical Axis
+      ctx.strokeStyle = '#475569';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(0, axisY);
+      ctx.lineTo(canvasW, axisY);
+      ctx.stroke();
+
+      if (systemMode === 'single') {
+        renderSingleSystem();
+      } else {
+        renderMultiSystem();
+      }
+
+      // Check snapshot timer in single mode
+      if (systemMode === 'single' && singleState.autoSnap && draggingTarget === 'obj') {
+        const now = Date.now();
+        if (now - lastSnapTime > 500) {
+          takeSnapshot();
+          lastSnapTime = now;
+        }
+      }
+    }
+
+    function drawGrid() {
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 1;
+      const step = 20;
+      for (let x = 0; x < canvasW; x += step) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvasH);
+        ctx.stroke();
+      }
+      for (let y = 0; y < canvasH; y += step) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvasW, y);
+        ctx.stroke();
+      }
+    }
+
+    // --- Render Single System ---
+    function renderSingleSystem() {
+      const p = calcSinglePhysics();
+      const { type, f, obj, opticX, screenX, eye, snapshots } = singleState;
+
+      // Draw Snapshots (Ghost Trails)
+      snapshots.forEach(s => drawGhostSnapshot(s));
+
+      // Draw Optical Element
+      drawOpticalElement(opticX, type, Math.abs(f));
+
+      // Draw Screen
+      drawScreen(screenX, p.imgX, p.isReal);
+
+      // Draw Object O
+      drawArrowObject(obj.x, axisY, obj.h, '#34d399', '物體 O');
+
+      // Draw Rays
+      singleState.rayMode = document.getElementById('rayMode').value;
+      const currentRayMode = singleState.rayMode;
+
+      if (currentRayMode === 'principal') {
+        drawPrincipalRays(obj, opticX, p, type, Math.abs(f));
+      } else if (currentRayMode === 'cone') {
+        drawDivergentConeRays(obj, opticX, p, type, Math.abs(f));
+      }
+
+      // 🎯 【關鍵升級處】：當 currentRayMode === 'none' (隱藏光路與像) 時，
+      // 主畫面上隱藏「實像/虛像」箭頭標示，讓學生與教師體驗用屏幕在空無一物的空間尋找清晰像點！
+      if (currentRayMode !== 'none') {
+        if (!p.isParallel) {
+          drawArrowObject(p.imgX, axisY, p.imgH, p.isReal ? '#34d399' : '#f472b6', p.isReal ? '實像 I' : '虛像 I', !p.isReal);
+        }
+      }
+
+      // Draw Observer Eye
+      const eyeInCone = checkEyeInLightCone(eye, opticX, p);
+      drawObserverEye(eye.x, eye.y, eyeInCone);
+
+      // Render Viewports (屏幕視窗依據物理像距距離，即時計算模糊與聚焦呈現)
+      renderScreenViewport(p);
+      renderEyeViewportSingle(p, eyeInCone);
+
+      // Update Live UI Data
+      updateSingleDataUI(p);
+    }
+
+    function drawOpticalElement(x, type, f) {
+      ctx.save();
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = '#38bdf8';
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.15)';
+
+      const lensH = 160;
+
+      if (type === 'convex_lens') {
+        ctx.beginPath();
+        ctx.ellipse(x, axisY, 12, lensH/2, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      } else if (type === 'concave_lens') {
+        ctx.beginPath();
+        ctx.moveTo(x - 12, axisY - lensH/2);
+        ctx.lineTo(x + 12, axisY - lensH/2);
+        ctx.quadraticCurveTo(x + 3, axisY, x + 12, axisY + lensH/2);
+        ctx.lineTo(x - 12, axisY + lensH/2);
+        ctx.quadraticCurveTo(x - 3, axisY, x - 12, axisY - lensH/2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      } else if (type === 'concave_mirror') {
+        ctx.beginPath();
+        ctx.arc(x - f * 2, axisY, f * 2, -Math.PI / 6, Math.PI / 6, false);
+        ctx.stroke();
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.5)';
+        ctx.lineWidth = 1;
+        for (let a = -Math.PI/6; a <= Math.PI/6; a += 0.05) {
+          const px = (x - f * 2) + f * 2 * Math.cos(a);
+          const py = axisY + f * 2 * Math.sin(a);
+          ctx.beginPath();
+          ctx.moveTo(px, py);
+          ctx.lineTo(px + 8, py - 4);
+          ctx.stroke();
+        }
+      } else if (type === 'convex_mirror') {
+        ctx.beginPath();
+        ctx.arc(x + f * 2, axisY, f * 2, Math.PI - Math.PI / 6, Math.PI + Math.PI / 6, false);
+        ctx.stroke();
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.5)';
+        ctx.lineWidth = 1;
+        for (let a = Math.PI - Math.PI/6; a <= Math.PI + Math.PI/6; a += 0.05) {
+          const px = (x + f * 2) + f * 2 * Math.cos(a);
+          const py = axisY + f * 2 * Math.sin(a);
+          ctx.beginPath();
+          ctx.moveTo(px, py);
+          ctx.lineTo(px + 8, py - 4);
+          ctx.stroke();
+        }
+      }
+
+      // Draw Focal Points
+      ctx.fillStyle = '#e2e8f0';
+
+      [x - f, x + f, x - 2*f, x + 2*f].forEach((fx, idx) => {
+        ctx.beginPath();
+        ctx.arc(fx, axisY, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.font = '10px sans-serif';
+        ctx.fillStyle = '#94a3b8';
+        const label = (idx === 0) ? 'F₁' : (idx === 1) ? "F₁'" : (idx === 2) ? '2F₁' : "2F₁'";
+        ctx.fillText(label, fx - 8, axisY + 16);
+      });
+
+      ctx.restore();
+    }
+
+    function drawArrowObject(x, y, h, color, label, isDashed = false) {
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.lineWidth = 3;
+
+      if (isDashed) ctx.setLineDash([5, 4]);
+
+      const topY = y - h;
+
+      // Shaft
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x, topY);
+      ctx.stroke();
+
+      // Arrow Head
+      ctx.setLineDash([]);
+      const headSize = Math.min(10, Math.abs(h) * 0.3);
+      const dir = h >= 0 ? 1 : -1;
+      ctx.beginPath();
+      ctx.moveTo(x, topY);
+      ctx.lineTo(x - headSize / 1.5, topY + headSize * dir);
+      ctx.lineTo(x + headSize / 1.5, topY + headSize * dir);
+      ctx.closePath();
+      ctx.fill();
+
+      // Label
+      if (label) {
+        ctx.font = 'bold 11px sans-serif';
+        ctx.fillText(label, x - 15, topY - 8 * dir);
+      }
+
+      ctx.restore();
+    }
+
+    function drawScreen(x, imgX, isReal) {
+      ctx.save();
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.lineWidth = 4;
+
+      ctx.beginPath();
+      ctx.moveTo(x, axisY - 80);
+      ctx.lineTo(x, axisY + 80);
+      ctx.stroke();
+
+      // Base
+      ctx.fillStyle = '#64748b';
+      ctx.fillRect(x - 12, axisY + 80, 24, 6);
+
+      // Precision highlight if matching imgX
+      if (isReal && Math.abs(x - imgX) < 8) {
+        ctx.strokeStyle = '#34d399';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x - 4, axisY - 84, 8, 168);
+      }
+
+      ctx.font = '10px sans-serif';
+      ctx.fillStyle = '#e2e8f0';
+      ctx.fillText('屏幕 (Screen)', x - 28, axisY + 102);
+
+      ctx.restore();
+    }
+
+    function drawObserverEye(x, y, inCone) {
+      ctx.save();
+      ctx.translate(x, y);
+
+      // Eye ball
+      ctx.fillStyle = '#1e293b';
+      ctx.strokeStyle = inCone ? '#fbbf24' : '#64748b';
+      ctx.lineWidth = 2;
+
+      ctx.beginPath();
+      ctx.arc(0, 0, 16, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // Iris & Pupil
+      ctx.fillStyle = inCone ? '#38bdf8' : '#94a3b8';
+      ctx.beginPath();
+      ctx.arc(-4, 0, 8, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#000';
+      ctx.beginPath();
+      ctx.arc(-4, 0, 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Eyelashes
+      ctx.strokeStyle = inCone ? '#fbbf24' : '#94a3b8';
+      ctx.beginPath();
+      ctx.arc(2, 0, 20, Math.PI * 0.7, Math.PI * 1.3);
+      ctx.stroke();
+
+      ctx.font = 'bold 10px sans-serif';
+      ctx.fillStyle = inCone ? '#fbbf24' : '#94a3b8';
+      ctx.fillText('觀察者', -18, 28);
+
+      ctx.restore();
+    }
+
+
+    // --- Single Principal & Cone Rays ---
+    function drawPrincipalRays(obj, opticX, p, type, f) {
+      ctx.save();
+      ctx.lineWidth = 1.5;
+
+      const objTopX = obj.x;
+      const objTopY = axisY - obj.h;
+      const imgTopX = p.imgX;
+      const imgTopY = axisY - p.imgH;
+
+      // Ray 1: Parallel to axis then through focal point
+      ctx.strokeStyle = '#38bdf8';
+      ctx.beginPath();
+      ctx.moveTo(objTopX, objTopY);
+      ctx.lineTo(opticX, objTopY);
+
+      if (type === 'convex_lens') {
+        ctx.lineTo(canvasW, objTopY + (canvasW - opticX) * ((imgTopY - objTopY) / (p.imgX - opticX)));
+        ctx.stroke();
+
+        if (!p.isReal) {
+          ctx.strokeStyle = 'rgba(244, 114, 182, 0.7)';
+          ctx.setLineDash([4, 4]);
+          ctx.beginPath();
+          ctx.moveTo(opticX, objTopY);
+          ctx.lineTo(imgTopX, imgTopY);
+          ctx.stroke();
+        }
+      } else if (type === 'concave_lens') {
+        const focalX = opticX - f;
+        const slope = (objTopY - axisY) / (opticX - focalX);
+        ctx.lineTo(canvasW, objTopY + slope * (canvasW - opticX));
+        ctx.stroke();
+
+        ctx.strokeStyle = 'rgba(244, 114, 182, 0.7)';
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(opticX, objTopY);
+        ctx.lineTo(focalX, axisY);
+        ctx.stroke();
+      } else if (type === 'concave_mirror' || type === 'convex_mirror') {
+        ctx.lineTo(opticX, objTopY);
+        ctx.lineTo(0, objTopY + (0 - opticX) * ((imgTopY - objTopY) / (p.imgX - opticX)));
+        ctx.stroke();
+
+        if (!p.isReal) {
+          ctx.strokeStyle = 'rgba(244, 114, 182, 0.7)';
+          ctx.setLineDash([4, 4]);
+          ctx.beginPath();
+          ctx.moveTo(opticX, objTopY);
+          ctx.lineTo(imgTopX, imgTopY);
+          ctx.stroke();
+        }
+      }
+
+      // Ray 2: Through optical center / vertex
+      ctx.setLineDash([]);
+      ctx.strokeStyle = '#34d399';
+      ctx.beginPath();
+      ctx.moveTo(objTopX, objTopY);
+
+      if (p.isLens) {
+        ctx.lineTo(canvasW, objTopY + (canvasW - objTopX) * ((axisY - objTopY) / (opticX - objTopX)));
+        ctx.stroke();
+
+        if (!p.isReal) {
+          ctx.strokeStyle = 'rgba(244, 114, 182, 0.7)';
+          ctx.setLineDash([4, 4]);
+          ctx.beginPath();
+          ctx.moveTo(opticX, axisY);
+          ctx.lineTo(imgTopX, imgTopY);
+          ctx.stroke();
+        }
+      } else {
+        ctx.lineTo(opticX, axisY);
+        ctx.lineTo(0, axisY + (0 - opticX) * (-(axisY - objTopY) / (opticX - objTopX)));
+        ctx.stroke();
+
+        if (!p.isReal) {
+          ctx.strokeStyle = 'rgba(244, 114, 182, 0.7)';
+          ctx.setLineDash([4, 4]);
+          ctx.beginPath();
+          ctx.moveTo(opticX, axisY);
+          ctx.lineTo(imgTopX, imgTopY);
+          ctx.stroke();
+        }
+      }
+
+      ctx.restore();
+    }
+
+    function drawDivergentConeRays(obj, opticX, p, type, f) {
+      ctx.save();
+      const numRays = 9;
+      const lensH = 140;
+
+      const objTopX = obj.x;
+      const objTopY = axisY - obj.h;
+
+      for (let i = 0; i < numRays; i++) {
+        const targetY = (axisY - lensH/2) + (lensH / (numRays - 1)) * i;
+
+        // Incident Ray
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.6)';
+        ctx.setLineDash([]);
+        ctx.lineWidth = 1.2;
+
+        ctx.beginPath();
+        ctx.moveTo(objTopX, objTopY);
+        ctx.lineTo(opticX, targetY);
+        ctx.stroke();
+
+        // Refracted / Reflected Ray
+        if (!p.isParallel) {
+          ctx.strokeStyle = p.isReal ? 'rgba(52, 211, 153, 0.8)' : 'rgba(244, 114, 182, 0.8)';
+          ctx.beginPath();
+          ctx.moveTo(opticX, targetY);
+
+          if (p.isLens) {
+            const endX = canvasW;
+            const endY = targetY + (endX - opticX) * ((p.imgH === 0 ? axisY : (axisY - p.imgH)) - targetY) / (p.imgX - opticX);
+            ctx.lineTo(endX, endY);
+            ctx.stroke();
+
+            if (!p.isReal) {
+              ctx.setLineDash([3, 3]);
+              ctx.beginPath();
+              ctx.moveTo(opticX, targetY);
+              ctx.lineTo(p.imgX, axisY - p.imgH);
+              ctx.stroke();
+            }
+          } else { // Mirror
+            const endX = 0;
+            const endY = targetY + (endX - opticX) * ((axisY - p.imgH) - targetY) / (p.imgX - opticX);
+            ctx.lineTo(endX, endY);
+            ctx.stroke();
+
+            if (!p.isReal) {
+              ctx.setLineDash([3, 3]);
+              ctx.beginPath();
+              ctx.moveTo(opticX, targetY);
+              ctx.lineTo(p.imgX, axisY - p.imgH);
+              ctx.stroke();
             }
           }
         }
       }
+
+      ctx.restore();
     }
-  </script>
-  <!-- FontAwesome for icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-    body {
-      font-family: 'Inter', system-ui, -apple-system, sans-serif;
-      user-select: none;
-    }
-    /* Custom Scrollbar */
-    ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
-    }
-    ::-webkit-scrollbar-track {
-      background: #0f172a;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: #334155;
-      border-radius: 3px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: #475569;
-    }
-    canvas {
-      touch-action: none;
-    }
-  </style>
-</head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col overflow-x-hidden">
 
-  <!-- Header Header Header -->
-  <header class="bg-slate-900/90 border-b border-slate-800 sticky top-0 z-30 backdrop-blur-md px-4 py-3">
-    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
-      <div class="flex items-center space-x-3">
-        <div class="p-2 bg-brand-600/20 text-brand-400 rounded-lg border border-brand-500/30">
-          <i class="fa-solid me-1 fa-glasses text-xl"></i>
-        </div>
-        <div>
-          <h1 class="text-lg font-bold text-slate-50 flex items-center gap-2">
-            物理光學實驗室 <span class="text-xs font-normal px-2 py-0.5 rounded bg-brand-500/10 text-brand-400 border border-brand-500/20">幾何光學與成像殘影系統</span>
-          </h1>
-          <p class="text-xs text-slate-400">精確面鏡/透鏡成像公式、0.5s 快照比較、屏幕焦距觀察與眼睛視角</p>
-        </div>
-      </div>
-
-      <!-- Quick Preset Buttons -->
-      <div class="flex flex-wrap items-center gap-1.5 bg-slate-800/80 p-1 rounded-xl border border-slate-700/60 text-xs">
-        <span class="px-2 text-slate-400 font-medium">經典情境：</span>
-        <button onclick="setPreset('d_gt_2f')" class="px-2.5 py-1 rounded-lg bg-slate-700/50 hover:bg-slate-700 text-slate-200 transition">
-          $d_o > 2f$
-        </button>
-        <button onclick="setPreset('d_eq_2f')" class="px-2.5 py-1 rounded-lg bg-slate-700/50 hover:bg-slate-700 text-slate-200 transition">
-          $d_o = 2f$
-        </button>
-        <button onclick="setPreset('f_lt_d_lt_2f')" class="px-2.5 py-1 rounded-lg bg-slate-700/50 hover:bg-slate-700 text-slate-200 transition">
-          $f < d_o < 2f$
-        </button>
-        <button onclick="setPreset('d_eq_f')" class="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 transition">
-          $d_o = f$ (不成像)
-        </button>
-        <button onclick="setPreset('d_lt_f')" class="px-2.5 py-1 rounded-lg bg-slate-700/50 hover:bg-slate-700 text-slate-200 transition">
-          $d_o < f$ (虛像)
-        </button>
-      </div>
-    </div>
-  </header>
-
-  <!-- Main Content Layout -->
-  <main class="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-4 grid grid-cols-1 lg:grid-cols-12 gap-4">
-
-    <!-- Left Controls & Optic Workbench (Col 8) -->
-    <div class="lg:col-span-8 flex flex-col gap-4">
-
-      <!-- Optic Selector & Mode Bar -->
-      <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-3 flex flex-wrap items-center justify-between gap-3 shadow-lg">
-        
-        <!-- Device Type Buttons -->
-        <div class="flex items-center gap-1 bg-slate-950/60 p-1 rounded-xl border border-slate-800">
-          <button id="btn-convex_lens" onclick="setOpticType('convex_lens')" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5">
-            <i class="fa-solid fa-circle-dot"></i> 凸透鏡
-          </button>
-          <button id="btn-concave_lens" onclick="setOpticType('concave_lens')" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5">
-            <i class="fa-solid fa-ellipsis-vertical"></i> 凹透鏡
-          </button>
-          <button id="btn-concave_mirror" onclick="setOpticType('concave_mirror')" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5">
-            <i class="fa-solid fa-moon"></i> 凹面鏡
-          </button>
-          <button id="btn-convex_mirror" onclick="setOpticType('convex_mirror')" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5">
-            <i class="fa-solid fa-sun"></i> 凸面鏡
-          </button>
-        </div>
-
-        <!-- Ray Display Modes -->
-        <div class="flex items-center gap-1 bg-slate-950/60 p-1 rounded-xl border border-slate-800">
-          <button id="btn-rayMode-1" onclick="setRayMode(1)" class="px-2.5 py-1.5 rounded-lg text-xs transition" title="無光線 (挑戰猜測與移動觀察)">
-            <i class="fa-solid fa-eye-slash"></i> 1. 無光線
-          </button>
-          <button id="btn-rayMode-2" onclick="setRayMode(2)" class="px-2.5 py-1.5 rounded-lg text-xs transition" title="作圖三光線">
-            <i class="fa-solid fa-route"></i> 2. 三主光線
-          </button>
-          <button id="btn-rayMode-3" onclick="setRayMode(3)" class="px-2.5 py-1.5 rounded-lg text-xs transition" title="13條發散錐形光束">
-            <i class="fa-solid fa-sun-plant-wilt"></i> 3. 發散光束
-          </button>
-        </div>
-
-        <!-- Snapshot Controls -->
-        <div class="flex items-center gap-2">
-          <label class="flex items-center gap-1.5 text-xs text-slate-300 cursor-pointer bg-slate-800/80 px-2.5 py-1.5 rounded-xl border border-slate-700 hover:bg-slate-700/80 transition">
-            <input type="checkbox" id="autoSnapshotToggle" onchange="toggleAutoSnapshot(this.checked)" checked class="rounded accent-brand-500 w-3.5 h-3.5">
-            <span>0.5s 自動殘影</span>
-          </label>
-          <button onclick="takeManualSnapshot()" class="px-3 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-medium shadow-md transition flex items-center gap-1">
-            <i class="fa-solid fa-camera"></i> 拍攝快照
-          </button>
-        </div>
-      </div>
-
-      <!-- Main Optics Workbench Canvas -->
-      <div class="relative bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl flex flex-col">
-        <canvas id="opticsCanvas" class="w-full h-[400px] cursor-crosshair block"></canvas>
-        
-        <!-- Canvas Floating Legend / Helper Info -->
-        <div class="absolute top-3 left-3 bg-slate-950/80 backdrop-blur border border-slate-800 text-[11px] px-3 py-1.5 rounded-xl text-slate-300 flex items-center gap-3">
-          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block"></span> 蠟燭 (拖曳)</span>
-          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-sky-400 inline-block"></span> 光學元件</span>
-          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 bg-blue-500 inline-block"></span> 屏幕</span>
-          <span class="flex items-center gap-1"><span class="w-2 rounded-full bg-emerald-400 inline-block text-center">👁️</span> 觀察眼</span>
-        </div>
-
-        <!-- Interactive Drag Slider Controls -->
-        <div class="bg-slate-950/90 border-t border-slate-800 p-3 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-          <!-- Focal Length Slider -->
-          <div>
-            <div class="flex justify-between text-slate-400 mb-1">
-              <span>焦距 ($f$)</span>
-              <span id="fValDisplay" class="font-mono text-brand-400">100 px</span>
-            </div>
-            <input type="range" id="fSlider" min="40" max="180" value="100" class="w-full accent-brand-500" oninput="onFSliderChange(this.value)">
-          </div>
-
-          <!-- Object Distance Slider -->
-          <div>
-            <div class="flex justify-between text-slate-400 mb-1">
-              <span>物距 ($d_o$)</span>
-              <span id="doValDisplay" class="font-mono text-amber-400">200 px</span>
-            </div>
-            <input type="range" id="doSlider" min="20" max="400" value="200" class="w-full accent-amber-500" oninput="onDoSliderChange(this.value)">
-          </div>
-
-          <!-- Candle Height Slider -->
-          <div>
-            <div class="flex justify-between text-slate-400 mb-1">
-              <span>物高 ($h_o$)</span>
-              <span id="hoValDisplay" class="font-mono text-rose-400">70 px</span>
-            </div>
-            <input type="range" id="hoSlider" min="30" max="120" value="70" class="w-full accent-rose-500" oninput="onHoSliderChange(this.value)">
-          </div>
-
-          <!-- Screen Position Slider -->
-          <div>
-            <div class="flex justify-between text-slate-400 mb-1">
-              <span>屏幕位置 ($x_{screen}$)</span>
-              <span id="screenValDisplay" class="font-mono text-blue-400">650 px</span>
-            </div>
-            <input type="range" id="screenSlider" min="100" max="950" value="650" class="w-full accent-blue-500" oninput="onScreenSliderChange(this.value)">
-          </div>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- Right Live Optics & Observer Viewports Panel (Col 4) -->
-    <div class="lg:col-span-4 flex flex-col gap-4">
-
-      <!-- Live Physics Data Cards -->
-      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-lg flex flex-col gap-3">
-        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between">
-          <span>即時光學物理數據</span>
-          <span id="opticTypeBadge" class="text-[11px] font-normal px-2 py-0.5 rounded-full bg-brand-500/20 text-brand-300 border border-brand-500/30">凸透鏡</span>
-        </h2>
-
-        <div class="grid grid-cols-2 gap-2 text-xs">
-          <div class="bg-slate-950/60 p-2.5 rounded-xl border border-slate-800">
-            <div class="text-slate-400 text-[11px]">像距 ($d_i$)</div>
-            <div id="diValData" class="text-base font-bold text-slate-100 font-mono mt-0.5">--</div>
-          </div>
-          <div class="bg-slate-950/60 p-2.5 rounded-xl border border-slate-800">
-            <div class="text-slate-400 text-[11px]">放大率 ($m$)</div>
-            <div id="mValData" class="text-base font-bold text-slate-100 font-mono mt-0.5">--</div>
-          </div>
-        </div>
-
-        <div class="bg-slate-950/60 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between">
-          <span class="text-xs text-slate-400">成像性質：</span>
-          <span id="natureValData" class="text-xs font-bold text-emerald-400 px-2 py-1 rounded bg-emerald-500/10 border border-emerald-500/20">倒立縮小實像</span>
-        </div>
-
-        <div class="text-[11px] text-slate-400 leading-relaxed bg-slate-800/40 p-2.5 rounded-xl border border-slate-700/50">
-          <i class="fa-solid fa-circle-info text-brand-400 me-1"></i>
-          <span id="physicsFormulaNote">透鏡實像位於右側異側 ($x_i = x_{optic} + d_i$)，反射面鏡實像位於鏡前同側 ($x_i = x_{optic} - d_i$)。</span>
-        </div>
-      </div>
-
-      <!-- Viewports Grid: Screen View & Observer Eye View -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3">
-
-        <!-- 1. Screen Projection View Window -->
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 shadow-lg flex flex-col">
-          <div class="flex items-center justify-between mb-2">
-            <div class="flex items-center gap-1.5 text-xs font-bold text-slate-200">
-              <i class="fa-solid fa-expand text-blue-400"></i>
-              <span>屏幕觀察視窗 (Screen View)</span>
-            </div>
-            <span id="screenStatusBadge" class="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300">成像離焦</span>
-          </div>
-          <div class="relative bg-slate-950 rounded-xl overflow-hidden border border-slate-800 flex items-center justify-center h-[130px]">
-            <canvas id="screenViewCanvas" class="w-full h-full block"></canvas>
-          </div>
-          <div class="mt-2 text-[11px] flex justify-between text-slate-400">
-            <span>焦平面偏差: <span id="defocusDistText" class="font-mono text-slate-200">0.0 px</span></span>
-            <span id="screenRealStatus" class="text-blue-400">捕捉實像中</span>
-          </div>
-        </div>
-
-        <!-- 2. Observer Eye View Window -->
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 shadow-lg flex flex-col">
-          <div class="flex items-center justify-between mb-2">
-            <div class="flex items-center gap-1.5 text-xs font-bold text-slate-200">
-              <i class="fa-solid fa-eye text-emerald-400"></i>
-              <span>眼睛觀察視窗 (Eye Perception)</span>
-            </div>
-            <span id="eyeStatusBadge" class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">在光路視角內</span>
-          </div>
-          <div class="relative bg-slate-950 rounded-xl overflow-hidden border border-slate-800 flex items-center justify-center h-[130px]">
-            <canvas id="eyeViewCanvas" class="w-full h-full block"></canvas>
-          </div>
-          <div class="mt-2 text-[11px] flex justify-between text-slate-400">
-            <span>眼睛位置: <span id="eyePosText" class="font-mono text-slate-200">(750, 180)</span></span>
-            <span id="eyeVisionQuality" class="text-emerald-400">清晰視覺</span>
-          </div>
-        </div>
-
-      </div>
-
-    </div>
-
-    <!-- Bottom Section: Snapshot & Ghost Trail Comparison Table (Col 12) -->
-    <div class="lg:col-span-12 bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl">
-      <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
-        <div class="flex items-center gap-2">
-          <div class="p-1.5 bg-brand-500/20 text-brand-400 rounded-lg">
-            <i class="fa-solid fa-layer-group"></i>
-          </div>
-          <div>
-            <h3 class="text-sm font-bold text-slate-100">0.5s 快照與殘影比較數據表 (Snapshot Ghost Trail Table)</h3>
-            <p class="text-xs text-slate-400">移至表格列時，主畫面上會即時高亮顯示對應的快照殘影 (Ghost Candle & Ghost Image)</p>
-          </div>
-        </div>
-        <button onclick="clearAllSnapshots()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-red-500/20 hover:text-red-400 text-slate-300 border border-slate-700 text-xs transition flex items-center gap-1">
-          <i class="fa-solid fa-trash-can"></i> 一鍵清空快照
-        </button>
-      </div>
-
-      <!-- Table Container -->
-      <div class="overflow-x-auto border border-slate-800 rounded-xl">
-        <table class="w-full text-left text-xs text-slate-300">
-          <thead class="bg-slate-950 text-slate-400 font-semibold border-b border-slate-800">
-            <tr>
-              <th class="p-2.5 text-center">色碼/編號</th>
-              <th class="p-2.5">光學元件</th>
-              <th class="p-2.5">焦距 ($f$)</th>
-              <th class="p-2.5">物距 ($d_o$)</th>
-              <th class="p-2.5">像距 ($d_i$)</th>
-              <th class="p-2.5">放大率 ($m$)</th>
-              <th class="p-2.5">成像性質</th>
-              <th class="p-2.5">像相對於元件位置 ($x_i$)</th>
-              <th class="p-2.5 text-center">操作</th>
-            </tr>
-          </thead>
-          <tbody id="snapshotTableBody" class="divide-y divide-slate-800 bg-slate-900/50">
-            <!-- Table rows populated dynamically via JS -->
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-  </main>
-
-  <!-- Script Section -->
-  <script>
-    /* ==========================================================================
-       OPTICS LABORATORY STATE MANAGEMENT & CALCULATIONS
-       ========================================================================== */
-
-    const state = {
-      opticType: 'convex_lens', // 'convex_lens', 'concave_lens', 'concave_mirror', 'convex_mirror'
-      rayMode: 2,              // 1: No Rays, 2: Principal Rays, 3: Cone Rays
-      f: 100,                  // Focal distance in canvas pixels
-      x_optic: 500,            // Lens/Mirror X coordinate
-      x_o: 300,                // Object X coordinate
-      h_o: 70,                 // Candle height
-      x_screen: 650,           // Screen X position
-      
-      // Observer Eye position
-      x_eye: 780,
-      y_eye: 180,
-
-      // Dragging states
-      isDraggingObject: false,
-      isDraggingOptic: false,
-      isDraggingScreen: false,
-      isDraggingEye: false,
-      dragOffsetX: 0,
-      dragOffsetY: 0,
-
-      // Auto snapshot tracking
-      autoSnapshot: true,
-      lastSnapshotTime: 0,
-      lastSnapshotX: 300,
-
-      // Hover state for snapshot table
-      hoveredSnapshotId: null
-    };
-
-    // Snapshots list
-    let snapshots = [];
-
-    // Distinct colorful palette for ghost trails
-    const colorPalette = [
-      '#f43f5e', '#ec4899', '#d946ef', '#a855f7', 
-      '#8b5cf6', '#6366f1', '#3b82f6', '#0ea5e9', 
-      '#06b6d4', '#14b8a6', '#10b981', '#84cc16', 
-      '#eab308', '#f97316'
-    ];
-    let paletteIdx = 0;
-
-    /* ==========================================================================
-       CORE OPTICAL PHYSICS FORMULA (100% ACCURATE)
-       ========================================================================== */
-
-    function computeOptics(optState = state) {
-      const type = optState.opticType;
-      const x_opt = optState.x_optic;
-      const x_o = optState.x_o;
-      const h_o = optState.h_o;
-
-      // 物距 d_o (正純量：物體到光學中心/鏡頂之距離)
-      const d_o = Math.max(1, Math.abs(x_opt - x_o));
-
-      const isLens = type === 'convex_lens' || type === 'concave_lens' || type.includes('lens');
-
-      // 焦距 signed_f：
-      // 凸透鏡與凹面鏡為會聚型，f > 0
-      // 凹透鏡與凸面鏡為發散型，f < 0
-      let signed_f = Math.abs(optState.f);
-      if (type === 'concave_lens' || type === 'convex_mirror') {
-        signed_f = -Math.abs(optState.f);
-      }
-
-      // 幾何光學薄透鏡/球面鏡公式: 1/f = 1/d_o + 1/d_i  =>  d_i = (f * d_o) / (d_o - f)
-      let d_i = 0;
-      let isInfinite = false;
-      const EPSILON = 0.8;
-
-      if (Math.abs(d_o - signed_f) < EPSILON) {
-        isInfinite = true;
-        d_i = Infinity;
+    function checkEyeInLightCone(eye, opticX, p) {
+      if (p.isLens) {
+        if (eye.x <= opticX) return false;
+        const dy = Math.abs(eye.y - axisY);
+        return dy < 100;
       } else {
-        d_i = (signed_f * d_o) / (d_o - signed_f);
-      }
-
-      let x_i = x_opt;
-      let isReal = false;
-      let m = 0;
-      let h_i = 0;
-
-      if (!isInfinite) {
-        m = -d_i / d_o;
-        h_i = m * h_o;
-
-        if (isLens) {
-          // 透鏡 (凸透鏡 / 凹透鏡): 光線穿透透鏡，imgX = opticsX + di
-          // d_i > 0 (實像) -> imgX 在透鏡右側 (與物體異側)
-          // d_i < 0 (虛像) -> imgX 在透鏡左側 (與物體同側，因 di 為負值)
-          x_i = x_opt + d_i;
-          isReal = d_i > 0;
-        } else {
-          // 面鏡 (凹面鏡 / 凸面鏡): 光線於鏡面反射，imgX = opticsX - di
-          // d_i > 0 (實像) -> imgX 在面鏡左側 (鏡前與物體同側)
-          // d_i < 0 (虛像) -> imgX 在面鏡右側 (鏡後，因 -di 為正值)
-          x_i = x_opt - d_i;
-          isReal = d_i > 0;
-        }
-      }
-
-      // 性質判斷
-      let natureStr = '';
-      if (isInfinite) {
-        natureStr = '不成像 (平行光束)';
-      } else if (isReal) {
-        const sizeStr = Math.abs(m) > 1.02 ? '放大' : (Math.abs(m) < 0.98 ? '縮小' : '等大');
-        natureStr = `倒立${sizeStr}實像`;
-      } else {
-        const sizeStr = Math.abs(m) > 1.02 ? '放大' : (Math.abs(m) < 0.98 ? '縮小' : '等大');
-        natureStr = `正立${sizeStr}虛像`;
-      }
-
-      return {
-        d_o,
-        signed_f,
-        d_i,
-        x_i,
-        h_i,
-        m,
-        isReal,
-        isInfinite,
-        natureStr,
-        isLens,
-        type
-      };
-    }
-
-    /* ==========================================================================
-       CANVAS RENDERING & GRAPHICS ENGINE
-       ========================================================================== */
-
-    let canvas, ctx;
-    let screenCanvas, screenCtx;
-    let eyeCanvas, eyeCtx;
-
-    window.addEventListener('DOMContentLoaded', () => {
-      canvas = document.getElementById('opticsCanvas');
-      ctx = canvas.getContext('2d');
-
-      screenCanvas = document.getElementById('screenViewCanvas');
-      screenCtx = screenCanvas.getContext('2d');
-
-      eyeCanvas = document.getElementById('eyeViewCanvas');
-      eyeCtx = eyeCanvas.getContext('2d');
-
-      resizeCanvases();
-      window.addEventListener('resize', resizeCanvases);
-
-      // Mouse / Touch Listener bindings
-      canvas.addEventListener('mousedown', handlePointerDown);
-      canvas.addEventListener('mousemove', handlePointerMove);
-      window.addEventListener('mouseup', handlePointerUp);
-
-      canvas.addEventListener('touchstart', handlePointerDown, { passive: false });
-      canvas.addEventListener('touchmove', handlePointerMove, { passive: false });
-      window.addEventListener('touchend', handlePointerUp);
-
-      // Add default initial snapshot
-      takeManualSnapshot();
-
-      // UI Init
-      updateUI();
-      requestAnimationFrame(animationLoop);
-    });
-
-    function resizeCanvases() {
-      if (!canvas) return;
-      const rect = canvas.getBoundingClientRect();
-      canvas.width = rect.width;
-      canvas.height = rect.height;
-
-      if (screenCanvas) {
-        const sRect = screenCanvas.getBoundingClientRect();
-        screenCanvas.width = sRect.width;
-        screenCanvas.height = sRect.height;
-      }
-
-      if (eyeCanvas) {
-        const eRect = eyeCanvas.getBoundingClientRect();
-        eyeCanvas.width = eRect.width;
-        eyeCanvas.height = eRect.height;
+        if (eye.x >= opticX) return false;
+        const dy = Math.abs(eye.y - axisY);
+        return dy < 100;
       }
     }
 
-    /* Animation Loop for glowing flame and continuous rendering */
-    let flameTime = 0;
-    function animationLoop() {
-      flameTime += 0.05;
-      renderMainCanvas();
-      renderScreenView();
-      renderEyeView();
-      requestAnimationFrame(animationLoop);
+
+    // --- Render Multi-Lens System ---
+    function renderMultiSystem() {
+      const p = calcMultiPhysics();
+      const { obj, l1, l2, eye } = multiState;
+
+      // 1. Draw Optics L1 and L2
+      drawOpticalElement(l1.x, 'convex_lens', Math.abs(l1.f));
+      drawOpticalElement(l2.x, l2.f < 0 ? 'concave_lens' : 'convex_lens', Math.abs(l2.f));
+
+      // Labels for Lens L1 and L2
+      ctx.font = 'bold 12px sans-serif';
+      ctx.fillStyle = '#38bdf8';
+      ctx.fillText('物鏡 L₁', l1.x - 20, axisY - 100);
+      ctx.fillStyle = '#c084fc';
+      ctx.fillText('目鏡 L₂', l2.x - 20, axisY - 100);
+
+      // 2. Draw Original Object O
+      drawArrowObject(obj.x, axisY, obj.h, '#34d399', '物體 O');
+
+      // 3. Draw Intermediate Image I1
+      if (!p.isParallel1) {
+        drawArrowObject(p.x_i1, axisY, p.h_i1, '#fbbf24', p.isReal1 ? '中間實像 I₁' : '中間虛像 I₁', !p.isReal1);
+      }
+
+      // 4. Draw Final Image I2
+      if (!p.isParallel2) {
+        drawArrowObject(p.x_i2, axisY, p.h_i2, '#f472b6', p.isReal2 ? '最終實像 I₂' : '最終虛像 I₂', !p.isReal2);
+      }
+
+      // 5. Light Ray Propagation Path
+      drawMultiRayPaths(obj, l1, l2, p);
+
+      // 6. Observer Eye & Cone Detection
+      const eyeInCone = (eye.x > l2.x) && (Math.abs(eye.y - axisY) < 90);
+      drawObserverEye(eye.x, eye.y, eyeInCone);
+
+      // 7. Update Viewports & Data Cards
+      renderEyeViewportMulti(p, eyeInCone);
+      updateMultiDataUI(p);
     }
 
-    function renderMainCanvas() {
-      if (!ctx) return;
-      const width = canvas.width;
-      const height = canvas.height;
-      const axisY = height / 2;
-
-      // 1. Background Grid & Axis
-      ctx.fillStyle = '#0f172a';
-      ctx.fillRect(0, 0, width, height);
-
-      // Grid lines
-      ctx.strokeStyle = '#1e293b';
-      ctx.lineWidth = 1;
-      for (let x = 0; x < width; x += 20) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, height);
-        ctx.stroke();
-      }
-      for (let y = 0; y < height; y += 20) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(width, y);
-        ctx.stroke();
-      }
-
-      // Principal Axis (主光軸)
-      ctx.strokeStyle = '#64748b';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(0, axisY);
-      ctx.lineTo(width, axisY);
-      ctx.stroke();
-
-      // Optical calculations
-      const opt = computeOptics();
-
-      // 2. Draw Bench Ruler & Focal Points
-      drawBenchRulerAndFoci(axisY);
-
-      // 3. Draw Ghost Trails (0.5s Snapshots) - Rendered beneath active objects!
-      drawGhostTrails(axisY);
-
-      // 4. Draw Interactive Screen Handle & Screen Line
-      drawScreenOnCanvas(axisY, opt);
-
-      // 5. Draw Light Rays based on Ray Mode
-      if (state.rayMode === 2) {
-        drawPrincipalRays(axisY, opt);
-      } else if (state.rayMode === 3) {
-        drawConeRays(axisY, opt);
-      }
-
-      // 6. Draw Live Object (Candle)
-      drawCandle(state.x_o, axisY, state.h_o, false, 1.0);
-
-      // 7. Draw Live Image (if not infinite)
-      if (!opt.isInfinite) {
-        drawCandle(opt.x_i, axisY, opt.h_i, true, 1.0);
-      }
-
-      // 8. Draw Optical Device (Lens / Mirror)
-      drawOpticDevice(axisY);
-
-      // 9. Draw Observer Eye
-      drawObserverEye();
-    }
-
-    /* --------------------------------------------------------------------------
-       BENCH MARKS & OPTIC DEVICE DRAWING
-       -------------------------------------------------------------------------- */
-
-    function drawBenchRulerAndFoci(axisY) {
-      const x_opt = state.x_optic;
-      const f_abs = Math.abs(state.f);
-      const type = state.opticType;
-      const isLens = type.includes('lens');
-
-      ctx.fillStyle = '#94a3b8';
-      ctx.font = '11px Inter, sans-serif';
-      ctx.textAlign = 'center';
-
-      // Focal points coordinates
-      let foci = [];
-      if (isLens) {
-        foci = [
-          { x: x_opt - 2 * f_abs, label: '2F₁' },
-          { x: x_opt - f_abs, label: 'F₁' },
-          { x: x_opt + f_abs, label: 'F₂' },
-          { x: x_opt + 2 * f_abs, label: '2F₂' }
-        ];
-      } else {
-        // Mirror
-        foci = [
-          { x: x_opt - f_abs, label: 'F (鏡前)' },
-          { x: x_opt - 2 * f_abs, label: '2F (鏡前)' },
-          { x: x_opt + f_abs, label: 'F (鏡後)' }
-        ];
-      }
-
-      foci.forEach(pt => {
-        if (pt.x >= 0 && pt.x <= canvas.width) {
-          ctx.strokeStyle = '#38bdf8';
-          ctx.lineWidth = 1.5;
-          ctx.beginPath();
-          ctx.moveTo(pt.x, axisY - 8);
-          ctx.lineTo(pt.x, axisY + 8);
-          ctx.stroke();
-
-          ctx.fillStyle = '#38bdf8';
-          ctx.fillText(pt.label, pt.x, axisY + 22);
-        }
-      });
-    }
-
-    function drawOpticDevice(axisY) {
-      const x = state.x_optic;
-      const type = state.opticType;
-      const lensHeight = 220;
-      const topY = axisY - lensHeight / 2;
-      const bottomY = axisY + lensHeight / 2;
-
+    function drawMultiRayPaths(obj, l1, l2, p) {
       ctx.save();
-      ctx.lineWidth = 3;
-
-      if (type === 'convex_lens') {
-        // Convex Lens (雙凸透鏡)
-        ctx.strokeStyle = '#38bdf8';
-        ctx.fillStyle = 'rgba(56, 189, 248, 0.15)';
-        ctx.beginPath();
-        ctx.moveTo(x, topY);
-        ctx.quadraticCurveTo(x + 24, axisY, x, bottomY);
-        ctx.quadraticCurveTo(x - 24, axisY, x, topY);
-        ctx.fill();
-        ctx.stroke();
-
-        // Arrow heads indicating convex lens
-        drawArrowHead(x, topY - 10, 0, -1, '#38bdf8');
-        drawArrowHead(x, bottomY + 10, 0, 1, '#38bdf8');
-
-      } else if (type === 'concave_lens') {
-        // Concave Lens (雙凹透鏡)
-        ctx.strokeStyle = '#38bdf8';
-        ctx.fillStyle = 'rgba(56, 189, 248, 0.15)';
-        ctx.beginPath();
-        ctx.moveTo(x - 18, topY);
-        ctx.lineTo(x + 18, topY);
-        ctx.quadraticCurveTo(x + 6, axisY, x + 18, bottomY);
-        ctx.lineTo(x - 18, bottomY);
-        ctx.quadraticCurveTo(x - 6, axisY, x - 18, topY);
-        ctx.fill();
-        ctx.stroke();
-
-      } else if (type === 'concave_mirror') {
-        // Concave Mirror (凹面鏡 - 開口朝左，反射面凹向物體 side)
-        ctx.strokeStyle = '#e0f2fe';
-        ctx.lineWidth = 4;
-        const R = 180;
-        const alpha = 0.65;
-        // 頂點位於 x，曲率中心在左側 (x - R)，弧線經頂點呈 `)` 狀凹向左側
-        ctx.beginPath();
-        ctx.arc(x - R, axisY, R, -alpha, alpha);
-        ctx.stroke();
-
-        // 背面斜線 (非反射面 - 畫在弧線右側/外側)
-        ctx.strokeStyle = '#64748b';
-        ctx.lineWidth = 1.5;
-        for (let a = -alpha; a <= alpha; a += 0.15) {
-          const px = (x - R) + R * Math.cos(a);
-          const py = axisY + R * Math.sin(a);
-          ctx.beginPath();
-          ctx.moveTo(px, py);
-          ctx.lineTo(px + 8, py - 6);
-          ctx.stroke();
-        }
-
-      } else if (type === 'convex_mirror') {
-        // Convex Mirror (凸面鏡 - 凸面朝左，反射面凸向物體 side)
-        ctx.strokeStyle = '#e0f2fe';
-        ctx.lineWidth = 4;
-        const R = 180;
-        const alpha = 0.65;
-        // 頂點位於 x，曲率中心在右側 (x + R)，弧線經頂點呈 `(` 狀凸向左側
-        ctx.beginPath();
-        ctx.arc(x + R, axisY, R, Math.PI - alpha, Math.PI + alpha);
-        ctx.stroke();
-
-        // 背面斜線 (非反射面 - 畫在弧線右側/內側)
-        ctx.strokeStyle = '#64748b';
-        ctx.lineWidth = 1.5;
-        for (let a = Math.PI - alpha; a <= Math.PI + alpha; a += 0.15) {
-          const px = (x + R) + R * Math.cos(a);
-          const py = axisY + R * Math.sin(a);
-          ctx.beginPath();
-          ctx.moveTo(px, py);
-          ctx.lineTo(px + 8, py - 6);
-          ctx.stroke();
-        }
-      }
-
-      // Optic Center Mark (O)
-      ctx.fillStyle = '#f8fafc';
-      ctx.beginPath();
-      ctx.arc(x, axisY, 4, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillText('O', x, axisY - 12);
-
-      ctx.restore();
-    }
-
-    function drawArrowHead(x, y, dx, dy, color) {
-      ctx.save();
-      ctx.fillStyle = color;
-      ctx.translate(x, y);
-      const angle = Math.atan2(dy, dx);
-      ctx.rotate(angle);
-      ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.lineTo(-6, -10);
-      ctx.lineTo(6, -10);
-      ctx.closePath();
-      ctx.fill();
-      ctx.restore();
-    }
-
-    /* --------------------------------------------------------------------------
-       CANDLE & IMAGE RENDERING
-       -------------------------------------------------------------------------- */
-
-    function drawCandle(x, axisY, height, isImage = false, opacity = 1.0, colorOverride = null) {
-      if (Math.abs(height) < 1) return;
-
-      ctx.save();
-      ctx.globalAlpha = opacity;
-
-      const topY = axisY - height; // If height is negative (inverted), topY will be below axisY
-      const isUpright = height > 0;
-      const bodyWidth = 12;
-
-      // Color themes
-      const bodyColor = colorOverride || (isImage ? '#0284c7' : '#f59e0b');
-      const flameColor = colorOverride || (isImage ? '#38bdf8' : '#fbbf24');
-
-      // 1. Candle Body
-      ctx.fillStyle = bodyColor;
-      ctx.fillRect(x - bodyWidth / 2, axisY, bodyWidth, -height);
-
-      // Wax stripes for texture
-      ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(x - bodyWidth / 2, axisY - height * 0.5);
-      ctx.lineTo(x + bodyWidth / 2, axisY - height * 0.5);
-      ctx.stroke();
-
-      // 2. Wick
-      const wickLen = 8 * (isUpright ? 1 : -1);
-      ctx.strokeStyle = '#475569';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(x, topY);
-      ctx.lineTo(x, topY - wickLen);
-      ctx.stroke();
-
-      // 3. Flame
-      const flameTipY = topY - wickLen - (16 * (isUpright ? 1 : -1));
-      const flicker = Math.sin(flameTime * 4 + x) * 2;
-
-      // Flame Glow
-      const grad = ctx.createRadialGradient(x, topY - wickLen, 2, x, topY - wickLen, 22);
-      grad.addColorStop(0, flameColor);
-      grad.addColorStop(0.5, isImage ? 'rgba(56, 189, 248, 0.4)' : 'rgba(245, 158, 11, 0.4)');
-      grad.addColorStop(1, 'transparent');
-
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.arc(x, topY - wickLen, 22, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Flame Shape
-      ctx.fillStyle = flameColor;
-      ctx.beginPath();
-      ctx.moveTo(x - 6, topY - wickLen);
-      ctx.quadraticCurveTo(x + flicker, flameTipY, x + 6, topY - wickLen);
-      ctx.closePath();
-      ctx.fill();
-
-      // Inner flame core
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.arc(x, topY - wickLen - (4 * (isUpright ? 1 : -1)), 3, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Label text
-      ctx.fillStyle = colorOverride || (isImage ? '#7dd3fc' : '#fde047');
-      ctx.font = 'bold 11px Inter, sans-serif';
-      ctx.textAlign = 'center';
-      const labelY = isUpright ? flameTipY - 8 : flameTipY + 16;
-      ctx.fillText(isImage ? '像 (Image)' : '物 (Candle)', x, labelY);
-
-      ctx.restore();
-    }
-
-    /* --------------------------------------------------------------------------
-       GHOST TRAILS (0.5s SNAPSHOT REMNANTS)
-       -------------------------------------------------------------------------- */
-
-    function drawGhostTrails(axisY) {
-      if (snapshots.length === 0) return;
-
-      snapshots.forEach((snap, idx) => {
-        const isHovered = state.hoveredSnapshotId === snap.id;
-        const opacity = isHovered ? 0.95 : 0.35;
-        const col = snap.color;
-
-        // 計算該快照狀態下的精確光學數據
-        const snapOpt = computeOptics({
-          opticType: snap.opticType,
-          f: snap.f,
-          x_optic: snap.x_optic,
-          x_o: snap.x_o,
-          h_o: snap.h_o
-        });
-
-        // 1. 繪製快照物體 (Ghost Candle)
-        drawCandle(snap.x_o, axisY, snap.h_o, false, opacity, col);
-
-        // 2. 繪製快照成像 (Ghost Image) - 嚴格依據 snapOpt.x_i (凸透鏡實像呈現在右側，面鏡實像呈現在左側)
-        if (!snapOpt.isInfinite) {
-          drawCandle(snapOpt.x_i, axisY, snapOpt.h_i, true, opacity, col);
-
-          // 3. 繪製快照物點頂端經光學中心/鏡頂至像點頂端的作圖光路虛線
-          const objTipY = axisY - snap.h_o;
-          const imgTipY = axisY - snapOpt.h_i;
-
-          ctx.save();
-          ctx.globalAlpha = opacity;
-          ctx.strokeStyle = col;
-          ctx.lineWidth = isHovered ? 2.5 : 1.2;
-          ctx.setLineDash([4, 4]);
-
-          ctx.beginPath();
-          ctx.moveTo(snap.x_o, objTipY);
-          // 穿越或折反射經過光學中心 O / 鏡頂 O (snap.x_optic, axisY)
-          ctx.lineTo(snap.x_optic, axisY);
-          ctx.lineTo(snapOpt.x_i, imgTipY);
-          ctx.stroke();
-
-          // 繪製快照編號標籤
-          ctx.fillStyle = col;
-          ctx.font = 'bold 10px monospace';
-          ctx.textAlign = 'center';
-          ctx.fillText(`#${snapshots.length - idx}`, snapOpt.x_i, imgTipY - (snapOpt.h_i > 0 ? 12 : -18));
-
-          ctx.restore();
-        }
-      });
-    }
-
-    /* --------------------------------------------------------------------------
-       SCREEN & OBSERVER EYE ON CANVAS
-       -------------------------------------------------------------------------- */
-
-    function drawScreenOnCanvas(axisY, opt) {
-      const x = state.x_screen;
-      const screenH = 260;
-
-      ctx.save();
-      // Screen vertical bar
-      ctx.strokeStyle = '#3b82f6';
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.moveTo(x, axisY - screenH / 2);
-      ctx.lineTo(x, axisY + screenH / 2);
-      ctx.stroke();
-
-      // Screen Handle Top & Bottom
-      ctx.fillStyle = '#1d4ed8';
-      ctx.fillRect(x - 8, axisY - screenH / 2 - 6, 16, 6);
-      ctx.fillRect(x - 8, axisY + screenH / 2, 16, 6);
-
-      // Label
-      ctx.fillStyle = '#60a5fa';
-      ctx.font = 'bold 11px Inter, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('屏幕 (Screen)', x, axisY - screenH / 2 - 12);
-
-      ctx.restore();
-    }
-
-    function drawObserverEye() {
-      const x = state.x_eye;
-      const y = state.y_eye;
-
-      ctx.save();
-      ctx.translate(x, y);
-
-      // Eye White Outer
-      ctx.fillStyle = '#f8fafc';
-      ctx.beginPath();
-      ctx.ellipse(0, 0, 16, 10, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = '#1e293b';
       ctx.lineWidth = 1.5;
+
+      const objTopX = obj.x;
+      const objTopY = axisY - obj.h;
+      const i1TopX = p.x_i1;
+      const i1TopY = axisY - p.h_i1;
+      const i2TopX = p.x_i2;
+      const i2TopY = axisY - p.h_i2;
+
+      // Stage 1 Rays (Object O to L1, then to I1)
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.7)';
+      ctx.beginPath();
+      ctx.moveTo(objTopX, objTopY);
+      ctx.lineTo(l1.x, objTopY);
+      ctx.lineTo(l2.x, objTopY + (l2.x - l1.x) * ((i1TopY - objTopY) / (i1TopX - l1.x)));
       ctx.stroke();
 
-      // Iris
-      ctx.fillStyle = '#0284c7';
       ctx.beginPath();
-      ctx.arc(-2, 0, 6, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.moveTo(objTopX, objTopY);
+      ctx.lineTo(l1.x, axisY);
+      ctx.lineTo(l2.x, axisY + (l2.x - l1.x) * ((i1TopY - axisY) / (i1TopX - l1.x)));
+      ctx.stroke();
 
-      // Pupil
-      ctx.fillStyle = '#0f172a';
+      // Stage 2 Rays (Through Lens 2 to Final Image I2)
+      ctx.strokeStyle = 'rgba(192, 132, 252, 0.8)';
+      const rayL2Y1 = objTopY + (l2.x - l1.x) * ((i1TopY - objTopY) / (i1TopX - l1.x));
+
       ctx.beginPath();
-      ctx.arc(-2, 0, 3, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.moveTo(l2.x, rayL2Y1);
+      ctx.lineTo(canvasW, rayL2Y1 + (canvasW - l2.x) * ((i2TopY - rayL2Y1) / (i2TopX - l2.x)));
+      ctx.stroke();
 
-      // Eye Eyelashes/Glint
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.arc(-3, -2, 1.2, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.fillStyle = '#34d399';
-      ctx.font = 'bold 10px Inter, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('眼睛 👁️', 0, 22);
-
-      ctx.restore();
-    }
-
-    /* --------------------------------------------------------------------------
-       RAY DISPLAY MODES (MODES 2 & 3)
-       -------------------------------------------------------------------------- */
-
-    function drawPrincipalRays(axisY, opt) {
-      const x_o = state.x_o;
-      const y_o = axisY - state.h_o;
-      const x_opt = state.x_optic;
-      const f_abs = Math.abs(state.f);
-      const isLens = opt.isLens;
-      const isConvex = state.opticType.includes('convex');
-
-      ctx.save();
-      ctx.lineWidth = 1.8;
-
-      // Color coding for 3 Principal Rays
-      const colors = ['#f43f5e', '#10b981', '#a855f7'];
-
-      if (state.opticType === 'convex_lens') {
-        if (!opt.isInfinite) {
-          const x_i = opt.x_i;
-          const y_i = axisY - opt.h_i;
-
-          // Ray 1: Parallel to axis -> Refracts through right focal point F2
-          ctx.strokeStyle = colors[0];
-          ctx.beginPath();
-          ctx.moveTo(x_o, y_o);
-          ctx.lineTo(x_opt, y_o);
-          ctx.lineTo(x_i, y_i);
-          ctx.stroke();
-
-          // Extend Ray 1 past image
-          extendLine(x_opt, y_o, x_i, y_i, colors[0]);
-
-          // Virtual extension if d_o < f
-          if (!opt.isReal) {
-            ctx.setLineDash([4, 4]);
-            ctx.beginPath();
-            ctx.moveTo(x_opt, y_o);
-            ctx.lineTo(x_i, y_i);
-            ctx.stroke();
-            ctx.setLineDash([]);
-          }
-
-          // Ray 2: Passes undeviated through Optical Center O
-          ctx.strokeStyle = colors[1];
-          ctx.beginPath();
-          ctx.moveTo(x_o, y_o);
-          ctx.lineTo(x_opt, axisY);
-          ctx.lineTo(x_i, y_i);
-          ctx.stroke();
-          extendLine(x_o, y_o, x_opt, axisY, colors[1]);
-
-          // Ray 3: Passes through left focal point F1 -> Emerges parallel to axis
-          ctx.strokeStyle = colors[2];
-          ctx.beginPath();
-          ctx.moveTo(x_o, y_o);
-          ctx.lineTo(x_opt, y_i);
-          ctx.lineTo(x_i, y_i);
-          ctx.stroke();
-          extendLine(x_opt, y_i, x_i, y_i, colors[2]);
-
-        } else {
-          // Parallel emerging rays when d_o = f
-          ctx.strokeStyle = colors[0];
-          ctx.beginPath();
-          ctx.moveTo(x_o, y_o);
-          ctx.lineTo(x_opt, y_o);
-          ctx.lineTo(canvas.width, y_o + (y_o - axisY));
-          ctx.stroke();
-        }
-
-      } else if (state.opticType === 'concave_lens') {
-        const x_i = opt.x_i;
-        const y_i = axisY - opt.h_i;
-
-        // Ray 1: Parallel -> Refracts diverging as if coming from left focus F1
-        ctx.strokeStyle = colors[0];
-        ctx.beginPath();
-        ctx.moveTo(x_o, y_o);
-        ctx.lineTo(x_opt, y_o);
-        ctx.lineTo(canvas.width, y_o - (axisY - y_o) * 0.8);
-        ctx.stroke();
-
-        // Virtual extension back to F1
+      if (!p.isReal2) {
+        ctx.strokeStyle = 'rgba(244, 114, 182, 0.7)';
         ctx.setLineDash([4, 4]);
         ctx.beginPath();
-        ctx.moveTo(x_opt, y_o);
-        ctx.lineTo(x_opt - f_abs, axisY);
+        ctx.moveTo(l2.x, rayL2Y1);
+        ctx.lineTo(i2TopX, i2TopY);
         ctx.stroke();
-        ctx.setLineDash([]);
-
-        // Ray 2: Center undeviated
-        ctx.strokeStyle = colors[1];
-        ctx.beginPath();
-        ctx.moveTo(x_o, y_o);
-        ctx.lineTo(canvas.width, axisY + (axisY - y_o) * ((canvas.width - x_opt) / (x_opt - x_o)));
-        ctx.stroke();
-
-      } else if (state.opticType === 'concave_mirror') {
-        if (!opt.isInfinite) {
-          const x_i = opt.x_i;
-          const y_i = axisY - opt.h_i;
-
-          // Ray 1: Parallel -> Reflects through focus F
-          ctx.strokeStyle = colors[0];
-          ctx.beginPath();
-          ctx.moveTo(x_o, y_o);
-          ctx.lineTo(x_opt, y_o);
-          ctx.lineTo(x_i, y_i);
-          ctx.stroke();
-          extendLine(x_opt, y_o, x_i, y_i, colors[0]);
-
-          if (!opt.isReal) {
-            // Virtual extension behind mirror
-            ctx.setLineDash([4, 4]);
-            ctx.beginPath();
-            ctx.moveTo(x_opt, y_o);
-            ctx.lineTo(x_i, y_i);
-            ctx.stroke();
-            ctx.setLineDash([]);
-          }
-
-          // Ray 2: Vertex reflection
-          ctx.strokeStyle = colors[1];
-          ctx.beginPath();
-          ctx.moveTo(x_o, y_o);
-          ctx.lineTo(x_opt, axisY);
-          ctx.lineTo(x_i, y_i);
-          ctx.stroke();
-        }
-
-      } else if (state.opticType === 'convex_mirror') {
-        const x_i = opt.x_i;
-        const y_i = axisY - opt.h_i;
-
-        // Ray 1: Parallel -> Reflects diverging from virtual focus F behind mirror
-        ctx.strokeStyle = colors[0];
-        ctx.beginPath();
-        ctx.moveTo(x_o, y_o);
-        ctx.lineTo(x_opt, y_o);
-        ctx.lineTo(0, y_o + 100);
-        ctx.stroke();
-
-        ctx.setLineDash([4, 4]);
-        ctx.beginPath();
-        ctx.moveTo(x_opt, y_o);
-        ctx.lineTo(x_opt + f_abs, axisY);
-        ctx.stroke();
-        ctx.setLineDash([]);
       }
 
       ctx.restore();
     }
 
-    function extendLine(x1, y1, x2, y2, color) {
-      const dx = x2 - x1;
-      const dy = y2 - y1;
-      if (Math.hypot(dx, dy) < 1) return;
-      ctx.save();
-      ctx.strokeStyle = color;
-      ctx.beginPath();
-      ctx.moveTo(x2, y2);
-      ctx.lineTo(x2 + dx * 2, y2 + dy * 2);
-      ctx.stroke();
-      ctx.restore();
-    }
 
-    function drawConeRays(axisY, opt) {
-      const x_o = state.x_o;
-      const y_o = axisY - state.h_o;
-      const x_opt = state.x_optic;
-      const numRays = 13;
-      const apertureH = 180;
+    // --- Viewports Rendering ---
 
-      ctx.save();
-      ctx.lineWidth = 1;
-      ctx.strokeStyle = 'rgba(251, 191, 36, 0.45)';
+    function renderScreenViewport(p) {
+      screenCtx.clearRect(0, 0, screenCanvas.width, screenCanvas.height);
+      screenCtx.fillStyle = '#05070a';
+      screenCtx.fillRect(0, 0, screenCanvas.width, screenCanvas.height);
 
-      for (let i = 0; i < numRays; i++) {
-        const y_lens = axisY - apertureH / 2 + (apertureH / (numRays - 1)) * i;
+      const tag = document.getElementById('screenBlurTag');
 
-        // Incident ray from candle flame tip to lens/mirror aperture point
-        ctx.beginPath();
-        ctx.moveTo(x_o, y_o);
-        ctx.lineTo(x_opt, y_lens);
-        ctx.stroke();
-
-        // Refracted / Reflected Ray
-        if (!opt.isInfinite) {
-          const x_i = opt.x_i;
-          const y_i = axisY - opt.h_i;
-
-          if (opt.isReal) {
-            // Rays converge through real image point and expand beyond!
-            ctx.beginPath();
-            ctx.moveTo(x_opt, y_lens);
-            ctx.lineTo(x_i, y_i);
-            ctx.stroke();
-
-            // Continue ray past real image
-            const dx = x_i - x_opt;
-            const dy = y_i - y_lens;
-            ctx.beginPath();
-            ctx.moveTo(x_i, y_i);
-            ctx.lineTo(x_i + dx * 0.8, y_i + dy * 0.8);
-            ctx.stroke();
-
-          } else {
-            // Virtual image: Rays diverge as if coming from virtual image tip (x_i, y_i)
-            const dx = x_opt - x_i;
-            const dy = y_lens - y_i;
-
-            const endX = opt.isLens ? canvas.width : 0;
-            const endY = y_lens + (endX - x_opt) * (dy / dx);
-
-            ctx.beginPath();
-            ctx.moveTo(x_opt, y_lens);
-            ctx.lineTo(endX, endY);
-            ctx.stroke();
-
-            // Dashed back extension to virtual image
-            ctx.save();
-            ctx.setLineDash([3, 3]);
-            ctx.strokeStyle = 'rgba(244, 63, 94, 0.4)';
-            ctx.beginPath();
-            ctx.moveTo(x_opt, y_lens);
-            ctx.lineTo(x_i, y_i);
-            ctx.stroke();
-            ctx.restore();
-          }
-        } else {
-          // Parallel beam
-          ctx.beginPath();
-          ctx.moveTo(x_opt, y_lens);
-          ctx.lineTo(canvas.width, y_lens);
-          ctx.stroke();
-        }
+      if (!p.isReal) {
+        tag.innerText = '無實像 (虛像無法捕捉)';
+        tag.className = 'status-badge badge-virtual';
+        screenCtx.fillStyle = '#64748b';
+        screenCtx.font = '12px sans-serif';
+        screenCtx.fillText('虛像無法在屏幕上會聚成像', 50, 65);
+        return;
       }
 
-      ctx.restore();
-    }
+      // Calculate focal offset
+      const distErr = Math.abs(singleState.screenX - p.imgX);
+      const blurAmount = Math.min(20, distErr * 0.15);
 
-    /* ==========================================================================
-       RIGHT VIEWPORTS: SCREEN VIEW & OBSERVER EYE VIEW
-       ========================================================================== */
+      if (distErr < 5) {
+        tag.innerText = '精確聚焦 (Clear)';
+        tag.className = 'status-badge badge-real';
+      } else {
+        tag.innerText = `散焦模糊 (Blur: ${distErr.toFixed(0)}px)`;
+        tag.className = 'status-badge';
+        tag.style.background = '#334155';
+      }
 
-    function renderScreenView() {
-      if (!screenCtx) return;
-      const w = screenCanvas.width;
-      const h = screenCanvas.height;
-      const opt = computeOptics();
+      screenCtx.save();
+      screenCtx.filter = `blur(${blurAmount}px)`;
 
-      screenCtx.fillStyle = '#020617';
-      screenCtx.fillRect(0, 0, w, h);
+      // Draw Screen Arrow Image
+      const cx = screenCanvas.width / 2;
+      const cy = screenCanvas.height / 2;
+      const scale = 0.8;
+      const h = p.imgH * scale;
 
-      // Grid backdrop on screen
-      screenCtx.strokeStyle = '#1e293b';
-      screenCtx.lineWidth = 1;
+      screenCtx.strokeStyle = '#34d399';
+      screenCtx.lineWidth = 4;
       screenCtx.beginPath();
-      screenCtx.arc(w/2, h/2, 40, 0, Math.PI * 2);
+      screenCtx.moveTo(cx, cy + h/2);
+      screenCtx.lineTo(cx, cy - h/2);
       screenCtx.stroke();
 
-      const defocusDist = Math.abs(state.x_screen - opt.x_i);
-      document.getElementById('defocusDistText').innerText = `${defocusDist.toFixed(1)} px`;
+      // Arrow head
+      screenCtx.fillStyle = '#34d399';
+      const dir = h >= 0 ? 1 : -1;
+      screenCtx.beginPath();
+      screenCtx.moveTo(cx, cy - h/2);
+      screenCtx.lineTo(cx - 8, cy - h/2 + 10 * dir);
+      screenCtx.lineTo(cx + 8, cy - h/2 + 10 * dir);
+      screenCtx.closePath();
+      screenCtx.fill();
 
-      const badge = document.getElementById('screenStatusBadge');
-      const realStatus = document.getElementById('screenRealStatus');
-
-      if (opt.isReal && !opt.isInfinite) {
-        // Calculate blur radius: zero when x_screen == x_i
-        const blurRadius = Math.min(20, defocusDist * 0.12);
-
-        screenCtx.save();
-        if (blurRadius > 0.5) {
-          screenCtx.filter = `blur(${blurRadius}px)`;
-        }
-
-        // Draw real inverted projection of flame on screen
-        const scale = Math.abs(opt.m);
-        const candleH = Math.min(70, Math.max(15, 30 * scale));
-
-        // Draw projected inverted flame
-        const cx = w / 2;
-        const cy = h / 2;
-
-        const grad = screenCtx.createRadialGradient(cx, cy, 2, cx, cy, candleH);
-        grad.addColorStop(0, '#f59e0b');
-        grad.addColorStop(0.7, 'rgba(239, 68, 68, 0.6)');
-        grad.addColorStop(1, 'transparent');
-
-        screenCtx.fillStyle = grad;
-        screenCtx.beginPath();
-        screenCtx.arc(cx, cy, candleH, 0, Math.PI * 2);
-        screenCtx.fill();
-
-        screenCtx.restore();
-
-        if (defocusDist < 4) {
-          badge.innerText = '完美清晰成實像';
-          badge.className = 'text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
-          realStatus.innerText = '完美合焦點';
-          realStatus.className = 'text-emerald-400 font-bold';
-        } else {
-          badge.innerText = '離焦模糊';
-          badge.className = 'text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30';
-          realStatus.innerText = '屏幕捕捉實像中';
-          realStatus.className = 'text-blue-400';
-        }
-
-      } else {
-        // Virtual image or parallel rays cannot be captured on screen!
-        screenCtx.fillStyle = '#64748b';
-        screenCtx.font = '11px Inter, sans-serif';
-        screenCtx.textAlign = 'center';
-        screenCtx.fillText('無法在屏幕捕捉虛像 / 無實像', w / 2, h / 2 - 6);
-        screenCtx.fillText('(虛像發散光束無法會聚於屏幕)', w / 2, h / 2 + 12);
-
-        badge.innerText = '無實像';
-        badge.className = 'text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400';
-        realStatus.innerText = '無法成實像';
-        realStatus.className = 'text-slate-500';
-      }
+      screenCtx.restore();
     }
 
-    function renderEyeView() {
-      if (!eyeCtx) return;
-      const w = eyeCanvas.width;
-      const h = eyeCanvas.height;
-      const opt = computeOptics();
+    function renderEyeViewportSingle(p, eyeInCone) {
+      eyeCtx.clearRect(0, 0, eyeCanvas.width, eyeCanvas.height);
+      eyeCtx.fillStyle = '#05070a';
+      eyeCtx.fillRect(0, 0, eyeCanvas.width, eyeCanvas.height);
 
-      eyeCtx.fillStyle = '#0f172a';
-      eyeCtx.fillRect(0, 0, w, h);
-
-      // Eye position check: Must be in refracted/reflected light zone!
-      const isLens = opt.isLens;
-      const x_eye = state.x_eye;
-      const y_eye = state.y_eye;
-      const x_opt = state.x_optic;
-
-      let inLightZone = false;
-      if (isLens) {
-        // Lens: Eye must be to the right of lens (x_eye > x_optic)
-        inLightZone = x_eye > x_opt + 10;
-      } else {
-        // Mirror: Eye must be in front of mirror (x_eye < x_optic)
-        inLightZone = x_eye < x_opt - 10;
-      }
-
-      document.getElementById('eyePosText').innerText = `(${Math.round(x_eye)}, ${Math.round(y_eye)})`;
       const badge = document.getElementById('eyeStatusBadge');
-      const quality = document.getElementById('eyeVisionQuality');
 
-      if (inLightZone && !opt.isInfinite) {
-        // Draw perceived visual image
-        const cx = w / 2;
-        const cy = h / 2;
-
-        const scale = Math.min(2.5, Math.max(0.3, Math.abs(opt.m)));
-        const size = 25 * scale;
-
-        eyeCtx.save();
-
-        // Draw Iris circular aperture framing
-        eyeCtx.strokeStyle = '#0284c7';
-        eyeCtx.lineWidth = 2;
-        eyeCtx.beginPath();
-        eyeCtx.arc(cx, cy, 50, 0, Math.PI * 2);
-        eyeCtx.stroke();
-
-        // Perceived image flame
-        const flameColor = opt.isReal ? '#f59e0b' : '#38bdf8';
-        const grad = eyeCtx.createRadialGradient(cx, cy, 2, cx, cy, size);
-        grad.addColorStop(0, flameColor);
-        grad.addColorStop(0.8, 'rgba(14, 165, 233, 0.3)');
-        grad.addColorStop(1, 'transparent');
-
-        eyeCtx.fillStyle = grad;
-        eyeCtx.beginPath();
-        eyeCtx.arc(cx, cy, size, 0, Math.PI * 2);
-        eyeCtx.fill();
-
-        eyeCtx.fillStyle = '#ffffff';
-        eyeCtx.font = 'bold 11px Inter, sans-serif';
-        eyeCtx.textAlign = 'center';
-        eyeCtx.fillText(opt.isReal ? '感知實像' : '感知虛像 (放大/縮小)', cx, cy + size + 16);
-
-        eyeCtx.restore();
-
-        badge.innerText = '受光視野內';
-        badge.className = 'text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
-        quality.innerText = '人眼可清晰觀察像';
-        quality.className = 'text-emerald-400 font-bold';
-
-      } else {
-        // Out of vision range
+      if (!eyeInCone) {
+        badge.innerText = '未在視角內';
+        badge.className = 'status-badge badge-virtual';
         eyeCtx.fillStyle = '#64748b';
-        eyeCtx.font = '11px Inter, sans-serif';
-        eyeCtx.textAlign = 'center';
-        eyeCtx.fillText('未在折射/反射光束範圍內', w / 2, h / 2 - 6);
-        eyeCtx.fillText('請將眼睛移動至光路區域內', w / 2, h / 2 + 12);
-
-        badge.innerText = '不在視野區';
-        badge.className = 'text-[10px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-300 border border-red-500/30';
-        quality.innerText = '視野無視覺光線';
-        quality.className = 'text-red-400';
+        eyeCtx.font = '12px sans-serif';
+        eyeCtx.fillText('請將眼睛移至光束出口範圍內', 45, 65);
+        return;
       }
+
+      badge.innerText = p.isReal ? '看見實像' : '看見虛像';
+      badge.className = p.isReal ? 'status-badge badge-real' : 'status-badge badge-virtual';
+
+      const cx = eyeCanvas.width / 2;
+      const cy = eyeCanvas.height / 2;
+      const scale = 0.8;
+      const h = p.imgH * scale;
+
+      eyeCtx.save();
+      eyeCtx.strokeStyle = p.isReal ? '#34d399' : '#f472b6';
+      eyeCtx.lineWidth = 4;
+      eyeCtx.beginPath();
+      eyeCtx.moveTo(cx, cy + h/2);
+      eyeCtx.lineTo(cx, cy - h/2);
+      eyeCtx.stroke();
+
+      eyeCtx.fillStyle = p.isReal ? '#34d399' : '#f472b6';
+      const dir = h >= 0 ? 1 : -1;
+      eyeCtx.beginPath();
+      eyeCtx.moveTo(cx, cy - h/2);
+      eyeCtx.lineTo(cx - 8, cy - h/2 + 10 * dir);
+      eyeCtx.lineTo(cx + 8, cy - h/2 + 10 * dir);
+      eyeCtx.closePath();
+      eyeCtx.fill();
+      eyeCtx.restore();
     }
 
-    /* ==========================================================================
-       INTERACTIVE POINTER & DRAGGING HANDLERS
-       ========================================================================== */
+    function renderEyeViewportMulti(p, eyeInCone) {
+      eyeCtx.clearRect(0, 0, eyeCanvas.width, eyeCanvas.height);
+      eyeCtx.fillStyle = '#05070a';
+      eyeCtx.fillRect(0, 0, eyeCanvas.width, eyeCanvas.height);
 
-    function getCanvasCoords(e) {
+      const badge = document.getElementById('eyeStatusBadge');
+
+      if (!eyeInCone) {
+        badge.innerText = '未位於目鏡視角內';
+        badge.className = 'status-badge badge-virtual';
+        eyeCtx.fillStyle = '#64748b';
+        eyeCtx.font = '12px sans-serif';
+        eyeCtx.fillText('將眼睛移至目鏡 L₂ 右側', 55, 65);
+        return;
+      }
+
+      badge.innerText = '看見最終像 I₂';
+      badge.className = 'status-badge badge-virtual';
+
+      const cx = eyeCanvas.width / 2;
+      const cy = eyeCanvas.height / 2;
+      const scale = Math.min(1.2, 100 / Math.abs(p.h_i2 || 1));
+      const h = p.h_i2 * scale;
+
+      eyeCtx.save();
+      eyeCtx.strokeStyle = '#f472b6';
+      eyeCtx.lineWidth = 4;
+      eyeCtx.beginPath();
+      eyeCtx.moveTo(cx, cy + h/2);
+      eyeCtx.lineTo(cx, cy - h/2);
+      eyeCtx.stroke();
+
+      eyeCtx.fillStyle = '#f472b6';
+      const dir = h >= 0 ? 1 : -1;
+      eyeCtx.beginPath();
+      eyeCtx.moveTo(cx, cy - h/2);
+      eyeCtx.lineTo(cx - 8, cy - h/2 + 10 * dir);
+      eyeCtx.lineTo(cx + 8, cy - h/2 + 10 * dir);
+      eyeCtx.closePath();
+      eyeCtx.fill();
+      eyeCtx.restore();
+    }
+
+
+    // --- Live UI Data Updates ---
+
+    function updateSingleDataUI(p) {
+      const grid = document.getElementById('dataGrid');
+      grid.innerHTML = `
+        <div class="data-item"><div class="data-label">物距 do</div><div class="data-value">${p.doVal.toFixed(1)} px</div></div>
+        <div class="data-item"><div class="data-label">像距 di</div><div class="data-value">${p.isParallel ? '∞ (平行)' : p.diVal.toFixed(1) + ' px'}</div></div>
+        <div class="data-item"><div class="data-label">放大率 m</div><div class="data-value">${p.isParallel ? '∞' : p.m.toFixed(2)} x</div></div>
+        <div class="data-item"><div class="data-label">成像性質</div><div class="data-value" style="color:${p.isReal?'var(--accent-green)':'var(--accent-pink)'}">
+          ${p.isParallel ? '不成像' : (p.isReal ? '正立/倒立實像' : '正立/倒立虛像')}
+        </div></div>
+      `;
+    }
+
+    function updateMultiDataUI(p) {
+      const grid = document.getElementById('dataGrid');
+      grid.innerHTML = `
+        <div class="data-item"><div class="data-label">L₁ 一次物距 do1</div><div class="data-value">${p.do1.toFixed(1)} px</div></div>
+        <div class="data-item"><div class="data-label">L₁ 一次像距 di1</div><div class="data-value">${p.di1.toFixed(1)} px</div></div>
+        <div class="data-item"><div class="data-label">L₂ 二次物距 do2</div><div class="data-value">${p.do2.toFixed(1)} px</div></div>
+        <div class="data-item"><div class="data-label">L₂ 最終像距 di2</div><div class="data-value">${p.di2.toFixed(1)} px</div></div>
+        <div class="data-item"><div class="data-label">總放大率 Mtotal</div><div class="data-value" style="color:var(--accent-pink)">${p.mTotal.toFixed(2)} x</div></div>
+        <div class="data-item"><div class="data-label">最終像性質</div><div class="data-value" style="color:var(--accent-purple)">
+          ${p.h_i2 < 0 ? '倒立' : '正立'} ${p.isReal2 ? '實像' : '虛像'}
+        </div></div>
+      `;
+    }
+
+
+    // --- Snapshot Management ---
+
+    function takeSnapshot() {
+      const p = calcSinglePhysics();
+      if (p.isParallel) return;
+
+      const snapshot = {
+        time: new Date().toLocaleTimeString(),
+        doVal: p.doVal,
+        diVal: p.diVal,
+        m: p.m,
+        isReal: p.isReal,
+        objX: singleState.obj.x,
+        imgX: p.imgX,
+        imgH: p.imgH
+      };
+
+      singleState.snapshots.unshift(snapshot);
+      if (singleState.snapshots.length > 8) singleState.snapshots.pop();
+
+      updateSnapshotTable();
+    }
+
+    function updateSnapshotTable() {
+      const tbody = document.getElementById('snapshotTableBody');
+      const countTag = document.getElementById('snapCountTag');
+      countTag.innerText = singleState.snapshots.length + ' 筆';
+
+      if (singleState.snapshots.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--text-muted)">無記錄，請開啟動態快照並移動物體</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = singleState.snapshots.map(s => `
+        <tr>
+          <td>${s.doVal.toFixed(0)}</td>
+          <td>${s.diVal.toFixed(0)}</td>
+          <td>${s.m.toFixed(2)}x</td>
+          <td><span class="status-badge ${s.isReal?'badge-real':'badge-virtual'}">${s.isReal?'實像':'虛像'}</span></td>
+        </tr>
+      `).join('');
+    }
+
+    function drawGhostSnapshot(s) {
+      ctx.save();
+      ctx.globalAlpha = 0.35;
+
+      drawArrowObject(s.objX, axisY, singleState.obj.h, '#94a3b8', null);
+      drawArrowObject(s.imgX, axisY, s.imgH, s.isReal ? '#34d399' : '#f472b6', null, !s.isReal);
+
+      ctx.strokeStyle = '#64748b';
+      ctx.setLineDash([2, 4]);
+      ctx.beginPath();
+      ctx.moveTo(s.objX, axisY - singleState.obj.h);
+      ctx.lineTo(s.imgX, axisY - s.imgH);
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+
+    // --- Mouse & Touch Dragging Handlers ---
+
+    function getMousePos(e) {
       const rect = canvas.getBoundingClientRect();
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
@@ -1370,290 +1494,88 @@
       };
     }
 
-    function handlePointerDown(e) {
-      const { x, y } = getCanvasCoords(e);
-      const axisY = canvas.height / 2;
+    canvas.addEventListener('mousedown', onDragStart);
+    canvas.addEventListener('touchstart', onDragStart);
+    window.addEventListener('mousemove', onDragMove);
+    window.addEventListener('touchmove', onDragMove);
+    window.addEventListener('mouseup', onDragEnd);
+    window.addEventListener('touchend', onDragEnd);
 
-      // 1. Check Candle Object click (Radius 30)
-      if (Math.hypot(x - state.x_o, y - (axisY - state.h_o / 2)) < 35) {
-        state.isDraggingObject = true;
-        state.dragOffsetX = x - state.x_o;
-        return;
-      }
+    function onDragStart(e) {
+      const pos = getMousePos(e);
 
-      // 2. Check Optic Device click
-      if (Math.hypot(x - state.x_optic, y - axisY) < 40) {
-        state.isDraggingOptic = true;
-        state.dragOffsetX = x - state.x_optic;
-        return;
-      }
-
-      // 3. Check Screen click
-      if (Math.abs(x - state.x_screen) < 20) {
-        state.isDraggingScreen = true;
-        state.dragOffsetX = x - state.x_screen;
-        return;
-      }
-
-      // 4. Check Eye click
-      if (Math.hypot(x - state.x_eye, y - state.y_eye) < 25) {
-        state.isDraggingEye = true;
-        state.dragOffsetX = x - state.x_eye;
-        state.dragOffsetY = y - state.y_eye;
-        return;
-      }
-    }
-
-    function handlePointerMove(e) {
-      if (!state.isDraggingObject && !state.isDraggingOptic && !state.isDraggingScreen && !state.isDraggingEye) return;
-      e.preventDefault();
-
-      const { x, y } = getCanvasCoords(e);
-
-      if (state.isDraggingObject) {
-        state.x_o = Math.max(30, Math.min(state.x_optic - 15, x - state.dragOffsetX));
-        document.getElementById('doSlider').value = Math.abs(state.x_optic - state.x_o);
-        
-        // Auto Snapshot triggers every 0.5s if position shifted > 8px
-        if (state.autoSnapshot) {
-          const now = Date.now();
-          if (now - state.lastSnapshotTime > 500 && Math.abs(state.x_o - state.lastSnapshotX) > 8) {
-            takeManualSnapshot();
-            state.lastSnapshotTime = now;
-            state.lastSnapshotX = state.x_o;
-          }
+      if (systemMode === 'single') {
+        if (Math.abs(pos.x - singleState.obj.x) < 25) {
+          draggingTarget = 'obj';
+          return;
         }
-      } else if (state.isDraggingOptic) {
-        state.x_optic = Math.max(200, Math.min(canvas.width - 200, x - state.dragOffsetX));
-      } else if (state.isDraggingScreen) {
-        state.x_screen = Math.max(100, Math.min(canvas.width - 20, x - state.dragOffsetX));
-        document.getElementById('screenSlider').value = state.x_screen;
-      } else if (state.isDraggingEye) {
-        state.x_eye = Math.max(50, Math.min(canvas.width - 20, x - state.dragOffsetX));
-        state.y_eye = Math.max(30, Math.min(canvas.height - 30, y - state.dragOffsetY));
-      }
-
-      updateUI();
-    }
-
-    function handlePointerUp() {
-      state.isDraggingObject = false;
-      state.isDraggingOptic = false;
-      state.isDraggingScreen = false;
-      state.isDraggingEye = false;
-    }
-
-    /* ==========================================================================
-       SNAPSHOT MANAGEMENT & COMPARISON TABLE
-       ========================================================================== */
-
-    function takeManualSnapshot() {
-      const opt = computeOptics();
-      const col = colorPalette[paletteIdx % colorPalette.length];
-      paletteIdx++;
-
-      const newSnap = {
-        id: Date.now() + Math.random(),
-        opticType: state.opticType,
-        f: state.f,
-        x_optic: state.x_optic,
-        x_o: state.x_o,
-        h_o: state.h_o,
-        d_o: opt.d_o,
-        d_i: opt.d_i,
-        x_i: opt.x_i,
-        m: opt.m,
-        natureStr: opt.natureStr,
-        isInfinite: opt.isInfinite,
-        color: col
-      };
-
-      snapshots.unshift(newSnap); // Push to beginning
-      if (snapshots.length > 12) snapshots.pop(); // Limit to 12 snapshots max
-
-      renderSnapshotTable();
-    }
-
-    function clearAllSnapshots() {
-      snapshots = [];
-      renderSnapshotTable();
-    }
-
-    function deleteSnapshot(id, event) {
-      if (event) event.stopPropagation();
-      snapshots = snapshots.filter(s => s.id !== id);
-      renderSnapshotTable();
-    }
-
-    function renderSnapshotTable() {
-      const tbody = document.getElementById('snapshotTableBody');
-      if (!tbody) return;
-
-      if (snapshots.length === 0) {
-        tbody.innerHTML = `
-          <tr>
-            <td colspan="9" class="text-center py-6 text-slate-500">
-              尚無快照殘影記錄。移動物體或點擊「拍攝快照」按鈕記錄光學殘影。
-            </td>
-          </tr>
-        `;
-        return;
-      }
-
-      let html = '';
-      snapshots.forEach((snap, idx) => {
-        const typeNameMap = {
-          'convex_lens': '凸透鏡',
-          'concave_lens': '凹透鏡',
-          'concave_mirror': '凹面鏡',
-          'convex_mirror': '凸面鏡'
-        };
-
-        const diText = snap.isInfinite ? '∞' : `${Math.abs(snap.d_i).toFixed(1)} px`;
-        const mText = snap.isInfinite ? '--' : snap.m.toFixed(2);
-        const relPos = snap.isInfinite ? '平行發散' : `${(snap.x_i - snap.x_optic).toFixed(1)} px`;
-
-        html += `
-          <tr class="hover:bg-slate-800/80 transition cursor-pointer" 
-              onmouseenter="state.hoveredSnapshotId = ${snap.id}" 
-              onmouseleave="state.hoveredSnapshotId = null">
-            <td class="p-2.5 text-center">
-              <span class="inline-flex items-center gap-1.5 font-mono text-xs font-bold" style="color: ${snap.color}">
-                <span class="w-2.5 h-2.5 rounded-full inline-block" style="background-color: ${snap.color}"></span>
-                #${snapshots.length - idx}
-              </span>
-            </td>
-            <td class="p-2.5 font-medium text-slate-200">${typeNameMap[snap.opticType]}</td>
-            <td class="p-2.5 font-mono text-slate-300">${snap.f} px</td>
-            <td class="p-2.5 font-mono text-amber-300">${snap.d_o.toFixed(1)} px</td>
-            <td class="p-2.5 font-mono text-sky-300">${diText}</td>
-            <td class="p-2.5 font-mono text-emerald-300">${mText}</td>
-            <td class="p-2.5 font-semibold text-xs">${snap.natureStr}</td>
-            <td class="p-2.5 font-mono text-slate-400 text-xs">${relPos}</td>
-            <td class="p-2.5 text-center">
-              <button onclick="deleteSnapshot(${snap.id}, event)" class="px-2 py-1 rounded bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-400 text-xs transition">
-                <i class="fa-solid fa-xmark"></i>
-              </button>
-            </td>
-          </tr>
-        `;
-      });
-
-      tbody.innerHTML = html;
-    }
-
-    /* ==========================================================================
-       UI INTERACTIVE STATE CONTROLLERS
-       ========================================================================== */
-
-    function updateUI() {
-      const opt = computeOptics();
-
-      // Sliders & Text
-      document.getElementById('fValDisplay').innerText = `${state.f} px`;
-      document.getElementById('doValDisplay').innerText = `${opt.d_o.toFixed(0)} px`;
-      document.getElementById('hoValDisplay').innerText = `${state.h_o} px`;
-      document.getElementById('screenValDisplay').innerText = `${state.x_screen} px`;
-
-      // Live Data Cards
-      document.getElementById('diValData').innerText = opt.isInfinite ? '無窮大 (∞)' : `${Math.abs(opt.d_i).toFixed(1)} px`;
-      document.getElementById('mValData').innerText = opt.isInfinite ? '不成像' : opt.m.toFixed(2);
-      document.getElementById('natureValData').innerText = opt.natureStr;
-
-      // Formula note text update
-      const noteEl = document.getElementById('physicsFormulaNote');
-      if (opt.isLens) {
-        noteEl.innerHTML = `<b>透鏡公式：</b>透鏡折射光穿透。實像位於透鏡右側異側 ($x_i = x_{optic} + d_i$)，虛像位於透鏡左側同側。`;
+        if (Math.abs(pos.x - singleState.screenX) < 20) {
+          draggingTarget = 'screen';
+          return;
+        }
+        if (Math.hypot(pos.x - singleState.eye.x, pos.y - singleState.eye.y) < 30) {
+          draggingTarget = 'eye';
+          return;
+        }
       } else {
-        noteEl.innerHTML = `<b>面鏡公式：</b>面鏡反射光回傳。實像位於鏡前同側 ($x_i = x_{optic} - d_i$)，虛像位於鏡後 ($x_i = x_{optic} + |d_i|$)。`;
+        if (Math.abs(pos.x - multiState.obj.x) < 25) {
+          draggingTarget = 'obj';
+          return;
+        }
+        if (Math.abs(pos.x - multiState.l1.x) < 25) {
+          draggingTarget = 'l1';
+          return;
+        }
+        if (Math.abs(pos.x - multiState.l2.x) < 25) {
+          draggingTarget = 'l2';
+          return;
+        }
+        if (Math.hypot(pos.x - multiState.eye.x, pos.y - multiState.eye.y) < 30) {
+          draggingTarget = 'eye';
+          return;
+        }
+      }
+    }
+
+    function onDragMove(e) {
+      if (!draggingTarget) return;
+      const pos = getMousePos(e);
+
+      if (systemMode === 'single') {
+        if (draggingTarget === 'obj') {
+          singleState.obj.x = Math.max(20, Math.min(singleState.opticX - 10, pos.x));
+        } else if (draggingTarget === 'screen') {
+          singleState.screenX = Math.max(singleState.opticX + 10, Math.min(canvasW - 20, pos.x));
+        } else if (draggingTarget === 'eye') {
+          singleState.eye.x = pos.x;
+          singleState.eye.y = pos.y;
+        }
+      } else {
+        if (draggingTarget === 'obj') {
+          multiState.obj.x = Math.max(10, Math.min(multiState.l1.x - 10, pos.x));
+        } else if (draggingTarget === 'l1') {
+          multiState.l1.x = Math.max(multiState.obj.x + 10, Math.min(multiState.l2.x - 30, pos.x));
+        } else if (draggingTarget === 'l2') {
+          multiState.l2.x = Math.max(multiState.l1.x + 30, Math.min(canvasW - 50, pos.x));
+        } else if (draggingTarget === 'eye') {
+          multiState.eye.x = pos.x;
+          multiState.eye.y = pos.y;
+        }
       }
 
-      // Type Badge
-      const typeMap = {
-        'convex_lens': '凸透鏡',
-        'concave_lens': '凹透鏡',
-        'concave_mirror': '凹面鏡',
-        'convex_mirror': '凸面鏡'
-      };
-      document.getElementById('opticTypeBadge').innerText = typeMap[state.opticType];
-
-      // Optic Button Styles
-      ['convex_lens', 'concave_lens', 'concave_mirror', 'convex_mirror'].forEach(type => {
-        const btn = document.getElementById(`btn-${type}`);
-        if (btn) {
-          if (state.opticType === type) {
-            btn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-brand-600 text-white shadow transition flex items-center gap-1.5';
-          } else {
-            btn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5';
-          }
-        }
-      });
-
-      // Ray Mode Button Styles
-      [1, 2, 3].forEach(mode => {
-        const btn = document.getElementById(`btn-rayMode-${mode}`);
-        if (btn) {
-          if (state.rayMode === mode) {
-            btn.className = 'px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-700 text-brand-300 border border-brand-500/40 transition';
-          } else {
-            btn.className = 'px-2.5 py-1.5 rounded-lg text-xs text-slate-400 hover:text-slate-200 transition';
-          }
-        }
-      });
+      render();
     }
 
-    function setOpticType(type) {
-      state.opticType = type;
-      updateUI();
+    function onDragEnd() {
+      draggingTarget = null;
     }
 
-    function setRayMode(mode) {
-      state.rayMode = mode;
-      updateUI();
-    }
 
-    function toggleAutoSnapshot(checked) {
-      state.autoSnapshot = checked;
-    }
-
-    function onFSliderChange(val) {
-      state.f = parseInt(val);
-      updateUI();
-    }
-
-    function onDoSliderChange(val) {
-      const d_o = parseInt(val);
-      state.x_o = state.x_optic - d_o;
-      updateUI();
-    }
-
-    function onHoSliderChange(val) {
-      state.h_o = parseInt(val);
-      updateUI();
-    }
-
-    function onScreenSliderChange(val) {
-      state.x_screen = parseInt(val);
-      updateUI();
-    }
-
-    function setPreset(preset) {
-      const f = state.f;
-      if (preset === 'd_gt_2f') {
-        state.x_o = state.x_optic - (2.5 * f);
-      } else if (preset === 'd_eq_2f') {
-        state.x_o = state.x_optic - (2.0 * f);
-      } else if (preset === 'f_lt_d_lt_2f') {
-        state.x_o = state.x_optic - (1.5 * f);
-      } else if (preset === 'd_eq_f') {
-        state.x_o = state.x_optic - (1.0 * f);
-      } else if (preset === 'd_lt_f') {
-        state.x_o = state.x_optic - (0.5 * f);
-      }
-      document.getElementById('doSlider').value = Math.abs(state.x_optic - state.x_o);
-      updateUI();
-      takeManualSnapshot();
-    }
+    // --- Initialization ---
+    window.onload = () => {
+      resizeCanvas();
+      switchSystemMode('single');
+    };
   </script>
 </body>
 </html>

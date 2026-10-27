@@ -1,0 +1,1685 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="h-full bg-slate-950 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>平面鏡與曲面鏡成像 互動教學實驗室</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Tone.js for Audio Feedback -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+        .canvas-container {
+            position: relative;
+            cursor: crosshair;
+        }
+        
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .tab-btn.active {
+            background-color: #3b82f6;
+            color: #ffffff;
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+        }
+
+        /* Range Slider styling */
+        input[type=range] {
+            accent-color: #3b82f6;
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col overflow-hidden select-none">
+
+    <!-- Top Navigation Header -->
+    <header class="bg-slate-900/90 border-b border-slate-800 px-4 py-3 flex flex-wrap items-center justify-between shrink-0 gap-3">
+        <div class="flex items-center space-x-3">
+            <div class="bg-blue-600 text-white p-2 rounded-xl shadow-lg shadow-blue-500/30">
+                <i class="fa-solid fa-wand-magic-sparkles text-xl"></i>
+            </div>
+            <div>
+                <h1 class="text-lg font-bold text-white tracking-wide">光學實驗室：平面鏡與曲面鏡成像</h1>
+                <p class="text-xs text-slate-400">國中/高中物理 幾何光學反射與虛像原理互動教學</p>
+            </div>
+        </div>
+
+        <!-- Module Tabs -->
+        <nav class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-sm">
+            <button id="tab-1-btn" onclick="switchTab(1)" class="tab-btn active px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2">
+                <i class="fa-solid fa-eye"></i> 1. 平面鏡虛像原理
+            </button>
+            <button id="tab-2-btn" onclick="switchTab(2)" class="tab-btn px-4 py-2 rounded-lg font-medium transition-all text-slate-400 hover:text-white flex items-center gap-2">
+                <i class="fa-solid fa-expand"></i> 2. 眼睛視野與多鏡繪畫
+            </button>
+            <button id="tab-3-btn" onclick="switchTab(3)" class="tab-btn px-4 py-2 rounded-lg font-medium transition-all text-slate-400 hover:text-white flex items-center gap-2">
+                <i class="fa-solid fa-circle-half-stroke"></i> 3. 曲面鏡曲率與成像
+            </button>
+        </nav>
+
+        <!-- Right Tool controls -->
+        <div class="flex items-center gap-2">
+            <button onclick="toggleAudio()" id="audio-btn" class="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-sm transition" title="聲音特效">
+                <i class="fa-solid fa-volume-high"></i>
+            </button>
+            <button onclick="resetCurrentTab()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-sm font-medium transition flex items-center gap-1.5">
+                <i class="fa-solid fa-rotate-left text-xs"></i> 重置重來
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <div class="flex-1 flex flex-col md:flex-row overflow-hidden relative">
+        
+        <!-- Left Sidebar: Controls & Guidance -->
+        <aside class="w-full md:w-80 lg:w-96 bg-slate-900/80 border-r border-slate-800 p-4 flex flex-col gap-4 overflow-y-auto shrink-0 z-10">
+            
+            <!-- Dynamic Controls per Tab -->
+            <!-- TAB 1 CONTROLS -->
+            <div id="tab-1-controls" class="space-y-4">
+                <div class="glass-panel p-3.5 rounded-xl border border-blue-500/20 bg-blue-950/20">
+                    <h3 class="text-sm font-semibold text-blue-400 flex items-center gap-2 mb-2">
+                        <i class="fa-solid fa-lightbulb"></i> 教學目標：虛像形成原理
+                    </h3>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        物體上一點發出兩條光線，經平面鏡反射後進入眼睛。大腦沿著進入眼睛的反射光線<span class="text-amber-400 font-semibold">反向虛線延長</span>，會在鏡後相交於一點，該點即為眼睛所看到的<span class="text-cyan-400 font-semibold">虛像 (Virtual Image)</span>。
+                    </p>
+                </div>
+
+                <!-- Mirror Remove / Compare Button -->
+                <div class="bg-slate-950/50 p-3 rounded-xl border border-slate-800 space-y-2">
+                    <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">光路對比切換</h4>
+                    <button id="t1-remove-mirror-btn" onclick="toggleT1Mirror()" class="w-full py-2 px-3 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-semibold shadow-md transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-eye-slash"></i> 移除平面鏡（觀察實物直射光路）
+                    </button>
+                    <p class="text-[11px] text-slate-400 leading-normal">
+                        點擊此按鈕可將平面鏡移除，比較「無鏡子直射光路」與「有鏡子反射虛像光路」的差異。
+                    </p>
+                </div>
+
+                <div class="space-y-3 bg-slate-950/50 p-3 rounded-xl border border-slate-800">
+                    <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">逐步拆解學習</h4>
+                    <div class="grid grid-cols-1 gap-2 text-xs">
+                        <label class="flex items-center gap-2 text-slate-200 cursor-pointer">
+                            <input type="checkbox" id="t1-show-rays" checked onchange="render()" class="rounded bg-slate-800 border-slate-700 text-blue-500 focus:ring-0">
+                            顯示發射入射光線 (2條)
+                        </label>
+                        <label class="flex items-center gap-2 text-slate-200 cursor-pointer">
+                            <input type="checkbox" id="t1-show-reflected" checked onchange="render()" class="rounded bg-slate-800 border-slate-700 text-blue-500 focus:ring-0">
+                            顯示反射光線至眼睛
+                        </label>
+                        <label class="flex items-center gap-2 text-slate-200 cursor-pointer">
+                            <input type="checkbox" id="t1-show-extensions" checked onchange="render()" class="rounded bg-slate-800 border-slate-700 text-blue-500 focus:ring-0">
+                            顯示鏡後虛線延長線
+                        </label>
+                        <label class="flex items-center gap-2 text-slate-200 cursor-pointer">
+                            <input type="checkbox" id="t1-show-angles" checked onchange="render()" class="rounded bg-slate-800 border-slate-700 text-blue-500 focus:ring-0">
+                            顯示法線與反射角 ($\theta_i = \theta_r$)
+                        </label>
+                        <label class="flex items-center gap-2 text-slate-200 cursor-pointer">
+                            <input type="checkbox" id="t1-show-distances" checked onchange="render()" class="rounded bg-slate-800 border-slate-700 text-blue-500 focus:ring-0">
+                            顯示物距與像距標示 ($d_o = d_i$)
+                        </label>
+                    </div>
+                </div>
+
+                <div class="bg-slate-950/50 p-3 rounded-xl border border-slate-800 space-y-2">
+                    <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">互動操作提示</h4>
+                    <p class="text-xs text-slate-300">
+                        • 用滑鼠<span class="text-blue-400 font-medium">拖曳物體（蠟燭）</span>改變位置<br>
+                        • 用滑鼠<span class="text-blue-400 font-medium">拖曳眼睛</span>觀察入射角與反射光路變化<br>
+                        • 用滑鼠<span class="text-blue-400 font-medium">拖曳平面鏡</span>左右移動
+                    </p>
+                </div>
+            </div>
+
+            <!-- TAB 2 CONTROLS -->
+            <div id="tab-2-controls" class="space-y-4 hidden">
+                <div class="glass-panel p-3.5 rounded-xl border border-emerald-500/20 bg-emerald-950/20">
+                    <h3 class="text-sm font-semibold text-emerald-400 flex items-center gap-2 mb-2">
+                        <i class="fa-solid fa-bullseye"></i> 教學目標：眼睛視野與多鏡成像
+                    </h3>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        眼睛與平面鏡兩端點構成視野範圍。本單元已新增<span class="text-amber-400 font-semibold">鏡邊入射光路（黃色區域）</span>與<span class="text-emerald-400 font-semibold">鏡後虛像區域（綠色區域）</span>。當物體或自由繪畫<span class="text-cyan-300 font-semibold">部分進入視野</span>時，鏡後將精確呈現<span class="text-cyan-300 font-semibold">對應部分的虛像</span>！
+                    </p>
+                </div>
+
+                <!-- Teacher Tools: Draw Mirror, Freehand, Drag -->
+                <div class="bg-slate-950/50 p-3 rounded-xl border border-slate-800 space-y-3">
+                    <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">繪圖與平面鏡工具</h4>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button id="tool-draw" onclick="setT2Tool('draw')" class="py-1.5 px-2 bg-blue-600 text-white rounded text-xs font-medium flex items-center justify-center gap-1">
+                            <i class="fa-solid fa-pen"></i> 自由畫筆
+                        </button>
+                        <button id="tool-mirror" onclick="setT2Tool('mirror')" class="py-1.5 px-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs font-medium flex items-center justify-center gap-1">
+                            <i class="fa-solid fa-slash"></i> 繪製平面鏡
+                        </button>
+                        <button id="tool-drag" onclick="setT2Tool('drag')" class="col-span-2 py-1.5 px-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs font-medium flex items-center justify-center gap-1">
+                            <i class="fa-solid fa-hand"></i> 拖曳/移動物件
+                        </button>
+                    </div>
+
+                    <div id="tool-mirror-hint" class="hidden text-[11px] text-amber-300 bg-amber-950/40 p-2 rounded border border-amber-800/40">
+                        <i class="fa-solid fa-circle-info"></i> 按住滑鼠從起點拉到終點即可繪製平面鏡！
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex gap-2 pt-1">
+                        <button onclick="undoLastMirror()" class="flex-1 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded text-xs flex items-center justify-center gap-1">
+                            <i class="fa-solid fa-rotate-left"></i> 復原平面鏡
+                        </button>
+                        <button onclick="clearAllMirrors()" class="px-2.5 py-1.5 bg-red-950/40 hover:bg-red-900/60 text-red-300 border border-red-800/50 rounded text-xs">
+                            <i class="fa-solid fa-trash-can"></i> 清除鏡子
+                        </button>
+                    </div>
+
+                    <div class="flex items-center gap-2 text-xs pt-1 border-t border-slate-800">
+                        <span class="text-slate-400">畫筆顏色:</span>
+                        <input type="color" id="t2-pen-color" value="#38bdf8" class="w-7 h-7 rounded bg-transparent cursor-pointer border-0">
+                        <button onclick="clearCanvasDrawings()" class="ml-auto px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs">
+                            <i class="fa-solid fa-eraser"></i> 清除畫筆
+                        </button>
+                    </div>
+
+                    <div class="pt-2 border-t border-slate-800 flex flex-wrap gap-1.5">
+                        <span class="text-xs text-slate-400 w-full">放置測試圖案：</span>
+                        <button onclick="addPresetObject('star')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-xs rounded text-amber-300">★ 星星</button>
+                        <button onclick="addPresetObject('apple')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-xs rounded text-rose-400">🍎 蘋果</button>
+                        <button onclick="addPresetObject('letter')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-xs rounded text-cyan-300">Letter F</button>
+                    </div>
+                </div>
+
+                <div class="bg-slate-950/50 p-3 rounded-xl border border-slate-800 space-y-1.5 text-xs text-slate-300">
+                    <div class="flex items-center gap-2">
+                        <div class="w-3 h-3 bg-amber-500/30 border border-amber-400 rounded"></div>
+                        <span>黃色區域：物體可被看見之入射光區域</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-3 h-3 bg-emerald-500/30 border border-emerald-400 rounded"></div>
+                        <span>綠色區域：鏡後虛像視野區域 (FOV)</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-3 h-0.5 border-b border-amber-400"></div>
+                        <span>黃色光線：鏡邊入射光線 (反射後入眼)</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-3 h-0.5 border-b border-dashed border-cyan-400"></div>
+                        <span>藍色虛線：視線向鏡後延伸線 (視野邊界)</span>
+                    </div>
+                    <p class="text-[11px] text-slate-400 pt-1">
+                        提示：物體發出的光線需落在黃色區域內，經鏡邊反射後才能入眼；若自由繪圖只有部分落入視野，鏡後將精確裁切並僅呈現落入視野內的該部分虛像。
+                    </p>
+                </div>
+            </div>
+
+            <!-- TAB 3 CONTROLS -->
+            <div id="tab-3-controls" class="space-y-4 hidden">
+                <div class="glass-panel p-3.5 rounded-xl border border-purple-500/20 bg-purple-950/20">
+                    <h3 class="text-sm font-semibold text-purple-400 flex items-center gap-2 mb-2">
+                        <i class="fa-solid fa-circle-notch"></i> 教學目標：曲面鏡曲率與成像
+                    </h3>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        調整鏡面曲率：<span class="text-rose-400 font-semibold">凹面鏡 ($f > 0$)</span> 會會聚光線，成實像或虛像；<span class="text-sky-400 font-semibold">凸面鏡 ($f < 0$)</span> 會發散光線，恆成正立縮小虛像。
+                    </p>
+                </div>
+
+                <!-- Mirror Curvature Slider -->
+                <div class="bg-slate-950/50 p-3 rounded-xl border border-slate-800 space-y-3">
+                    <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">鏡面曲率 / 焦距調整</h4>
+                    
+                    <div>
+                        <div class="flex justify-between text-xs font-medium mb-1">
+                            <span class="text-slate-300">鏡面類型:</span>
+                            <span id="t3-mirror-type-label" class="text-purple-400 font-bold">平面鏡 ( Flat Mirror )</span>
+                        </div>
+                        <input type="range" id="t3-curvature-slider" min="-250" max="250" value="0" step="5" oninput="updateCurvature(this.value)" class="w-full">
+                        <div class="flex justify-between text-[10px] text-slate-500 mt-1">
+                            <span>← 凸面鏡 (Convex)</span>
+                            <span>平面鏡</span>
+                            <span>凹面鏡 (Concave) →</span>
+                        </div>
+                    </div>
+
+                    <div class="pt-2 border-t border-slate-800 space-y-1.5 text-xs">
+                        <div class="flex justify-between text-slate-300">
+                            <span>焦距 ($f$):</span>
+                            <span id="t3-f-val" class="font-mono text-amber-400">∞ (無窮大)</span>
+                        </div>
+                        <div class="flex justify-between text-slate-300">
+                            <span>物距 ($d_o$):</span>
+                            <span id="t3-do-val" class="font-mono text-cyan-400">180 cm</span>
+                        </div>
+                        <div class="flex justify-between text-slate-300">
+                            <span>像距 ($i$ / $d_i$):</span>
+                            <span id="t3-di-val" class="font-mono text-emerald-400">-180 cm (虛像)</span>
+                        </div>
+                        <div class="flex justify-between text-slate-300">
+                            <span>放大率 ($m = -d_i/d_o$):</span>
+                            <span id="t3-m-val" class="font-mono text-purple-400">+1.00 (正立等大)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Principal Rays Toggle -->
+                <div class="bg-slate-950/50 p-3 rounded-xl border border-slate-800 space-y-2 text-xs">
+                    <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">三條主要特殊光線</h4>
+                    <label class="flex items-center gap-2 text-slate-200 cursor-pointer">
+                        <input type="checkbox" id="t3-ray1" checked onchange="render()" class="rounded bg-slate-800 text-rose-500 focus:ring-0">
+                        <span class="text-rose-400 font-medium">光線 1:</span> 平行主軸入射 $\rightarrow$ 通過焦點 $F$
+                    </label>
+                    <label class="flex items-center gap-2 text-slate-200 cursor-pointer">
+                        <input type="checkbox" id="t3-ray2" checked onchange="render()" class="rounded bg-slate-800 text-emerald-500 focus:ring-0">
+                        <span class="text-emerald-400 font-medium">光線 2:</span> 通過焦點 $F$ 入射 $\rightarrow$ 平行主軸反射
+                    </label>
+                    <label class="flex items-center gap-2 text-slate-200 cursor-pointer">
+                        <input type="checkbox" id="t3-ray3" checked onchange="render()" class="rounded bg-slate-800 text-sky-500 focus:ring-0">
+                        <span class="text-sky-400 font-medium">光線 3:</span> 通過鏡頂 $V$ 入射 $\rightarrow$ 對稱角度反射
+                    </label>
+                </div>
+            </div>
+
+            <!-- Global Physics Info Box -->
+            <div class="mt-auto bg-slate-950/80 p-3 rounded-xl border border-slate-800/80 text-xs text-slate-400 space-y-1">
+                <div class="flex items-center justify-between text-slate-300 font-semibold border-b border-slate-800 pb-1">
+                    <span><i class="fa-solid fa-circle-info text-blue-400"></i> 當前成像性質</span>
+                    <span id="image-nature-badge" class="px-2 py-0.5 rounded text-[11px] bg-cyan-950 text-cyan-300 border border-cyan-800">正立等大虛像</span>
+                </div>
+                <p id="image-nature-desc" class="text-[11px] leading-relaxed pt-1 text-slate-300">
+                    物距等於像距，成正立等大的虛像，像與物體關於平面鏡對稱。
+                </p>
+            </div>
+
+        </aside>
+
+        <!-- Right Main Interactive Canvas Section -->
+        <main class="flex-1 bg-slate-950 relative flex flex-col overflow-hidden">
+            
+            <!-- Canvas Container -->
+            <div id="canvas-holder" class="flex-1 w-full h-full relative overflow-hidden bg-slate-950">
+                <canvas id="opticsCanvas" class="block w-full h-full"></canvas>
+
+                <!-- Floating Canvas Controls / Legend Overlay -->
+                <div class="absolute top-4 left-4 glass-panel px-3 py-2 rounded-lg text-xs flex items-center gap-4 text-slate-300 pointer-events-none">
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-3 h-0.5 bg-amber-400 inline-block shadow-[0_0_5px_rgba(251,191,36,0.8)]"></span>
+                        <span>入射光線</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-3 h-0.5 bg-emerald-400 inline-block shadow-[0_0_5px_rgba(52,211,153,0.8)]"></span>
+                        <span>反射光線</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-3 h-0.5 border-b border-dashed border-cyan-400 inline-block"></span>
+                        <span>反向延長虛線</span>
+                    </div>
+                </div>
+
+                <!-- Floating Drag Hint -->
+                <div id="drag-hint" class="absolute bottom-4 left-1/2 -translate-x-1/2 glass-panel px-4 py-1.5 rounded-full text-xs text-slate-300 flex items-center gap-2 pointer-events-none animate-pulse">
+                    <i class="fa-solid fa-hand-pointer text-blue-400"></i> 提示：可在畫面上按住滑鼠拖曳「物體」、「眼睛」或「繪製鏡面」
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Application Script Logic -->
+    <script>
+        // --- GLOBAL APP STATE ---
+        let currentTab = 1;
+        let canvas, ctx;
+        let dpr = 1;
+
+        // Sound FX enabled flag
+        let audioEnabled = false;
+        let synth = null;
+
+        // Interaction state
+        let isDragging = false;
+        let dragTarget = null; // 'object', 'eye', 'mirror', 'drawing', 'mirrorDraw'
+        let dragOffset = { x: 0, y: 0 };
+
+        // TAB 1 & 2 SHARED SIMULATION STATE
+        const state = {
+            // Tab 1 state
+            t1RemoveMirror: false, // Remove mirror toggle for Tab 1 comparison
+            obj: { x: 220, y: 320, width: 24, height: 90 },
+            eye: { x: 180, y: 160, size: 28 },
+            mirror: { x: 480, y: 120, height: 380 },
+
+            // Tab 2 State
+            t2Tool: 'draw', // 'draw', 'mirror', 'drag'
+            drawColor: '#38bdf8',
+            strokes: [], // Array of stroke paths [{ points: [{x,y}], color, size }]
+            currentStroke: null,
+            presetObjects: [], // Preset items added by user
+            
+            // Tab 2 Custom Mirrors array created by teachers/students
+            mirrors: [
+                { id: 1, x1: 480, y1: 120, x2: 480, y2: 440 }
+            ],
+            isDrawingMirror: false,
+            tempMirrorStart: null,
+            tempMirrorEnd: null,
+
+            // Tab 3 Curved Mirror State
+            curvature: 0, // -250 (Convex) to +250 (Concave), 0 is Flat
+            mirrorApex: { x: 560, y: 320 },
+            objCurved: { x: 280, height: 100 } // Object x & height on principal axis
+        };
+
+        // --- INITIALIZATION ---
+        window.addEventListener('load', () => {
+            canvas = document.getElementById('opticsCanvas');
+            ctx = canvas.getContext('2d');
+
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+
+            setupCanvasInteractions();
+            render();
+        });
+
+        function resizeCanvas() {
+            const container = document.getElementById('canvas-holder');
+            dpr = window.devicePixelRatio || 1;
+            canvas.width = container.clientWidth * dpr;
+            canvas.height = container.clientHeight * dpr;
+            ctx.scale(dpr, dpr);
+
+            // Keep optics elements reasonably centered if canvas resizes
+            const h = container.clientHeight;
+            state.mirror.y = Math.max(50, (h - state.mirror.height) / 2);
+            state.mirrorApex.y = h / 2;
+            state.obj.y = Math.min(h - 120, Math.max(120, h / 2 + 40));
+
+            // Sync default mirror line for tab 2
+            if (state.mirrors.length > 0 && state.mirrors[0].id === 1) {
+                state.mirrors[0].y1 = 100;
+                state.mirrors[0].y2 = h - 100;
+            }
+
+            render();
+        }
+
+        function switchTab(tabId) {
+            currentTab = tabId;
+
+            // Update UI buttons
+            [1, 2, 3].forEach(i => {
+                const btn = document.getElementById(`tab-${i}-btn`);
+                const ctrl = document.getElementById(`tab-${i}-controls`);
+                if (i === tabId) {
+                    btn.classList.add('active');
+                    btn.classList.remove('text-slate-400');
+                    ctrl.classList.remove('hidden');
+                } else {
+                    btn.classList.remove('active');
+                    btn.classList.add('text-slate-400');
+                    ctrl.classList.add('hidden');
+                }
+            });
+
+            playTone(400 + tabId * 100, "16n");
+            render();
+        }
+
+        function toggleAudio() {
+            audioEnabled = !audioEnabled;
+            const btn = document.getElementById('audio-btn');
+            if (audioEnabled) {
+                if (!synth && window.Tone) {
+                    synth = new Tone.Synth().toDestination();
+                }
+                btn.classList.add('text-blue-400', 'bg-slate-700');
+                btn.classList.remove('text-slate-300');
+                playTone(523.25, "8n");
+            } else {
+                btn.classList.remove('text-blue-400', 'bg-slate-700');
+                btn.classList.add('text-slate-300');
+            }
+        }
+
+        function playTone(freq, duration) {
+            if (audioEnabled && synth) {
+                try {
+                    Tone.start();
+                    synth.triggerAttackRelease(freq, duration);
+                } catch(e) {}
+            }
+        }
+
+        function toggleT1Mirror() {
+            state.t1RemoveMirror = !state.t1RemoveMirror;
+            const btn = document.getElementById('t1-remove-mirror-btn');
+            if (state.t1RemoveMirror) {
+                btn.innerHTML = `<i class="fa-solid fa-wand-magic"></i> 恢復平面鏡（觀察虛像反射線）`;
+                btn.className = "w-full py-2 px-3 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold shadow-md transition flex items-center justify-center gap-2";
+            } else {
+                btn.innerHTML = `<i class="fa-solid fa-eye-slash"></i> 移除平面鏡（觀察實物直射光路）`;
+                btn.className = "w-full py-2 px-3 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-semibold shadow-md transition flex items-center justify-center gap-2";
+            }
+            render();
+        }
+
+        function resetCurrentTab() {
+            const h = canvas.height / dpr;
+            if (currentTab === 1) {
+                state.t1RemoveMirror = false;
+                state.obj = { x: 200, y: h / 2 + 30, width: 24, height: 90 };
+                state.eye = { x: 160, y: h / 2 - 120, size: 28 };
+                state.mirror = { x: 460, y: (h - 360)/2, height: 360 };
+                const btn = document.getElementById('t1-remove-mirror-btn');
+                btn.innerHTML = `<i class="fa-solid fa-eye-slash"></i> 移除平面鏡（觀察實物直射光路）`;
+                btn.className = "w-full py-2 px-3 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-semibold shadow-md transition flex items-center justify-center gap-2";
+            } else if (currentTab === 2) {
+                state.strokes = [];
+                state.presetObjects = [];
+                state.mirrors = [{ id: 1, x1: 480, y1: 100, x2: 480, y2: h - 100 }];
+            } else if (currentTab === 3) {
+                state.curvature = 0;
+                document.getElementById('t3-curvature-slider').value = 0;
+                state.objCurved = { x: 280, height: 100 };
+                updateCurvature(0);
+            }
+            render();
+        }
+
+        // --- TAB 2 SPECIFIC CONTROLS ---
+        function setT2Tool(tool) {
+            state.t2Tool = tool;
+            document.getElementById('tool-draw').className = tool === 'draw' 
+                ? 'py-1.5 px-2 bg-blue-600 text-white rounded text-xs font-medium flex items-center justify-center gap-1'
+                : 'py-1.5 px-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs font-medium flex items-center justify-center gap-1';
+            document.getElementById('tool-mirror').className = tool === 'mirror' 
+                ? 'py-1.5 px-2 bg-blue-600 text-white rounded text-xs font-medium flex items-center justify-center gap-1'
+                : 'py-1.5 px-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs font-medium flex items-center justify-center gap-1';
+            document.getElementById('tool-drag').className = tool === 'drag' 
+                ? 'col-span-2 py-1.5 px-2 bg-blue-600 text-white rounded text-xs font-medium flex items-center justify-center gap-1'
+                : 'col-span-2 py-1.5 px-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs font-medium flex items-center justify-center gap-1';
+
+            const hint = document.getElementById('tool-mirror-hint');
+            if (tool === 'mirror') hint.classList.remove('hidden');
+            else hint.classList.add('hidden');
+        }
+
+        function undoLastMirror() {
+            if (state.mirrors.length > 0) {
+                state.mirrors.pop();
+                render();
+            }
+        }
+
+        function clearAllMirrors() {
+            state.mirrors = [];
+            render();
+        }
+
+        function clearCanvasDrawings() {
+            state.strokes = [];
+            state.presetObjects = [];
+            render();
+        }
+
+        function addPresetObject(type) {
+            const h = canvas.height / dpr;
+            const x = 120 + Math.random() * 120;
+            const y = 150 + Math.random() * (h - 300);
+            state.presetObjects.push({ id: Date.now(), type, x, y });
+            render();
+        }
+
+        // --- TAB 3 CURVATURE CONTROLS ---
+        function updateCurvature(val) {
+            state.curvature = parseInt(val);
+            const label = document.getElementById('t3-mirror-type-label');
+            if (state.curvature === 0) {
+                label.innerText = '平面鏡 ( Flat Mirror )';
+                label.className = 'text-purple-400 font-bold';
+            } else if (state.curvature < 0) {
+                label.innerText = `凸面鏡 ( Convex Mirror )`;
+                label.className = 'text-sky-400 font-bold';
+            } else {
+                label.innerText = `凹面鏡 ( Concave Mirror )`;
+                label.className = 'text-rose-400 font-bold';
+            }
+            render();
+        }
+
+        // --- MAIN RENDER LOOP ---
+        function render() {
+            if (!ctx) return;
+            const w = canvas.width / dpr;
+            const h = canvas.height / dpr;
+
+            // Clear Background
+            ctx.fillStyle = '#090d16'; // Deep space slate
+            ctx.fillRect(0, 0, w, h);
+
+            // Draw Subtle Grid
+            drawGrid(w, h);
+
+            if (currentTab === 1) {
+                renderTab1(w, h);
+            } else if (currentTab === 2) {
+                renderTab2(w, h);
+            } else if (currentTab === 3) {
+                renderTab3(w, h);
+            }
+        }
+
+        function drawGrid(w, h) {
+            ctx.save();
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+            ctx.lineWidth = 1;
+            const step = 40;
+            for (let x = 0; x < w; x += step) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+            }
+            for (let y = 0; y < h; y += step) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+            }
+            ctx.restore();
+        }
+
+        // =========================================================================
+        // MODULE 1: PLANE MIRROR RAY TRACING & NO-MIRROR COMPARISON
+        // =========================================================================
+        function renderTab1(w, h) {
+            const mirrorX = state.mirror.x;
+            const mirrorY1 = state.mirror.y;
+            const mirrorY2 = state.mirror.y + state.mirror.height;
+
+            // Key points: Flame Tip of Candle
+            const objectTip = { x: state.obj.x, y: state.obj.y - state.obj.height };
+            // Virtual Image position: symmetric across mirrorX
+            const imageTip = { x: 2 * mirrorX - objectTip.x, y: objectTip.y };
+            const imageBase = { x: 2 * mirrorX - state.obj.x, y: state.obj.y };
+
+            // Eye position & pupil points for TWO rays
+            const eyeX = state.eye.x;
+            const eyeY = state.eye.y;
+            const pupilTop = { x: eyeX + 10, y: eyeY - 8 };
+            const pupilBot = { x: eyeX + 10, y: eyeY + 8 };
+
+            const showRays = document.getElementById('t1-show-rays').checked;
+            const showReflected = document.getElementById('t1-show-reflected').checked;
+            const showExtensions = document.getElementById('t1-show-extensions').checked;
+            const showAngles = document.getElementById('t1-show-angles').checked;
+            const showDistances = document.getElementById('t1-show-distances').checked;
+
+            if (state.t1RemoveMirror) {
+                // --- NO MIRROR DIRECT LIGHT RAYS MODE ---
+                
+                // Ghost outline where mirror used to be
+                ctx.save();
+                ctx.strokeStyle = 'rgba(148, 163, 184, 0.3)';
+                ctx.setLineDash([6, 6]);
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(mirrorX, mirrorY1);
+                ctx.lineTo(mirrorX, mirrorY2);
+                ctx.stroke();
+
+                ctx.fillStyle = '#64748b';
+                ctx.font = '12px Inter, sans-serif';
+                ctx.fillText('平面鏡已移除 (No Mirror)', mirrorX - 60, mirrorY1 - 12);
+                ctx.restore();
+
+                // Direct rays from candle tip to eye
+                if (showRays || showReflected) {
+                    drawRay(objectTip, pupilTop, '#f59e0b', 2.5, true);
+                    drawRay(objectTip, pupilBot, '#fbbf24', 2.5, true);
+                }
+
+                // Draw Real Object (Candle)
+                drawCandle(state.obj.x, state.obj.y, state.obj.height, 1.0, "實物 (Object)");
+
+                // Draw Eye
+                drawEye(eyeX, eyeY, state.eye.size);
+
+                // Info Badge
+                document.getElementById('image-nature-badge').innerText = '無平面鏡 (實物直射光線)';
+                document.getElementById('image-nature-badge').className = 'px-2 py-0.5 rounded text-[11px] bg-amber-950 text-amber-300 border border-amber-800';
+                document.getElementById('image-nature-desc').innerHTML = 
+                    `當沒有平面鏡時，物體發出的光線<b>直接直線行進</b>進入眼睛。眼睛順著光線方向追蹤，直接看到位於原位置的<b>實際物體</b>，不會產生鏡後虛像。`;
+
+            } else {
+                // --- NORMAL PLANE MIRROR REFLECTION MODE ---
+
+                // 1. Draw Mirror
+                drawPlaneMirror(mirrorX, mirrorY1, mirrorY2, "平面鏡 (Plane Mirror)");
+
+                // Calculate Reflection Points on Mirror Line for Ray 1 & Ray 2
+                const getMirrorIntersectY = (pupil) => {
+                    const t = (mirrorX - imageTip.x) / (pupil.x - imageTip.x);
+                    return imageTip.y + t * (pupil.y - imageTip.y);
+                };
+
+                const mY1 = getMirrorIntersectY(pupilTop);
+                const mY2 = getMirrorIntersectY(pupilBot);
+
+                const hitPoint1 = { x: mirrorX, y: mY1 };
+                const hitPoint2 = { x: mirrorX, y: mY2 };
+
+                // 2. Draw Light Rays
+                if (showRays) {
+                    drawRay(objectTip, hitPoint1, '#f59e0b', 2, true); // Incident 1
+                    drawRay(objectTip, hitPoint2, '#fbbf24', 2, true); // Incident 2
+                }
+
+                if (showReflected) {
+                    drawRay(hitPoint1, pupilTop, '#10b981', 2, true); // Reflected 1
+                    drawRay(hitPoint2, pupilBot, '#34d399', 2, true); // Reflected 2
+                }
+
+                if (showExtensions) {
+                    // Dashed Extension Rays behind Mirror to Virtual Image Tip
+                    drawDashedLine(hitPoint1, imageTip, '#06b6d4', 2);
+                    drawDashedLine(hitPoint2, imageTip, '#22d3ee', 2);
+
+                    // Highlight Intersection Point at Virtual Image Tip
+                    ctx.save();
+                    ctx.fillStyle = '#22d3ee';
+                    ctx.shadowColor = '#06b6d4';
+                    ctx.shadowBlur = 12;
+                    ctx.beginPath();
+                    ctx.arc(imageTip.x, imageTip.y, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                }
+
+                // Normals & Angles
+                if (showAngles) {
+                    drawNormalAndAngles(hitPoint1, objectTip, pupilTop);
+                    drawNormalAndAngles(hitPoint2, objectTip, pupilBot);
+                }
+
+                // 3. Draw Real Object (Candle)
+                drawCandle(state.obj.x, state.obj.y, state.obj.height, 1.0, "實物 (Object)");
+
+                // 4. Draw Virtual Image (Ghost Candle)
+                drawCandle(imageBase.x, imageBase.y, state.obj.height, 0.55, "虛像 (Virtual Image)");
+
+                // 5. Draw Eye
+                drawEye(eyeX, eyeY, state.eye.size);
+
+                // 6. Distance Annotations ($d_o = d_i$)
+                if (showDistances) {
+                    const doVal = Math.round(Math.abs(mirrorX - state.obj.x));
+                    const diVal = doVal;
+                    const lineY = Math.max(state.obj.y, imageBase.y) + 30;
+
+                    drawDistanceBar(state.obj.x, mirrorX, lineY, `物距 d_o = ${doVal} px`, '#38bdf8');
+                    drawDistanceBar(mirrorX, imageBase.x, lineY, `像距 d_i = ${diVal} px`, '#a855f7');
+                }
+
+                // Update Badge Info
+                document.getElementById('image-nature-badge').innerText = '正立等大虛像';
+                document.getElementById('image-nature-badge').className = 'px-2 py-0.5 rounded text-[11px] bg-cyan-950 text-cyan-300 border border-cyan-800';
+                document.getElementById('image-nature-desc').innerHTML = 
+                    `物體發出兩條入射光，經平面鏡反射後進入眼睛。眼睛順著反射光向鏡後延長，兩條虛線交於一點，形成<b>正立等大的虛像</b> ($d_o = d_i$)。`;
+            }
+        }
+
+        // =========================================================================
+        // MODULE 2: EYE FIELD OF VIEW (FOV), CUSTOM MIRRORS & MULTI-REFLECTIONS
+        // =========================================================================
+        function renderTab2(w, h) {
+            const eye = state.eye;
+
+            // 1. Draw Teacher/User Mirrors, Incident Rays, FOV Cones & Extensions
+            state.mirrors.forEach((m, idx) => {
+                const mirrorSeg = { p1: { x: m.x1, y: m.y1 }, p2: { x: m.x2, y: m.y2 } };
+
+                // Virtual Eye position (reflection of eye across mirror m)
+                const eyeRefl = reflectPointAcrossSegment(eye, mirrorSeg.p1, mirrorSeg.p2);
+
+                // Incident ray direction from object space to mirror endpoint 1
+                const dirInc1 = { x: mirrorSeg.p1.x - eyeRefl.x, y: mirrorSeg.p1.y - eyeRefl.y };
+                const incExt1 = { x: mirrorSeg.p1.x + dirInc1.x * 4, y: mirrorSeg.p1.y + dirInc1.y * 4 };
+
+                // Incident ray direction from object space to mirror endpoint 2
+                const dirInc2 = { x: mirrorSeg.p2.x - eyeRefl.x, y: mirrorSeg.p2.y - eyeRefl.y };
+                const incExt2 = { x: mirrorSeg.p2.x + dirInc2.x * 4, y: mirrorSeg.p2.y + dirInc2.y * 4 };
+
+                // Extension Dotted Lines behind mirror along sight lines (Eye -> p1 and Eye -> p2)
+                const dir1 = { x: mirrorSeg.p1.x - eye.x, y: mirrorSeg.p1.y - eye.y };
+                const dir2 = { x: mirrorSeg.p2.x - eye.x, y: mirrorSeg.p2.y - eye.y };
+
+                const ext1 = { x: mirrorSeg.p1.x + dir1.x * 4, y: mirrorSeg.p1.y + dir1.y * 4 };
+                const ext2 = { x: mirrorSeg.p2.x + dir2.x * 4, y: mirrorSeg.p2.y + dir2.y * 4 };
+
+                // Draw Object FOV Cone in front of mirror (Amber)
+                drawObjectFOVZone(mirrorSeg.p1, mirrorSeg.p2, incExt1, incExt2);
+
+                // Draw Virtual Image FOV Cone behind mirror (Emerald)
+                drawFOVPolygon(mirrorSeg.p1, mirrorSeg.p2, ext1, ext2);
+
+                // Draw Incident rays from Object Space -> Mirror Edges -> Eye
+                drawRay(incExt1, mirrorSeg.p1, '#f59e0b', 1.5, true);
+                drawRay(incExt2, mirrorSeg.p2, '#f59e0b', 1.5, true);
+
+                // Draw Reflected Rays from Mirror Edges -> Eye
+                drawRay(mirrorSeg.p1, eye, '#10b981', 1.5, true);
+                drawRay(mirrorSeg.p2, eye, '#10b981', 1.5, true);
+
+                // Extension Dotted Lines behind mirror
+                drawDashedLine(mirrorSeg.p1, ext1, '#06b6d4', 1.5);
+                drawDashedLine(mirrorSeg.p2, ext2, '#06b6d4', 1.5);
+
+                // Draw Physical Mirror Segment
+                drawCustomMirrorSegment(m.x1, m.y1, m.x2, m.y2, `平面鏡 ${idx + 1}`);
+            });
+
+            // 2. Render In-Progress Mirror Drawing preview line
+            if (state.isDrawingMirror && state.tempMirrorStart && state.tempMirrorEnd) {
+                ctx.save();
+                ctx.strokeStyle = '#38bdf8';
+                ctx.lineWidth = 4;
+                ctx.setLineDash([4, 4]);
+                ctx.beginPath();
+                ctx.moveTo(state.tempMirrorStart.x, state.tempMirrorStart.y);
+                ctx.lineTo(state.tempMirrorEnd.x, state.tempMirrorEnd.y);
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            // 3. Render Custom Freehand Strokes with Exact Partial FOV Clipping
+            renderStrokesWithFOV(eye);
+
+            // 4. Render Preset Objects with Exact Partial FOV Clipping
+            renderPresetObjectsWithFOV(eye);
+
+            // 5. Draw Eye (Fixed Location)
+            drawEye(eye.x, eye.y, state.eye.size);
+
+            // Update Badge
+            document.getElementById('image-nature-badge').innerText = '眼睛視野與多鏡虛像';
+            document.getElementById('image-nature-badge').className = 'px-2 py-0.5 rounded text-[11px] bg-emerald-950 text-emerald-300 border border-emerald-800';
+            document.getElementById('image-nature-desc').innerHTML = 
+                `黃色區域為物體發出光線可經鏡邊反射入眼的範圍；綠色區域為鏡後虛像視野範圍。<span class="text-cyan-300 font-semibold">自由繪圖或物體即便只有部分落在視野內，亦能精確呈現該部分的鏡中虛像</span>！`;
+        }
+
+        function drawObjectFOVZone(p1, p2, incExt1, incExt2) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(incExt1.x, incExt1.y);
+            ctx.lineTo(incExt2.x, incExt2.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.closePath();
+
+            const objFovGradient = ctx.createLinearGradient(p1.x, p1.y, incExt1.x, incExt1.y);
+            objFovGradient.addColorStop(0, 'rgba(245, 158, 11, 0.12)');
+            objFovGradient.addColorStop(1, 'rgba(245, 158, 11, 0.02)');
+            ctx.fillStyle = objFovGradient;
+            ctx.fill();
+
+            ctx.fillStyle = 'rgba(251, 191, 36, 0.6)';
+            ctx.font = '10px Inter, sans-serif';
+            const midIncX = (incExt1.x + incExt2.x) / 2;
+            const midIncY = (incExt1.y + incExt2.y) / 2;
+            ctx.fillText('物體可見反射區域', (p1.x + p2.x + midIncX) / 3, (p1.y + p2.y + midIncY) / 3);
+            ctx.restore();
+        }
+
+        function drawFOVPolygon(p1, p2, ext1, ext2) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(ext1.x, ext1.y);
+            ctx.lineTo(ext2.x, ext2.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.closePath();
+
+            const fovGradient = ctx.createLinearGradient(p1.x, p1.y, ext1.x, ext1.y);
+            fovGradient.addColorStop(0, 'rgba(16, 185, 129, 0.15)');
+            fovGradient.addColorStop(1, 'rgba(16, 185, 129, 0.02)');
+            ctx.fillStyle = fovGradient;
+            ctx.fill();
+
+            ctx.fillStyle = 'rgba(52, 211, 153, 0.6)';
+            ctx.font = '10px Inter, sans-serif';
+            const midExtX = (ext1.x + ext2.x) / 2;
+            const midExtY = (ext1.y + ext2.y) / 2;
+            ctx.fillText('鏡後虛像視野範圍 (FOV)', (p1.x + p2.x + midExtX) / 3, (p1.y + p2.y + midExtY) / 3);
+            ctx.restore();
+        }
+
+        function renderStrokesWithFOV(eye) {
+            // Draw Real User Freehand Strokes (unclipped in real space)
+            state.strokes.forEach(stroke => {
+                drawStrokePath(stroke.points, stroke.color, stroke.size, 1.0);
+            });
+
+            // Draw current drawing stroke
+            if (state.currentStroke) {
+                drawStrokePath(state.currentStroke.points, state.currentStroke.color, state.currentStroke.size, 1.0);
+            }
+
+            // For each mirror, clip drawing to its FOV region and render reflected strokes
+            state.mirrors.forEach(m => {
+                const mirrorSeg = { p1: { x: m.x1, y: m.y1 }, p2: { x: m.x2, y: m.y2 } };
+                const dir1 = { x: mirrorSeg.p1.x - eye.x, y: mirrorSeg.p1.y - eye.y };
+                const dir2 = { x: mirrorSeg.p2.x - eye.x, y: mirrorSeg.p2.y - eye.y };
+                const ext1 = { x: mirrorSeg.p1.x + dir1.x * 4, y: mirrorSeg.p1.y + dir1.y * 4 };
+                const ext2 = { x: mirrorSeg.p2.x + dir2.x * 4, y: mirrorSeg.p2.y + dir2.y * 4 };
+
+                // Apply FOV clip path for virtual image rendering
+                ctx.save();
+                ctx.beginPath();
+                ctx.moveTo(mirrorSeg.p1.x, mirrorSeg.p1.y);
+                ctx.lineTo(ext1.x, ext1.y);
+                ctx.lineTo(ext2.x, ext2.y);
+                ctx.lineTo(mirrorSeg.p2.x, mirrorSeg.p2.y);
+                ctx.closePath();
+                ctx.clip(); // Clips virtual images precisely to FOV!
+
+                // Draw reflected strokes inside FOV clip
+                state.strokes.forEach(stroke => {
+                    const vPoints = stroke.points.map(pt => reflectPointAcrossSegment(pt, mirrorSeg.p1, mirrorSeg.p2));
+                    drawStrokePath(vPoints, stroke.color, stroke.size, 0.65, true);
+                });
+
+                if (state.currentStroke) {
+                    const vPoints = state.currentStroke.points.map(pt => reflectPointAcrossSegment(pt, mirrorSeg.p1, mirrorSeg.p2));
+                    drawStrokePath(vPoints, state.currentStroke.color, state.currentStroke.size, 0.65, true);
+                }
+
+                ctx.restore();
+            });
+        }
+
+        function renderPresetObjectsWithFOV(eye) {
+            // Draw Real Preset Objects
+            state.presetObjects.forEach(obj => {
+                drawPresetShape(obj.type, obj.x, obj.y, 1.0);
+            });
+
+            // For each mirror, render virtual preset objects clipped to FOV
+            state.mirrors.forEach((m, mIdx) => {
+                const mirrorSeg = { p1: { x: m.x1, y: m.y1 }, p2: { x: m.x2, y: m.y2 } };
+                const dir1 = { x: mirrorSeg.p1.x - eye.x, y: mirrorSeg.p1.y - eye.y };
+                const dir2 = { x: mirrorSeg.p2.x - eye.x, y: mirrorSeg.p2.y - eye.y };
+                const ext1 = { x: mirrorSeg.p1.x + dir1.x * 4, y: mirrorSeg.p1.y + dir1.y * 4 };
+                const ext2 = { x: mirrorSeg.p2.x + dir2.x * 4, y: mirrorSeg.p2.y + dir2.y * 4 };
+
+                ctx.save();
+                ctx.beginPath();
+                ctx.moveTo(mirrorSeg.p1.x, mirrorSeg.p1.y);
+                ctx.lineTo(ext1.x, ext1.y);
+                ctx.lineTo(ext2.x, ext2.y);
+                ctx.lineTo(mirrorSeg.p2.x, mirrorSeg.p2.y);
+                ctx.closePath();
+                ctx.clip(); // Clips virtual preset shapes and rays to FOV!
+
+                state.presetObjects.forEach(obj => {
+                    const vPt1 = reflectPointAcrossSegment(obj, mirrorSeg.p1, mirrorSeg.p2);
+                    const hit1 = isVirtualImageVisibleInMirror(eye, vPt1, m);
+
+                    // Render virtual shape (partially or fully visible inside clipped region)
+                    drawPresetShape(obj.type, vPt1.x, vPt1.y, 0.7);
+
+                    if (hit1) {
+                        drawRay(obj, hit1, '#f59e0b', 1.5, false);
+                        drawRay(hit1, eye, '#10b981', 1.5, false);
+                        drawDashedLine(hit1, vPt1, '#06b6d4', 1.5);
+
+                        ctx.save();
+                        ctx.fillStyle = '#38bdf8';
+                        ctx.font = '10px Inter, sans-serif';
+                        ctx.fillText(`虛像 ${mIdx + 1}`, vPt1.x - 15, vPt1.y + 22);
+                        ctx.restore();
+                    }
+                });
+
+                ctx.restore();
+            });
+        }
+
+        function drawCustomMirrorSegment(x1, y1, x2, y2, label) {
+            ctx.save();
+            ctx.strokeStyle = '#e2e8f0';
+            ctx.lineWidth = 5;
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+
+            // Normal vector for hatching lines
+            const dx = x2 - x1;
+            const dy = y2 - y1;
+            const len = Math.hypot(dx, dy);
+            if (len > 0) {
+                const nx = -dy / len;
+                const ny = dx / len;
+                const steps = Math.floor(len / 12);
+
+                ctx.strokeStyle = '#64748b';
+                ctx.lineWidth = 1.5;
+                for (let i = 0; i <= steps; i++) {
+                    const t = i / steps;
+                    const px = x1 + t * dx;
+                    const py = y1 + t * dy;
+                    ctx.beginPath();
+                    ctx.moveTo(px, py);
+                    ctx.lineTo(px + nx * 8, py + ny * 8);
+                    ctx.stroke();
+                }
+            }
+
+            ctx.fillStyle = '#cbd5e1';
+            ctx.font = '11px Inter, sans-serif';
+            ctx.fillText(label, (x1 + x2) / 2 + 10, (y1 + y2) / 2);
+            ctx.restore();
+        }
+
+        function drawStrokePath(points, color, size, alpha, isDashed = false) {
+            if (points.length < 2) return;
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.strokeStyle = color;
+            ctx.lineWidth = size;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            if (isDashed) ctx.setLineDash([4, 4]);
+
+            ctx.beginPath();
+            ctx.moveTo(points[0].x, points[0].y);
+            for (let i = 1; i < points.length; i++) {
+                ctx.lineTo(points[i].x, points[i].y);
+            }
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        function drawPresetShape(type, x, y, alpha) {
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            if (type === 'star') {
+                ctx.font = '28px sans-serif';
+                ctx.fillText('★', x, y);
+            } else if (type === 'apple') {
+                ctx.font = '26px sans-serif';
+                ctx.fillText('🍎', x, y);
+            } else if (type === 'letter') {
+                ctx.font = 'bold 32px Inter, serif';
+                ctx.fillStyle = '#38bdf8';
+                ctx.fillText('F', x, y);
+            }
+            ctx.restore();
+        }
+
+        // =========================================================================
+        // MODULE 3: CURVED MIRRORS (CONCAVE & CONVEX OPTICS WITH CORRECTED ARC)
+        // =========================================================================
+        function renderTab3(w, h) {
+            const apex = state.mirrorApex; // Center anchor on principal axis
+            const curv = state.curvature;  // -250 to +250
+
+            // Principal axis horizontal line
+            ctx.save();
+            ctx.strokeStyle = 'rgba(148, 163, 184, 0.4)';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([8, 6]);
+            ctx.beginPath();
+            ctx.moveTo(0, apex.y);
+            ctx.lineTo(w, apex.y);
+            ctx.stroke();
+            ctx.restore();
+
+            let f = 0;
+            let isPlane = (Math.abs(curv) < 5);
+
+            if (!isPlane) {
+                // curv > 0 -> Concave (f > 0, focus in front x < apex.x)
+                // curv < 0 -> Convex (f < 0, focus behind x > apex.x)
+                f = (26000 / curv); // Scaled focal length
+            }
+
+            const focusX = isPlane ? -99999 : apex.x - f;
+            const centerCX = isPlane ? -99999 : apex.x - 2 * f;
+
+            // Draw Curved Mirror Shape (Corrected Arc Bulge Direction)
+            drawCurvedMirrorShape(apex.x, apex.y, 320, curv);
+
+            // Draw Focus (F) and Center of Curvature (C) points
+            if (!isPlane) {
+                drawOpticPoint(focusX, apex.y, 'F (焦點)', '#f59e0b');
+                drawOpticPoint(centerCX, apex.y, 'C (曲率中心)', '#a855f7');
+            }
+            drawOpticPoint(apex.x, apex.y, 'V (鏡頂)', '#38bdf8');
+
+            // Object Arrow (Real Object)
+            const objX = state.objCurved.x;
+            const objHeight = state.objCurved.height;
+            const objTopY = apex.y - objHeight;
+
+            drawArrowObject(objX, apex.y, objTopY, '#38bdf8', "物體 (Object)", 1.0);
+
+            // Physics calculation: 1/f = 1/do + 1/di  =>  di = (f * do) / (do - f)
+            const doVal = apex.x - objX; // Object distance (> 0)
+            let diVal = 0;
+            let m = 1;
+            let isVirtual = false;
+            let isInfinite = false;
+
+            if (isPlane) {
+                diVal = -doVal;
+                m = 1.0;
+                isVirtual = true;
+            } else {
+                const denominator = doVal - f;
+                if (Math.abs(denominator) < 2) {
+                    isInfinite = true; // At Focal Point! Rays are parallel
+                } else {
+                    diVal = (f * doVal) / denominator;
+                    m = -diVal / doVal; // Magnification
+                    isVirtual = diVal < 0;
+                }
+            }
+
+            // Image coordinates
+            const imgX = apex.x - diVal;
+            const imgHeight = m * objHeight;
+            const imgTopY = apex.y - imgHeight;
+
+            // Principal Rays Toggles
+            const showR1 = document.getElementById('t3-ray1').checked;
+            const showR2 = document.getElementById('t3-ray2').checked;
+            const showR3 = document.getElementById('t3-ray3').checked;
+
+            if (!isInfinite) {
+                // Ray 1: Parallel to Principal Axis -> Reflects through Focus F
+                if (showR1) {
+                    drawRay({ x: objX, y: objTopY }, { x: apex.x, y: objTopY }, '#f43f5e', 2, true);
+
+                    if (isPlane) {
+                        drawRay({ x: apex.x, y: objTopY }, { x: 0, y: objTopY }, '#f43f5e', 2, true);
+                        drawDashedLine({ x: apex.x, y: objTopY }, { x: imgX, y: imgTopY }, '#f43f5e', 2);
+                    } else if (f > 0) { // Concave
+                        const dir = { x: focusX - apex.x, y: apex.y - objTopY };
+                        const farPt = { x: apex.x + dir.x * 3, y: objTopY + dir.y * 3 };
+                        drawRay({ x: apex.x, y: objTopY }, farPt, '#f43f5e', 2, true);
+
+                        if (isVirtual) {
+                            drawDashedLine({ x: apex.x, y: objTopY }, { x: imgX, y: imgTopY }, '#f43f5e', 2);
+                        }
+                    } else { // Convex (f < 0)
+                        const dir = { x: apex.x - focusX, y: objTopY - apex.y };
+                        const farPt = { x: apex.x + dir.x * 3, y: objTopY + dir.y * 3 };
+                        drawRay({ x: apex.x, y: objTopY }, farPt, '#f43f5e', 2, true);
+                        drawDashedLine({ x: apex.x, y: objTopY }, { x: focusX, y: apex.y }, '#f43f5e', 2);
+                    }
+                }
+
+                // Ray 3: Through Apex V -> Symmetrical Reflection
+                if (showR3) {
+                    drawRay({ x: objX, y: objTopY }, { x: apex.x, y: apex.y }, '#0284c7', 2, true);
+                    const reflAngleY = apex.y + (apex.y - objTopY);
+                    const farPt = { x: objX, y: reflAngleY };
+                    drawRay({ x: apex.x, y: apex.y }, farPt, '#0284c7', 2, true);
+
+                    if (isVirtual) {
+                        drawDashedLine({ x: apex.x, y: apex.y }, { x: imgX, y: imgTopY }, '#0284c7', 2);
+                    }
+                }
+
+                // Render Resulting Image Arrow
+                if (isVirtual) {
+                    drawArrowObject(imgX, apex.y, imgTopY, '#22d3ee', "虛像 (Virtual Image)", 0.6, true);
+                } else {
+                    drawArrowObject(imgX, apex.y, imgTopY, '#a855f7', "實像 (Real Image)", 0.85, false);
+                }
+            } else {
+                ctx.save();
+                ctx.fillStyle = '#ef4444';
+                ctx.font = 'bold 14px Inter, sans-serif';
+                ctx.fillText('成焦於無窮遠 (無成像)', w - 220, apex.y - 40);
+                ctx.restore();
+            }
+
+            // Update Math Panel
+            document.getElementById('t3-f-val').innerText = isPlane ? '∞ (平面鏡)' : `${Math.round(f)} cm`;
+            document.getElementById('t3-do-val').innerText = `${Math.round(doVal)} cm`;
+            document.getElementById('t3-di-val').innerText = isInfinite ? '∞' : `${Math.round(diVal)} cm (${isVirtual ? '虛像' : '實像'})`;
+            document.getElementById('t3-m-val').innerText = isInfinite ? '∞' : `${m > 0 ? '+' : ''}${m.toFixed(2)} (${Math.abs(m) > 1 ? '放大' : Math.abs(m) < 1 ? '縮小' : '等大'})`;
+
+            // Dynamic Nature Badge
+            const badge = document.getElementById('image-nature-badge');
+            const desc = document.getElementById('image-nature-desc');
+
+            if (isPlane) {
+                badge.innerText = '正立等大虛像';
+                badge.className = 'px-2 py-0.5 rounded text-[11px] bg-cyan-950 text-cyan-300 border border-cyan-800';
+                desc.innerHTML = `平面鏡成<b>正立等大虛像</b>，像距等於物距 ($d_o = d_i$)。`;
+            } else if (curv < 0) { // Convex
+                badge.innerText = '正立縮小虛像';
+                badge.className = 'px-2 py-0.5 rounded text-[11px] bg-sky-950 text-sky-300 border border-sky-800';
+                desc.innerHTML = `凸面鏡（鏡面中間向物體凸出）發散光線，無論物體位置為何，皆成<b>正立縮小的虛像</b>，常用於後視鏡與路口轉角鏡。`;
+            } else { // Concave
+                if (doVal > 2 * f) {
+                    badge.innerText = '倒立縮小實像';
+                    badge.className = 'px-2 py-0.5 rounded text-[11px] bg-purple-950 text-purple-300 border border-purple-800';
+                    desc.innerHTML = `凹面鏡（鏡面中間向後凹陷）當物距 $d_o > 2f$ (曲率中心 $C$ 外側)，成<b>倒立縮小的實像</b>。`;
+                } else if (Math.abs(doVal - 2 * f) < 5) {
+                    badge.innerText = '倒立等大實像';
+                    badge.className = 'px-2 py-0.5 rounded text-[11px] bg-purple-950 text-purple-300 border border-purple-800';
+                    desc.innerHTML = `當物體恰好位於曲率中心 $C$ ($d_o = 2f$)，成<b>倒立等大的實像</b>。`;
+                } else if (doVal > f) {
+                    badge.innerText = '倒立放大實像';
+                    badge.className = 'px-2 py-0.5 rounded text-[11px] bg-purple-950 text-purple-300 border border-purple-800';
+                    desc.innerHTML = `當物體介於焦點與曲率中心之間 ($f < d_o < 2f$)，成<b>倒立放大的實像</b>。`;
+                } else if (Math.abs(doVal - f) < 5) {
+                    badge.innerText = '無成像 (成焦於無窮遠)';
+                    badge.className = 'px-2 py-0.5 rounded text-[11px] bg-rose-950 text-rose-300 border border-rose-800';
+                    desc.innerHTML = `當物體恰好位於焦點 $F$ 上 ($d_o = f$)，反射光線互相平行，<b>不相交亦不形成像</b>。`;
+                } else {
+                    badge.innerText = '正立放大虛像';
+                    badge.className = 'px-2 py-0.5 rounded text-[11px] bg-amber-950 text-amber-300 border border-amber-800';
+                    desc.innerHTML = `當物體位於焦點內側 ($d_o < f$)，反射光線發散，鏡後延長交成<b>正立放大的虛像</b>（如耳鼻喉科診察鏡、化妝鏡）。`;
+                }
+            }
+        }
+
+        // =========================================================================
+        // DRAWING HELPER FUNCTIONS & DRAW UTILITIES
+        // =========================================================================
+
+        function drawPlaneMirror(x, y1, y2, label) {
+            ctx.save();
+            ctx.strokeStyle = '#e2e8f0';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(x, y1);
+            ctx.lineTo(x, y2);
+            ctx.stroke();
+
+            // Mirror Backing Hash Lines
+            ctx.strokeStyle = '#64748b';
+            ctx.lineWidth = 1.5;
+            const step = 12;
+            for (let y = y1; y <= y2; y += step) {
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.lineTo(x + 10, y + 8);
+                ctx.stroke();
+            }
+
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '12px Inter, sans-serif';
+            ctx.fillText(label, x - 30, y1 - 12);
+            ctx.restore();
+        }
+
+        function drawCurvedMirrorShape(apexX, apexY, height, curv) {
+            ctx.save();
+            const topY = apexY - height / 2;
+            const botY = apexY + height / 2;
+
+            // Corrected Curvature Sagitta calculation:
+            // Object is on the left at x ~ 280. Mirror Apex is at x = apexX (560).
+            // Concave (curv > 0): Mirror center is shifted RIGHT away from object, top/bottom ends shifted LEFT towards object -> Bowl shape ')'
+            // Convex (curv < 0): Mirror center bulges LEFT towards object, top/bottom ends shifted RIGHT away from object -> Dome shape '('
+            const sagitta = curv * 0.2;
+
+            const endX = apexX - sagitta;
+            const ctrlX = apexX + sagitta;
+
+            ctx.beginPath();
+            ctx.moveTo(endX, topY);
+            ctx.quadraticCurveTo(ctrlX, apexY, endX, botY);
+
+            ctx.strokeStyle = '#cbd5e1';
+            ctx.lineWidth = 4;
+            ctx.stroke();
+
+            // Hatching lines along the BACK of mirror (facing right +dx)
+            ctx.strokeStyle = '#64748b';
+            ctx.lineWidth = 1.5;
+            const steps = 18;
+            for (let i = 0; i <= steps; i++) {
+                const t = i / steps;
+                const y = topY + t * height;
+                const arcX = (1 - t) * (1 - t) * endX + 2 * (1 - t) * t * ctrlX + t * t * endX;
+                
+                const dx = 8;
+                ctx.beginPath();
+                ctx.moveTo(arcX, y);
+                ctx.lineTo(arcX + dx, y + (t - 0.5) * 4 + 2);
+                ctx.stroke();
+            }
+            ctx.restore();
+        }
+
+        function drawRay(from, to, color, width = 2, drawArrowHead = true) {
+            ctx.save();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = width;
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 6;
+
+            ctx.beginPath();
+            ctx.moveTo(from.x, from.y);
+            ctx.lineTo(to.x, to.y);
+            ctx.stroke();
+
+            if (drawArrowHead) {
+                const midX = (from.x + to.x) / 2;
+                const midY = (from.y + to.y) / 2;
+                const angle = Math.atan2(to.y - from.y, to.x - from.x);
+
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.moveTo(midX, midY);
+                ctx.lineTo(midX - 10 * Math.cos(angle - Math.PI / 7), midY - 10 * Math.sin(angle - Math.PI / 7));
+                ctx.lineTo(midX - 10 * Math.cos(angle + Math.PI / 7), midY - 10 * Math.sin(angle + Math.PI / 7));
+                ctx.closePath();
+                ctx.fill();
+            }
+            ctx.restore();
+        }
+
+        function drawDashedLine(from, to, color, width = 1.5) {
+            ctx.save();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = width;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(from.x, from.y);
+            ctx.lineTo(to.x, to.y);
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        function drawNormalAndAngles(hitPt, objTip, pupilPt) {
+            ctx.save();
+            ctx.strokeStyle = '#94a3b8';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([3, 3]);
+            ctx.beginPath();
+            ctx.moveTo(hitPt.x - 60, hitPt.y);
+            ctx.lineTo(hitPt.x + 20, hitPt.y);
+            ctx.stroke();
+
+            ctx.fillStyle = '#cbd5e1';
+            ctx.font = '10px Inter, sans-serif';
+            ctx.fillText('法線 N', hitPt.x - 55, hitPt.y - 4);
+            ctx.restore();
+        }
+
+        function drawDistanceBar(x1, x2, y, label, color) {
+            ctx.save();
+            ctx.strokeStyle = color;
+            ctx.fillStyle = color;
+            ctx.lineWidth = 1.5;
+
+            ctx.beginPath();
+            ctx.moveTo(x1, y); ctx.lineTo(x2, y);
+            ctx.moveTo(x1, y - 5); ctx.lineTo(x1, y + 5);
+            ctx.moveTo(x2, y - 5); ctx.lineTo(x2, y + 5);
+            ctx.stroke();
+
+            ctx.font = '11px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(label, (x1 + x2) / 2, y + 18);
+            ctx.restore();
+        }
+
+        function drawCandle(x, y, height, alpha = 1.0, label = "") {
+            ctx.save();
+            ctx.globalAlpha = alpha;
+
+            // Candle Body
+            const w = 18;
+            ctx.fillStyle = '#f1f5f9';
+            ctx.fillRect(x - w / 2, y - height + 20, w, height - 20);
+
+            // Candle Wax Highlight
+            ctx.fillStyle = '#cbd5e1';
+            ctx.fillRect(x - w / 2, y - height + 20, 4, height - 20);
+
+            // Wick
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(x, y - height + 20);
+            ctx.lineTo(x, y - height + 10);
+            ctx.stroke();
+
+            // Candle Flame
+            const flameY = y - height + 10;
+            ctx.fillStyle = '#f59e0b';
+            ctx.shadowColor = '#fbbf24';
+            ctx.shadowBlur = alpha > 0.8 ? 15 : 0;
+            ctx.beginPath();
+            ctx.ellipse(x, flameY - 8, 6, 12, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Flame Inner Core
+            ctx.fillStyle = '#fef08a';
+            ctx.beginPath();
+            ctx.ellipse(x, flameY - 6, 3, 6, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Label text
+            if (label) {
+                ctx.fillStyle = alpha > 0.8 ? '#f8fafc' : '#94a3b8';
+                ctx.font = '12px Inter, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(label, x, y + 20);
+            }
+            ctx.restore();
+        }
+
+        function drawEye(x, y, size) {
+            ctx.save();
+            ctx.fillStyle = '#ffffff';
+            ctx.strokeStyle = '#0284c7';
+            ctx.lineWidth = 2;
+
+            ctx.beginPath();
+            ctx.arc(x, y, size / 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            // Iris & Pupil
+            ctx.fillStyle = '#0f172a';
+            ctx.beginPath();
+            ctx.arc(x + 4, y, size / 5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Eyelashes / Eye shape details
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(x, y, size / 1.5, -Math.PI / 3, Math.PI / 3);
+            ctx.stroke();
+
+            ctx.fillStyle = '#f8fafc';
+            ctx.font = '12px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('眼睛 (Eye)', x, y + size + 10);
+            ctx.restore();
+        }
+
+        function drawArrowObject(x, baseY, topY, color, label, alpha = 1.0, isDashed = false) {
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.strokeStyle = color;
+            ctx.fillStyle = color;
+            ctx.lineWidth = 3;
+            if (isDashed) ctx.setLineDash([5, 4]);
+
+            ctx.beginPath();
+            ctx.moveTo(x, baseY);
+            ctx.lineTo(x, topY);
+            ctx.stroke();
+
+            const dir = topY < baseY ? -1 : 1;
+            ctx.beginPath();
+            ctx.moveTo(x, topY);
+            ctx.lineTo(x - 8, topY - dir * 12);
+            ctx.lineTo(x + 8, topY - dir * 12);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(x, baseY, 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.font = '12px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(label, x, baseY + 20);
+            ctx.restore();
+        }
+
+        function drawOpticPoint(x, y, label, color) {
+            ctx.save();
+            ctx.fillStyle = color;
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 8;
+
+            ctx.beginPath();
+            ctx.arc(x, y, 5, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.font = '11px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(label, x, y - 12);
+            ctx.restore();
+        }
+
+        // =========================================================================
+        // MOUSE & TOUCH INTERACTION HANDLING
+        // =========================================================================
+        function setupCanvasInteractions() {
+            canvas.addEventListener('mousedown', handlePointerDown);
+            canvas.addEventListener('mousemove', handlePointerMove);
+            window.addEventListener('mouseup', handlePointerUp);
+
+            canvas.addEventListener('touchstart', (e) => {
+                const touch = e.touches[0];
+                handlePointerDown({ clientX: touch.clientX, clientY: touch.clientY });
+            }, { passive: false });
+
+            canvas.addEventListener('touchstart', (e) => {}, { passive: false });
+            canvas.addEventListener('touchmove', (e) => {
+                const touch = e.touches[0];
+                handlePointerMove({ clientX: touch.clientX, clientY: touch.clientY });
+            }, { passive: false });
+
+            window.addEventListener('touchend', handlePointerUp);
+        }
+
+        function getCanvasCoords(e) {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top
+            };
+        }
+
+        function handlePointerDown(e) {
+            const pt = getCanvasCoords(e);
+
+            if (currentTab === 1) {
+                if (dist(pt, { x: state.obj.x, y: state.obj.y - state.obj.height / 2 }) < 40) {
+                    isDragging = true;
+                    dragTarget = 'object';
+                    dragOffset = { x: pt.x - state.obj.x, y: pt.y - state.obj.y };
+                } else if (dist(pt, state.eye) < 35) {
+                    isDragging = true;
+                    dragTarget = 'eye';
+                    dragOffset = { x: pt.x - state.eye.x, y: pt.y - state.eye.y };
+                } else if (!state.t1RemoveMirror && Math.abs(pt.x - state.mirror.x) < 20) {
+                    isDragging = true;
+                    dragTarget = 'mirror';
+                    dragOffset = { x: pt.x - state.mirror.x, y: pt.y - state.mirror.y };
+                }
+            } else if (currentTab === 2) {
+                if (state.t2Tool === 'draw') {
+                    isDragging = true;
+                    dragTarget = 'drawing';
+                    state.currentStroke = {
+                        points: [pt],
+                        color: document.getElementById('t2-pen-color').value,
+                        size: 3
+                    };
+                } else if (state.t2Tool === 'mirror') {
+                    isDragging = true;
+                    dragTarget = 'mirrorDraw';
+                    state.isDrawingMirror = true;
+                    state.tempMirrorStart = pt;
+                    state.tempMirrorEnd = pt;
+                } else if (state.t2Tool === 'drag') {
+                    // Check preset objects drag
+                    for (let obj of state.presetObjects) {
+                        if (dist(pt, obj) < 30) {
+                            isDragging = true;
+                            dragTarget = obj;
+                            dragOffset = { x: pt.x - obj.x, y: pt.y - obj.y };
+                            return;
+                        }
+                    }
+                }
+            } else if (currentTab === 3) {
+                if (Math.abs(pt.x - state.objCurved.x) < 30) {
+                    isDragging = true;
+                    dragTarget = 'objectCurved';
+                }
+            }
+        }
+
+        function handlePointerMove(e) {
+            const pt = getCanvasCoords(e);
+
+            if (!isDragging) {
+                let hovering = false;
+                if (currentTab === 1) {
+                    if (dist(pt, { x: state.obj.x, y: state.obj.y - state.obj.height / 2 }) < 40 ||
+                        dist(pt, state.eye) < 35 ||
+                        (!state.t1RemoveMirror && Math.abs(pt.x - state.mirror.x) < 20)) {
+                        hovering = true;
+                    }
+                } else if (currentTab === 2) {
+                    if (state.t2Tool === 'mirror') canvas.style.cursor = 'crosshair';
+                    else if (state.t2Tool === 'draw') canvas.style.cursor = 'crosshair';
+                    else {
+                        for (let obj of state.presetObjects) {
+                            if (dist(pt, obj) < 30) hovering = true;
+                        }
+                    }
+                } else if (currentTab === 3) {
+                    if (Math.abs(pt.x - state.objCurved.x) < 30) hovering = true;
+                }
+                if (state.t2Tool !== 'mirror' && state.t2Tool !== 'draw') {
+                    canvas.style.cursor = hovering ? 'grab' : 'default';
+                }
+                return;
+            }
+
+            if (dragTarget === 'drawing' && state.currentStroke) {
+                state.currentStroke.points.push(pt);
+                render();
+                return;
+            }
+
+            if (dragTarget === 'mirrorDraw') {
+                state.tempMirrorEnd = pt;
+                render();
+                return;
+            }
+
+            const w = canvas.width / dpr;
+            const h = canvas.height / dpr;
+
+            if (dragTarget === 'object') {
+                const maxX = state.t1RemoveMirror ? w - 100 : state.mirror.x - 40;
+                state.obj.x = Math.max(40, Math.min(maxX, pt.x - dragOffset.x));
+                state.obj.y = Math.max(100, Math.min(h - 60, pt.y - dragOffset.y));
+                playTone(200 + state.obj.x, "32n");
+            } else if (dragTarget === 'eye') {
+                const maxX = state.t1RemoveMirror ? w - 50 : state.mirror.x - 30;
+                state.eye.x = Math.max(30, Math.min(maxX, pt.x - dragOffset.x));
+                state.eye.y = Math.max(50, Math.min(h - 50, pt.y - dragOffset.y));
+            } else if (dragTarget === 'mirror') {
+                state.mirror.x = Math.max(250, Math.min(w - 150, pt.x - dragOffset.x));
+            } else if (dragTarget === 'objectCurved') {
+                state.objCurved.x = Math.max(40, Math.min(state.mirrorApex.x - 10, pt.x));
+            } else if (typeof dragTarget === 'object') { // Preset object drag
+                dragTarget.x = pt.x - dragOffset.x;
+                dragTarget.y = pt.y - dragOffset.y;
+            }
+
+            render();
+        }
+
+        function handlePointerUp() {
+            if (dragTarget === 'drawing' && state.currentStroke) {
+                state.strokes.push(state.currentStroke);
+                state.currentStroke = null;
+            } else if (dragTarget === 'mirrorDraw' && state.tempMirrorStart && state.tempMirrorEnd) {
+                const d = dist(state.tempMirrorStart, state.tempMirrorEnd);
+                if (d > 20) { // Add mirror line segment
+                    state.mirrors.push({
+                        id: Date.now(),
+                        x1: state.tempMirrorStart.x,
+                        y1: state.tempMirrorStart.y,
+                        x2: state.tempMirrorEnd.x,
+                        y2: state.tempMirrorEnd.y
+                    });
+                }
+                state.isDrawingMirror = false;
+                state.tempMirrorStart = null;
+                state.tempMirrorEnd = null;
+            }
+
+            isDragging = false;
+            dragTarget = null;
+            render();
+        }
+
+        function dist(p1, p2) {
+            return Math.hypot(p1.x - p2.x, p1.y - p2.y);
+        }
+
+        // Geometry helper functions for mirror reflections and FOV ray intersections
+        function reflectPointAcrossSegment(p, a, b) {
+            const dx = b.x - a.x;
+            const dy = b.y - a.y;
+            const lenSq = dx * dx + dy * dy;
+            if (lenSq === 0) return { x: p.x, y: p.y };
+
+            const t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / lenSq;
+            const projX = a.x + t * dx;
+            const projY = a.y + t * dy;
+
+            return {
+                x: 2 * projX - p.x,
+                y: 2 * projY - p.y
+            };
+        }
+
+        function isVirtualImageVisibleInMirror(eye, virtualPt, mirror) {
+            const x1 = eye.x, y1 = eye.y;
+            const x2 = virtualPt.x, y2 = virtualPt.y;
+            const x3 = mirror.x1, y3 = mirror.y1;
+            const x4 = mirror.x2, y4 = mirror.y2;
+
+            const denom = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1);
+            if (Math.abs(denom) < 1e-6) return null;
+
+            const ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / denom;
+            const ub = ((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)) / denom;
+
+            // Check if intersection lies within the mirror segment bounds
+            if (ub >= 0 && ub <= 1) {
+                return {
+                    x: x1 + ua * (x2 - x1),
+                    y: y1 + ua * (y2 - y1)
+                };
+            }
+            return null;
+        }
+
+    </script>
+</body>
+</html>
