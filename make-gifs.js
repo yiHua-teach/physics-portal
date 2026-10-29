@@ -43,6 +43,13 @@ async function createGifForHtml(htmlPath, gifPath) {
     await page.setViewport({ width: 500, height: 300 });
 
     await page.goto(`file://${htmlPath}`, { waitUntil: 'networkidle0' });
+
+    // 🌟【新增】自動將畫面滾動對焦至中央（優先對準 <canvas> 物理主體）
+    await page.evaluate(() => {
+        const target = document.querySelector('canvas') || document.body;
+        target.scrollIntoView({ block: 'center', inline: 'center' });
+    });
+
     await injectCursor(page);
 
     // 初始化 gif-encoder-2
@@ -54,24 +61,14 @@ async function createGifForHtml(htmlPath, gifPath) {
 
     await new Promise(r => setTimeout(r, 500));
 
-    // 自動模擬滑鼠拖曳操作
+    // 自動模擬滑鼠操作
     await page.mouse.move(50, 50);
     await page.mouse.move(250, 150, { steps: 10 });
     await page.mouse.down();
     await page.mouse.move(380, 100, { steps: 15 });
     await page.mouse.up();
 
-    // 模擬觸發滑桿 (<input type="range">)
-    await page.evaluate(() => {
-        const slider = document.querySelector('input[type="range"]');
-        if (slider) {
-            slider.value = (Number(slider.min) + Number(slider.max)) / 1.5;
-            slider.dispatchEvent(new Event('input', { bubbles: true }));
-            slider.dispatchEvent(new Event('change', { bubbles: true }));
-        }
-    });
-
-    // 擷取 25 幀畫面（約 2.5 秒）
+    // 擷取 25 幀畫面
     for (let i = 0; i < 25; i++) {
         const buffer = await page.screenshot({ type: 'png' });
         const png = PNG.sync.read(buffer);
@@ -81,12 +78,11 @@ async function createGifForHtml(htmlPath, gifPath) {
 
     encoder.finish();
     
-    // 輸出並儲存 GIF 檔
     const gifBuffer = encoder.out.getData();
     fs.writeFileSync(gifPath, gifBuffer);
 
     await browser.close();
-    console.log(`✅ 成功產生 GIF: ${path.basename(gifPath)}`);
+    console.log(`✅ 成功產生對焦版 GIF: ${path.basename(gifPath)}`);
 }
 
 async function processAllFiles() {
