@@ -1,3 +1,6 @@
+require('dotenv').config(); // 🌟 自動讀取同目錄下的 .env 檔案
+const fs = require('fs');
+const path = require('path');
 const fs = require('fs');
 const path = require('path');
 
