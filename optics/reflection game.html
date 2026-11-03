@@ -167,7 +167,7 @@
                 
                 <div id="game-canvas-status-tip" class="absolute bottom-4 left-6 bg-slate-900/90 border border-slate-800 text-slate-300 text-xs px-3 py-1.5 rounded-lg pointer-events-none flex items-center gap-2">
                     <i class="fa-solid fa-hand-pointer text-yellow-400"></i>
-                    <span id="canvas-tip-text">【單指】：畫平面鏡或擦除｜【雙指按住觸控】：召喚三稜鏡並張開/旋轉！</span>
+                    <span id="canvas-tip-text">【點選工具後點擊畫布】：放置分光鏡/濾光片/傳送門/三稜鏡｜【拖曳】：畫鏡或旋轉元件｜【雙指】：召喚三稜鏡！</span>
                 </div>
             </div>
 
@@ -178,22 +178,63 @@
                         <i class="fa-solid fa-toolbox text-cyan-400"></i> 操作工具箱
                     </h3>
 
-                    <div class="grid grid-cols-1 gap-2">
-                        <button id="tool-draw-mirror" onclick="setGameTool('draw_mirror')" class="p-3 rounded-xl border bg-cyan-950/60 border-cyan-500 text-cyan-300 text-xs font-bold flex items-center gap-3 transition glow-cyan">
-                            <i class="fa-solid fa-pen-nib text-lg"></i>
-                            <div class="text-left">
-                                <div>✏️ 畫平面鏡 (Flat Mirror)</div>
-                                <div class="text-[10px] text-cyan-400/70 font-normal">拖曳畫線，即時呈現法線與直角</div>
-                            </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button id="tool-draw-mirror" onclick="setGameTool('draw_mirror')" class="p-2.5 rounded-xl border bg-cyan-950/60 border-cyan-500 text-cyan-300 text-xs font-bold flex flex-col items-center justify-center gap-1 transition glow-cyan">
+                            <i class="fa-solid fa-pen-nib text-base"></i>
+                            <span>✏️ 畫平面鏡</span>
                         </button>
 
-                        <button id="tool-eraser" onclick="setGameTool('eraser')" class="p-3 rounded-xl border bg-slate-900 border-slate-700 text-slate-300 text-xs font-bold flex items-center gap-3 hover:border-slate-500 transition">
-                            <i class="fa-solid fa-eraser text-lg text-rose-400"></i>
-                            <div class="text-left">
-                                <div>🧹 橡皮擦 (Eraser)</div>
-                                <div class="text-[10px] text-slate-400 font-normal">擦除已劃出之平面鏡或三稜鏡</div>
-                            </div>
+                        <button id="tool-place-splitter" onclick="setGameTool('place_splitter')" class="p-2.5 rounded-xl border bg-slate-900 border-slate-700 text-slate-300 text-xs font-bold flex flex-col items-center justify-center gap-1 hover:border-slate-500 transition">
+                            <i class="fa-solid fa-code-branch text-base text-cyan-400"></i>
+                            <span>🪞 放置分光鏡</span>
                         </button>
+
+                        <button id="tool-place-filter" onclick="setGameTool('place_filter')" class="p-2.5 rounded-xl border bg-slate-900 border-slate-700 text-slate-300 text-xs font-bold flex flex-col items-center justify-center gap-1 hover:border-slate-500 transition">
+                            <i class="fa-solid fa-filter text-base text-rose-400"></i>
+                            <span>🔴🟢 放置濾光片</span>
+                        </button>
+
+                        <button id="tool-place-portal" onclick="setGameTool('place_portal')" class="p-2.5 rounded-xl border bg-slate-900 border-slate-700 text-slate-300 text-xs font-bold flex flex-col items-center justify-center gap-1 hover:border-slate-500 transition">
+                            <i class="fa-solid fa-circle-notch text-base text-purple-400"></i>
+                            <span>🌀 放置傳送門</span>
+                        </button>
+
+                        <button id="tool-place-prism" onclick="setGameTool('place_prism')" class="p-2.5 rounded-xl border bg-slate-900 border-slate-700 text-slate-300 text-xs font-bold flex flex-col items-center justify-center gap-1 hover:border-slate-500 transition">
+                            <i class="fa-solid fa-play -rotate-90 text-base text-amber-400"></i>
+                            <span>📐 放置三稜鏡</span>
+                        </button>
+
+                        <button id="tool-eraser" onclick="setGameTool('eraser')" class="p-2.5 rounded-xl border bg-slate-900 border-slate-700 text-slate-300 text-xs font-bold flex flex-col items-center justify-center gap-1 hover:border-slate-500 transition">
+                            <i class="fa-solid fa-eraser text-base text-rose-400"></i>
+                            <span>🧹 橡皮擦</span>
+                        </button>
+                    </div>
+
+                    <!-- Selected Play Object Tweaker Panel -->
+                    <div id="play-selected-panel" class="bg-slate-900/90 border border-cyan-500/40 rounded-xl p-3 space-y-2 text-xs hidden">
+                        <div class="flex justify-between items-center border-b border-slate-800 pb-1.5">
+                            <span id="play-selected-title" class="font-bold text-cyan-300 flex items-center gap-1.5">
+                                <i class="fa-solid fa-sliders"></i> 元件微調
+                            </span>
+                            <button onclick="deleteSelectedPlayObject()" class="text-rose-400 hover:text-rose-300 text-[11px] flex items-center gap-1">
+                                <i class="fa-solid fa-trash-can"></i> 刪除
+                            </button>
+                        </div>
+                        <div class="space-y-1">
+                            <div class="flex justify-between text-[11px] text-slate-400">
+                                <span>角度 (Angle):</span>
+                                <span id="play-selected-angle-val" class="font-mono text-cyan-400">0°</span>
+                            </div>
+                            <input id="play-selected-angle-slider" type="range" min="0" max="360" value="0" oninput="updateSelectedPlayAngle(parseInt(this.value))" class="w-full accent-cyan-500">
+                        </div>
+                        <div id="play-filter-color-row" class="hidden flex items-center justify-between text-[11px] pt-1">
+                            <span class="text-slate-400">濾鏡透光色:</span>
+                            <div class="flex gap-1.5">
+                                <button onclick="setPlayFilterColor('#f43f5e')" class="w-5 h-5 rounded-full bg-rose-500 border border-white/20 hover:scale-110 transition" title="紅光濾鏡"></button>
+                                <button onclick="setPlayFilterColor('#10b981')" class="w-5 h-5 rounded-full bg-emerald-500 border border-white/20 hover:scale-110 transition" title="綠光濾鏡"></button>
+                                <button onclick="setPlayFilterColor('#06b6d4')" class="w-5 h-5 rounded-full bg-cyan-500 border border-white/20 hover:scale-110 transition" title="青光濾鏡"></button>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Prism Touch Gesture Tip Card -->
@@ -240,24 +281,44 @@
                     </h3>
 
                     <div class="grid grid-cols-2 gap-2">
-                        <button onclick="addEditorElement('emitter')" class="p-2 bg-slate-900 border border-slate-700 hover:border-cyan-500 rounded-xl text-xs font-bold text-cyan-300 flex items-center gap-2 transition">
+                        <button onclick="addEditorElement('emitter')" class="p-2 bg-slate-900 border border-slate-700 hover:border-cyan-500 rounded-xl text-xs font-bold text-cyan-300 flex items-center gap-1.5 transition">
                             <i class="fa-solid fa-bolt"></i> + 光源發射器
                         </button>
 
-                        <button onclick="addEditorElement('target')" class="p-2 bg-slate-900 border border-slate-700 hover:border-pink-500 rounded-xl text-xs font-bold text-pink-300 flex items-center gap-2 transition">
+                        <button onclick="addEditorElement('target')" class="p-2 bg-slate-900 border border-slate-700 hover:border-pink-500 rounded-xl text-xs font-bold text-pink-300 flex items-center gap-1.5 transition">
                             <i class="fa-solid fa-bullseye"></i> + 感應標靶
                         </button>
 
-                        <button onclick="addEditorElement('wall')" class="p-2 bg-slate-900 border border-slate-700 hover:border-slate-400 rounded-xl text-xs font-bold text-slate-300 flex items-center gap-2 transition">
+                        <button onclick="addEditorElement('wall')" class="p-2 bg-slate-900 border border-slate-700 hover:border-slate-400 rounded-xl text-xs font-bold text-slate-300 flex items-center gap-1.5 transition">
                             <i class="fa-solid fa-square"></i> + 障礙牆
                         </button>
 
-                        <button onclick="addEditorElement('glass')" class="p-2 bg-slate-900 border border-slate-700 hover:border-blue-400 rounded-xl text-xs font-bold text-blue-300 flex items-center gap-2 transition">
+                        <button onclick="addEditorElement('glass')" class="p-2 bg-slate-900 border border-slate-700 hover:border-blue-400 rounded-xl text-xs font-bold text-blue-300 flex items-center gap-1.5 transition">
                             <i class="fa-solid fa-cubes"></i> + 矩形玻璃
                         </button>
 
-                        <button onclick="addEditorElement('prism')" class="p-2 bg-slate-900 border border-slate-700 hover:border-amber-400 rounded-xl text-xs font-bold text-amber-300 flex items-center gap-2 transition col-span-2">
-                            <i class="fa-solid fa-play -rotate-90"></i> + 三稜鏡 (Prism)
+                        <button onclick="addEditorElement('prism')" class="p-2 bg-slate-900 border border-slate-700 hover:border-amber-400 rounded-xl text-xs font-bold text-amber-300 flex items-center gap-1.5 transition">
+                            <i class="fa-solid fa-play -rotate-90"></i> + 三稜鏡
+                        </button>
+
+                        <button onclick="addEditorElement('splitter')" class="p-2 bg-slate-900 border border-slate-700 hover:border-cyan-400 rounded-xl text-xs font-bold text-cyan-300 flex items-center gap-1.5 transition">
+                            <i class="fa-solid fa-code-branch"></i> + 分光鏡
+                        </button>
+
+                        <button onclick="addEditorElement('sensor')" class="p-2 bg-slate-900 border border-slate-700 hover:border-emerald-400 rounded-xl text-xs font-bold text-emerald-300 flex items-center gap-1.5 transition">
+                            <i class="fa-solid fa-solar-panel"></i> + 光敏開關
+                        </button>
+
+                        <button onclick="addEditorElement('gate')" class="p-2 bg-slate-900 border border-slate-700 hover:border-rose-400 rounded-xl text-xs font-bold text-rose-300 flex items-center gap-1.5 transition">
+                            <i class="fa-solid fa-shield-halved"></i> + 防護閘門
+                        </button>
+
+                        <button onclick="addEditorElement('filter')" class="p-2 bg-slate-900 border border-slate-700 hover:border-pink-400 rounded-xl text-xs font-bold text-pink-300 flex items-center gap-1.5 transition">
+                            <i class="fa-solid fa-filter"></i> + 彩色濾鏡
+                        </button>
+
+                        <button onclick="addEditorElement('portal')" class="p-2 bg-slate-900 border border-slate-700 hover:border-purple-400 rounded-xl text-xs font-bold text-purple-300 flex items-center gap-1.5 transition">
+                            <i class="fa-solid fa-circle-notch"></i> + 傳送門組
                         </button>
                     </div>
                 </div>
@@ -273,12 +334,13 @@
                         <!-- Color Picker -->
                         <div id="prop-color-group" class="space-y-1">
                             <label class="text-[11px] text-slate-400 font-bold">元件顏色 (Color):</label>
-                            <div class="flex items-center gap-2">
-                                <button onclick="setSelectedColor('#06b6d4')" class="w-6 h-6 rounded-full bg-cyan-500 border border-white/20 hover:scale-110 transition"></button>
-                                <button onclick="setSelectedColor('#f43f5e')" class="w-6 h-6 rounded-full bg-rose-500 border border-white/20 hover:scale-110 transition"></button>
-                                <button onclick="setSelectedColor('#10b981')" class="w-6 h-6 rounded-full bg-emerald-500 border border-white/20 hover:scale-110 transition"></button>
-                                <button onclick="setSelectedColor('#a855f7')" class="w-6 h-6 rounded-full bg-purple-500 border border-white/20 hover:scale-110 transition"></button>
-                                <button onclick="setSelectedColor('#f59e0b')" class="w-6 h-6 rounded-full bg-amber-500 border border-white/20 hover:scale-110 transition"></button>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <button onclick="setSelectedColor('#06b6d4')" class="w-6 h-6 rounded-full bg-cyan-500 border border-white/20 hover:scale-110 transition" title="青色"></button>
+                                <button onclick="setSelectedColor('#f43f5e')" class="w-6 h-6 rounded-full bg-rose-500 border border-white/20 hover:scale-110 transition" title="紅色"></button>
+                                <button onclick="setSelectedColor('#10b981')" class="w-6 h-6 rounded-full bg-emerald-500 border border-white/20 hover:scale-110 transition" title="綠色"></button>
+                                <button onclick="setSelectedColor('#a855f7')" class="w-6 h-6 rounded-full bg-purple-500 border border-white/20 hover:scale-110 transition" title="紫色"></button>
+                                <button onclick="setSelectedColor('#f59e0b')" class="w-6 h-6 rounded-full bg-amber-500 border border-white/20 hover:scale-110 transition" title="橙黃色"></button>
+                                <button onclick="setSelectedColor('#ffffff')" class="w-6 h-6 rounded-full bg-white border border-slate-300 hover:scale-110 transition" title="自然白光"></button>
                             </div>
                         </div>
 
@@ -557,7 +619,7 @@
 
         function getPolygonEdges(obj) {
             let pts = [];
-            if (obj.shape === 'rect' || obj.type === 'wall' || obj.type === 'glass') {
+            if (obj.shape === 'rect' || obj.type === 'wall' || obj.type === 'glass' || obj.type === 'gate') {
                 const w = obj.w || obj.size || 60;
                 const h = obj.h || obj.size || 60;
                 const rad = (obj.angle || 0) * Math.PI / 180;
@@ -587,107 +649,251 @@
             return edges;
         }
 
-        /* Full Physical Ray Tracing Engine */
-        function traceRayPathFull(origin, direction, rayColor, objects, targets, maxBounces = 25) {
-            let currentOrigin = { ...origin };
-            let currentDir = Vec.norm(direction);
-            let currentMediumN = 1.0; // Default Air/Vacuum (n = 1.00)
-            const steps = [];
+        function getObjectSegment(obj) {
+            if (obj.p1 && obj.p2) return { p1: obj.p1, p2: obj.p2 };
+            const size = obj.size || 60;
+            const rad = (obj.angle || 0) * Math.PI / 180;
+            const halfVec = Vec.rot({ x: 0, y: -size / 2 }, rad);
+            return {
+                p1: Vec.sub(obj.center, halfVec),
+                p2: Vec.add(obj.center, halfVec)
+            };
+        }
 
-            for (let bounce = 0; bounce < maxBounces; bounce++) {
-                let closestHit = null;
+        /* Full Multi-Branching Physical Ray Tracing Engine (Supports Splitters, Filters, Sensors, Gates, Portals) */
+        function traceAllRays(emitters, objects, targets, maxBounces = 35) {
+            const sensors = objects.filter(o => o.type === 'sensor');
+            const gates = objects.filter(o => o.type === 'gate');
 
-                objects.forEach(obj => {
-                    if (obj.type === 'mirror') {
-                        const hit = intersectRaySegment(currentOrigin, currentDir, obj.p1, obj.p2);
-                        if (hit && (!closestHit || hit.t < closestHit.t)) {
-                            const seg = Vec.sub(obj.p2, obj.p1);
-                            const norm = Vec.norm({ x: -seg.y, y: seg.x });
-                            closestHit = { ...hit, object: obj, type: 'mirror', normal: norm };
-                        }
-                    } else if (obj.type === 'wall') {
-                        const edges = getPolygonEdges(obj);
-                        edges.forEach(edge => {
-                            const hit = intersectRaySegment(currentOrigin, currentDir, edge.p1, edge.p2);
+            let allRays = [];
+            const passes = 2; // Pass 1: find which sensors are triggered; Pass 2: trace through opened gates
+
+            for (let pass = 0; pass < passes; pass++) {
+                sensors.forEach(s => s.hit = false);
+
+                gates.forEach(g => {
+                    const linkedSensor = sensors.find(s => s.id === g.sensorId || s.targetGateId === g.id);
+                    g.opened = linkedSensor ? linkedSensor.hit : false;
+                });
+
+                allRays = [];
+                targets.forEach(t => t.hit = false);
+
+                const rayQueue = [];
+                emitters.forEach(em => {
+                    const rad = (em.angle || 0) * Math.PI / 180;
+                    rayQueue.push({
+                        origin: { ...em.center },
+                        dir: Vec.norm({ x: Math.cos(rad), y: Math.sin(rad) }),
+                        color: em.color || '#06b6d4',
+                        mediumN: 1.0,
+                        intensity: 1.0,
+                        bounce: 0,
+                        teleports: 0
+                    });
+                });
+
+                let totalSegments = 0;
+                const MAX_TOTAL_SEGMENTS = 140;
+
+                while (rayQueue.length > 0 && totalSegments < MAX_TOTAL_SEGMENTS) {
+                    const currentRay = rayQueue.shift();
+                    totalSegments++;
+
+                    let { origin, dir, color, mediumN, intensity, bounce, teleports } = currentRay;
+                    if (bounce >= maxBounces) continue;
+
+                    let closestHit = null;
+
+                    objects.forEach(obj => {
+                        if (obj.type === 'mirror' || obj.type === 'splitter' || obj.type === 'filter' || obj.type === 'portal') {
+                            const segObj = getObjectSegment(obj);
+                            const hit = intersectRaySegment(origin, dir, segObj.p1, segObj.p2);
                             if (hit && (!closestHit || hit.t < closestHit.t)) {
-                                closestHit = { ...hit, object: obj, type: 'wall' };
+                                const seg = Vec.sub(segObj.p2, segObj.p1);
+                                const norm = Vec.norm({ x: -seg.y, y: seg.x });
+                                closestHit = { ...hit, object: obj, type: obj.type, normal: norm };
                             }
-                        });
-                    } else if (obj.type === 'glass' || obj.type === 'prism') {
-                        const edges = getPolygonEdges(obj);
-                        edges.forEach(edge => {
-                            const hit = intersectRaySegment(currentOrigin, currentDir, edge.p1, edge.p2);
-                            if (hit && (!closestHit || hit.t < closestHit.t)) {
-                                const seg = Vec.sub(edge.p2, edge.p1);
-                                const normOut = Vec.norm({ x: -seg.y, y: seg.x });
-                                closestHit = { ...hit, object: obj, type: 'glass', normal: normOut };
+                        } else if (obj.type === 'wall' || obj.type === 'glass' || obj.type === 'prism') {
+                            const edges = getPolygonEdges(obj);
+                            edges.forEach(edge => {
+                                const hit = intersectRaySegment(origin, dir, edge.p1, edge.p2);
+                                if (hit && (!closestHit || hit.t < closestHit.t)) {
+                                    const seg = Vec.sub(edge.p2, edge.p1);
+                                    const normOut = Vec.norm({ x: -seg.y, y: seg.x });
+                                    closestHit = { ...hit, object: obj, type: obj.type === 'prism' ? 'glass' : obj.type, normal: normOut };
+                                }
+                            });
+                        } else if (obj.type === 'gate') {
+                            if (!obj.opened) {
+                                const edges = getPolygonEdges(obj);
+                                edges.forEach(edge => {
+                                    const hit = intersectRaySegment(origin, dir, edge.p1, edge.p2);
+                                    if (hit && (!closestHit || hit.t < closestHit.t)) {
+                                        closestHit = { ...hit, object: obj, type: 'wall' };
+                                    }
+                                });
                             }
-                        });
-                    }
-                });
-
-                let segLen = 1200;
-                let nextOrigin = Vec.add(currentOrigin, Vec.mult(currentDir, segLen));
-                let hitInfo = null;
-
-                if (closestHit) {
-                    segLen = closestHit.t;
-                    nextOrigin = closestHit.point;
-                    hitInfo = closestHit;
-                }
-
-                // Check target hits (Beam penetrates targets)
-                targets.forEach(target => {
-                    const dist = distToSegment(target.center, currentOrigin, nextOrigin);
-                    if (dist <= target.radius) {
-                        if (target.color.toLowerCase() === rayColor.toLowerCase()) {
-                            target.hit = true;
                         }
-                    }
-                });
+                    });
 
-                steps.push({
-                    p1: currentOrigin,
-                    p2: nextOrigin,
-                    dir: currentDir,
-                    length: segLen,
-                    color: rayColor,
-                    mediumN: currentMediumN,
-                    hit: hitInfo
-                });
-
-                if (!closestHit || closestHit.type === 'wall') break;
-
-                if (closestHit.type === 'mirror') {
-                    let N = closestHit.normal;
-                    if (Vec.dot(currentDir, N) > 0) N = Vec.mult(N, -1);
-                    const refDir = Vec.norm(Vec.sub(currentDir, Vec.mult(N, 2 * Vec.dot(currentDir, N))));
-                    currentDir = refDir;
-                    currentOrigin = Vec.add(nextOrigin, Vec.mult(currentDir, 0.1));
-                } else if (closestHit.type === 'glass') {
-                    const N_out = closestHit.normal;
-                    let n1, n2, N_face;
-
-                    if (Vec.dot(currentDir, N_out) < 0) {
-                        // Entering Glass: Vacuum (1.00) -> Glass
-                        n1 = currentMediumN;
-                        n2 = closestHit.object.n || 1.52;
-                        N_face = N_out;
-                    } else {
-                        // Exiting Glass: Glass -> Vacuum (1.00)
-                        n1 = closestHit.object.n || 1.52;
-                        n2 = 1.00;
-                        N_face = Vec.mult(N_out, -1);
+                    let segLen = 1200;
+                    let hitPoint = Vec.add(origin, Vec.mult(dir, segLen));
+                    if (closestHit) {
+                        segLen = closestHit.t;
+                        hitPoint = closestHit.point;
                     }
 
-                    const refr = computeRefraction(currentDir, N_face, n1, n2);
-                    currentDir = refr.dir;
-                    currentMediumN = refr.isTIR ? n1 : n2;
-                    currentOrigin = Vec.add(nextOrigin, Vec.mult(currentDir, 0.2));
+                    // Target collision check (Monochromatic color filtering check)
+                    targets.forEach(target => {
+                        const dist = distToSegment(target.center, origin, hitPoint);
+                        if (dist <= target.radius) {
+                            const isWhiteRay = color.toLowerCase() === '#ffffff';
+                            const isWhiteTarget = target.color.toLowerCase() === '#ffffff';
+                            if (isWhiteTarget) {
+                                if (isWhiteRay) target.hit = true;
+                            } else {
+                                if (!isWhiteRay && target.color.toLowerCase() === color.toLowerCase()) {
+                                    target.hit = true;
+                                }
+                            }
+                        }
+                    });
+
+                    // Sensor collision check
+                    sensors.forEach(sensor => {
+                        const dist = distToSegment(sensor.center, origin, hitPoint);
+                        if (dist <= (sensor.radius || 24)) {
+                            if (!sensor.color || sensor.color === '#ffffff' || sensor.color.toLowerCase() === color.toLowerCase()) {
+                                sensor.hit = true;
+                            }
+                        }
+                    });
+
+                    allRays.push({
+                        p1: origin,
+                        p2: hitPoint,
+                        dir: dir,
+                        length: segLen,
+                        color: color,
+                        intensity: intensity,
+                        mediumN: mediumN,
+                        hit: closestHit
+                    });
+
+                    if (!closestHit) continue;
+                    if (closestHit.type === 'wall') continue;
+
+                    if (closestHit.type === 'mirror') {
+                        let N = closestHit.normal;
+                        if (Vec.dot(dir, N) > 0) N = Vec.mult(N, -1);
+                        const refDir = Vec.norm(Vec.sub(dir, Vec.mult(N, 2 * Vec.dot(dir, N))));
+                        rayQueue.push({
+                            origin: Vec.add(hitPoint, Vec.mult(refDir, 0.15)),
+                            dir: refDir,
+                            color: color,
+                            mediumN: mediumN,
+                            intensity: intensity,
+                            bounce: bounce + 1,
+                            teleports
+                        });
+                    } else if (closestHit.type === 'splitter') {
+                        // Splitter: 50% Reflected, 50% Transmitted straight through!
+                        let N = closestHit.normal;
+                        if (Vec.dot(dir, N) > 0) N = Vec.mult(N, -1);
+                        const refDir = Vec.norm(Vec.sub(dir, Vec.mult(N, 2 * Vec.dot(dir, N))));
+
+                        // 1. Reflected ray
+                        rayQueue.push({
+                            origin: Vec.add(hitPoint, Vec.mult(refDir, 0.15)),
+                            dir: refDir,
+                            color: color,
+                            mediumN: mediumN,
+                            intensity: intensity * 0.7,
+                            bounce: bounce + 1,
+                            teleports
+                        });
+
+                        // 2. Transmitted ray
+                        rayQueue.push({
+                            origin: Vec.add(hitPoint, Vec.mult(dir, 0.15)),
+                            dir: dir,
+                            color: color,
+                            mediumN: mediumN,
+                            intensity: intensity * 0.7,
+                            bounce: bounce + 1,
+                            teleports
+                        });
+                    } else if (closestHit.type === 'filter') {
+                        // Color filter: white turns to filter color; matching color passes; non-matching absorbed
+                        const filterCol = closestHit.object.color || '#f43f5e';
+                        const isWhite = color.toLowerCase() === '#ffffff';
+                        const isMatch = color.toLowerCase() === filterCol.toLowerCase();
+
+                        if (isWhite || isMatch) {
+                            rayQueue.push({
+                                origin: Vec.add(hitPoint, Vec.mult(dir, 0.2)),
+                                dir: dir,
+                                color: filterCol,
+                                mediumN: mediumN,
+                                intensity: intensity,
+                                bounce: bounce + 1,
+                                teleports
+                            });
+                        }
+                    } else if (closestHit.type === 'portal') {
+                        if (teleports < 8) {
+                            const portal = closestHit.object;
+                            let pairedPortal = null;
+                            if (portal.pairId) {
+                                pairedPortal = objects.find(o => o.id === portal.pairId);
+                            } else {
+                                pairedPortal = objects.find(o => o.type === 'portal' && o !== portal);
+                            }
+
+                            if (pairedPortal) {
+                                const exitRad = (pairedPortal.angle || 0) * Math.PI / 180;
+                                const exitDir = Vec.norm({ x: Math.cos(exitRad), y: Math.sin(exitRad) });
+                                rayQueue.push({
+                                    origin: Vec.add(pairedPortal.center, Vec.mult(exitDir, 16)),
+                                    dir: exitDir,
+                                    color: color,
+                                    mediumN: 1.0,
+                                    intensity: intensity,
+                                    bounce: bounce + 1,
+                                    teleports: teleports + 1
+                                });
+                            }
+                        }
+                    } else if (closestHit.type === 'glass') {
+                        const N_out = closestHit.normal;
+                        let n1, n2, N_face;
+
+                        if (Vec.dot(dir, N_out) < 0) {
+                            n1 = mediumN;
+                            n2 = closestHit.object.n || 1.52;
+                            N_face = N_out;
+                        } else {
+                            n1 = closestHit.object.n || 1.52;
+                            n2 = 1.00;
+                            N_face = Vec.mult(N_out, -1);
+                        }
+
+                        const refr = computeRefraction(dir, N_face, n1, n2);
+                        rayQueue.push({
+                            origin: Vec.add(hitPoint, Vec.mult(refr.dir, 0.2)),
+                            dir: refr.dir,
+                            color: color,
+                            mediumN: refr.isTIR ? n1 : n2,
+                            intensity: intensity,
+                            bounce: bounce + 1,
+                            teleports
+                        });
+                    }
                 }
             }
 
-            return steps;
+            return allRays;
         }
 
         /* ==========================================================================
@@ -776,6 +982,84 @@
                     { id: 'w1', type: 'wall', shape: 'rect', center: { x: 240, y: 240 }, w: 30, h: 200 },
                     { id: 'w2', type: 'wall', shape: 'rect', center: { x: 560, y: 240 }, w: 30, h: 200 }
                 ]
+            },
+            {
+                title: "關卡 7: 🪞 分光之鑰：雙靶分流",
+                desc: "僅有 1 束青色雷射，但有 2 個目標靶分散在兩端！請利用【分光鏡】將光線一分為二，同時命中兩靶！",
+                hint: "點擊左側「🪞 放置分光鏡」，放置在雷射路徑上（例如 45°），光線將同時產生透射與反射，分別射向兩個標靶！",
+                physics: "半透半反分光鏡（Beam Splitter）利用薄膜光學原理，將單一光束分為 50% 透射光與 50% 反射光，是現代雷射干涉與光學計算的核心元件。",
+                emitters: [{ id: 'e1', center: { x: 90, y: 240 }, angle: 0, color: '#06b6d4' }],
+                targets: [
+                    { id: 'T1', name: '上方青靶', center: { x: 450, y: 80 }, radius: 24, color: '#06b6d4', hit: false },
+                    { id: 'T2', name: '直射青靶', center: { x: 750, y: 240 }, radius: 24, color: '#06b6d4', hit: false }
+                ],
+                fixedObjects: [
+                    { id: 'w1', type: 'wall', shape: 'rect', center: { x: 450, y: 360 }, w: 40, h: 200, angle: 0 },
+                    { id: 'w2', type: 'wall', shape: 'rect', center: { x: 600, y: 150 }, w: 40, h: 180, angle: 0 }
+                ]
+            },
+            {
+                title: "關卡 8: 🔘 光電連鎖：光控雷射門",
+                desc: "終點標靶被高壓防護閘門嚴密鎖死！必須先導引一束光持續照亮【光敏開關】開啟防護門，另一束光才能穿過擊靶！",
+                hint: "使用分光鏡將光線拆成兩路：一路引導照射下方的光敏開關解除閘門，另一路利用反射鏡穿過開啟的閘門直達標靶！",
+                physics: "光敏開關利用光電效應或光敏電阻，在受光照射時電導率劇增或產生光電壓，驅動自動機關門開啟。",
+                emitters: [{ id: 'e1', center: { x: 90, y: 180 }, angle: 0, color: '#06b6d4' }],
+                targets: [{ id: 'T1', name: '終點核心靶', center: { x: 750, y: 180 }, radius: 24, color: '#06b6d4', hit: false }],
+                fixedObjects: [
+                    { id: 's1', type: 'sensor', center: { x: 380, y: 400 }, radius: 24, targetGateId: 'g1', hit: false },
+                    { id: 'g1', type: 'gate', sensorId: 's1', center: { x: 560, y: 180 }, w: 30, h: 200, angle: 0, opened: false },
+                    { id: 'w1', type: 'wall', shape: 'rect', center: { x: 560, y: 45 }, w: 30, h: 120 },
+                    { id: 'w2', type: 'wall', shape: 'rect', center: { x: 560, y: 395 }, w: 30, h: 220 },
+                    { id: 'w3', type: 'wall', shape: 'rect', center: { x: 380, y: 260 }, w: 180, h: 26 }
+                ]
+            },
+            {
+                title: "關卡 9: 🔴🟢 光譜濾色：白光分色擊靶",
+                desc: "發射器射出自然白光！標靶分別為【紅色標靶】與【綠色標靶】。白光必須通過對應顏色的濾光片提取純色光才能精準激活！",
+                hint: "先用分光鏡將白光分流，一路放上「紅色濾光片」射向紅靶，另一路放上「綠色濾光片」射向綠靶！點擊已放置濾鏡可切換顏色。",
+                physics: "彩色濾光片（Absorption Filter）透過選擇性吸收多餘波長，僅讓特定頻段的光透過，將複合白光過濾為單色光。",
+                emitters: [{ id: 'e1', center: { x: 90, y: 240 }, angle: 0, color: '#ffffff' }],
+                targets: [
+                    { id: 'T1', name: '紅色感應靶', center: { x: 740, y: 120 }, radius: 24, color: '#f43f5e', hit: false },
+                    { id: 'T2', name: '綠色感應靶', center: { x: 740, y: 360 }, radius: 24, color: '#10b981', hit: false }
+                ],
+                fixedObjects: [
+                    { id: 'w1', type: 'wall', shape: 'rect', center: { x: 420, y: 240 }, w: 40, h: 180 },
+                    { id: 'w2', type: 'wall', shape: 'rect', center: { x: 580, y: 120 }, w: 30, h: 100 },
+                    { id: 'w3', type: 'wall', shape: 'rect', center: { x: 580, y: 360 }, w: 30, h: 100 }
+                ]
+            },
+            {
+                title: "關卡 10: 🌀 空間折躍：光學傳送門",
+                desc: "終點標靶被完全封閉在迷宮厚實黑體牆中，無法常規反射！請善用光學傳送門（入口 A ➔ 出口 B）進行空間折躍！",
+                hint: "放置或引導光線射入紫色傳送門 A，光線將直接從密室內青色傳送門 B 依指定朝向射出！再於密室內反射擊中標靶。",
+                physics: "傳送門模擬了光纖全反射（Total Internal Reflection）的光能定向傳播，能使光線跨越黑體障礙完整重定向傳導。",
+                emitters: [{ id: 'e1', center: { x: 90, y: 120 }, angle: 25, color: '#06b6d4' }],
+                targets: [{ id: 'T1', name: '密室深處核心靶', center: { x: 720, y: 380 }, radius: 24, color: '#06b6d4', hit: false }],
+                fixedObjects: [
+                    { id: 'pA', type: 'portal', pairId: 'pB', pairRole: 'A', center: { x: 380, y: 160 }, angle: 0, size: 55, color: '#c084fc', label: 'PORTAL A' },
+                    { id: 'pB', type: 'portal', pairId: 'pA', pairRole: 'B', center: { x: 560, y: 380 }, angle: 0, size: 55, color: '#38bdf8', label: 'PORTAL B' },
+                    { id: 'w1', type: 'wall', shape: 'rect', center: { x: 480, y: 380 }, w: 30, h: 180 },
+                    { id: 'w2', type: 'wall', shape: 'rect', center: { x: 660, y: 280 }, w: 380, h: 30 },
+                    { id: 'w3', type: 'wall', shape: 'rect', center: { x: 480, y: 140 }, w: 30, h: 260 }
+                ]
+            },
+            {
+                title: "關卡 11: ⚡ 終極光學工坊：大師級連鎖挑戰",
+                desc: "終極考驗！融合自然白光、分光鏡、光敏機關門、彩色濾光鏡與空間傳送門，完成極限光學連鎖！",
+                hint: "將白光分流：一路過濾成紅光觸發光敏開關以開啟防護門；另一路穿過開啟的閘門射入傳送門，並過濾成綠光命中密室內的綠靶！",
+                physics: "幾何光學集大成之作！綜合反射、透射分光、選擇性波長吸收與光電開關控制，呈現精密物理系統的極致魅力！",
+                emitters: [{ id: 'e1', center: { x: 80, y: 240 }, angle: 0, color: '#ffffff' }],
+                targets: [{ id: 'T1', name: '密室綠色核心靶', center: { x: 750, y: 380 }, radius: 24, color: '#10b981', hit: false }],
+                fixedObjects: [
+                    { id: 's1', type: 'sensor', center: { x: 320, y: 90 }, radius: 24, targetGateId: 'g1', color: '#f43f5e', hit: false },
+                    { id: 'g1', type: 'gate', sensorId: 's1', center: { x: 460, y: 240 }, w: 30, h: 180, opened: false },
+                    { id: 'pA', type: 'portal', pairId: 'pB', pairRole: 'A', center: { x: 620, y: 240 }, angle: 0, size: 50, color: '#c084fc', label: 'PORTAL A' },
+                    { id: 'pB', type: 'portal', pairId: 'pA', pairRole: 'B', center: { x: 560, y: 380 }, angle: 0, size: 50, color: '#38bdf8', label: 'PORTAL B' },
+                    { id: 'w1', type: 'wall', shape: 'rect', center: { x: 460, y: 100 }, w: 30, h: 160 },
+                    { id: 'w2', type: 'wall', shape: 'rect', center: { x: 460, y: 380 }, w: 30, h: 160 },
+                    { id: 'w3', type: 'wall', shape: 'rect', center: { x: 660, y: 300 }, w: 420, h: 26 }
+                ]
             }
         ];
 
@@ -851,7 +1135,7 @@
                 playSidebar.classList.remove('hidden');
                 editorSidebar.classList.add('hidden');
 
-                tipText.textContent = "【單指】：畫平面鏡或擦除｜【雙指按住觸控】：召喚三稜鏡，張開/縮小/旋轉！";
+                tipText.textContent = "【點選工具後點擊畫布】：放置分光鏡/濾光片/傳送門/三稜鏡｜【拖曳】：畫鏡或旋轉元件｜【雙指】：召喚三稜鏡！";
 
                 loadGameLevel(currentGameLevelIdx);
             } else {
@@ -912,21 +1196,114 @@
             gameActiveTool = tool;
             playClickSound();
 
-            const drawBtn = document.getElementById('tool-draw-mirror');
-            const eraseBtn = document.getElementById('tool-eraser');
+            const toolIds = [
+                'tool-draw-mirror',
+                'tool-place-splitter',
+                'tool-place-filter',
+                'tool-place-portal',
+                'tool-place-prism',
+                'tool-eraser'
+            ];
 
-            if (tool === 'draw_mirror') {
-                drawBtn.className = "p-3 rounded-xl border bg-cyan-950/60 border-cyan-500 text-cyan-300 text-xs font-bold flex items-center gap-3 transition glow-cyan";
-                eraseBtn.className = "p-3 rounded-xl border bg-slate-900 border-slate-700 text-slate-300 text-xs font-bold flex items-center gap-3 hover:border-slate-500 transition";
-            } else {
-                eraseBtn.className = "p-3 rounded-xl border bg-rose-950/60 border-rose-500 text-rose-300 text-xs font-bold flex items-center gap-3 transition glow-pink";
-                drawBtn.className = "p-3 rounded-xl border bg-slate-900 border-slate-700 text-slate-300 text-xs font-bold flex items-center gap-3 hover:border-slate-500 transition";
+            toolIds.forEach(id => {
+                const btn = document.getElementById(id);
+                if (!btn) return;
+                btn.className = "p-2.5 rounded-xl border bg-slate-900 border-slate-700 text-slate-300 text-xs font-bold flex flex-col items-center justify-center gap-1 hover:border-slate-500 transition";
+            });
+
+            const activeBtn = document.getElementById(
+                tool === 'draw_mirror' ? 'tool-draw-mirror' :
+                tool === 'place_splitter' ? 'tool-place-splitter' :
+                tool === 'place_filter' ? 'tool-place-filter' :
+                tool === 'place_portal' ? 'tool-place-portal' :
+                tool === 'place_prism' ? 'tool-place-prism' : 'tool-eraser'
+            );
+            if (activeBtn) {
+                if (tool === 'eraser') {
+                    activeBtn.className = "p-2.5 rounded-xl border bg-rose-950/60 border-rose-500 text-rose-300 text-xs font-bold flex flex-col items-center justify-center gap-1 transition glow-pink";
+                } else {
+                    activeBtn.className = "p-2.5 rounded-xl border bg-cyan-950/60 border-cyan-500 text-cyan-300 text-xs font-bold flex flex-col items-center justify-center gap-1 transition glow-cyan";
+                }
             }
+        }
+
+        let selectedPlayObject = null;
+        let isDraggingPlayObject = false;
+        let isRotatingPlayObject = false;
+        let playDragOffset = { x: 0, y: 0 };
+
+        function selectPlayObject(obj) {
+            selectedPlayObject = obj;
+            updatePlaySelectedPanel();
+        }
+
+        function updatePlaySelectedPanel() {
+            const panel = document.getElementById('play-selected-panel');
+            if (!panel) return;
+
+            if (!selectedPlayObject) {
+                panel.classList.add('hidden');
+                return;
+            }
+
+            panel.classList.remove('hidden');
+            let title = '元件微調';
+            if (selectedPlayObject.type === 'splitter') title = '🪞 分光鏡';
+            else if (selectedPlayObject.type === 'filter') title = '🔴🟢 濾光鏡';
+            else if (selectedPlayObject.type === 'portal') title = selectedPlayObject.label || '🌀 傳送門';
+            else if (selectedPlayObject.type === 'glass' && selectedPlayObject.shape === 'prism') title = '📐 三稜鏡';
+            else if (selectedPlayObject.type === 'mirror') title = '✏️ 平面鏡';
+
+            document.getElementById('play-selected-title').innerHTML = `<i class="fa-solid fa-sliders"></i> ${title}`;
+            document.getElementById('play-selected-angle-slider').value = Math.round(selectedPlayObject.angle || 0);
+            document.getElementById('play-selected-angle-val').textContent = `${Math.round(selectedPlayObject.angle || 0)}°`;
+
+            const filterRow = document.getElementById('play-filter-color-row');
+            if (selectedPlayObject.type === 'filter') {
+                filterRow.classList.remove('hidden');
+            } else {
+                filterRow.classList.add('hidden');
+            }
+        }
+
+        function updateSelectedPlayAngle(angle) {
+            if (!selectedPlayObject) return;
+            selectedPlayObject.angle = angle;
+            document.getElementById('play-selected-angle-val').textContent = `${angle}°`;
+            recalcGameRay();
+        }
+
+        function setPlayFilterColor(color) {
+            if (!selectedPlayObject || selectedPlayObject.type !== 'filter') return;
+            selectedPlayObject.color = color;
+            playClickSound();
+            recalcGameRay();
+        }
+
+        function deleteSelectedPlayObject() {
+            if (!selectedPlayObject) return;
+            playClickSound();
+            if (selectedPlayObject.type === 'portal' && selectedPlayObject.pairId) {
+                gamePlayerObjects = gamePlayerObjects.filter(o => o.id !== selectedPlayObject.id && o.id !== selectedPlayObject.pairId);
+            } else {
+                gamePlayerObjects = gamePlayerObjects.filter(o => o !== selectedPlayObject);
+            }
+            selectedPlayObject = null;
+            updatePlaySelectedPanel();
+            updateGameStats();
+            recalcGameRay();
         }
 
         function undoPlayerObject() {
             if (gamePlayerObjects.length > 0) {
-                gamePlayerObjects.pop();
+                const popped = gamePlayerObjects.pop();
+                if (popped && popped.type === 'portal' && popped.pairId) {
+                    gamePlayerObjects = gamePlayerObjects.filter(o => o.id !== popped.pairId);
+                }
+                if (selectedPlayObject === popped) {
+                    selectedPlayObject = null;
+                    updatePlaySelectedPanel();
+                }
                 playClickSound();
                 updateGameStats();
                 recalcGameRay();
@@ -936,6 +1313,8 @@
         function clearPlayerDrawnGameObjects() {
             playClickSound();
             gamePlayerObjects = [];
+            selectedPlayObject = null;
+            updatePlaySelectedPanel();
             updateGameStats();
             recalcGameRay();
         }
@@ -987,14 +1366,7 @@
                 }
             }
 
-            calculatedRays = [];
-
-            emitters.forEach(emitter => {
-                const rad = emitter.angle * Math.PI / 180;
-                const dir = { x: Math.cos(rad), y: Math.sin(rad) };
-                const raySteps = traceRayPathFull(emitter.center, dir, emitter.color, allObjs, targets);
-                calculatedRays.push(raySteps);
-            });
+            calculatedRays = traceAllRays(emitters, allObjs, targets);
 
             if (currentAppMode === 'play') {
                 updateGameStats();
@@ -1053,13 +1425,17 @@
             const beforeLen = gamePlayerObjects.length;
             gamePlayerObjects = gamePlayerObjects.filter(obj => {
                 if (obj.type === 'mirror') {
-                    return distToSegment(pos, obj.p1, obj.p2) > 18;
-                } else if (obj.type === 'glass') {
-                    return Vec.dist(pos, obj.center) > (obj.size || 50) / 2 + 10;
+                    return distToSegment(pos, obj.p1, obj.p2) > 20;
+                } else if (obj.center) {
+                    return Vec.dist(pos, obj.center) > (obj.size || 50) / 2 + 15;
                 }
                 return true;
             });
             if (gamePlayerObjects.length !== beforeLen) {
+                if (selectedPlayObject && !gamePlayerObjects.includes(selectedPlayObject)) {
+                    selectedPlayObject = null;
+                    updatePlaySelectedPanel();
+                }
                 playClickSound();
                 updateGameStats();
                 recalcGameRay();
@@ -1089,6 +1465,25 @@
             } else if (type === 'prism') {
                 editorLevel.fixedObjects.push({ id, type: 'glass', shape: 'prism', center, size: 90, angle: 0, n: 1.52 });
                 selectEditorElement('fixedObjects', editorLevel.fixedObjects.length - 1);
+            } else if (type === 'splitter') {
+                editorLevel.fixedObjects.push({ id, type: 'splitter', center, size: 60, angle: 45 });
+                selectEditorElement('fixedObjects', editorLevel.fixedObjects.length - 1);
+            } else if (type === 'sensor') {
+                const gateId = 'gate_' + Date.now();
+                editorLevel.fixedObjects.push({ id, type: 'sensor', center, radius: 24, targetGateId: gateId, color: '#06b6d4', hit: false });
+                selectEditorElement('fixedObjects', editorLevel.fixedObjects.length - 1);
+            } else if (type === 'gate') {
+                editorLevel.fixedObjects.push({ id, type: 'gate', center, w: 30, h: 180, angle: 0, opened: false });
+                selectEditorElement('fixedObjects', editorLevel.fixedObjects.length - 1);
+            } else if (type === 'filter') {
+                editorLevel.fixedObjects.push({ id, type: 'filter', center, size: 60, angle: 0, color: '#f43f5e' });
+                selectEditorElement('fixedObjects', editorLevel.fixedObjects.length - 1);
+            } else if (type === 'portal') {
+                const idA = 'pA_' + Date.now();
+                const idB = 'pB_' + Date.now();
+                editorLevel.fixedObjects.push({ id: idA, type: 'portal', pairId: idB, pairRole: 'A', center: { x: 340, y: 240 }, size: 50, angle: 0, color: '#c084fc', label: 'PORTAL A' });
+                editorLevel.fixedObjects.push({ id: idB, type: 'portal', pairId: idA, pairRole: 'B', center: { x: 500, y: 240 }, size: 50, angle: 0, color: '#38bdf8', label: 'PORTAL B' });
+                selectEditorElement('fixedObjects', editorLevel.fixedObjects.length - 2);
             }
 
             recalcGameRay();
@@ -1124,6 +1519,11 @@
             else if (elem.type === 'wall') labelName = '障礙牆';
             else if (elem.type === 'glass' && elem.shape === 'rect') labelName = '矩形玻璃';
             else if (elem.shape === 'prism') labelName = '三稜鏡';
+            else if (elem.type === 'splitter') labelName = '🪞 分光鏡';
+            else if (elem.type === 'sensor') labelName = '🔘 光敏開關';
+            else if (elem.type === 'gate') labelName = '防護閘門';
+            else if (elem.type === 'filter') labelName = '彩色濾鏡';
+            else if (elem.type === 'portal') labelName = '🌀 光學傳送門';
 
             badge.textContent = `${labelName} (#${selectedEditorElement.index + 1})`;
 
@@ -1143,7 +1543,7 @@
 
             // Color Visibility
             const colorGroup = document.getElementById('prop-color-group');
-            if (selectedEditorElement.category === 'emitters' || selectedEditorElement.category === 'targets') {
+            if (selectedEditorElement.category === 'emitters' || selectedEditorElement.category === 'targets' || elem.type === 'filter' || elem.type === 'sensor' || elem.type === 'portal') {
                 colorGroup.classList.remove('hidden');
             } else {
                 colorGroup.classList.add('hidden');
@@ -1275,6 +1675,19 @@
             };
         }
 
+        function findPlayHitObject(pos) {
+            for (let i = gamePlayerObjects.length - 1; i >= 0; i--) {
+                const obj = gamePlayerObjects[i];
+                if (obj.type === 'mirror') {
+                    if (distToSegment(pos, obj.p1, obj.p2) <= 18) return obj;
+                } else if (obj.center) {
+                    const size = obj.size || 60;
+                    if (Vec.dist(pos, obj.center) <= size / 2 + 14) return obj;
+                }
+            }
+            return null;
+        }
+
         function findEditorHitElement(pos) {
             // Check emitters
             for (let i = editorLevel.emitters.length - 1; i >= 0; i--) {
@@ -1292,7 +1705,7 @@
             for (let i = editorLevel.fixedObjects.length - 1; i >= 0; i--) {
                 const obj = editorLevel.fixedObjects[i];
                 const size = obj.size || obj.w || 60;
-                if (Vec.dist(pos, obj.center) <= size / 2 + 10) {
+                if (Vec.dist(pos, obj.center) <= size / 2 + 12) {
                     return { category: 'fixedObjects', index: i };
                 }
             }
@@ -1300,16 +1713,16 @@
         }
 
         gameCanvas.addEventListener('pointerdown', (e) => {
-            if (e.pointerType === 'touch' && currentAppMode === 'play') return;
             const pos = getCanvasPos(e);
 
             if (currentAppMode === 'editor') {
                 const selectedElem = getSelectedElemObj();
                 if (selectedElem) {
-                    // Check if clicked on rotation handle knob
+                    // Check rotation handle knob
                     const rad = (selectedElem.angle || 0) * Math.PI / 180;
-                    const rotKnobPos = Vec.add(selectedElem.center, Vec.rot({ x: 0, y: -((selectedElem.size || selectedElem.h || 60) / 2 + 25) }, rad));
-                    if (Vec.dist(pos, rotKnobPos) <= 12) {
+                    const size = selectedElem.size || selectedElem.h || selectedElem.radius * 2 || 60;
+                    const rotKnobPos = Vec.add(selectedElem.center, Vec.rot({ x: 0, y: -(size / 2 + 25) }, rad));
+                    if (Vec.dist(pos, rotKnobPos) <= 14) {
                         isRotatingEditorElement = true;
                         return;
                     }
@@ -1326,20 +1739,133 @@
                     updateInspectorPanel();
                 }
             } else if (currentAppMode === 'play') {
+                // Check if clicked handles on selectedPlayObject
+                if (selectedPlayObject && selectedPlayObject.center) {
+                    const size = selectedPlayObject.size || 60;
+                    const rad = (selectedPlayObject.angle || 0) * Math.PI / 180;
+                    const rotKnobPos = Vec.add(selectedPlayObject.center, Vec.rot({ x: 0, y: -(size / 2 + 25) }, rad));
+                    const delBtnPos = Vec.add(selectedPlayObject.center, Vec.rot({ x: size / 2 + 15, y: -(size / 2 + 15) }, rad));
+
+                    if (Vec.dist(pos, rotKnobPos) <= 15) {
+                        isRotatingPlayObject = true;
+                        return;
+                    }
+                    if (Vec.dist(pos, delBtnPos) <= 15) {
+                        deleteSelectedPlayObject();
+                        return;
+                    }
+                }
+
+                // Check hit on existing player objects
+                const hitObj = findPlayHitObject(pos);
+                if (hitObj) {
+                    if (gameActiveTool === 'eraser') {
+                        eraseAtPos(pos);
+                        return;
+                    } else {
+                        selectPlayObject(hitObj);
+                        isDraggingPlayObject = true;
+                        playDragOffset = Vec.sub(pos, hitObj.center || hitObj.p1);
+                        return;
+                    }
+                }
+
+                // Perform tool creation
                 if (gameActiveTool === 'draw_mirror') {
+                    selectedPlayObject = null;
+                    updatePlaySelectedPanel();
                     isDrawingMirror = true;
                     drawStartPt = pos;
                     drawCurrentPt = pos;
+                } else if (gameActiveTool === 'place_splitter') {
+                    const newObj = {
+                        id: Date.now(),
+                        type: 'splitter',
+                        center: pos,
+                        size: 60,
+                        angle: 45,
+                        isPlayer: true
+                    };
+                    gamePlayerObjects.push(newObj);
+                    selectPlayObject(newObj);
+                    playClickSound();
+                    updateGameStats();
+                    recalcGameRay();
+                } else if (gameActiveTool === 'place_filter') {
+                    const newObj = {
+                        id: Date.now(),
+                        type: 'filter',
+                        center: pos,
+                        size: 60,
+                        angle: 0,
+                        color: '#f43f5e',
+                        isPlayer: true
+                    };
+                    gamePlayerObjects.push(newObj);
+                    selectPlayObject(newObj);
+                    playClickSound();
+                    updateGameStats();
+                    recalcGameRay();
+                } else if (gameActiveTool === 'place_portal') {
+                    const idA = 'pA_' + Date.now();
+                    const idB = 'pB_' + Date.now();
+                    const pA = {
+                        id: idA,
+                        type: 'portal',
+                        pairId: idB,
+                        pairRole: 'A',
+                        center: { x: Math.max(50, pos.x - 60), y: pos.y },
+                        size: 50,
+                        angle: 0,
+                        color: '#c084fc',
+                        label: 'PORTAL A',
+                        isPlayer: true
+                    };
+                    const pB = {
+                        id: idB,
+                        type: 'portal',
+                        pairId: idA,
+                        pairRole: 'B',
+                        center: { x: Math.min(gameCanvas.width - 50, pos.x + 60), y: pos.y },
+                        size: 50,
+                        angle: 0,
+                        color: '#38bdf8',
+                        label: 'PORTAL B',
+                        isPlayer: true
+                    };
+                    gamePlayerObjects.push(pA, pB);
+                    selectPlayObject(pA);
+                    playClickSound();
+                    updateGameStats();
+                    recalcGameRay();
+                } else if (gameActiveTool === 'place_prism') {
+                    const newObj = {
+                        id: Date.now(),
+                        type: 'glass',
+                        shape: 'prism',
+                        center: pos,
+                        size: 80,
+                        angle: 0,
+                        n: 1.52,
+                        isPlayer: true
+                    };
+                    gamePlayerObjects.push(newObj);
+                    selectPlayObject(newObj);
+                    playClickSound();
+                    updateGameStats();
+                    recalcGameRay();
                 } else if (gameActiveTool === 'eraser') {
                     isErasing = true;
                     eraserPos = pos;
-                    eraseAtPos(eraserPos);
+                    eraseAtPos(pos);
+                } else {
+                    selectedPlayObject = null;
+                    updatePlaySelectedPanel();
                 }
             }
         });
 
         gameCanvas.addEventListener('pointermove', (e) => {
-            if (e.pointerType === 'touch' && currentAppMode === 'play') return;
             const pos = getCanvasPos(e);
 
             if (currentAppMode === 'editor') {
@@ -1356,7 +1882,25 @@
                     recalcGameRay();
                 }
             } else if (currentAppMode === 'play') {
-                if (isDrawingMirror) {
+                if (isRotatingPlayObject && selectedPlayObject && selectedPlayObject.center) {
+                    const delta = Vec.sub(pos, selectedPlayObject.center);
+                    let angle = Math.atan2(delta.y, delta.x) * 180 / Math.PI + 90;
+                    if (angle < 0) angle += 360;
+                    selectedPlayObject.angle = Math.round(angle);
+                    updatePlaySelectedPanel();
+                    recalcGameRay();
+                } else if (isDraggingPlayObject && selectedPlayObject) {
+                    if (selectedPlayObject.center) {
+                        selectedPlayObject.center = Vec.sub(pos, playDragOffset);
+                    } else if (selectedPlayObject.p1 && selectedPlayObject.p2) {
+                        const shift = Vec.sub(pos, playDragOffset);
+                        const delta = Vec.sub(shift, selectedPlayObject.p1);
+                        selectedPlayObject.p1 = Vec.add(selectedPlayObject.p1, delta);
+                        selectedPlayObject.p2 = Vec.add(selectedPlayObject.p2, delta);
+                        playDragOffset = pos;
+                    }
+                    recalcGameRay();
+                } else if (isDrawingMirror) {
                     drawCurrentPt = pos;
                 } else if (isErasing) {
                     eraserPos = pos;
@@ -1366,11 +1910,12 @@
         });
 
         window.addEventListener('pointerup', (e) => {
-            if (e.pointerType === 'touch' && currentAppMode === 'play') return;
             if (currentAppMode === 'editor') {
                 isDraggingEditorElement = false;
                 isRotatingEditorElement = false;
             } else if (currentAppMode === 'play') {
+                isDraggingPlayObject = false;
+                isRotatingPlayObject = false;
                 if (isDrawingMirror && drawStartPt && drawCurrentPt) {
                     const len = Vec.len(Vec.sub(drawCurrentPt, drawStartPt));
                     if (len > 15) {
@@ -1398,13 +1943,15 @@
             }
         });
 
-        /* Dual-Touch Handlers for Play Mode Pinch Prism Gesture */
+        /* Dual-Touch Handlers specifically for Play Mode Pinch Prism Gesture */
         gameCanvas.addEventListener('touchstart', (e) => {
             if (currentAppMode !== 'play') return;
             if (e.touches.length === 2) {
                 e.preventDefault();
                 isDrawingMirror = false;
                 isErasing = false;
+                isDraggingPlayObject = false;
+                isRotatingPlayObject = false;
 
                 const p1 = getCanvasPos(e.touches[0]);
                 const p2 = getCanvasPos(e.touches[1]);
@@ -1422,17 +1969,6 @@
                 pinchPrismData = { center, size: touchInitialPrismSize, angle: 0 };
                 playClickSound();
                 recalcGameRay();
-            } else if (e.touches.length === 1 && !isPinchingPrism) {
-                const p = getCanvasPos(e.touches[0]);
-                if (gameActiveTool === 'draw_mirror') {
-                    isDrawingMirror = true;
-                    drawStartPt = p;
-                    drawCurrentPt = p;
-                } else if (gameActiveTool === 'eraser') {
-                    isErasing = true;
-                    eraserPos = p;
-                    eraseAtPos(eraserPos);
-                }
             }
         }, { passive: false });
 
@@ -1454,18 +1990,14 @@
 
                 pinchPrismData = { center: currentCenter, size: newSize, angle: newAngle };
                 recalcGameRay();
-            } else if (e.touches.length === 1 && !isPinchingPrism) {
-                const p = getCanvasPos(e.touches[0]);
-                if (isDrawingMirror) drawCurrentPt = p;
-                else if (isErasing) { eraserPos = p; eraseAtPos(eraserPos); }
             }
         }, { passive: false });
 
-        const handleTouchEnd = (e) => {
+        const handlePinchTouchEnd = (e) => {
             if (currentAppMode !== 'play') return;
             if (isPinchingPrism && e.touches.length < 2) {
                 if (pinchPrismData) {
-                    gamePlayerObjects.push({
+                    const newPrism = {
                         id: Date.now(),
                         type: 'glass',
                         shape: 'prism',
@@ -1474,7 +2006,9 @@
                         angle: pinchPrismData.angle,
                         n: 1.52,
                         isPlayer: true
-                    });
+                    };
+                    gamePlayerObjects.push(newPrism);
+                    selectPlayObject(newPrism);
                     playClickSound();
                 }
                 isPinchingPrism = false;
@@ -1486,34 +2020,11 @@
                     playWinSound();
                     setTimeout(() => toggleVictoryModal(true), 300);
                 }
-            } else if (isDrawingMirror && drawStartPt && drawCurrentPt) {
-                const len = Vec.len(Vec.sub(drawCurrentPt, drawStartPt));
-                if (len > 15) {
-                    gamePlayerObjects.push({
-                        id: Date.now(),
-                        type: 'mirror',
-                        p1: drawStartPt,
-                        p2: drawCurrentPt,
-                        isPlayer: true
-                    });
-                    playClickSound();
-                    updateGameStats();
-                    recalcGameRay();
-
-                    if (gameTargets.length > 0 && gameTargets.every(t => t.hit)) {
-                        playWinSound();
-                        setTimeout(() => toggleVictoryModal(true), 300);
-                    }
-                }
-                isDrawingMirror = false;
-                drawStartPt = null;
-                drawCurrentPt = null;
             }
-            isErasing = false;
         };
 
-        gameCanvas.addEventListener('touchend', handleTouchEnd);
-        gameCanvas.addEventListener('touchcancel', handleTouchEnd);
+        gameCanvas.addEventListener('touchend', handlePinchTouchEnd);
+        gameCanvas.addEventListener('touchcancel', handlePinchTouchEnd);
 
         /* ==========================================================================
            7. Main Render Loop & Graphic Draw Helpers
@@ -1540,6 +2051,11 @@
                 if (obj.type === 'wall') drawWall(gameCtx, obj);
                 else if (obj.type === 'mirror') drawMirror(gameCtx, obj);
                 else if (obj.type === 'glass') drawGlass(gameCtx, obj);
+                else if (obj.type === 'splitter') drawSplitter(gameCtx, obj);
+                else if (obj.type === 'filter') drawFilter(gameCtx, obj);
+                else if (obj.type === 'sensor') drawSensor(gameCtx, obj);
+                else if (obj.type === 'gate') drawGate(gameCtx, obj);
+                else if (obj.type === 'portal') drawPortal(gameCtx, obj);
             });
 
             // Preview Pinch Prism
@@ -1562,10 +2078,12 @@
             activeEmitters.forEach(em => drawEmitterObj(gameCtx, em.center, em.angle, em.color));
 
             // Draw Light Rays
-            calculatedRays.forEach(raySteps => {
-                raySteps.forEach(step => {
-                    drawGlowingRay(gameCtx, step.p1, step.p2, step.color, 3);
-                });
+            calculatedRays.forEach(step => {
+                if (Array.isArray(step)) {
+                    step.forEach(s => drawGlowingRay(gameCtx, s.p1, s.p2, s.color, s.intensity ? 3 * Math.max(0.6, s.intensity) : 3));
+                } else {
+                    drawGlowingRay(gameCtx, step.p1, step.p2, step.color, step.intensity ? 3 * Math.max(0.6, step.intensity) : 3);
+                }
             });
 
             // Draw Real-time Mirror Preview
@@ -1609,6 +2127,11 @@
                 gameCtx.restore();
             }
 
+            // Selection Handles in Play Mode
+            if (currentAppMode === 'play' && selectedPlayObject && selectedPlayObject.center) {
+                drawPlaySelectionHandles(gameCtx, selectedPlayObject);
+            }
+
             // Editor Selection Handles
             if (currentAppMode === 'editor') {
                 const elem = getSelectedElemObj();
@@ -1618,6 +2141,58 @@
             }
 
             requestAnimationFrame(renderGame);
+        }
+
+        function drawPlaySelectionHandles(ctx, obj) {
+            ctx.save();
+            const center = obj.center;
+            const size = obj.size || 60;
+            const rad = (obj.angle || 0) * Math.PI / 180;
+
+            // Dashed selection ring
+            ctx.strokeStyle = '#06b6d4';
+            ctx.lineWidth = 1.8;
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath();
+            ctx.arc(center.x, center.y, size / 2 + 12, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Rotation Knob Handle (Top)
+            const rotKnobPos = Vec.add(center, Vec.rot({ x: 0, y: -(size / 2 + 25) }, rad));
+            ctx.strokeStyle = '#f59e0b';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(center.x, center.y);
+            ctx.lineTo(rotKnobPos.x, rotKnobPos.y);
+            ctx.stroke();
+
+            ctx.fillStyle = '#f59e0b';
+            ctx.beginPath();
+            ctx.arc(rotKnobPos.x, rotKnobPos.y, 8, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Rotation icon on knob
+            ctx.fillStyle = '#0f172a';
+            ctx.font = 'bold 9px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('↻', rotKnobPos.x, rotKnobPos.y);
+
+            // Delete Handle (Top Right)
+            const delBtnPos = Vec.add(center, Vec.rot({ x: size / 2 + 15, y: -(size / 2 + 15) }, rad));
+            ctx.fillStyle = '#ef4444';
+            ctx.beginPath();
+            ctx.arc(delBtnPos.x, delBtnPos.y, 8, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 9px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('✕', delBtnPos.x, delBtnPos.y);
+
+            ctx.restore();
         }
 
         function drawEditorSelectionHandles(ctx, elem) {
@@ -1700,6 +2275,211 @@
             ctx.moveTo(obj.p1.x, obj.p1.y);
             ctx.lineTo(obj.p2.x, obj.p2.y);
             ctx.stroke();
+            ctx.restore();
+        }
+
+        function drawSplitter(ctx, obj) {
+            ctx.save();
+            const size = obj.size || 60;
+            const rad = (obj.angle || 0) * Math.PI / 180;
+            ctx.translate(obj.center.x, obj.center.y);
+            ctx.rotate(rad);
+
+            // Glass plate
+            ctx.fillStyle = 'rgba(6, 182, 212, 0.3)';
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 2.5;
+            ctx.shadowColor = '#06b6d4';
+            ctx.shadowBlur = 8;
+            ctx.fillRect(-size / 2, -5, size, 10);
+            ctx.strokeRect(-size / 2, -5, size, 10);
+
+            // Half-silvered diagonal dashed line
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath();
+            ctx.moveTo(-size / 2, 0);
+            ctx.lineTo(size / 2, 0);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Label
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 8px monospace';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('50/50', 0, 0);
+
+            ctx.restore();
+        }
+
+        function drawFilter(ctx, obj) {
+            ctx.save();
+            const size = obj.size || 60;
+            const color = obj.color || '#f43f5e';
+            const rad = (obj.angle || 0) * Math.PI / 180;
+            ctx.translate(obj.center.x, obj.center.y);
+            ctx.rotate(rad);
+
+            // Translucent colored glass
+            ctx.fillStyle = color === '#ffffff' ? 'rgba(255,255,255,0.3)' : (color + '44');
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 3;
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 10;
+            ctx.fillRect(-size / 2, -6, size, 12);
+            ctx.strokeRect(-size / 2, -6, size, 12);
+
+            // Label
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 9px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            let label = '濾鏡';
+            if (color === '#f43f5e') label = '紅濾光';
+            else if (color === '#10b981') label = '綠濾光';
+            else if (color === '#06b6d4') label = '青濾光';
+            ctx.fillText(label, 0, 0);
+
+            ctx.restore();
+        }
+
+        function drawSensor(ctx, obj) {
+            ctx.save();
+            ctx.translate(obj.center.x, obj.center.y);
+            const r = obj.radius || 24;
+
+            // Outer cell
+            ctx.fillStyle = '#0f172a';
+            ctx.strokeStyle = obj.hit ? '#10b981' : '#f59e0b';
+            ctx.lineWidth = 2.5;
+            ctx.shadowColor = obj.hit ? '#10b981' : '#f59e0b';
+            ctx.shadowBlur = obj.hit ? 16 : 6;
+            ctx.beginPath();
+            ctx.arc(0, 0, r, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            // Photodiode grid
+            ctx.strokeStyle = obj.hit ? 'rgba(16, 185, 129, 0.5)' : 'rgba(245, 158, 11, 0.4)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(-r * 0.7, 0); ctx.lineTo(r * 0.7, 0);
+            ctx.moveTo(0, -r * 0.7); ctx.lineTo(0, r * 0.7);
+            ctx.stroke();
+
+            // LED indicator
+            ctx.fillStyle = obj.hit ? '#10b981' : '#ef4444';
+            ctx.shadowColor = obj.hit ? '#10b981' : '#ef4444';
+            ctx.shadowBlur = 8;
+            ctx.beginPath();
+            ctx.arc(0, 0, 6, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '9px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(obj.hit ? '⚡觸發' : '🔘光敏', 0, r + 13);
+
+            ctx.restore();
+        }
+
+        function drawGate(ctx, obj) {
+            ctx.save();
+            const w = obj.w || 30;
+            const h = obj.h || 180;
+            const rad = (obj.angle || 0) * Math.PI / 180;
+            ctx.translate(obj.center.x, obj.center.y);
+            ctx.rotate(rad);
+
+            if (obj.opened) {
+                // Open gate
+                ctx.fillStyle = 'rgba(16, 185, 129, 0.08)';
+                ctx.strokeStyle = '#10b981';
+                ctx.lineWidth = 1.5;
+                ctx.setLineDash([6, 6]);
+                ctx.strokeRect(-w / 2, -h / 2, w, h);
+                ctx.fillRect(-w / 2, -h / 2, w, h);
+                ctx.setLineDash([]);
+
+                ctx.fillStyle = '#10b981';
+                ctx.font = 'bold 11px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('🔓 PASS', 0, 0);
+            } else {
+                // Closed gate: laser barrier
+                ctx.fillStyle = '#1e1b4b';
+                ctx.strokeStyle = '#ef4444';
+                ctx.lineWidth = 2.5;
+                ctx.shadowColor = '#ef4444';
+                ctx.shadowBlur = 12;
+                ctx.fillRect(-w / 2, -h / 2, w, h);
+                ctx.strokeRect(-w / 2, -h / 2, w, h);
+
+                // Hazard laser lines
+                ctx.strokeStyle = '#f43f5e';
+                ctx.lineWidth = 1.8;
+                ctx.beginPath();
+                for (let y = -h / 2 + 15; y < h / 2; y += 22) {
+                    ctx.moveTo(-w / 2 + 3, y);
+                    ctx.lineTo(w / 2 - 3, y);
+                }
+                ctx.stroke();
+
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 10px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('🔒 鎖定', 0, 0);
+            }
+            ctx.restore();
+        }
+
+        function drawPortal(ctx, obj) {
+            ctx.save();
+            const size = obj.size || 50;
+            const color = obj.color || (obj.pairRole === 'B' ? '#38bdf8' : '#c084fc');
+            const rad = (obj.angle || 0) * Math.PI / 180;
+            ctx.translate(obj.center.x, obj.center.y);
+            ctx.rotate(rad);
+
+            // Portal outer vortex
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 3;
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 14;
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 10, size / 2, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            // Inner swirling ring
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 5, size / 2 - 6, 0, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Direction arrow
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(10, 0); ctx.lineTo(20, 0);
+            ctx.lineTo(16, -4);
+            ctx.moveTo(20, 0); ctx.lineTo(16, 4);
+            ctx.stroke();
+
+            // Label
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 8px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText(obj.label || (obj.pairRole === 'B' ? 'PORTAL B' : 'PORTAL A'), 0, -size / 2 - 5);
+
             ctx.restore();
         }
 
