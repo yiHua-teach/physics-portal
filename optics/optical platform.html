@@ -104,7 +104,7 @@
             <!-- Mode Guidance Banner -->
             <div id="drawingModeBanner" class="hidden glass-panel px-3 py-1.5 md:px-6 md:py-2.5 rounded-2xl flex items-center gap-2 md:gap-3 border border-amber-500/50 bg-amber-950/40 animate-pulse">
                 <i id="drawingModeIcon" class="fa-solid fa-hand-holding-hand text-amber-400 text-sm md:text-lg"></i>
-                <span id="drawingModeText" class="text-[11px] md:text-xs font-bold text-amber-300 font-mono">縱向雙指放置模式：雙指控制透鏡縱向高與旋轉，放開可連續放置！</span>
+                <span id="drawingModeText" class="text-[11px] md:text-xs font-bold text-amber-300 font-mono">縱向雙指/雙點放置模式：雙指控制高度與角度，放開後自動回到選擇模式！</span>
             </div>
 
             <!-- Toast Alert Container -->
@@ -218,20 +218,25 @@
                                 <button onclick="setSelectedBeamType('parallel3')" id="beamParallel3Btn" class="py-1 rounded bg-slate-800 text-slate-300 text-[9px] md:text-[10px] text-center border border-slate-700">3平行</button>
                                 <button onclick="setSelectedBeamType('parallel5')" id="beamParallel5Btn" class="py-1 rounded bg-slate-800 text-slate-300 text-[9px] md:text-[10px] text-center border border-slate-700">5平行</button>
                                 <button onclick="setSelectedBeamType('fan')" id="beamFanBtn" class="py-1 rounded bg-slate-800 text-slate-300 text-[9px] md:text-[10px] text-center border border-slate-700">扇形</button>
-                                <button onclick="setSelectedBeamType('dispersion')" id="beamDispersionBtn" class="py-1 rounded bg-slate-800 text-slate-300 text-[9px] md:text-[10px] text-center border border-slate-700">色散</button>
+                                <button onclick="setSelectedBeamType('dispersion')" id="beamDispersionBtn" class="py-1 rounded bg-slate-800 text-slate-300 text-[9px] md:text-[10px] text-center border border-slate-700">七色散</button>
                             </div>
                         </div>
 
                         <!-- Wavelength & Color Selection -->
                         <div>
-                            <div class="text-[10px] text-slate-400 mb-1">雷射顏色 / 波長</div>
-                            <div class="flex items-center gap-1.5 justify-between">
-                                <button onclick="setSelectedEmitterColor('#00ff66', 532)" class="w-6 h-6 md:w-7 md:h-7 rounded-full bg-emerald-500 border-2 border-white/20 hover:scale-110 transition-transform" title="綠光 (532nm)"></button>
-                                <button onclick="setSelectedEmitterColor('#ff2255', 650)" class="w-6 h-6 md:w-7 md:h-7 rounded-full bg-rose-500 border-2 border-white/20 hover:scale-110 transition-transform" title="紅光 (650nm)"></button>
-                                <button onclick="setSelectedEmitterColor('#2288ff', 450)" class="w-6 h-6 md:w-7 md:h-7 rounded-full bg-blue-500 border-2 border-white/20 hover:scale-110 transition-transform" title="藍光 (450nm)"></button>
-                                <button onclick="setSelectedEmitterColor('#f59e0b', 580)" class="w-6 h-6 md:w-7 md:h-7 rounded-full bg-amber-500 border-2 border-white/20 hover:scale-110 transition-transform" title="黃光 (580nm)"></button>
-                                <button onclick="setSelectedEmitterColor('#a855f7', 400)" class="w-6 h-6 md:w-7 md:h-7 rounded-full bg-purple-500 border-2 border-white/20 hover:scale-110 transition-transform" title="紫光 (400nm)"></button>
-                                <button onclick="setSelectedEmitterColor('#ffffff', 0)" class="w-6 h-6 md:w-7 md:h-7 rounded-full bg-white border-2 border-slate-400 hover:scale-110 transition-transform" title="白光"></button>
+                            <div class="flex justify-between items-center text-[10px] text-slate-400 mb-1">
+                                <span>光譜波長 / 自然光</span>
+                                <span id="currentWavelengthLabel" class="text-amber-400 font-mono font-bold">530nm (綠光)</span>
+                            </div>
+                            <div class="flex items-center gap-1 justify-between">
+                                <button onclick="setSelectedEmitterColor('#ff3b30', 680)" class="w-6 h-6 rounded-full bg-red-500 border-2 border-white/20 hover:scale-110 transition-transform shadow" title="紅光 (680nm)"></button>
+                                <button onclick="setSelectedEmitterColor('#ff9500', 615)" class="w-6 h-6 rounded-full bg-orange-500 border-2 border-white/20 hover:scale-110 transition-transform shadow" title="橙光 (615nm)"></button>
+                                <button onclick="setSelectedEmitterColor('#ffcc00', 580)" class="w-6 h-6 rounded-full bg-yellow-400 border-2 border-white/20 hover:scale-110 transition-transform shadow" title="黃光 (580nm)"></button>
+                                <button onclick="setSelectedEmitterColor('#34c759', 530)" class="w-6 h-6 rounded-full bg-emerald-500 border-2 border-white/20 hover:scale-110 transition-transform shadow" title="綠光 (530nm)"></button>
+                                <button onclick="setSelectedEmitterColor('#00c7be', 490)" class="w-6 h-6 rounded-full bg-teal-400 border-2 border-white/20 hover:scale-110 transition-transform shadow" title="青光 (490nm)"></button>
+                                <button onclick="setSelectedEmitterColor('#007aff', 450)" class="w-6 h-6 rounded-full bg-blue-500 border-2 border-white/20 hover:scale-110 transition-transform shadow" title="藍光 (450nm)"></button>
+                                <button onclick="setSelectedEmitterColor('#af52de', 410)" class="w-6 h-6 rounded-full bg-purple-500 border-2 border-white/20 hover:scale-110 transition-transform shadow" title="紫光 (410nm)"></button>
+                                <button onclick="setSelectedEmitterColor('#ffffff', 'white')" class="w-6 h-6 rounded-full bg-white border-2 border-amber-400 hover:scale-110 transition-transform shadow ring-1 ring-cyan-400" title="自然白光 (全光譜色散)"></button>
                             </div>
                         </div>
                     </div>
@@ -401,6 +406,34 @@
         }
 
         /**
+         * Natural Spectrum & Dispersion Constants
+         * Visible spectrum: Red, Orange, Yellow, Green, Cyan, Blue, Violet
+         * Cauchy-style refractive index delta (dn): Shorter wavelength -> bends more!
+         */
+        const SPECTRUM = [
+            { name: '紅光', wavelength: 680, color: '#ff3b30', dn: -0.035 },
+            { name: '橙光', wavelength: 615, color: '#ff9500', dn: -0.022 },
+            { name: '黃光', wavelength: 580, color: '#ffcc00', dn: -0.010 },
+            { name: '綠光', wavelength: 530, color: '#34c759', dn: 0.000 },
+            { name: '青光', wavelength: 490, color: '#00c7be', dn: +0.010 },
+            { name: '藍光', wavelength: 450, color: '#007aff', dn: +0.022 },
+            { name: '紫光', wavelength: 410, color: '#af52de', dn: +0.036 }
+        ];
+
+        function getColorAndDeltaN(wavelength, fallbackColor) {
+            if (wavelength === 'white') {
+                return { color: '#ffffff', dn: 0 };
+            }
+            if (typeof wavelength === 'number') {
+                const item = SPECTRUM.find(s => Math.abs(s.wavelength - wavelength) <= 20);
+                if (item) return { color: item.color, dn: item.dn };
+                const dn = (530 - wavelength) * 0.00025;
+                return { color: fallbackColor || '#34c759', dn };
+            }
+            return { color: fallbackColor || '#ffffff', dn: 0 };
+        }
+
+        /**
          * Optics Emitter & Objects
          */
         class Emitter {
@@ -409,31 +442,41 @@
                 this.pos = new Vec2(x, y);
                 this.angle = angle;
                 this.type = 'single';
-                this.color = '#00ff66';
-                this.wavelength = 532;
+                this.color = '#34c759';
+                this.wavelength = 530;
             }
         }
 
         class LineMirror {
             constructor(p1, p2, name = '平面鏡') {
+                this.id = 'mirror_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
                 this.type = 'line_mirror';
                 this.p1 = p1;
                 this.p2 = p2;
                 this.shapeName = name;
+                this.rotHandleAngle = -Math.PI / 2;
             }
             getSegments() {
                 return [{ p1: this.p1, p2: this.p2, parent: this, isMirror: true }];
             }
             getCenter() { return this.p1.add(this.p2).mult(0.5); }
+            rotate(deltaAngle) {
+                const c = this.getCenter();
+                this.p1 = this.p1.sub(c).rotate(deltaAngle).add(c);
+                this.p2 = this.p2.sub(c).rotate(deltaAngle).add(c);
+                if (this.rotHandleAngle !== undefined) this.rotHandleAngle += deltaAngle;
+            }
         }
 
         class CurvedMirror {
             constructor(p1, p2, curvature = 'concave', name = '曲面鏡') {
+                this.id = 'curved_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
                 this.type = 'curved_mirror';
                 this.p1 = p1;
                 this.p2 = p2;
                 this.curvature = curvature;
                 this.shapeName = name;
+                this.rotHandleAngle = -Math.PI / 2;
             }
             getSegments() {
                 const segs = [];
@@ -455,13 +498,21 @@
                 return segs;
             }
             getCenter() { return this.p1.add(this.p2).mult(0.5); }
+            rotate(deltaAngle) {
+                const c = this.getCenter();
+                this.p1 = this.p1.sub(c).rotate(deltaAngle).add(c);
+                this.p2 = this.p2.sub(c).rotate(deltaAngle).add(c);
+                if (this.rotHandleAngle !== undefined) this.rotHandleAngle += deltaAngle;
+            }
         }
 
         class FreehandMirror {
             constructor(points) {
+                this.id = 'freehand_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
                 this.type = 'freehand_mirror';
                 this.points = points;
                 this.shapeName = '手畫鏡';
+                this.rotHandleAngle = -Math.PI / 2;
             }
             getSegments() {
                 const segs = [];
@@ -475,14 +526,21 @@
                 this.points.forEach(p => { sx += p.x; sy += p.y; });
                 return new Vec2(sx / this.points.length, sy / this.points.length);
             }
+            rotate(deltaAngle) {
+                const c = this.getCenter();
+                this.points = this.points.map(p => p.sub(c).rotate(deltaAngle).add(c));
+                if (this.rotHandleAngle !== undefined) this.rotHandleAngle += deltaAngle;
+            }
         }
 
         class PolygonLens {
             constructor(points, n = 1.50, shapeName = '透鏡') {
+                this.id = 'lens_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
                 this.type = 'polygon_lens';
                 this.points = points;
                 this.n = n;
                 this.shapeName = shapeName;
+                this.rotHandleAngle = -Math.PI / 2;
             }
             getSegments() {
                 const segs = [];
@@ -511,6 +569,65 @@
                 }
                 return inside;
             }
+            rotate(deltaAngle) {
+                const c = this.getCenter();
+                this.points = this.points.map(p => p.sub(c).rotate(deltaAngle).add(c));
+                if (this.rotHandleAngle !== undefined) this.rotHandleAngle += deltaAngle;
+            }
+        }
+
+        /**
+         * Hit Testing & Object Rotation Helpers
+         */
+        function distToSegment(p, a, b) {
+            const ab = b.sub(a);
+            const ap = p.sub(a);
+            const ab2 = ab.dot(ab);
+            if (ab2 === 0) return p.dist(a);
+            const t = Math.max(0, Math.min(1, ap.dot(ab) / ab2));
+            const proj = a.add(ab.mult(t));
+            return p.dist(proj);
+        }
+
+        function getObjectRadius(obj) {
+            const c = obj.getCenter();
+            let maxR = 40;
+            if (obj.points) {
+                obj.points.forEach(p => { maxR = Math.max(maxR, p.dist(c)); });
+            } else if (obj.p1 && obj.p2) {
+                maxR = Math.max(maxR, obj.p1.dist(c), obj.p2.dist(c));
+            }
+            return maxR;
+        }
+
+        function getObjectRotationHandlePos(obj) {
+            const c = obj.getCenter();
+            const r = getObjectRadius(obj) + 32;
+            const a = obj.rotHandleAngle !== undefined ? obj.rotHandleAngle : -Math.PI / 2;
+            return new Vec2(c.x + Math.cos(a) * r, c.y + Math.sin(a) * r);
+        }
+
+        function hitTestRotationHandle(obj, pos) {
+            const handlePos = getObjectRotationHandlePos(obj);
+            return pos.dist(handlePos) < 28;
+        }
+
+        function hitTestObject(obj, pos) {
+            const c = obj.getCenter();
+            if (pos.dist(c) < 45) return true;
+            if (obj.containsPoint && obj.containsPoint(pos)) return true;
+            if (obj.getSegments) {
+                const segs = obj.getSegments();
+                for (let seg of segs) {
+                    if (distToSegment(pos, seg.p1, seg.p2) < 32) return true;
+                }
+            }
+            if (obj.points) {
+                for (let pt of obj.points) {
+                    if (pos.dist(pt) < 32) return true;
+                }
+            }
+            return false;
         }
 
         /**
@@ -521,6 +638,7 @@
             currentRefractiveIndex: 1.50,
             emitters: [],
             selectedEmitterId: null,
+            selectedObject: null,
             hud: {
                 showNormal: true,
                 showAngles: true,
@@ -541,11 +659,13 @@
             dragState: {
                 target: null,
                 type: null,
-                startPos: null
+                startPos: null,
+                lastAngle: 0
             },
             lastStats: {
                 incidentAngle: null,
                 reflectAngle: null,
+                interactionType: null,
                 bounces: 0,
                 hasTIR: false
             }
@@ -556,15 +676,30 @@
         let width = canvas.width = window.innerWidth;
         let height = canvas.height = window.innerHeight;
 
-        window.addEventListener('resize', () => {
+        /**
+         * Precise Screen & Touch Coordinate Calibration
+         * Converts touch/mouse viewport coordinates to exact canvas pixel coordinates,
+         * compensating for devicePixelRatio, browser zoom, CSS scaling, and screen offsets.
+         */
+        function getCanvasCoords(clientX, clientY) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = rect.width > 0 ? canvas.width / rect.width : 1;
+            const scaleY = rect.height > 0 ? canvas.height / rect.height : 1;
+            return new Vec2((clientX - rect.left) * scaleX, (clientY - rect.top) * scaleY);
+        }
+
+        function resizeCanvas() {
             width = canvas.width = window.innerWidth;
             height = canvas.height = window.innerHeight;
-        });
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        window.addEventListener('orientationchange', resizeCanvas);
 
         function initDefaultScene() {
-            const defaultEmitter = new Emitter(220, height / 2, 0);
-            state.emitters.push(defaultEmitter);
-            state.selectedEmitterId = defaultEmitter.id;
+            state.emitters = [];
+            state.selectedEmitterId = null;
+            state.selectedObject = null;
         }
 
         /**
@@ -769,7 +904,7 @@
             if (tool.startsWith('gesture')) {
                 banner.classList.remove('hidden');
                 bannerIcon.className = 'fa-solid fa-hand-holding-hand text-amber-400 text-sm md:text-lg';
-                bannerText.innerText = '縱向雙指放置模式：雙指控制縱向高度與角度，放開可連續放置下一個！';
+                bannerText.innerText = '縱向雙指/雙點放置模式：放開後自動回到選擇/移動模式！';
             } else if (tool === 'addEmitter') {
                 banner.classList.remove('hidden');
                 bannerIcon.className = 'fa-solid fa-lightbulb text-amber-400 text-sm md:text-lg';
@@ -851,6 +986,7 @@
             if (em) {
                 em.color = colorHex;
                 em.wavelength = wavelength;
+                updateSelectedEmitterUI();
                 sound.playClick();
             }
         }
@@ -867,11 +1003,25 @@
         function updateSelectedEmitterUI() {
             const panel = document.getElementById('selectedEmitterControls');
             const em = getSelectedEmitter();
+            const label = document.getElementById('currentWavelengthLabel');
             if (!em) {
                 panel.classList.add('opacity-40', 'pointer-events-none');
+                if (label) label.innerText = '未放置光源 (點擊下方「新增光源」)';
                 return;
             }
             panel.classList.remove('opacity-40', 'pointer-events-none');
+
+            if (label) {
+                if (em.wavelength === 'white') {
+                    label.innerText = '自然白光 (全光譜色散)';
+                    label.className = 'text-white font-mono font-bold drop-shadow';
+                } else {
+                    const found = SPECTRUM.find(s => Math.abs(s.wavelength - em.wavelength) <= 20);
+                    const name = found ? found.name : '';
+                    label.innerText = `${em.wavelength}nm (${name})`;
+                    label.className = 'text-amber-400 font-mono font-bold';
+                }
+            }
 
             ['single', 'parallel3', 'parallel5', 'fan', 'dispersion'].forEach(t => {
                 const btn = document.getElementById(`beam${t.charAt(0).toUpperCase() + t.slice(1)}Btn`);
@@ -907,10 +1057,11 @@
         function undoLastObject() {
             if (state.objects.length > 0) {
                 state.objects.pop();
+                state.selectedObject = null;
                 sound.playClick();
-            } else if (state.emitters.length > 1) {
+            } else if (state.emitters.length > 0) {
                 state.emitters.pop();
-                state.selectedEmitterId = state.emitters[state.emitters.length - 1].id;
+                state.selectedEmitterId = state.emitters.length > 0 ? state.emitters[state.emitters.length - 1].id : null;
                 updateSelectedEmitterUI();
                 sound.playClick();
             }
@@ -919,7 +1070,9 @@
         function clearAllObjects() {
             state.objects = [];
             state.emitters = [];
-            initDefaultScene();
+            state.selectedEmitterId = null;
+            state.selectedObject = null;
+            updateSelectedEmitterUI();
             sound.playClick();
         }
 
@@ -958,7 +1111,7 @@
             return null;
         }
 
-        function traceSingleRay(origin, dir, wavelength = 532, refractiveIndex = 1.0, depth = 0) {
+        function traceSingleRay(origin, dir, wavelength = 530, refractiveIndex = 1.0, depth = 0) {
             if (depth >= 16) return [];
 
             let closestHit = null;
@@ -987,13 +1140,15 @@
                 }
             });
 
+            const { color: rayColor, dn } = getColorAndDeltaN(wavelength, (state.laser && state.laser.color) || '#34c759');
+
             if (!closestHit) {
-                let rayColor = state.laser.color || '#00ff66';
-                if (wavelength === 650) rayColor = '#ff2255';
-                if (wavelength === 450) rayColor = '#2288ff';
-                if (wavelength === 580) rayColor = '#f59e0b';
-                if (wavelength === 400) rayColor = '#a855f7';
-                return [{ start: origin, end: origin.add(dir.mult(3000)), color: rayColor }];
+                return [{
+                    start: origin,
+                    end: origin.add(dir.mult(3000)),
+                    color: rayColor,
+                    wavelength: wavelength
+                }];
             }
 
             const hitPoint = closestHit.point;
@@ -1002,45 +1157,34 @@
 
             if (dir.dot(normal) > 0) normal = normal.mult(-1);
 
-            let rayColor = state.laser.color || '#00ff66';
-            if (wavelength === 650) rayColor = '#ff2255';
-            if (wavelength === 450) rayColor = '#2288ff';
-            if (wavelength === 580) rayColor = '#f59e0b';
-            if (wavelength === 400) rayColor = '#a855f7';
+            const incRad = Math.acos(Math.min(1, Math.max(-1, -dir.dot(normal))));
+            const incDeg = incRad * 180 / Math.PI;
 
-            const rayPath = [{
-                start: origin,
-                end: hitPoint,
-                normal: normal,
-                hitObject: hitSegment.parent,
-                color: rayColor
-            }];
-
-            if (depth === 0) {
-                state.lastStats.bounces = 1;
-                const incRad = Math.acos(Math.min(1, Math.max(-1, -dir.dot(normal))));
-                state.lastStats.incidentAngle = (incRad * 180 / Math.PI).toFixed(1);
-            } else {
-                state.lastStats.bounces++;
-            }
-
-            // Mirror Reflection
+            // 1. Mirror Reflection
             if (hitSegment.isMirror) {
                 const reflectDir = dir.sub(normal.mult(2 * dir.dot(normal))).norm();
-                if (depth === 0) state.lastStats.reflectAngle = state.lastStats.incidentAngle;
-
-                const nextRays = traceSingleRay(hitPoint.add(reflectDir.mult(0.1)), reflectDir, wavelength, refractiveIndex, depth + 1);
-                return rayPath.concat(nextRays);
+                const currentRay = {
+                    start: origin,
+                    end: hitPoint,
+                    normal: normal,
+                    hitObject: hitSegment.parent,
+                    color: rayColor,
+                    wavelength: wavelength,
+                    incidentAngle: incDeg,
+                    outgoingAngle: incDeg,
+                    interactionType: 'reflect'
+                };
+                const nextRays = traceSingleRay(hitPoint.add(reflectDir.mult(0.2)), reflectDir, wavelength, refractiveIndex, depth + 1);
+                return [currentRay, ...nextRays];
             }
 
-            // Lens Refraction (Snell's Law)
+            // 2. Lens Refraction (Snell's Law with dispersion)
             if (hitSegment.isLens) {
                 const lensObj = hitSegment.parent;
                 const isEntering = lensObj.containsPoint ? !lensObj.containsPoint(origin.add(dir.mult(0.1))) : true;
 
                 let nMedium = hitSegment.n || state.currentRefractiveIndex;
-                if (wavelength === 650) nMedium -= 0.02;
-                if (wavelength === 450) nMedium += 0.02;
+                nMedium += dn; // Wavelength-specific refractive index
 
                 const n1 = isEntering ? 1.0 : nMedium;
                 const n2 = isEntering ? nMedium : 1.0;
@@ -1050,25 +1194,55 @@
                 const sinT2 = eta * eta * (1.0 - cosI * cosI);
 
                 if (sinT2 > 1.0) {
+                    // Total Internal Reflection (TIR)
                     state.lastStats.hasTIR = true;
                     const reflectDir = dir.sub(normal.mult(2 * dir.dot(normal))).norm();
-                    const nextRays = traceSingleRay(hitPoint.add(reflectDir.mult(0.1)), reflectDir, wavelength, refractiveIndex, depth + 1);
-                    return rayPath.concat(nextRays);
+                    const currentRay = {
+                        start: origin,
+                        end: hitPoint,
+                        normal: normal,
+                        hitObject: hitSegment.parent,
+                        color: rayColor,
+                        wavelength: wavelength,
+                        incidentAngle: incDeg,
+                        outgoingAngle: incDeg,
+                        interactionType: 'tir'
+                    };
+                    const nextRays = traceSingleRay(hitPoint.add(reflectDir.mult(0.2)), reflectDir, wavelength, refractiveIndex, depth + 1);
+                    return [currentRay, ...nextRays];
                 } else {
-                    const cosT = Math.sqrt(1.0 - sinT2);
+                    // Refraction
+                    const cosT = Math.sqrt(Math.max(0, 1.0 - sinT2));
                     const refractDir = dir.mult(eta).add(normal.mult(eta * cosI - cosT)).norm();
+                    const refDeg = Math.acos(Math.min(1, Math.max(-1, cosT))) * 180 / Math.PI;
 
-                    if (depth === 0) {
-                        const refRad = Math.acos(Math.min(1, Math.max(-1, -refractDir.dot(normal))));
-                        state.lastStats.reflectAngle = (refRad * 180 / Math.PI).toFixed(1);
-                    }
-
+                    const currentRay = {
+                        start: origin,
+                        end: hitPoint,
+                        normal: normal,
+                        hitObject: hitSegment.parent,
+                        color: rayColor,
+                        wavelength: wavelength,
+                        incidentAngle: incDeg,
+                        outgoingAngle: refDeg,
+                        interactionType: 'refract'
+                    };
                     const nextRays = traceSingleRay(hitPoint.add(refractDir.mult(0.2)), refractDir, wavelength, refractiveIndex, depth + 1);
-                    return rayPath.concat(nextRays);
+                    return [currentRay, ...nextRays];
                 }
             }
 
-            return rayPath;
+            return [{
+                start: origin,
+                end: hitPoint,
+                normal: normal,
+                hitObject: hitSegment.parent,
+                color: rayColor,
+                wavelength: wavelength,
+                incidentAngle: incDeg,
+                outgoingAngle: incDeg,
+                interactionType: 'hit'
+            }];
         }
 
         /**
@@ -1103,21 +1277,30 @@
                 }
 
                 ctx.fillStyle = '#1e293b';
-                ctx.strokeStyle = isSelected ? '#f59e0b' : (em.color || '#00ff66');
+                ctx.strokeStyle = isSelected ? '#f59e0b' : (em.color || '#34c759');
                 ctx.lineWidth = 2.5;
                 ctx.beginPath();
                 ctx.roundRect(-24, -14, 48, 28, 6);
                 ctx.fill(); ctx.stroke();
 
-                ctx.fillStyle = em.color || '#00ff66';
-                ctx.shadowColor = em.color || '#00ff66';
-                ctx.shadowBlur = 10;
-                ctx.fillRect(24, -5, 6, 10);
+                // Emitter laser aperture
+                if (em.wavelength === 'white') {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.shadowColor = '#ffffff';
+                    ctx.shadowBlur = 12;
+                    ctx.fillRect(24, -5, 6, 10);
+                } else {
+                    ctx.fillStyle = em.color || '#34c759';
+                    ctx.shadowColor = em.color || '#34c759';
+                    ctx.shadowBlur = 10;
+                    ctx.fillRect(24, -5, 6, 10);
+                }
 
+                // Emitter rotation handle
                 ctx.strokeStyle = '#38bdf8';
                 ctx.lineWidth = 2;
                 ctx.beginPath(); ctx.moveTo(30, 0); ctx.lineTo(55, 0); ctx.stroke();
-                ctx.beginPath(); ctx.arc(55, 0, 5, 0, Math.PI * 2); ctx.fillStyle = '#38bdf8'; ctx.fill();
+                ctx.beginPath(); ctx.arc(55, 0, 6, 0, Math.PI * 2); ctx.fillStyle = '#38bdf8'; ctx.fill();
 
                 if (isSelected && state.emitters.length > 1) {
                     ctx.translate(0, -32);
@@ -1169,7 +1352,7 @@
 
                     const center = obj.getCenter();
                     ctx.fillStyle = '#38bdf8';
-                    ctx.font = 'bold 10px JetBrains Mono';
+                    ctx.font = 'bold 10px JetBrains Mono, monospace';
                     ctx.textAlign = 'center';
                     ctx.fillText(obj.shapeName || '平面鏡', center.x, center.y - 12);
                     ctx.restore();
@@ -1193,12 +1376,76 @@
 
                     const center = obj.getCenter();
                     ctx.fillStyle = '#e9d5ff';
-                    ctx.font = 'bold 11px JetBrains Mono';
+                    ctx.font = 'bold 11px JetBrains Mono, monospace';
                     ctx.textAlign = 'center';
                     ctx.fillText(`${obj.shapeName || '透鏡'} (n=${obj.n})`, center.x, center.y + 4);
                     ctx.restore();
                 }
             });
+
+            // Selected Object Controls: Rotation Handle & Delete Handle
+            if (state.selectedObject) {
+                const obj = state.selectedObject;
+                const c = obj.getCenter();
+                const handlePos = getObjectRotationHandlePos(obj);
+                const r = getObjectRadius(obj) + 12;
+                const a = obj.rotHandleAngle !== undefined ? obj.rotHandleAngle : -Math.PI / 2;
+
+                ctx.save();
+                // 1. Selection dashed bounding circle
+                ctx.strokeStyle = 'rgba(56, 189, 248, 0.45)';
+                ctx.lineWidth = 1.5;
+                ctx.setLineDash([4, 4]);
+                ctx.beginPath();
+                ctx.arc(c.x, c.y, r, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // 2. Rotation Stalk
+                ctx.strokeStyle = '#38bdf8';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(c.x, c.y);
+                ctx.lineTo(handlePos.x, handlePos.y);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // 3. Rotation Handle Button
+                ctx.shadowColor = '#06b6d4';
+                ctx.shadowBlur = 12;
+                ctx.fillStyle = '#0284c7';
+                ctx.strokeStyle = '#e0f2fe';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.arc(handlePos.x, handlePos.y, 14, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 14px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('↻', handlePos.x, handlePos.y + 1);
+
+                ctx.fillStyle = '#38bdf8';
+                ctx.font = 'bold 10px JetBrains Mono, monospace';
+                ctx.fillText('旋轉點', handlePos.x, handlePos.y - 18);
+
+                // 4. Delete button on opposite side
+                const delPos = new Vec2(c.x - Math.cos(a) * r, c.y - Math.sin(a) * r);
+                ctx.fillStyle = '#ef4444';
+                ctx.strokeStyle = '#fee2e2';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.arc(delPos.x, delPos.y, 11, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 11px sans-serif';
+                ctx.fillText('✕', delPos.x, delPos.y);
+
+                ctx.restore();
+            }
 
             // GESTURE PREVIEW HOVER ELEMENT
             if (state.gesturePreviewElement) {
@@ -1305,7 +1552,11 @@
             ctx.restore();
         }
 
+        /**
+         * Render Ray Paths & Accurate Angle Labels for Each Specific Hit Point
+         */
         function drawRayPaths(raySegments) {
+            // 1. Draw light beams
             raySegments.forEach(ray => {
                 ctx.save();
                 ctx.strokeStyle = ray.color;
@@ -1319,34 +1570,68 @@
                 ctx.stroke();
 
                 ctx.strokeStyle = '#ffffff';
-                ctx.lineWidth = 0.8;
+                ctx.lineWidth = 0.7;
                 ctx.stroke();
                 ctx.restore();
 
+                // Surface normal line
                 if (ray.normal && state.hud.showNormal) {
                     ctx.save();
                     ctx.strokeStyle = 'rgba(56, 189, 248, 0.6)';
                     ctx.lineWidth = 1;
                     ctx.setLineDash([3, 3]);
 
-                    const nStart = ray.end.sub(ray.normal.mult(35));
-                    const nEnd = ray.end.add(ray.normal.mult(35));
+                    const nStart = ray.end.sub(ray.normal.mult(32));
+                    const nEnd = ray.end.add(ray.normal.mult(32));
                     ctx.beginPath(); ctx.moveTo(nStart.x, nStart.y); ctx.lineTo(nEnd.x, nEnd.y); ctx.stroke();
                     ctx.restore();
                 }
-
-                if (ray.normal && state.hud.showAngles && state.lastStats.incidentAngle) {
-                    ctx.save();
-                    ctx.fillStyle = '#fbbf24';
-                    ctx.font = '10px JetBrains Mono';
-                    ctx.fillText(`θi=${state.lastStats.incidentAngle}°`, ray.end.x + 10, ray.end.y - 10);
-                    if (state.lastStats.reflectAngle) {
-                        ctx.fillStyle = '#34d399';
-                        ctx.fillText(`θr=${state.lastStats.reflectAngle}°`, ray.end.x + 10, ray.end.y + 14);
-                    }
-                    ctx.restore();
-                }
             });
+
+            // 2. Draw angle measurement badges (deduplicating overlapping hits)
+            if (state.hud.showAngles) {
+                const drawnHits = [];
+                raySegments.forEach(ray => {
+                    if (ray.normal && ray.incidentAngle !== undefined) {
+                        const isClose = drawnHits.some(pt => pt.dist(ray.end) < 20);
+                        if (!isClose) {
+                            drawnHits.push(ray.end);
+                            ctx.save();
+                            const bx = ray.end.x + 10;
+                            const by = ray.end.y - 18;
+
+                            ctx.fillStyle = 'rgba(6, 12, 26, 0.88)';
+                            ctx.strokeStyle = 'rgba(56, 189, 248, 0.45)';
+                            ctx.lineWidth = 1;
+                            ctx.beginPath();
+                            ctx.roundRect(bx - 4, by - 10, 96, 36, 6);
+                            ctx.fill();
+                            ctx.stroke();
+
+                            ctx.font = 'bold 10px JetBrains Mono, monospace';
+                            ctx.textAlign = 'left';
+                            ctx.textBaseline = 'top';
+
+                            // Incident angle θi
+                            ctx.fillStyle = '#fbbf24';
+                            ctx.fillText(`θi = ${ray.incidentAngle.toFixed(1)}°`, bx, by - 6);
+
+                            // Outgoing angle (Reflect / Refract / TIR)
+                            if (ray.interactionType === 'reflect') {
+                                ctx.fillStyle = '#38bdf8';
+                                ctx.fillText(`θr = ${ray.outgoingAngle.toFixed(1)}° 反射`, bx, by + 8);
+                            } else if (ray.interactionType === 'tir') {
+                                ctx.fillStyle = '#f43f5e';
+                                ctx.fillText(`θr = ${ray.outgoingAngle.toFixed(1)}° 全反射`, bx, by + 8);
+                            } else {
+                                ctx.fillStyle = '#34d399';
+                                ctx.fillText(`θt = ${ray.outgoingAngle.toFixed(1)}° 折射`, bx, by + 8);
+                            }
+                            ctx.restore();
+                        }
+                    }
+                });
+            }
         }
 
         /**
@@ -1366,34 +1651,60 @@
             state.emitters.forEach(em => {
                 state.laser = em;
                 const dir = new Vec2(Math.cos(em.angle), Math.sin(em.angle));
+                const isWhite = (em.wavelength === 'white' || em.type === 'dispersion');
 
-                if (em.type === 'single') {
-                    allRays.push(...traceSingleRay(em.pos, dir, em.wavelength));
-
-                } else if (em.type === 'parallel3' || em.type === 'parallel5') {
-                    const count = em.type === 'parallel3' ? 3 : 5;
-                    const perp = new Vec2(-dir.y, dir.x);
-                    const spacing = 18;
-                    const startIdx = -Math.floor(count / 2);
-                    for (let i = 0; i < count; i++) {
-                        const offset = startIdx + i;
-                        const origin = em.pos.add(perp.mult(offset * spacing));
-                        allRays.push(...traceSingleRay(origin, dir, em.wavelength));
+                if (isWhite) {
+                    if (em.type === 'parallel3' || em.type === 'parallel5') {
+                        const count = em.type === 'parallel3' ? 3 : 5;
+                        const perp = new Vec2(-dir.y, dir.x);
+                        const spacing = 18;
+                        const startIdx = -Math.floor(count / 2);
+                        for (let i = 0; i < count; i++) {
+                            const offset = startIdx + i;
+                            const origin = em.pos.add(perp.mult(offset * spacing));
+                            SPECTRUM.forEach(spec => {
+                                allRays.push(...traceSingleRay(origin, dir, spec.wavelength));
+                            });
+                        }
+                    } else if (em.type === 'fan') {
+                        const count = 5;
+                        const spreadAngle = 0.35;
+                        for (let i = 0; i < count; i++) {
+                            const deltaA = -spreadAngle / 2 + (spreadAngle * i / (count - 1));
+                            const fanDir = dir.rotate(deltaA);
+                            SPECTRUM.forEach(spec => {
+                                allRays.push(...traceSingleRay(em.pos, fanDir, spec.wavelength));
+                            });
+                        }
+                    } else {
+                        // Single or dispersion mode: radiates all 7 spectrum components
+                        SPECTRUM.forEach(spec => {
+                            allRays.push(...traceSingleRay(em.pos, dir, spec.wavelength));
+                        });
                     }
-
-                } else if (em.type === 'fan') {
-                    const count = 5;
-                    const spreadAngle = 0.35;
-                    for (let i = 0; i < count; i++) {
-                        const deltaA = -spreadAngle / 2 + (spreadAngle * i / (count - 1));
-                        const fanDir = dir.rotate(deltaA);
-                        allRays.push(...traceSingleRay(em.pos, fanDir, em.wavelength));
+                } else {
+                    // Monochromatic light
+                    if (em.type === 'single') {
+                        allRays.push(...traceSingleRay(em.pos, dir, em.wavelength));
+                    } else if (em.type === 'parallel3' || em.type === 'parallel5') {
+                        const count = em.type === 'parallel3' ? 3 : 5;
+                        const perp = new Vec2(-dir.y, dir.x);
+                        const spacing = 18;
+                        const startIdx = -Math.floor(count / 2);
+                        for (let i = 0; i < count; i++) {
+                            const offset = startIdx + i;
+                            const origin = em.pos.add(perp.mult(offset * spacing));
+                            allRays.push(...traceSingleRay(origin, dir, em.wavelength));
+                        }
+                    } else if (em.type === 'fan') {
+                        const count = 5;
+                        const spreadAngle = 0.35;
+                        for (let i = 0; i < count; i++) {
+                            const deltaA = -spreadAngle / 2 + (spreadAngle * i / (count - 1));
+                            const fanDir = dir.rotate(deltaA);
+                            allRays.push(...traceSingleRay(em.pos, fanDir, em.wavelength));
+                        }
                     }
-
-                } else if (em.type === 'dispersion') {
-                    allRays.push(...traceSingleRay(em.pos, dir, 650));
-                    allRays.push(...traceSingleRay(em.pos, dir, 532));
-                    allRays.push(...traceSingleRay(em.pos, dir, 450));
                 }
             });
 
@@ -1402,8 +1713,27 @@
             drawEmitters();
             drawOverlayTools();
 
+            // Update HUD values from rays
+            const firstHitRay = allRays.find(r => r.incidentAngle !== undefined);
+            if (firstHitRay) {
+                state.lastStats.incidentAngle = firstHitRay.incidentAngle.toFixed(1);
+                state.lastStats.reflectAngle = firstHitRay.outgoingAngle.toFixed(1);
+                state.lastStats.interactionType = firstHitRay.interactionType;
+            } else {
+                state.lastStats.incidentAngle = null;
+                state.lastStats.reflectAngle = null;
+                state.lastStats.interactionType = null;
+            }
+            state.lastStats.bounces = allRays.filter(r => r.normal).length;
+
             document.getElementById('hudIncidentAngle').innerText = state.lastStats.incidentAngle ? `${state.lastStats.incidentAngle}°` : '--°';
-            document.getElementById('hudReflectAngle').innerText = state.lastStats.reflectAngle ? `${state.lastStats.reflectAngle}°` : '--°';
+            const reflectEl = document.getElementById('hudReflectAngle');
+            if (state.lastStats.reflectAngle) {
+                const label = state.lastStats.interactionType === 'refract' ? ' (折射)' : ' (反射)';
+                reflectEl.innerText = `${state.lastStats.reflectAngle}°${label}`;
+            } else {
+                reflectEl.innerText = '--°';
+            }
             document.getElementById('hudSourceCount').innerText = `${state.emitters.length} 個 / ${state.lastStats.bounces} 次`;
 
             const tirEl = document.getElementById('hudTIRStatus');
@@ -1427,13 +1757,18 @@
         }
 
         /**
-         * Touch & Mouse Event Handlers
+         * Touch & Mouse Event Handlers with Precise Screen Mapping
          */
         function getEventPos(e) {
+            let clientX, clientY;
             if (e.touches && e.touches.length > 0) {
-                return new Vec2(e.touches[0].clientX, e.touches[0].clientY);
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
             }
-            return new Vec2(e.clientX, e.clientY);
+            return getCanvasCoords(clientX, clientY);
         }
 
         function handlePhysicalRulerCheck(e) {
@@ -1441,8 +1776,8 @@
             const details = document.getElementById('physicalRulerDetails');
 
             if (e.touches && e.touches.length >= 2 && state.activeTool === 'select') {
-                const p1 = new Vec2(e.touches[0].clientX, e.touches[0].clientY);
-                const p2 = new Vec2(e.touches[1].clientX, e.touches[1].clientY);
+                const p1 = getCanvasCoords(e.touches[0].clientX, e.touches[0].clientY);
+                const p2 = getCanvasCoords(e.touches[1].clientX, e.touches[1].clientY);
                 state.physicalRuler = new LineMirror(p1, p2, '實體尺');
                 const len = p1.dist(p2).toFixed(0);
                 details.innerText = `雙點感應: 長度 ${len}px`;
@@ -1454,13 +1789,20 @@
         }
 
         function onPointerDown(e) {
+            // Do not capture pointer down if touching UI controls (buttons, header, footer, HUD)
+            if (e.target !== canvas) {
+                return;
+            }
+            if (e.cancelable) {
+                e.preventDefault();
+            }
             sound.init();
 
             // 1. Gesture Tool Placement
             if (state.activeTool.startsWith('gesture')) {
                 if (e.touches && e.touches.length >= 2) {
-                    const p1 = new Vec2(e.touches[0].clientX, e.touches[0].clientY);
-                    const p2 = new Vec2(e.touches[1].clientX, e.touches[1].clientY);
+                    const p1 = getCanvasCoords(e.touches[0].clientX, e.touches[0].clientY);
+                    const p2 = getCanvasCoords(e.touches[1].clientX, e.touches[1].clientY);
                     state.gesturePreviewElement = generateElementFromTwoPoints(state.activeTool, p1, p2);
                     state.gestureActive = true;
                     sound.playDraw();
@@ -1480,20 +1822,21 @@
                 for (let i = state.emitters.length - 1; i >= 0; i--) {
                     if (pos.dist(state.emitters[i].pos) < 35) {
                         state.emitters.splice(i, 1);
-                        if (state.emitters.length === 0) initDefaultScene();
-                        else state.selectedEmitterId = state.emitters[0].id;
+                        state.selectedEmitterId = state.emitters.length > 0 ? state.emitters[0].id : null;
                         updateSelectedEmitterUI();
                         sound.playClick();
                         return;
                     }
                 }
                 for (let i = state.objects.length - 1; i >= 0; i--) {
-                    if (pos.dist(state.objects[i].getCenter()) < 50) {
+                    if (hitTestObject(state.objects[i], pos)) {
                         state.objects.splice(i, 1);
+                        if (state.selectedObject === state.objects[i]) state.selectedObject = null;
                         sound.playClick();
                         return;
                     }
                 }
+                return;
             }
 
             // 3. Add Emitter Mode
@@ -1514,27 +1857,69 @@
                 return;
             }
 
-            // 5. Select & Drag Objects / Emitters
+            // 5. Select & Rotate / Move
+            // 5a. Check delete button on selected object
+            if (state.selectedObject) {
+                const c = state.selectedObject.getCenter();
+                const r = getObjectRadius(state.selectedObject) + 12;
+                const a = state.selectedObject.rotHandleAngle !== undefined ? state.selectedObject.rotHandleAngle : -Math.PI / 2;
+                const delPos = new Vec2(c.x - Math.cos(a) * r, c.y - Math.sin(a) * r);
+                if (pos.dist(delPos) < 18) {
+                    const idx = state.objects.indexOf(state.selectedObject);
+                    if (idx !== -1) state.objects.splice(idx, 1);
+                    state.selectedObject = null;
+                    sound.playClick();
+                    return;
+                }
+            }
+
+            // 5b. Check rotation handle of selected object first
+            if (state.selectedObject && hitTestRotationHandle(state.selectedObject, pos)) {
+                const c = state.selectedObject.getCenter();
+                state.dragState.target = state.selectedObject;
+                state.dragState.type = 'object_rotate';
+                state.dragState.lastAngle = Math.atan2(pos.y - c.y, pos.x - c.x);
+                sound.playClick();
+                return;
+            }
+
+            // 5c. Check rotation handle of ANY object
+            for (let obj of state.objects) {
+                if (hitTestRotationHandle(obj, pos)) {
+                    state.selectedObject = obj;
+                    state.selectedEmitterId = null;
+                    const c = obj.getCenter();
+                    state.dragState.target = obj;
+                    state.dragState.type = 'object_rotate';
+                    state.dragState.lastAngle = Math.atan2(pos.y - c.y, pos.x - c.x);
+                    sound.playClick();
+                    return;
+                }
+            }
+
+            // 5d. Check emitters (delete button, rotation handle, body move)
             for (let em of state.emitters) {
                 if (em.id === state.selectedEmitterId && state.emitters.length > 1) {
                     const delPos = em.pos.add(new Vec2(0, -32).rotate(em.angle));
-                    if (pos.dist(delPos) < 16) {
+                    if (pos.dist(delPos) < 20) {
                         deleteSelectedEmitter();
                         return;
                     }
                 }
 
                 const rotHandle = em.pos.add(new Vec2(55, 0).rotate(em.angle));
-                if (pos.dist(rotHandle) < 22) {
+                if (pos.dist(rotHandle) < 26) {
                     state.selectedEmitterId = em.id;
+                    state.selectedObject = null;
                     state.dragState.target = em;
                     state.dragState.type = 'emitter_rotate';
                     updateSelectedEmitterUI();
                     return;
                 }
 
-                if (pos.dist(em.pos) < 32) {
+                if (pos.dist(em.pos) < 36) {
                     state.selectedEmitterId = em.id;
+                    state.selectedObject = null;
                     state.dragState.target = em;
                     state.dragState.type = 'emitter_move';
                     updateSelectedEmitterUI();
@@ -1542,21 +1927,35 @@
                 }
             }
 
-            for (let obj of state.objects) {
-                if (pos.dist(obj.getCenter()) < 60) {
+            // 5e. Check object body hit test (move object)
+            for (let i = state.objects.length - 1; i >= 0; i--) {
+                const obj = state.objects[i];
+                if (hitTestObject(obj, pos)) {
+                    state.selectedObject = obj;
+                    state.selectedEmitterId = null;
                     state.dragState.target = obj;
                     state.dragState.type = 'object_move';
                     state.dragState.startPos = pos;
+                    sound.playClick();
                     return;
                 }
             }
+
+            // Clicked empty background: deselect
+            state.selectedObject = null;
+            state.selectedEmitterId = null;
+            updateSelectedEmitterUI();
         }
 
         function onPointerMove(e) {
+            if (e.target === canvas || state.dragState.target || state.placingEmitter || state.gestureActive || state.currentDrawingPoints.length > 0) {
+                if (e.cancelable) e.preventDefault();
+            }
+
             if (state.activeTool.startsWith('gesture')) {
                 if (e.touches && e.touches.length >= 2) {
-                    const p1 = new Vec2(e.touches[0].clientX, e.touches[0].clientY);
-                    const p2 = new Vec2(e.touches[1].clientX, e.touches[1].clientY);
+                    const p1 = getCanvasCoords(e.touches[0].clientX, e.touches[0].clientY);
+                    const p2 = getCanvasCoords(e.touches[1].clientX, e.touches[1].clientY);
                     state.gesturePreviewElement = generateElementFromTwoPoints(state.activeTool, p1, p2);
                     state.gestureActive = true;
                     return;
@@ -1597,35 +1996,49 @@
                     const delta = pos.sub(state.dragState.startPos);
                     if (target.points) {
                         target.points = target.points.map(p => p.add(delta));
-                    } else if (target.p1) {
+                    } else if (target.p1 && target.p2) {
                         target.p1 = target.p1.add(delta);
                         target.p2 = target.p2.add(delta);
                     }
                     state.dragState.startPos = pos;
+                } else if (type === 'object_rotate') {
+                    const c = target.getCenter();
+                    const curAngle = Math.atan2(pos.y - c.y, pos.x - c.x);
+                    let delta = curAngle - state.dragState.lastAngle;
+                    while (delta > Math.PI) delta -= Math.PI * 2;
+                    while (delta < -Math.PI) delta += Math.PI * 2;
+                    target.rotate(delta);
+                    state.dragState.lastAngle = curAngle;
                 }
             }
         }
 
         function onPointerUp(e) {
-            // Continuous Placement Lock
+            // Placement Finish -> Revert to Select Mode
             if (state.gestureActive && state.gesturePreviewElement) {
                 const prev = state.gesturePreviewElement;
-                
+                let newObj = null;
+
                 if (prev.type === 'line_mirror') {
-                    state.objects.push(new LineMirror(prev.p1, prev.p2, prev.shapeName));
+                    newObj = new LineMirror(prev.p1, prev.p2, prev.shapeName);
+                    state.objects.push(newObj);
                 } else if (prev.type === 'curved_mirror') {
-                    state.objects.push(new CurvedMirror(prev.p1, prev.p2, prev.curvature, prev.shapeName));
+                    newObj = new CurvedMirror(prev.p1, prev.p2, prev.curvature, prev.shapeName);
+                    state.objects.push(newObj);
                 } else if (prev.type === 'polygon_lens') {
                     const finalPoints = prev.points.map(p => new Vec2(p.x, p.y));
-                    state.objects.push(new PolygonLens(finalPoints, state.currentRefractiveIndex, prev.shapeName));
+                    newObj = new PolygonLens(finalPoints, state.currentRefractiveIndex, prev.shapeName);
+                    state.objects.push(newObj);
                 }
 
                 sound.playPlaceElement();
-                showToast(`已放置 ${prev.shapeName}！可連續放置下一個...`);
+                showToast(`已放置 ${prev.shapeName}！已回到選擇/移動模式`);
 
                 state.gesturePreviewElement = null;
                 state.gestureActive = false;
                 state.gestureStartPoints = null;
+                state.selectedObject = newObj;
+                setActiveTool('select');
                 return;
             }
 
@@ -1670,9 +2083,11 @@
         window.addEventListener('touchstart', onPointerDown, { passive: false });
         window.addEventListener('touchmove', onPointerMove, { passive: false });
         window.addEventListener('touchend', onPointerUp);
+        window.addEventListener('touchcancel', onPointerUp);
 
         // App Initialization
         window.onload = function () {
+            resizeCanvas();
             initDefaultScene();
             initHUDDrag();
             updateSelectedEmitterUI();
