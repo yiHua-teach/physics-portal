@@ -19,14 +19,17 @@
             font-family: sans-serif;
             user-select: none;
             -webkit-user-select: none;
+            padding: 10px;
+            box-sizing: border-box;
         }
         .toolbar {
             display: flex;
-            gap: 8px;
+            gap: 6px;
             margin-bottom: 8px;
             flex-wrap: wrap;
             justify-content: center;
             max-width: 860px;
+            width: 100%;
         }
         .sub-toolbar {
             background: #181a24;
@@ -45,6 +48,7 @@
             cursor: pointer;
             font-size: 13px;
             transition: all 0.2s;
+            touch-action: manipulation;
         }
         button:hover { background: #333848; color: #fff; }
         button.active { background: #0066cc; color: #fff; border-color: #0088ff; }
@@ -75,12 +79,18 @@
             display: flex;
             gap: 12px;
             align-items: flex-start;
+            justify-content: center;
+            flex-wrap: wrap;
+            width: 100%;
+            max-width: 860px;
         }
 
         .canvas-container {
             position: relative;
-            width: 640px;
-            height: 480px;
+            width: 100%;
+            max-width: 640px;
+            aspect-ratio: 4 / 3;
+            height: auto;
             border: 2px solid #334;
             box-shadow: 0 0 25px rgba(0, 162, 255, 0.2);
             border-radius: 4px;
@@ -110,6 +120,17 @@
             align-items: center;
             box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
             transition: all 0.3s ease;
+        }
+        @media (max-width: 768px) {
+            .graph-container {
+                width: 100%;
+                max-width: 320px;
+                height: 200px;
+            }
+            #graphCanvas {
+                width: 100% !important;
+                height: 150px !important;
+            }
         }
         .graph-title {
             font-size: 12px;
@@ -668,13 +689,17 @@
             annoCanvas.setPointerCapture(e.pointerId);
             isDrawing = true;
             const rect = annoCanvas.getBoundingClientRect();
-            strokePoints = [{ x: e.clientX - rect.left, y: e.clientY - rect.top }];
+            const scaleX = annoCanvas.width / rect.width;
+            const scaleY = annoCanvas.height / rect.height;
+            strokePoints = [{ x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY }];
         });
 
         annoCanvas.addEventListener('pointermove', (e) => {
             if (!isDrawing || !isPaused) return;
             const rect = annoCanvas.getBoundingClientRect();
-            strokePoints.push({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+            const scaleX = annoCanvas.width / rect.width;
+            const scaleY = annoCanvas.height / rect.height;
+            strokePoints.push({ x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY });
 
             if (strokePoints.length >= 3) {
                 const p1 = strokePoints[strokePoints.length - 3];

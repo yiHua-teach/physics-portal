@@ -4,12 +4,14 @@
     <title>爆炸與質心運動模擬</title>
     <meta name="description" content="長按控制發射與空中爆炸角度，觀察質心軌跡與動量守恆。">
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>高中物理：爆炸與質心運動模擬 (按壓瞄準版)</title>
     <style>
-        body { font-family: sans-serif; background: #121212; color: #fff; text-align: center; margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; }
-        .main-container { display: flex; gap: 20px; margin-top: 10px; flex-wrap: wrap; justify-content: center; }
-        canvas { background: #1a1a1a; border: 2px solid #444; border-radius: 8px; cursor: crosshair; touch-action: none; /* 重要：防止行動裝置觸控滾動 */ }
-        .control-panel { background: #252525; border-radius: 8px; padding: 20px; width: 300px; border: 1px solid #444; }
+        * { box-sizing: border-box; }
+        body { font-family: sans-serif; background: #121212; color: #fff; text-align: center; margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+        .main-container { display: flex; gap: 20px; margin-top: 10px; flex-wrap: wrap; justify-content: center; width: 100%; max-width: 1200px; }
+        canvas { background: #1a1a1a; border: 2px solid #444; border-radius: 8px; cursor: crosshair; touch-action: none; max-width: 100%; height: auto; aspect-ratio: 850 / 550; }
+        .control-panel { background: #252525; border-radius: 8px; padding: 20px; width: 320px; max-width: 100%; border: 1px solid #444; }
         .control-group { margin-bottom: 15px; text-align: left; }
         .control-group label { display: block; font-size: 14px; margin-bottom: 5px; color: #ddd; }
         input[type="range"] { width: 100%; cursor: pointer; }
@@ -122,8 +124,10 @@ function w2s(x, y) {
 // 2. Screen to World (畫布像素 -> 物理公尺) - 瞄準計算用
 function s2w(sx, sy) {
     const rect = canvas.getBoundingClientRect();
-    const canvasSx = sx - rect.left; // 確保取得相對於 canvas 的螢幕座標
-    const canvasSy = sy - rect.top;
+    const scaleX = rect.width > 0 ? canvas.width / rect.width : 1;
+    const scaleY = rect.height > 0 ? canvas.height / rect.height : 1;
+    const canvasSx = (sx - rect.left) * scaleX;
+    const canvasSy = (sy - rect.top) * scaleY;
     
     return {
         x: (canvasSx / canvas.width) * viewW + viewX,
@@ -143,9 +147,13 @@ canvas.addEventListener('pointerdown', (e) => {
         // 檢查是否點擊在發射點附近 (0,0)
         const launchPointS = w2s(0, 0);
         const rect = canvas.getBoundingClientRect();
-        const dist = Math.sqrt((e.clientX - rect.left - launchPointS.x)**2 + (e.clientY - rect.top - launchPointS.y)**2);
+        const scaleX = rect.width > 0 ? canvas.width / rect.width : 1;
+        const scaleY = rect.height > 0 ? canvas.height / rect.height : 1;
+        const clickSx = (e.clientX - rect.left) * scaleX;
+        const clickSy = (e.clientY - rect.top) * scaleY;
+        const dist = Math.sqrt((clickSx - launchPointS.x)**2 + (clickSy - launchPointS.y)**2);
         
-        if (dist < 30) { // 30像素的點擊靈敏度
+        if (dist < 40) { // 提高點擊靈敏度至40px，便於手機手指觸控
             currentInteractionState = STATE.AIMING_LAUNCH;
         }
     } 
@@ -326,7 +334,9 @@ function drawAimingInterface() {
 
     const centerS = w2s(centerW.x, centerW.y);
     const rect = canvas.getBoundingClientRect();
-    const fingerCanvasS = { x: pointerPos.x - rect.left, y: pointerPos.y - rect.top };
+    const scaleX = rect.width > 0 ? canvas.width / rect.width : 1;
+    const scaleY = rect.height > 0 ? canvas.height / rect.height : 1;
+    const fingerCanvasS = { x: (pointerPos.x - rect.left) * scaleX, y: (pointerPos.y - rect.top) * scaleY };
 
     // 1. 繪製由物體中心指向手指的虛線（輔助學生理解）
     ctx.save();

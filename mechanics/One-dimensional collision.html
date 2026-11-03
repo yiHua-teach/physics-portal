@@ -8,26 +8,33 @@
     <title>一維彈性碰撞模擬器 (含鏡頭跟隨與質心資訊)</title>
     <style>
         * { box-sizing: border-box; font-family: sans-serif; }
-        body { display: flex; flex-direction: column; align-items: center; background: #f0f2f5; margin: 0; padding: 20px; }
-        .container { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 900px; width: 100%; }
-        h2 { text-align: center; margin-top: 0; color: #333; }
-        canvas { background: #1e1e2f; border-radius: 8px; display: block; margin: 10px auto; }
-        .controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px; }
+        body { display: flex; flex-direction: column; align-items: center; background: #f0f2f5; margin: 0; padding: 12px; min-height: 100vh; }
+        .container { background: white; padding: 16px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 900px; width: 100%; }
+        h2 { text-align: center; margin-top: 0; color: #333; font-size: 1.4rem; }
+        canvas { background: #1e1e2f; border-radius: 8px; display: block; margin: 10px auto; max-width: 100%; height: auto; aspect-ratio: 840 / 240; touch-action: none; }
+        .controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 15px; }
         .control-group { background: #f8f9fa; padding: 10px 15px; border-radius: 8px; border: 1px solid #e9ecef; }
         label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 14px; }
         input[type="range"], select { width: 100%; padding: 4px; }
-        .btn-group { display: flex; gap: 10px; justify-content: center; margin-bottom: 15px; }
+        .btn-group { display: flex; gap: 10px; justify-content: center; margin-bottom: 15px; flex-wrap: wrap; }
         button { padding: 8px 20px; font-size: 14px; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; color: white; background: #007bff; }
         button:hover { background: #0056b3; }
         button#resetBtn { background: #6c757d; }
         button#resetBtn:hover { background: #545b62; }
-        .dashboard { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; background: #282c34; color: #fff; padding: 15px; border-radius: 8px; font-family: monospace; }
+        .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; background: #282c34; color: #fff; padding: 15px; border-radius: 8px; font-family: monospace; }
         .card { background: #353b45; padding: 10px; border-radius: 6px; }
         .card h4 { margin: 0 0 8px 0; }
         .card.m1 h4 { color: #ff6b6b; }
         .card.m2 h4 { color: #4ecdc4; }
         .card.system h4 { color: #ffe66d; }
         p { margin: 4px 0; font-size: 13px; }
+
+        @media (max-width: 600px) {
+            body { padding: 6px; }
+            .container { padding: 12px 10px; }
+            h2 { font-size: 1.15rem; }
+            button { width: 100%; }
+        }
     </style>
 </head>
 <body>

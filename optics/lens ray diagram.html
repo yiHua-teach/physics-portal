@@ -156,6 +156,7 @@
       display: block;
       width: 100%;
       height: 100%;
+      touch-action: none;
     }
 
     .side-panel {
@@ -167,6 +168,53 @@
       gap: 12px;
       padding: 12px;
       overflow-y: auto;
+    }
+
+    @media (max-width: 768px) {
+      body {
+        height: auto;
+        min-height: 100vh;
+        overflow-y: auto;
+      }
+      header {
+        flex-direction: column;
+        gap: 8px;
+        align-items: stretch;
+        padding: 8px 12px;
+      }
+      .title-group {
+        justify-content: space-between;
+      }
+      .mode-tabs {
+        width: 100%;
+        display: flex;
+      }
+      .tab-btn {
+        flex: 1;
+        text-align: center;
+        padding: 6px 4px;
+        font-size: 0.8rem;
+      }
+      .controls-bar {
+        padding: 8px 12px;
+        gap: 8px;
+      }
+      .main-container {
+        flex-direction: column;
+        height: auto;
+        flex: none;
+      }
+      .canvas-container {
+        width: 100%;
+        height: 52vh;
+        min-height: 300px;
+      }
+      .side-panel {
+        width: 100%;
+        border-left: none;
+        border-top: 1px solid var(--panel-border);
+        overflow-y: visible;
+      }
     }
 
     .card {
@@ -1497,42 +1545,43 @@
     }
 
     canvas.addEventListener('mousedown', onDragStart);
-    canvas.addEventListener('touchstart', onDragStart);
+    canvas.addEventListener('touchstart', onDragStart, { passive: false });
     window.addEventListener('mousemove', onDragMove);
-    window.addEventListener('touchmove', onDragMove);
+    window.addEventListener('touchmove', onDragMove, { passive: false });
     window.addEventListener('mouseup', onDragEnd);
     window.addEventListener('touchend', onDragEnd);
 
     function onDragStart(e) {
+      if (e.cancelable && e.type === 'touchstart') e.preventDefault();
       const pos = getMousePos(e);
 
       if (systemMode === 'single') {
-        if (Math.abs(pos.x - singleState.obj.x) < 25) {
+        if (Math.abs(pos.x - singleState.obj.x) < 35) {
           draggingTarget = 'obj';
           return;
         }
-        if (Math.abs(pos.x - singleState.screenX) < 20) {
+        if (Math.abs(pos.x - singleState.screenX) < 30) {
           draggingTarget = 'screen';
           return;
         }
-        if (Math.hypot(pos.x - singleState.eye.x, pos.y - singleState.eye.y) < 30) {
+        if (Math.hypot(pos.x - singleState.eye.x, pos.y - singleState.eye.y) < 36) {
           draggingTarget = 'eye';
           return;
         }
       } else {
-        if (Math.abs(pos.x - multiState.obj.x) < 25) {
+        if (Math.abs(pos.x - multiState.obj.x) < 35) {
           draggingTarget = 'obj';
           return;
         }
-        if (Math.abs(pos.x - multiState.l1.x) < 25) {
+        if (Math.abs(pos.x - multiState.l1.x) < 35) {
           draggingTarget = 'l1';
           return;
         }
-        if (Math.abs(pos.x - multiState.l2.x) < 25) {
+        if (Math.abs(pos.x - multiState.l2.x) < 35) {
           draggingTarget = 'l2';
           return;
         }
-        if (Math.hypot(pos.x - multiState.eye.x, pos.y - multiState.eye.y) < 30) {
+        if (Math.hypot(pos.x - multiState.eye.x, pos.y - multiState.eye.y) < 36) {
           draggingTarget = 'eye';
           return;
         }

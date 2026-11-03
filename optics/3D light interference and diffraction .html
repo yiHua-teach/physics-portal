@@ -29,28 +29,31 @@
 <body class="bg-slate-950 text-slate-100 h-full overflow-hidden font-sans select-none flex flex-col">
 
   <!-- Header -->
-  <header class="h-14 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between px-6 flex-shrink-0 z-20">
-    <div class="flex items-center space-x-3">
-      <div class="p-2 bg-indigo-600/30 text-indigo-400 rounded-lg border border-indigo-500/30">
+  <header class="h-14 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between px-3 md:px-6 flex-shrink-0 z-20">
+    <div class="flex items-center space-x-2 md:space-x-3">
+      <button id="btn-toggle-sidebar" class="md:hidden p-2 bg-slate-800 text-indigo-400 rounded-lg border border-slate-700 hover:bg-slate-700 flex items-center justify-center" title="開啟/關閉控制面版">
+        <i class="fa-solid fa-sliders text-sm"></i>
+      </button>
+      <div class="p-2 bg-indigo-600/30 text-indigo-400 rounded-lg border border-indigo-500/30 hidden sm:block">
         <i class="fa-solid fa-wave-square text-lg"></i>
       </div>
       <div>
-        <h1 class="font-bold text-base tracking-wide bg-gradient-to-r from-indigo-300 via-cyan-300 to-emerald-300 bg-clip-text text-transparent">
-          3D 波動光學實驗室 <span class="text-xs text-slate-400 font-normal ml-2">干涉與繞射視覺模擬</span>
+        <h1 class="font-bold text-sm md:text-base tracking-wide bg-gradient-to-r from-indigo-300 via-cyan-300 to-emerald-300 bg-clip-text text-transparent">
+          3D 波動光學實驗室 <span class="hidden sm:inline text-xs text-slate-400 font-normal ml-2">干涉與繞射視覺模擬</span>
         </h1>
       </div>
     </div>
     
     <!-- Camera View Controls -->
-    <div class="flex items-center space-x-2">
-      <button id="btn-cam-persp" class="px-3 py-1.5 text-xs font-medium bg-indigo-600 hover:bg-indigo-500 text-white rounded-md transition flex items-center gap-1.5 shadow-sm">
-        <i class="fa-solid fa-cube"></i> 透視視角
+    <div class="flex items-center space-x-1 sm:space-x-2">
+      <button id="btn-cam-persp" class="px-2 sm:px-3 py-1.5 text-xs font-medium bg-indigo-600 hover:bg-indigo-500 text-white rounded-md transition flex items-center gap-1 shadow-sm">
+        <i class="fa-solid fa-cube"></i> <span class="hidden xs:inline">透視</span>
       </button>
-      <button id="btn-cam-top" class="px-3 py-1.5 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-md transition flex items-center gap-1.5 border border-slate-700">
-        <i class="fa-solid fa-arrows-up-to-line"></i> 正俯視圖
+      <button id="btn-cam-top" class="px-2 sm:px-3 py-1.5 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-md transition flex items-center gap-1 border border-slate-700">
+        <i class="fa-solid fa-arrows-up-to-line"></i> <span class="hidden xs:inline">俯視</span>
       </button>
-      <button id="btn-cam-front" class="px-3 py-1.5 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-md transition flex items-center gap-1.5 border border-slate-700">
-        <i class="fa-solid fa-border-all"></i> 螢幕正面
+      <button id="btn-cam-front" class="px-2 sm:px-3 py-1.5 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-md transition flex items-center gap-1 border border-slate-700">
+        <i class="fa-solid fa-border-all"></i> <span class="hidden xs:inline">螢幕</span>
       </button>
     </div>
   </header>
@@ -59,7 +62,7 @@
   <div class="flex-1 flex min-h-0 relative">
 
     <!-- Left Controls Panel -->
-    <aside class="w-80 glass-panel flex flex-col z-10 border-r border-slate-800 flex-shrink-0 overflow-y-auto">
+    <aside id="sidebar-panel" class="w-80 max-w-[85vw] glass-panel flex flex-col z-30 border-r border-slate-800 flex-shrink-0 overflow-y-auto absolute md:static inset-y-0 left-0 transition-transform duration-300 -translate-x-full md:translate-x-0 shadow-2xl md:shadow-none">
       <div class="p-4 space-y-6">
 
         <!-- Experiment Mode Selection -->
@@ -1045,6 +1048,14 @@
         camera.position.set(x + 2.0, 0.35, 0);
         controls.target.set(x, 0.35, 0);
       });
+
+      const toggleSidebarBtn = document.getElementById('btn-toggle-sidebar');
+      const sidebarPanel = document.getElementById('sidebar-panel');
+      if (toggleSidebarBtn && sidebarPanel) {
+        toggleSidebarBtn.addEventListener('click', () => {
+          sidebarPanel.classList.toggle('-translate-x-full');
+        });
+      }
     }
 
     // Resize Handler
