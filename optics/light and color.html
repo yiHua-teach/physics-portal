@@ -261,16 +261,20 @@
                         <label class="text-xs font-bold text-slate-400 block">⚡ 快速教學情境切換</label>
                         <div class="grid grid-cols-1 gap-1.5 text-xs">
                             <button onclick="applySidePreset(1)" class="w-full text-left bg-slate-900 hover:bg-slate-800 border border-slate-800 p-2 rounded-lg text-slate-300 transition flex justify-between items-center">
-                                <span>1. 🔴 紅光照綠玻璃紙 + 藍底</span>
-                                <span class="text-rose-400 font-mono text-[10px]">完全吸收</span>
+                                <span>1. 🟢 綠光束照白色反射面</span>
+                                <span class="text-emerald-400 font-mono text-[10px]">光束面呈現綠色</span>
                             </button>
                             <button onclick="applySidePreset(2)" class="w-full text-left bg-slate-900 hover:bg-slate-800 border border-slate-800 p-2 rounded-lg text-slate-300 transition flex justify-between items-center">
-                                <span>2. ⚪ 白光過黃+青玻璃紙照紅底</span>
-                                <span class="text-amber-300 font-mono text-[10px]">雙層過濾</span>
+                                <span>2. 🟢 綠光束照藍色反射面</span>
+                                <span class="text-rose-400 font-mono text-[10px]">完全吸收光束面呈現黑色</span>
                             </button>
                             <button onclick="applySidePreset(3)" class="w-full text-left bg-slate-900 hover:bg-slate-800 border border-slate-800 p-2 rounded-lg text-slate-300 transition flex justify-between items-center">
-                                <span>3. 🪞 平面鏡對稱反射標準示範</span>
-                                <span class="text-emerald-400 font-mono text-[10px]">$\theta_i=\theta_r$</span>
+                                <span>3. 🔴 紅光照綠玻璃紙 + 藍底</span>
+                                <span class="text-amber-300 font-mono text-[10px]">完全吸收</span>
+                            </button>
+                            <button onclick="applySidePreset(4)" class="w-full text-left bg-slate-900 hover:bg-slate-800 border border-slate-800 p-2 rounded-lg text-slate-300 transition flex justify-between items-center">
+                                <span>4. 🪞 平面鏡對稱反射標準示範</span>
+                                <span class="text-cyan-400 font-mono text-[10px]">$\theta_i=\theta_r$</span>
                             </button>
                         </div>
                     </div>
@@ -280,81 +284,125 @@
 
 
         <!-- ========================================================================= -->
-        <!-- MODULE 2: Five Color Blocks Light Lab                                   -->
+        <!-- MODULE 2: Five Color Blocks Interactive Searchlight Lab                   -->
         <!-- ========================================================================= -->
-        <section id="mod-blocks" class="space-y-6 hidden">
+        <section id="mod-blocks" class="space-y-5 hidden">
             <div class="glass-panel rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4 border-l-4 border-l-purple-500">
                 <div class="flex items-center space-x-3">
                     <i class="fa-solid fa-cubes text-purple-400 text-xl"></i>
                     <div>
-                        <h2 class="font-bold text-slate-200">五色塊光源實驗室 (Stage Lighting Lab)</h2>
-                        <p class="text-xs text-slate-400">切換不同光源，觀察紅、綠、藍、黑、白五色塊在舞台聚光燈下的物理真實顏色。</p>
+                        <h2 class="font-bold text-slate-200">五色塊互動探照燈實驗室 (Interactive Searchlight Lab)</h2>
+                        <p class="text-xs text-slate-400">切換不同顏色的探照燈，並用手或滑鼠拖曳畫面中的探照燈光圈，觀察照在不同色塊上呈現的<strong class="text-purple-300">反射與吸收（變黑）</strong>物理現象。</p>
                     </div>
                 </div>
 
-                <div class="flex items-center space-x-2 bg-slate-900 p-1.5 rounded-xl border border-slate-800 overflow-x-auto" id="blocks-light-btns">
+                <div class="flex flex-wrap items-center gap-1.5 bg-slate-900 p-1.5 rounded-xl border border-slate-800" id="blocks-light-btns">
                     <!-- Dynamic Buttons -->
                 </div>
             </div>
 
-            <div class="glass-panel rounded-2xl p-6 relative overflow-hidden border border-slate-700 shadow-2xl">
-                <div id="spotlight-cone" class="absolute inset-x-0 top-0 h-48 pointer-events-none transition-all duration-500 opacity-30 bg-gradient-to-b from-white via-white/20 to-transparent"></div>
+            <!-- Interactive Stage Canvas Panel -->
+            <div class="glass-panel rounded-2xl p-3 sm:p-4 relative overflow-hidden border border-slate-700 shadow-2xl space-y-3">
+                <!-- Stage Controls Toolbar -->
+                <div class="flex flex-wrap items-center justify-between gap-3 bg-slate-900/90 border border-slate-800 px-3 py-2 rounded-xl text-xs">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-slate-400 font-medium">當前探照燈：</span>
+                        <span class="inline-flex items-center space-x-1.5 bg-slate-950 border border-slate-700 px-2.5 py-1 rounded-lg font-mono text-purple-300">
+                            <span id="stage-light-dot" class="w-2.5 h-2.5 rounded-full bg-white border border-white/30"></span>
+                            <strong id="stage-light-name" class="text-white">白光/白色</strong>
+                        </span>
+                    </div>
 
-                <div class="text-center mb-6">
-                    <span class="inline-block bg-slate-900 border border-slate-700 px-4 py-1 rounded-full text-xs font-mono text-purple-300">
-                        當前照射光源：<strong id="stage-light-name" class="text-white text-sm">白色光源 (White Light)</strong>
-                    </span>
+                    <div class="flex flex-wrap items-center gap-4">
+                        <div class="flex items-center space-x-2">
+                            <label for="blocks-radius-slider" class="text-slate-400">光圈大小:</label>
+                            <input id="blocks-radius-slider" type="range" min="60" max="175" value="105" step="5"
+                                   class="w-24 sm:w-28 h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-purple-500">
+                            <span id="blocks-radius-val" class="font-mono text-purple-300 w-10">105px</span>
+                        </div>
+
+                        <label class="inline-flex items-center space-x-1.5 cursor-pointer select-none text-slate-300">
+                            <input id="blocks-ambient-toggle" type="checkbox" checked class="rounded accent-purple-500 w-3.5 h-3.5 cursor-pointer">
+                            <span>顯示微弱環境光</span>
+                        </label>
+
+                        <button onclick="centerBlocksSpotlight()" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700 transition flex items-center space-x-1">
+                            <i class="fa-solid fa-crosshairs text-purple-400"></i>
+                            <span>置中探照燈</span>
+                        </button>
+                    </div>
                 </div>
 
-                <div class="grid grid-cols-2 md:grid-cols-5 gap-4 relative z-10">
-                    <!-- Red Block -->
-                    <div class="block-card bg-slate-900/90 border border-slate-800 rounded-2xl p-4 text-center flex flex-col items-center space-y-3 transition-all duration-300">
-                        <span class="text-xs font-bold text-slate-400">原色：紅色 (Red)</span>
-                        <div id="block-view-0" class="w-24 h-24 rounded-2xl shadow-inner transition-colors duration-300 border border-white/10 flex items-center justify-center font-bold text-xs text-white/70">色塊</div>
-                        <div class="text-[11px] font-mono text-slate-300 space-y-1">
-                            <div>感知：<span id="block-res-0" class="font-bold text-red-400">紅色</span></div>
-                            <div id="block-math-0" class="text-[10px] text-slate-500">RGB: (1,0,0)</div>
-                        </div>
-                    </div>
+                <!-- Interactive Searchlight Canvas -->
+                <div class="relative rounded-xl overflow-hidden border border-slate-800 bg-[#050811]">
+                    <canvas id="blocksCanvas" class="w-full h-[380px] block cursor-grab active:cursor-grabbing touch-none"></canvas>
+                </div>
+            </div>
 
-                    <!-- Green Block -->
-                    <div class="block-card bg-slate-900/90 border border-slate-800 rounded-2xl p-4 text-center flex flex-col items-center space-y-3 transition-all duration-300">
-                        <span class="text-xs font-bold text-slate-400">原色：綠色 (Green)</span>
-                        <div id="block-view-1" class="w-24 h-24 rounded-2xl shadow-inner transition-colors duration-300 border border-white/10 flex items-center justify-center font-bold text-xs text-white/70">色塊</div>
-                        <div class="text-[11px] font-mono text-slate-300 space-y-1">
-                            <div>感知：<span id="block-res-1" class="font-bold text-green-400">綠色</span></div>
-                            <div id="block-math-1" class="text-[10px] text-slate-500">RGB: (0,1,0)</div>
-                        </div>
+            <!-- Dynamic Optical Feedback Cards (Synced with Spotlight Hit) -->
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-3 relative z-10">
+                <!-- Red Block -->
+                <div id="block-card-0" class="block-card bg-slate-900/90 border border-slate-800 rounded-2xl p-3 text-center flex flex-col items-center space-y-2 transition-all duration-200">
+                    <div class="flex items-center justify-between w-full text-[11px]">
+                        <span class="font-bold text-slate-400">原色：紅色</span>
+                        <span id="block-hit-0" class="px-1.5 py-0.5 rounded text-[10px] font-mono bg-slate-800 text-slate-500">未照射</span>
                     </div>
-
-                    <!-- Blue Block -->
-                    <div class="block-card bg-slate-900/90 border border-slate-800 rounded-2xl p-4 text-center flex flex-col items-center space-y-3 transition-all duration-300">
-                        <span class="text-xs font-bold text-slate-400">原色：藍色 (Blue)</span>
-                        <div id="block-view-2" class="w-24 h-24 rounded-2xl shadow-inner transition-colors duration-300 border border-white/10 flex items-center justify-center font-bold text-xs text-white/70">色塊</div>
-                        <div class="text-[11px] font-mono text-slate-300 space-y-1">
-                            <div>感知：<span id="block-res-2" class="font-bold text-blue-400">藍色</span></div>
-                            <div id="block-math-2" class="text-[10px] text-slate-500">RGB: (0,0,1)</div>
-                        </div>
+                    <div id="block-view-0" class="w-12 h-12 rounded-xl shadow-inner transition-colors duration-200 border border-white/15 flex items-center justify-center font-bold text-[10px] text-white/80">色塊</div>
+                    <div class="text-[11px] font-mono text-slate-300 space-y-0.5">
+                        <div>照射呈現：<span id="block-res-0" class="font-bold text-red-400">紅色</span></div>
+                        <div id="block-math-0" class="text-[10px] text-slate-500">RGB: (1,0,0)</div>
                     </div>
+                </div>
 
-                    <!-- Black Block -->
-                    <div class="block-card bg-slate-900/90 border border-slate-800 rounded-2xl p-4 text-center flex flex-col items-center space-y-3 transition-all duration-300">
-                        <span class="text-xs font-bold text-slate-400">原色：黑色 (Black)</span>
-                        <div id="block-view-3" class="w-24 h-24 rounded-2xl shadow-inner transition-colors duration-300 border border-white/10 flex items-center justify-center font-bold text-xs text-white/70">色塊</div>
-                        <div class="text-[11px] font-mono text-slate-300 space-y-1">
-                            <div>感知：<span id="block-res-3" class="font-bold text-slate-400">黑色</span></div>
-                            <div id="block-math-3" class="text-[10px] text-slate-500">RGB: (0,0,0)</div>
-                        </div>
+                <!-- Green Block -->
+                <div id="block-card-1" class="block-card bg-slate-900/90 border border-slate-800 rounded-2xl p-3 text-center flex flex-col items-center space-y-2 transition-all duration-200">
+                    <div class="flex items-center justify-between w-full text-[11px]">
+                        <span class="font-bold text-slate-400">原色：綠色</span>
+                        <span id="block-hit-1" class="px-1.5 py-0.5 rounded text-[10px] font-mono bg-slate-800 text-slate-500">未照射</span>
                     </div>
+                    <div id="block-view-1" class="w-12 h-12 rounded-xl shadow-inner transition-colors duration-200 border border-white/15 flex items-center justify-center font-bold text-[10px] text-white/80">色塊</div>
+                    <div class="text-[11px] font-mono text-slate-300 space-y-0.5">
+                        <div>照射呈現：<span id="block-res-1" class="font-bold text-green-400">綠色</span></div>
+                        <div id="block-math-1" class="text-[10px] text-slate-500">RGB: (0,1,0)</div>
+                    </div>
+                </div>
 
-                    <!-- White Block -->
-                    <div class="block-card bg-slate-900/90 border border-slate-800 rounded-2xl p-4 text-center flex flex-col items-center space-y-3 transition-all duration-300 col-span-2 md:col-span-1">
-                        <span class="text-xs font-bold text-slate-400">原色：白色 (White)</span>
-                        <div id="block-view-4" class="w-24 h-24 rounded-2xl shadow-inner transition-colors duration-300 border border-white/10 flex items-center justify-center font-bold text-xs text-slate-800">色塊</div>
-                        <div class="text-[11px] font-mono text-slate-300 space-y-1">
-                            <div>感知：<span id="block-res-4" class="font-bold text-white">白色</span></div>
-                            <div id="block-math-4" class="text-[10px] text-slate-500">RGB: (1,1,1)</div>
-                        </div>
+                <!-- Blue Block -->
+                <div id="block-card-2" class="block-card bg-slate-900/90 border border-slate-800 rounded-2xl p-3 text-center flex flex-col items-center space-y-2 transition-all duration-200">
+                    <div class="flex items-center justify-between w-full text-[11px]">
+                        <span class="font-bold text-slate-400">原色：藍色</span>
+                        <span id="block-hit-2" class="px-1.5 py-0.5 rounded text-[10px] font-mono bg-slate-800 text-slate-500">未照射</span>
+                    </div>
+                    <div id="block-view-2" class="w-12 h-12 rounded-xl shadow-inner transition-colors duration-200 border border-white/15 flex items-center justify-center font-bold text-[10px] text-white/80" style="background-color: #0000ff;">色塊</div>
+                    <div class="text-[11px] font-mono text-slate-300 space-y-0.5">
+                        <div>照射呈現：<span id="block-res-2" class="font-bold text-blue-500">藍色</span></div>
+                        <div id="block-math-2" class="text-[10px] text-slate-500">RGB: (0,0,1)</div>
+                    </div>
+                </div>
+
+                <!-- Black Block -->
+                <div id="block-card-3" class="block-card bg-slate-900/90 border border-slate-800 rounded-2xl p-3 text-center flex flex-col items-center space-y-2 transition-all duration-200">
+                    <div class="flex items-center justify-between w-full text-[11px]">
+                        <span class="font-bold text-slate-400">原色：黑色</span>
+                        <span id="block-hit-3" class="px-1.5 py-0.5 rounded text-[10px] font-mono bg-slate-800 text-slate-500">未照射</span>
+                    </div>
+                    <div id="block-view-3" class="w-12 h-12 rounded-xl shadow-inner transition-colors duration-200 border border-white/15 flex items-center justify-center font-bold text-[10px] text-white/80">色塊</div>
+                    <div class="text-[11px] font-mono text-slate-300 space-y-0.5">
+                        <div>照射呈現：<span id="block-res-3" class="font-bold text-slate-400">黑色</span></div>
+                        <div id="block-math-3" class="text-[10px] text-slate-500">RGB: (0,0,0)</div>
+                    </div>
+                </div>
+
+                <!-- White Block -->
+                <div id="block-card-4" class="block-card bg-slate-900/90 border border-slate-800 rounded-2xl p-3 text-center flex flex-col items-center space-y-2 transition-all duration-200 col-span-2 md:col-span-1">
+                    <div class="flex items-center justify-between w-full text-[11px]">
+                        <span class="font-bold text-slate-400">原色：白色</span>
+                        <span id="block-hit-4" class="px-1.5 py-0.5 rounded text-[10px] font-mono bg-slate-800 text-slate-500">未照射</span>
+                    </div>
+                    <div id="block-view-4" class="w-12 h-12 rounded-xl shadow-inner transition-colors duration-200 border border-white/15 flex items-center justify-center font-bold text-[10px] text-slate-800">色塊</div>
+                    <div class="text-[11px] font-mono text-slate-300 space-y-0.5">
+                        <div>照射呈現：<span id="block-res-4" class="font-bold text-white">白色</span></div>
+                        <div id="block-math-4" class="text-[10px] text-slate-500">RGB: (1,1,1)</div>
                     </div>
                 </div>
             </div>
@@ -519,7 +567,7 @@
             white:   { name: '白光/白色', rgb: [1, 1, 1], hex: '#ffffff', textClass: 'text-white' },
             red:     { name: '紅色',     rgb: [1, 0, 0], hex: '#ef4444', textClass: 'text-red-400' },
             green:   { name: '綠色',     rgb: [0, 1, 0], hex: '#22c55e', textClass: 'text-green-400' },
-            blue:    { name: '藍色',     rgb: [0, 0.4, 1], hex: '#3b82f6', textClass: 'text-blue-400' },
+            blue:    { name: '藍色',     rgb: [0, 0, 1], hex: '#0000ff', textClass: 'text-blue-500' },
             yellow:  { name: '黃色',     rgb: [1, 1, 0], hex: '#eab308', textClass: 'text-yellow-400' },
             magenta: { name: '洋紅色',   rgb: [1, 0, 1], hex: '#ec4899', textClass: 'text-pink-400' },
             cyan:    { name: '青色',     rgb: [0, 1, 1], hex: '#06b6d4', textClass: 'text-cyan-400' },
@@ -558,6 +606,21 @@
             return '黑色 (無光)';
         }
 
+        function getColorName(rgb) {
+            const r = rgb[0] > 0.1 ? 1 : 0;
+            const g = rgb[1] > 0.1 ? 1 : 0;
+            const b = rgb[2] > 0.1 ? 1 : 0;
+
+            if (r === 1 && g === 1 && b === 1) return '白色';
+            if (r === 1 && g === 0 && b === 0) return '紅色';
+            if (r === 0 && g === 1 && b === 0) return '綠色';
+            if (r === 0 && g === 0 && b === 1) return '藍色';
+            if (r === 1 && g === 1 && b === 0) return '黃色';
+            if (r === 1 && g === 0 && b === 1) return '洋紅色';
+            if (r === 0 && g === 1 && b === 1) return '青色';
+            return '黑色';
+        }
+
         // =========================================================================
         // Tab Navigation
         // =========================================================================
@@ -575,6 +638,7 @@
             });
 
             if (tabId === 'sideview') resizeOpticsCanvas();
+            else if (tabId === 'blocks') resizeBlocksCanvas();
             else if (tabId === 'freecanvas') resizePaintCanvas();
         }
 
@@ -617,10 +681,11 @@
             document.getElementById('select-surface').addEventListener('change', (e) => { sideState.surfaceKey = e.target.value; });
 
             // Initialize Particles
-            for (let i = 0; i < 30; i++) {
+            for (let i = 0; i < 36; i++) {
                 sideState.particles.push({
                     t: Math.random(),
-                    speed: 0.005 + Math.random() * 0.004
+                    speed: 0.004 + Math.random() * 0.004,
+                    lateralOffset: (Math.random() - 0.5) * 1.4
                 });
             }
         }
@@ -629,26 +694,33 @@
             sideState.lightKey = key;
             ['white', 'red', 'green', 'blue', 'yellow', 'magenta', 'cyan'].forEach(k => {
                 const btn = document.getElementById(`btn-src-${k}`);
-                if (k === key) {
-                    btn.className = "p-2 rounded-xl border border-blue-500 ring-2 ring-blue-500 bg-slate-800 flex flex-col items-center justify-center space-y-1 transition text-[10px] font-bold";
-                } else {
-                    btn.className = "p-2 rounded-xl border border-slate-700 bg-slate-900/80 hover:bg-slate-800 flex flex-col items-center justify-center space-y-1 transition text-[10px] font-bold";
+                if (btn) {
+                    if (k === key) {
+                        btn.className = "p-2 rounded-xl border border-blue-500 ring-2 ring-blue-500 bg-slate-800 flex flex-col items-center justify-center space-y-1 transition text-[10px] font-bold";
+                    } else {
+                        btn.className = "p-2 rounded-xl border border-slate-700 bg-slate-900/80 hover:bg-slate-800 flex flex-col items-center justify-center space-y-1 transition text-[10px] font-bold";
+                    }
                 }
             });
         }
 
         function applySidePreset(num) {
             if (num === 1) {
+                setSourceColor('green');
+                document.getElementById('select-filter1').value = 'none'; sideState.filter1Key = 'none';
+                document.getElementById('select-filter2').value = 'none'; sideState.filter2Key = 'none';
+                document.getElementById('select-surface').value = 'white'; sideState.surfaceKey = 'white';
+            } else if (num === 2) {
+                setSourceColor('green');
+                document.getElementById('select-filter1').value = 'none'; sideState.filter1Key = 'none';
+                document.getElementById('select-filter2').value = 'none'; sideState.filter2Key = 'none';
+                document.getElementById('select-surface').value = 'blue'; sideState.surfaceKey = 'blue';
+            } else if (num === 3) {
                 setSourceColor('red');
                 document.getElementById('select-filter1').value = 'green'; sideState.filter1Key = 'green';
                 document.getElementById('select-filter2').value = 'none'; sideState.filter2Key = 'none';
                 document.getElementById('select-surface').value = 'blue'; sideState.surfaceKey = 'blue';
-            } else if (num === 2) {
-                setSourceColor('white');
-                document.getElementById('select-filter1').value = 'yellow'; sideState.filter1Key = 'yellow';
-                document.getElementById('select-filter2').value = 'cyan'; sideState.filter2Key = 'cyan';
-                document.getElementById('select-surface').value = 'red'; sideState.surfaceKey = 'red';
-            } else if (num === 3) {
+            } else if (num === 4) {
                 setSourceColor('white');
                 document.getElementById('select-filter1').value = 'none'; sideState.filter1Key = 'none';
                 document.getElementById('select-filter2').value = 'none'; sideState.filter2Key = 'none';
@@ -727,24 +799,12 @@
             // Update Badges
             updateDataBadges(srcRGB, pass2RGB, reflRGB, eyeRGB);
 
-            // 2. Draw Bottom Reflection Surface
-            opticsCtx.save();
-            if (sideState.surfaceKey === 'mirror') {
-                const grad = opticsCtx.createLinearGradient(0, yBot, W, yBot + 30);
-                grad.addColorStop(0, '#64748b'); grad.addColorStop(0.5, '#f8fafc'); grad.addColorStop(1, '#475569');
-                opticsCtx.fillStyle = grad;
-            } else {
-                opticsCtx.fillStyle = COLOR_DATA[sideState.surfaceKey].hex;
-            }
-            opticsCtx.fillRect(40, yBot, W - 80, 20);
-            opticsCtx.strokeStyle = '#64748b';
-            opticsCtx.lineWidth = 2;
-            opticsCtx.strokeRect(40, yBot, W - 80, 20);
+            // Beam thickness and horizontal projection width (enlarged searchlight beam)
+            const BEAM_HALF_WIDTH = W < 480 ? 18 : 26;
+            const w_h = BEAM_HALF_WIDTH / Math.cos(angleRad);
 
-            opticsCtx.fillStyle = '#f8fafc';
-            opticsCtx.font = 'bold 12px sans-serif';
-            opticsCtx.fillText(`反射底面：${COLOR_DATA[sideState.surfaceKey].name}`, 50, yBot + 14);
-            opticsCtx.restore();
+            // 2. Draw Bottom Reflection Surface & Illuminated Beam-Surface Patch (該光束面)
+            drawBottomSurface(xHit, yHit, w_h, pass2RGB, reflRGB, sideState.surfaceKey, W);
 
             // 3. Draw Normal Line (垂直法線)
             opticsCtx.save();
@@ -784,43 +844,60 @@
             opticsCtx.fillText(`θr = ${sideState.angle}°`, xHit + 20, yHit - 55);
             opticsCtx.restore();
 
-            // 5. Draw Filter Plates
+            // 5. Draw Filter Plates (Base strips)
             drawFilterPlate(yFilter1, sideState.filter1Key, '第一層玻璃紙 (Filter 1)', W);
             drawFilterPlate(yFilter2, sideState.filter2Key, '第二層玻璃紙 (Filter 2)', W);
 
-            // 6. Draw Oblique Light Rays (Segment by Segment)
+            // 6. Draw Oblique Searchlight Beams & Transmission Surface Patches
             // Seg 1: Source -> Filter 1
-            drawRaySegment(xSrc, ySrc, xF1_dn, yFilter1, srcRGB);
+            drawSearchlightBeam(xSrc, ySrc, w_h * 0.85, xF1_dn, yFilter1, w_h, srcRGB);
+
+            // Filter 1 Downward Transmission Patch
+            if (sideState.filter1Key !== 'none') {
+                drawFilterBeamPatch(xF1_dn, yFilter1, w_h, pass1RGB, getIntensity(pass1RGB) === 0);
+            }
 
             // Seg 2: Filter 1 -> Filter 2
             if (getIntensity(pass1RGB) > 0) {
-                drawRaySegment(xF1_dn, yFilter1, xF2_dn, yFilter2, pass1RGB);
+                drawSearchlightBeam(xF1_dn, yFilter1, w_h, xF2_dn, yFilter2, w_h, pass1RGB);
+                // Filter 2 Downward Transmission Patch
+                if (sideState.filter2Key !== 'none') {
+                    drawFilterBeamPatch(xF2_dn, yFilter2, w_h, pass2RGB, getIntensity(pass2RGB) === 0);
+                }
             } else {
                 drawAbsorptionBadge(xF1_dn, yFilter1, '第一層玻璃紙完全吸收');
             }
 
             // Seg 3: Filter 2 -> Surface
             if (getIntensity(pass1RGB) > 0 && getIntensity(pass2RGB) > 0) {
-                drawRaySegment(xF2_dn, yFilter2, xHit, yHit, pass2RGB);
+                drawSearchlightBeam(xF2_dn, yFilter2, w_h, xHit, yHit, w_h, pass2RGB);
             } else if (getIntensity(pass1RGB) > 0 && getIntensity(pass2RGB) === 0) {
                 drawAbsorptionBadge(xF2_dn, yFilter2, '第二層玻璃紙完全吸收');
             }
 
             // Seg 4: Surface -> Filter 2 (Reflected)
             if (getIntensity(pass2RGB) > 0 && getIntensity(reflRGB) > 0) {
-                drawRaySegment(xHit, yHit, xF2_up, yFilter2, reflRGB);
+                drawSearchlightBeam(xHit, yHit, w_h, xF2_up, yFilter2, w_h, reflRGB);
+                // Filter 2 Upward Transmission Patch
+                if (sideState.filter2Key !== 'none') {
+                    drawFilterBeamPatch(xF2_up, yFilter2, w_h, pass3RGB, getIntensity(pass3RGB) === 0);
+                }
             } else if (getIntensity(pass2RGB) > 0 && getIntensity(reflRGB) === 0) {
-                drawAbsorptionBadge(xHit, yHit, '底面完全吸收無反射');
+                drawAbsorptionBadge(xHit, yHit - 18, '底面完全吸收無反射');
             }
 
             // Seg 5: Filter 2 -> Filter 1 (Reflected Upwards)
             if (getIntensity(reflRGB) > 0 && getIntensity(pass3RGB) > 0) {
-                drawRaySegment(xF2_up, yFilter2, xF1_up, yFilter1, pass3RGB);
+                drawSearchlightBeam(xF2_up, yFilter2, w_h, xF1_up, yFilter1, w_h, pass3RGB);
+                // Filter 1 Upward Transmission Patch
+                if (sideState.filter1Key !== 'none') {
+                    drawFilterBeamPatch(xF1_up, yFilter1, w_h, eyeRGB, getIntensity(eyeRGB) === 0);
+                }
             }
 
             // Seg 6: Filter 1 -> Observer Eye
             if (getIntensity(pass3RGB) > 0 && getIntensity(eyeRGB) > 0) {
-                drawRaySegment(xF1_up, yFilter1, xEye, yEye, eyeRGB);
+                drawSearchlightBeam(xF1_up, yFilter1, w_h, xEye, yEye, w_h * 0.85, eyeRGB);
             }
 
             // 7. Draw Source Spotlight (Top Left)
@@ -829,19 +906,19 @@
             // 8. Draw Observer Eye (Top Right)
             drawEyeObserver(xEye, yEye, eyeRGB);
 
-            // 9. Particles Flowing Animation
-            drawFlowParticles(xSrc, ySrc, xF1_dn, yFilter1, xF2_dn, yFilter2, xHit, yHit, xF2_up, yFilter2, xF1_up, yFilter1, xEye, yEye, srcRGB, pass1RGB, pass2RGB, reflRGB, pass3RGB, eyeRGB);
+            // 9. Particles Flowing Animation across Searchlight Beam
+            drawFlowParticles(xSrc, ySrc, xF1_dn, yFilter1, xF2_dn, yFilter2, xHit, yHit, xF2_up, yFilter2, xF1_up, yFilter1, xEye, yEye, w_h * 0.85, w_h, w_h, w_h, w_h, w_h, w_h * 0.85, srcRGB, pass1RGB, pass2RGB, reflRGB, pass3RGB, eyeRGB);
 
             requestAnimationFrame(drawSideView);
         }
 
-        // Helper: Filter Plate Visual
+        // Helper: Filter Plate Visual (Base Strip)
         function drawFilterPlate(y, filterKey, label, W) {
             if (filterKey === 'none') return;
             opticsCtx.save();
             const color = COLOR_DATA[filterKey];
             opticsCtx.fillStyle = color.hex;
-            opticsCtx.globalAlpha = 0.4;
+            opticsCtx.globalAlpha = 0.35;
             opticsCtx.fillRect(60, y - 6, W - 120, 12);
 
             opticsCtx.globalAlpha = 1.0;
@@ -850,26 +927,238 @@
             opticsCtx.strokeRect(60, y - 6, W - 120, 12);
 
             opticsCtx.fillStyle = '#f3f4f6';
-            opticsCtx.font = '10px sans-serif';
+            opticsCtx.font = 'bold 10px sans-serif';
             opticsCtx.fillText(`${label}: ${color.name}`, 70, y - 10);
             opticsCtx.restore();
         }
 
-        // Helper: Draw Ray Segment
-        function drawRaySegment(x1, y1, x2, y2, rgb) {
+        // Helper: Draw Transmission Surface Patch on Filter
+        function drawFilterBeamPatch(x, y, w, rgb, isAbsorbed) {
+            opticsCtx.save();
+            const patchH = 12;
+            const patchTop = y - patchH / 2;
+            if (isAbsorbed) {
+                // Absorbed patch: dark black with warning border
+                opticsCtx.fillStyle = '#050505';
+                opticsCtx.fillRect(x - w, patchTop, w * 2, patchH);
+                opticsCtx.strokeStyle = '#ef4444';
+                opticsCtx.lineWidth = 1.5;
+                opticsCtx.setLineDash([3, 2]);
+                opticsCtx.strokeRect(x - w, patchTop, w * 2, patchH);
+
+                opticsCtx.fillStyle = '#f87171';
+                opticsCtx.font = 'bold 9px sans-serif';
+                opticsCtx.textAlign = 'center';
+                opticsCtx.fillText('🚫 吸收', x, y + 3);
+            } else {
+                // Transmitted patch: glowing in the transmitted color
+                const hex = rgbToHex(rgb);
+                opticsCtx.fillStyle = hex;
+                opticsCtx.shadowColor = hex;
+                opticsCtx.shadowBlur = 12;
+                opticsCtx.globalAlpha = 0.85;
+                opticsCtx.fillRect(x - w, patchTop, w * 2, patchH);
+
+                opticsCtx.strokeStyle = '#ffffff';
+                opticsCtx.lineWidth = 1.5;
+                opticsCtx.globalAlpha = 0.95;
+                opticsCtx.strokeRect(x - w, patchTop, w * 2, patchH);
+            }
+            opticsCtx.restore();
+        }
+
+        // Helper: Draw Bottom Reflection Surface & The Illuminated Beam Surface (該光束面)
+        function drawBottomSurface(xHit, yHit, w_h, pass2RGB, reflRGB, surfKey, W) {
+            const surfX = W < 480 ? 16 : 50;
+            const surfWidth = W - surfX * 2;
+            const surfH = 24;
+
+            // 1. Draw Intrinsic Base Surface
+            opticsCtx.save();
+            if (surfKey === 'mirror') {
+                const grad = opticsCtx.createLinearGradient(surfX, yHit, surfX + surfWidth, yHit + surfH);
+                grad.addColorStop(0, '#475569');
+                grad.addColorStop(0.3, '#94a3b8');
+                grad.addColorStop(0.5, '#f8fafc');
+                grad.addColorStop(0.7, '#94a3b8');
+                grad.addColorStop(1, '#475569');
+                opticsCtx.fillStyle = grad;
+            } else {
+                opticsCtx.fillStyle = COLOR_DATA[surfKey].hex;
+            }
+            opticsCtx.fillRect(surfX, yHit, surfWidth, surfH);
+            opticsCtx.strokeStyle = '#64748b';
+            opticsCtx.lineWidth = 2;
+            opticsCtx.strokeRect(surfX, yHit, surfWidth, surfH);
+
+            // Label on the left
+            opticsCtx.fillStyle = (surfKey === 'white' || surfKey === 'yellow' || surfKey === 'mirror') ? '#0f172a' : '#f8fafc';
+            opticsCtx.font = W < 480 ? 'bold 10px sans-serif' : 'bold 11px sans-serif';
+            opticsCtx.textAlign = 'left';
+            opticsCtx.fillText(`反射底面：${COLOR_DATA[surfKey].name}`, surfX + 10, yHit + 16);
+            opticsCtx.restore();
+
+            // 2. Draw Illuminated Beam Contact Area (該光束面)
+            // If light actually reached the surface
+            if (getIntensity(pass2RGB) > 0) {
+                const patchW = w_h * 2;
+                const patchX = xHit - w_h;
+                const hasReflection = getIntensity(reflRGB) > 0;
+
+                opticsCtx.save();
+                if (hasReflection) {
+                    const hex = rgbToHex(reflRGB);
+                    // A. Face of plate illuminated in reflected color
+                    opticsCtx.fillStyle = hex;
+                    opticsCtx.fillRect(patchX, yHit, patchW, surfH);
+                    opticsCtx.strokeStyle = '#ffffff';
+                    opticsCtx.lineWidth = 2;
+                    opticsCtx.strokeRect(patchX, yHit, patchW, surfH);
+
+                    // B. Glowing Ellipse on Top Surface
+                    opticsCtx.fillStyle = hex;
+                    opticsCtx.shadowColor = hex;
+                    opticsCtx.shadowBlur = 18;
+                    opticsCtx.beginPath();
+                    opticsCtx.ellipse(xHit, yHit, w_h + 3, 6, 0, 0, Math.PI * 2);
+                    opticsCtx.fill();
+
+                    // Hot reflection core
+                    opticsCtx.fillStyle = '#ffffff';
+                    opticsCtx.globalAlpha = 0.75;
+                    opticsCtx.beginPath();
+                    opticsCtx.ellipse(xHit, yHit, w_h * 0.45, 2.5, 0, 0, Math.PI * 2);
+                    opticsCtx.fill();
+                    opticsCtx.restore();
+
+                    // C. Surface Reflection Badge
+                    drawSurfaceBadge(xHit, yHit + surfH + 6, hex, `光束面呈現：${getColorName(reflRGB)}`, true);
+                } else {
+                    // Surface absorbs light completely: Beam Surface is Pitch Black
+                    opticsCtx.fillStyle = '#050505';
+                    opticsCtx.fillRect(patchX, yHit, patchW, surfH);
+                    opticsCtx.strokeStyle = '#ef4444';
+                    opticsCtx.lineWidth = 1.5;
+                    opticsCtx.setLineDash([4, 3]);
+                    opticsCtx.strokeRect(patchX, yHit, patchW, surfH);
+
+                    // Absorbed black footprint ellipse
+                    opticsCtx.fillStyle = '#050505';
+                    opticsCtx.beginPath();
+                    opticsCtx.ellipse(xHit, yHit, w_h + 3, 6, 0, 0, Math.PI * 2);
+                    opticsCtx.fill();
+                    opticsCtx.strokeStyle = '#ef4444';
+                    opticsCtx.lineWidth = 1.5;
+                    opticsCtx.stroke();
+                    opticsCtx.restore();
+
+                    // Surface Absorption Badge
+                    drawSurfaceBadge(xHit, yHit + surfH + 6, '#f87171', '光束面呈現：黑色 (完全吸收無反射)', false);
+                }
+            }
+        }
+
+        // Helper: Badge underneath surface
+        function drawSurfaceBadge(x, y, colorHex, text, isReflecting) {
+            opticsCtx.save();
+            opticsCtx.font = 'bold 11px sans-serif';
+            const metrics = opticsCtx.measureText(text);
+            const padX = 10;
+            const boxW = metrics.width + padX * 2;
+            const boxH = 22;
+
+            // Box
+            opticsCtx.fillStyle = '#0f172a';
+            opticsCtx.fillRect(x - boxW / 2, y, boxW, boxH);
+            opticsCtx.strokeStyle = colorHex;
+            opticsCtx.lineWidth = 1.5;
+            opticsCtx.strokeRect(x - boxW / 2, y, boxW, boxH);
+
+            // Small color dot
+            opticsCtx.fillStyle = colorHex;
+            if (isReflecting) {
+                opticsCtx.shadowColor = colorHex;
+                opticsCtx.shadowBlur = 8;
+            }
+            opticsCtx.beginPath();
+            opticsCtx.arc(x - boxW / 2 + 10, y + boxH / 2, 4, 0, Math.PI * 2);
+            opticsCtx.fill();
+
+            // Text
+            opticsCtx.shadowBlur = 0;
+            opticsCtx.fillStyle = isReflecting ? '#ffffff' : '#fca5a5';
+            opticsCtx.textAlign = 'left';
+            opticsCtx.fillText(text, x - boxW / 2 + 18, y + 15);
+            opticsCtx.restore();
+        }
+
+        // Helper: Volumetric Searchlight Beam Segment
+        function drawSearchlightBeam(x1, y1, w1, x2, y2, w2, rgb) {
+            if (getIntensity(rgb) <= 0) return;
             opticsCtx.save();
             const hex = rgbToHex(rgb);
-            
-            // Outer Glow
-            opticsCtx.strokeStyle = hex;
-            opticsCtx.lineWidth = 8;
-            opticsCtx.globalAlpha = 0.35;
-            opticsCtx.beginPath(); opticsCtx.moveTo(x1, y1); opticsCtx.lineTo(x2, y2); opticsCtx.stroke();
+            const r = Math.round(rgb[0] * 255);
+            const g = Math.round(rgb[1] * 255);
+            const b = Math.round(rgb[2] * 255);
 
-            // Core Ray
-            opticsCtx.lineWidth = 3;
-            opticsCtx.globalAlpha = 0.95;
-            opticsCtx.beginPath(); opticsCtx.moveTo(x1, y1); opticsCtx.lineTo(x2, y2); opticsCtx.stroke();
+            // 1. Volumetric Beam Quad
+            opticsCtx.beginPath();
+            opticsCtx.moveTo(x1 - w1, y1);
+            opticsCtx.lineTo(x2 - w2, y2);
+            opticsCtx.lineTo(x2 + w2, y2);
+            opticsCtx.lineTo(x1 + w1, y1);
+            opticsCtx.closePath();
+
+            // Normal to the central line for gradient
+            const dx = x2 - x1;
+            const dy = y2 - y1;
+            const len = Math.hypot(dx, dy) || 1;
+            const nx = -dy / len;
+            const ny = dx / len;
+            const midX = (x1 + x2) / 2;
+            const midY = (y1 + y2) / 2;
+            const avgW = (w1 + w2) / 2;
+
+            const grad = opticsCtx.createLinearGradient(
+                midX - nx * avgW, midY - ny * avgW,
+                midX + nx * avgW, midY + ny * avgW
+            );
+            grad.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0.0)`);
+            grad.addColorStop(0.15, `rgba(${r}, ${g}, ${b}, 0.28)`);
+            grad.addColorStop(0.5, `rgba(${r}, ${g}, ${b}, 0.65)`);
+            grad.addColorStop(0.85, `rgba(${r}, ${g}, ${b}, 0.28)`);
+            grad.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0.0)`);
+
+            opticsCtx.fillStyle = grad;
+            opticsCtx.fill();
+
+            // 2. Soft Edge Rays
+            opticsCtx.strokeStyle = `rgba(${r}, ${g}, ${b}, 0.42)`;
+            opticsCtx.lineWidth = 2;
+            opticsCtx.beginPath();
+            opticsCtx.moveTo(x1 - w1, y1);
+            opticsCtx.lineTo(x2 - w2, y2);
+            opticsCtx.moveTo(x1 + w1, y1);
+            opticsCtx.lineTo(x2 + w2, y2);
+            opticsCtx.stroke();
+
+            // 3. Central Core Ray
+            opticsCtx.strokeStyle = hex;
+            opticsCtx.lineWidth = 6;
+            opticsCtx.globalAlpha = 0.9;
+            opticsCtx.beginPath();
+            opticsCtx.moveTo(x1, y1);
+            opticsCtx.lineTo(x2, y2);
+            opticsCtx.stroke();
+
+            // 4. Inner White Laser Filament
+            opticsCtx.strokeStyle = '#ffffff';
+            opticsCtx.lineWidth = 2;
+            opticsCtx.globalAlpha = 0.6;
+            opticsCtx.beginPath();
+            opticsCtx.moveTo(x1, y1);
+            opticsCtx.lineTo(x2, y2);
+            opticsCtx.stroke();
 
             opticsCtx.restore();
         }
@@ -881,9 +1170,9 @@
             opticsCtx.beginPath(); opticsCtx.arc(x, y, 6, 0, Math.PI * 2); opticsCtx.fill();
 
             opticsCtx.fillStyle = '#0f172a';
-            opticsCtx.fillRect(x - 65, y + 10, 130, 22);
+            opticsCtx.fillRect(x - 70, y + 10, 140, 22);
             opticsCtx.strokeStyle = '#f87171';
-            opticsCtx.strokeRect(x - 65, y + 10, 130, 22);
+            opticsCtx.strokeRect(x - 70, y + 10, 140, 22);
 
             opticsCtx.fillStyle = '#fca5a5';
             opticsCtx.font = 'bold 10px sans-serif';
@@ -896,23 +1185,82 @@
         function drawSpotlightFixture(x, y, rgb, angle) {
             opticsCtx.save();
             opticsCtx.translate(x, y);
-            opticsCtx.rotate((angle * Math.PI) / 180);
+            const rad = (angle * Math.PI) / 180;
+            opticsCtx.rotate(Math.PI / 2 - rad);
 
+            const hex = rgbToHex(rgb);
+
+            // Lamp Body / Housing (Cylinder & Cone scaled for wider searchlight beam)
+            opticsCtx.fillStyle = '#1e293b';
+            opticsCtx.strokeStyle = '#475569';
+            opticsCtx.lineWidth = 2;
+
+            // Rear cylinder
+            opticsCtx.fillRect(-24, -17, 18, 34);
+            opticsCtx.strokeRect(-24, -17, 18, 34);
+
+            // Cooling ribs
+            opticsCtx.strokeStyle = '#334155';
+            opticsCtx.beginPath();
+            opticsCtx.moveTo(-19, -17); opticsCtx.lineTo(-19, 17);
+            opticsCtx.moveTo(-14, -17); opticsCtx.lineTo(-14, 17);
+            opticsCtx.stroke();
+
+            // Flared front hood / reflector cone
             opticsCtx.fillStyle = '#334155';
             opticsCtx.strokeStyle = '#64748b';
             opticsCtx.lineWidth = 2;
-            opticsCtx.beginPath(); opticsCtx.arc(0, 0, 16, 0, Math.PI * 2); opticsCtx.fill(); opticsCtx.stroke();
+            opticsCtx.beginPath();
+            opticsCtx.moveTo(-6, -17);
+            opticsCtx.lineTo(14, -25);
+            opticsCtx.lineTo(14, 25);
+            opticsCtx.lineTo(-6, 17);
+            opticsCtx.closePath();
+            opticsCtx.fill();
+            opticsCtx.stroke();
 
-            opticsCtx.fillStyle = rgbToHex(rgb);
-            opticsCtx.beginPath(); opticsCtx.arc(0, 0, 10, 0, Math.PI * 2); opticsCtx.fill();
+            // Barndoor upper & lower flaps
+            opticsCtx.fillStyle = '#1e293b';
+            opticsCtx.strokeStyle = '#475569';
+            opticsCtx.beginPath();
+            opticsCtx.moveTo(14, -25); opticsCtx.lineTo(25, -32); opticsCtx.lineTo(22, -23); opticsCtx.closePath(); opticsCtx.fill(); opticsCtx.stroke();
+            opticsCtx.beginPath();
+            opticsCtx.moveTo(14, 25); opticsCtx.lineTo(25, 32); opticsCtx.lineTo(22, 23); opticsCtx.closePath(); opticsCtx.fill(); opticsCtx.stroke();
+
+            // Glowing lens front aperture
+            opticsCtx.save();
+            opticsCtx.fillStyle = hex;
+            opticsCtx.shadowColor = hex;
+            opticsCtx.shadowBlur = 22;
+            opticsCtx.beginPath();
+            opticsCtx.ellipse(14, 0, 5, 24, 0, 0, Math.PI * 2);
+            opticsCtx.fill();
+            opticsCtx.restore();
+
+            // Inner bulb filament
+            opticsCtx.fillStyle = '#ffffff';
+            opticsCtx.beginPath();
+            opticsCtx.arc(4, 0, 5, 0, Math.PI * 2);
+            opticsCtx.fill();
 
             opticsCtx.restore();
 
+            // Mount bracket
             opticsCtx.save();
+            opticsCtx.strokeStyle = '#64748b';
+            opticsCtx.lineWidth = 3;
+            opticsCtx.beginPath();
+            opticsCtx.moveTo(x - 24, y - 24);
+            opticsCtx.lineTo(x - 10, y - 6);
+            opticsCtx.stroke();
+            opticsCtx.fillStyle = '#0f172a';
+            opticsCtx.beginPath(); opticsCtx.arc(x - 10, y - 6, 4, 0, Math.PI * 2); opticsCtx.fill(); opticsCtx.stroke();
+
+            // Text Label
             opticsCtx.fillStyle = '#f3f4f6';
             opticsCtx.font = 'bold 11px sans-serif';
             opticsCtx.textAlign = 'center';
-            opticsCtx.fillText('光源 Spotlight', x, y - 22);
+            opticsCtx.fillText(`探照燈光源 (${COLOR_DATA[sideState.lightKey].name.split('/')[0]})`, Math.max(70, x - 6), y - 34);
             opticsCtx.restore();
         }
 
@@ -929,34 +1277,40 @@
             opticsCtx.strokeStyle = '#475569'; opticsCtx.lineWidth = 2; opticsCtx.stroke();
 
             // Iris
-            const irisColor = getIntensity(rgb) > 0 ? rgbToHex(rgb) : '#1e293b';
+            const hasLight = getIntensity(rgb) > 0;
+            const irisColor = hasLight ? rgbToHex(rgb) : '#1e293b';
             opticsCtx.fillStyle = irisColor;
+            if (hasLight) {
+                opticsCtx.shadowColor = irisColor;
+                opticsCtx.shadowBlur = 10;
+            }
             opticsCtx.beginPath(); opticsCtx.arc(-4, 0, 8, 0, Math.PI * 2); opticsCtx.fill();
 
             // Pupil
+            opticsCtx.shadowBlur = 0;
             opticsCtx.fillStyle = '#000000';
             opticsCtx.beginPath(); opticsCtx.arc(-4, 0, 4, 0, Math.PI * 2); opticsCtx.fill();
 
             opticsCtx.restore();
 
             opticsCtx.save();
-            opticsCtx.fillStyle = '#f3f4f6';
+            opticsCtx.fillStyle = hasLight ? rgbToHex(rgb) : '#94a3b8';
             opticsCtx.font = 'bold 11px sans-serif';
             opticsCtx.textAlign = 'center';
-            opticsCtx.fillText('觀察者 Observer', x, y - 22);
+            opticsCtx.fillText(hasLight ? `觀察者感知：${getColorName(rgb)}` : '觀察者感知：黑色 (無光進入)', x, y - 22);
             opticsCtx.restore();
         }
 
-        // Helper: Particles Flow
-        function drawFlowParticles(x0, y0, x1, y1, x2, y2, x3, y3, x4, y4, x5, y5, x6, y6, rgb0, rgb1, rgb2, rgb3, rgb4, rgb5) {
+        // Helper: Particles Flow across Searchlight Beam Volume
+        function drawFlowParticles(x0, y0, x1, y1, x2, y2, x3, y3, x4, y4, x5, y5, x6, y6, w0, w1, w2, w3, w4, w5, w6, rgb0, rgb1, rgb2, rgb3, rgb4, rgb5) {
             const waypoints = [
-                { x: x0, y: y0, rgb: rgb0 },
-                { x: x1, y: y1, rgb: rgb1 },
-                { x: x2, y: y2, rgb: rgb2 },
-                { x: x3, y: y3, rgb: rgb3 },
-                { x: x4, y: y4, rgb: rgb4 },
-                { x: x5, y: y5, rgb: rgb5 },
-                { x: x6, y: y6, rgb: rgb5 }
+                { x: x0, y: y0, w: w0, rgb: rgb0 },
+                { x: x1, y: y1, w: w1, rgb: rgb1 },
+                { x: x2, y: y2, w: w2, rgb: rgb2 },
+                { x: x3, y: y3, w: w3, rgb: rgb3 },
+                { x: x4, y: y4, w: w4, rgb: rgb4 },
+                { x: x5, y: y5, w: w5, rgb: rgb5 },
+                { x: x6, y: y6, w: w6, rgb: rgb5 }
             ];
 
             sideState.particles.forEach(p => {
@@ -973,14 +1327,17 @@
                     const wpB = waypoints[segIdx + 1];
 
                     if (getIntensity(wpA.rgb) > 0) {
-                        const px = wpA.x + (wpB.x - wpA.x) * segT;
+                        const curW = wpA.w + (wpB.w - wpA.w) * segT;
+                        const px = wpA.x + (wpB.x - wpA.x) * segT + p.lateralOffset * curW;
                         const py = wpA.y + (wpB.y - wpA.y) * segT;
 
                         opticsCtx.save();
                         opticsCtx.fillStyle = '#ffffff';
                         opticsCtx.shadowColor = rgbToHex(wpA.rgb);
-                        opticsCtx.shadowBlur = 8;
-                        opticsCtx.beginPath(); opticsCtx.arc(px, py, 3, 0, Math.PI * 2); opticsCtx.fill();
+                        opticsCtx.shadowBlur = 6;
+                        opticsCtx.beginPath();
+                        opticsCtx.arc(px, py, 1.8, 0, Math.PI * 2);
+                        opticsCtx.fill();
                         opticsCtx.restore();
                     }
                 }
@@ -995,17 +1352,155 @@
             document.getElementById('card-f1-text').innerText = `${getRGBName(fRGB)} (${getIntensity(fRGB)}%)`;
 
             document.getElementById('card-refl-swatch').style.backgroundColor = rgbToHex(reflRGB);
-            document.getElementById('card-refl-text').innerText = `${getRGBName(reflRGB)} (${getIntensity(reflRGB)}%)`;
+            document.getElementById('card-refl-text').innerText = getIntensity(reflRGB) > 0
+                ? `${getRGBName(reflRGB)} (${getIntensity(reflRGB)}%)`
+                : '黑色 (無反射 0%)';
 
             document.getElementById('card-eye-swatch').style.backgroundColor = rgbToHex(eyeRGB);
-            document.getElementById('card-eye-text').innerText = `${getRGBName(eyeRGB)} (${getIntensity(eyeRGB)}%)`;
+            document.getElementById('card-eye-text').innerText = getIntensity(eyeRGB) > 0
+                ? `${getRGBName(eyeRGB)} (${getIntensity(eyeRGB)}%)`
+                : '黑色 (無光 0%)';
         }
 
 
         // =========================================================================
-        // MODULE 2: Five Color Blocks Stage Logic
+        // MODULE 2: Five Color Blocks Interactive Searchlight Stage Logic
         // =========================================================================
+        const blocksCanvas = document.getElementById('blocksCanvas');
+        const blocksCtx = blocksCanvas ? blocksCanvas.getContext('2d') : null;
+        let blocksLogicalW = 800;
+        let blocksLogicalH = 380;
+
         let blocksLightKey = 'white';
+        let blocksState = {
+            spotX: 400,
+            spotY: 200,
+            spotRadius: 105,
+            isDragging: false,
+            dragOffsetX: 0,
+            dragOffsetY: 0,
+            ambientLight: true,
+            hasInteracted: false,
+            positioned: false,
+            rects: []
+        };
+
+        const STAGE_BLOCKS = [
+            { key: 'red',   label: '紅色塊', ambientHex: '#4f1212' },
+            { key: 'green', label: '綠色塊', ambientHex: '#104f1e' },
+            { key: 'blue',  label: '藍色塊', ambientHex: '#0a105c' },
+            { key: 'black', label: '黑色塊', ambientHex: '#0a0d14' },
+            { key: 'white', label: '白色塊', ambientHex: '#4b515c' }
+        ];
+
+        function circleIntersectsRect(cx, cy, r, rx, ry, rw, rh) {
+            const closestX = Math.max(rx, Math.min(cx, rx + rw));
+            const closestY = Math.max(ry, Math.min(cy, ry + rh));
+            const dx = cx - closestX;
+            const dy = cy - closestY;
+            return (dx * dx + dy * dy) <= r * r;
+        }
+
+        function drawRoundedRectPath(ctx, x, y, w, h, r) {
+            const radius = Math.min(r, w / 2, h / 2);
+            ctx.beginPath();
+            ctx.moveTo(x + radius, y);
+            ctx.lineTo(x + w - radius, y);
+            ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
+            ctx.lineTo(x + w, y + h - radius);
+            ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
+            ctx.lineTo(x + radius, y + h);
+            ctx.quadraticCurveTo(x, y + h, x, y + h - radius);
+            ctx.lineTo(x, y + radius);
+            ctx.quadraticCurveTo(x, y, x + radius, y);
+            ctx.closePath();
+        }
+
+        function layoutBlocksStage(W, H) {
+            const rects = [];
+            if (W >= 680) {
+                const gap = 20;
+                const blockW = Math.min(126, (W - 64 - 4 * gap) / 5);
+                const blockH = blockW;
+                const totalW = 5 * blockW + 4 * gap;
+                const startX = (W - totalW) / 2;
+                const y = Math.round(H * 0.52 - blockH / 2 + 10);
+                STAGE_BLOCKS.forEach((b, idx) => {
+                    rects.push({ ...b, idx, x: startX + idx * (blockW + gap), y, w: blockW, h: blockH });
+                });
+            } else {
+                const gap = 14;
+                const blockW = Math.min(108, (W - 32 - 2 * gap) / 3);
+                const blockH = Math.round(blockW * 0.92);
+                const startX1 = (W - (3 * blockW + 2 * gap)) / 2;
+                const y1 = 102;
+                for (let idx = 0; idx < 3; idx++) {
+                    rects.push({ ...STAGE_BLOCKS[idx], idx, x: startX1 + idx * (blockW + gap), y: y1, w: blockW, h: blockH });
+                }
+                const startX2 = (W - (2 * blockW + gap)) / 2;
+                const y2 = y1 + blockH + 48;
+                for (let i = 0; i < 2; i++) {
+                    const idx = 3 + i;
+                    rects.push({ ...STAGE_BLOCKS[idx], idx, x: startX2 + i * (blockW + gap), y: y2, w: blockW, h: blockH });
+                }
+            }
+            blocksState.rects = rects;
+        }
+
+        function centerBlocksSpotlight(shouldDraw = true) {
+            if (!blocksState.rects.length) {
+                blocksState.spotX = blocksLogicalW / 2;
+                blocksState.spotY = blocksLogicalH / 2;
+            } else {
+                const xs = blocksState.rects.map(r => r.x + r.w / 2);
+                const ys = blocksState.rects.map(r => r.y + r.h / 2);
+                blocksState.spotX = (Math.min(...xs) + Math.max(...xs)) / 2;
+                blocksState.spotY = (Math.min(...ys) + Math.max(...ys)) / 2;
+            }
+            if (shouldDraw) {
+                drawBlocksStage();
+                updateBlocksStage();
+            }
+        }
+
+        function resizeBlocksCanvas() {
+            if (!blocksCanvas || !blocksCanvas.parentElement || !blocksCtx) return;
+            const rect = blocksCanvas.parentElement.getBoundingClientRect();
+            const w = Math.floor(rect.width || blocksCanvas.parentElement.clientWidth || 0);
+            if (w <= 0) return;
+
+            const h = w < 680 ? 420 : 380;
+            const prevW = blocksLogicalW;
+            const prevH = blocksLogicalH;
+            blocksLogicalW = w;
+            blocksLogicalH = h;
+
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            blocksCanvas.style.height = `${h}px`;
+            blocksCanvas.width = Math.floor(w * dpr);
+            blocksCanvas.height = Math.floor(h * dpr);
+            blocksCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+            layoutBlocksStage(w, h);
+
+            if (!blocksState.positioned || prevW <= 0) {
+                centerBlocksSpotlight(false);
+                blocksState.positioned = true;
+            } else {
+                blocksState.spotX = Math.max(20, Math.min(w - 20, (blocksState.spotX / prevW) * w));
+                blocksState.spotY = Math.max(20, Math.min(h - 20, (blocksState.spotY / prevH) * h));
+            }
+            drawBlocksStage();
+            updateBlocksStage();
+        }
+
+        function getBlocksCanvasPos(e) {
+            const rect = blocksCanvas.getBoundingClientRect();
+            return {
+                x: ((e.clientX - rect.left) / rect.width) * blocksLogicalW,
+                y: ((e.clientY - rect.top) / rect.height) * blocksLogicalH
+            };
+        }
 
         function initBlocksModule() {
             const container = document.getElementById('blocks-light-btns');
@@ -1018,6 +1513,67 @@
                 </button>
             `).join('');
 
+            const radiusSlider = document.getElementById('blocks-radius-slider');
+            if (radiusSlider) {
+                radiusSlider.addEventListener('input', (e) => {
+                    blocksState.spotRadius = parseInt(e.target.value, 10);
+                    document.getElementById('blocks-radius-val').innerText = `${blocksState.spotRadius}px`;
+                    drawBlocksStage();
+                    updateBlocksStage();
+                });
+            }
+
+            const ambientToggle = document.getElementById('blocks-ambient-toggle');
+            if (ambientToggle) {
+                ambientToggle.addEventListener('change', (e) => {
+                    blocksState.ambientLight = e.target.checked;
+                    drawBlocksStage();
+                    updateBlocksStage();
+                });
+            }
+
+            if (blocksCanvas) {
+                blocksCanvas.addEventListener('pointerdown', (e) => {
+                    e.preventDefault();
+                    try { blocksCanvas.setPointerCapture(e.pointerId); } catch (err) {}
+                    const pos = getBlocksCanvasPos(e);
+                    const dist = Math.hypot(pos.x - blocksState.spotX, pos.y - blocksState.spotY);
+                    blocksState.isDragging = true;
+                    blocksState.hasInteracted = true;
+
+                    if (dist <= blocksState.spotRadius + 20) {
+                        blocksState.dragOffsetX = pos.x - blocksState.spotX;
+                        blocksState.dragOffsetY = pos.y - blocksState.spotY;
+                    } else {
+                        blocksState.dragOffsetX = 0;
+                        blocksState.dragOffsetY = 0;
+                        blocksState.spotX = Math.max(20, Math.min(blocksLogicalW - 20, pos.x));
+                        blocksState.spotY = Math.max(20, Math.min(blocksLogicalH - 20, pos.y));
+                        drawBlocksStage();
+                        updateBlocksStage();
+                    }
+                });
+
+                blocksCanvas.addEventListener('pointermove', (e) => {
+                    if (!blocksState.isDragging) return;
+                    e.preventDefault();
+                    const pos = getBlocksCanvasPos(e);
+                    blocksState.spotX = Math.max(15, Math.min(blocksLogicalW - 15, pos.x - blocksState.dragOffsetX));
+                    blocksState.spotY = Math.max(25, Math.min(blocksLogicalH - 15, pos.y - blocksState.dragOffsetY));
+                    drawBlocksStage();
+                    updateBlocksStage();
+                });
+
+                const endBlocksDrag = (e) => {
+                    if (!blocksState.isDragging) return;
+                    blocksState.isDragging = false;
+                    try { blocksCanvas.releasePointerCapture(e.pointerId); } catch (err) {}
+                };
+                blocksCanvas.addEventListener('pointerup', endBlocksDrag);
+                blocksCanvas.addEventListener('pointercancel', endBlocksDrag);
+            }
+
+            resizeBlocksCanvas();
             updateBlocksStage();
         }
 
@@ -1025,34 +1581,331 @@
             blocksLightKey = key;
             ['white', 'red', 'green', 'blue', 'yellow', 'magenta', 'cyan', 'black'].forEach(k => {
                 const btn = document.getElementById(`btn-block-light-${k}`);
+                if (!btn) return;
                 if (k === key) {
                     btn.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-1.5 bg-purple-600 text-white shadow-md";
                 } else {
                     btn.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-1.5 bg-slate-800 text-slate-400 hover:bg-slate-700";
                 }
             });
+            drawBlocksStage();
             updateBlocksStage();
+        }
+
+        function drawBlocksStage() {
+            if (!blocksCtx || blocksLogicalW <= 0) return;
+            const W = blocksLogicalW;
+            const H = blocksLogicalH;
+            const ctx = blocksCtx;
+            const lightColor = COLOR_DATA[blocksLightKey];
+            const lr = Math.round(lightColor.rgb[0] * 255);
+            const lg = Math.round(lightColor.rgb[1] * 255);
+            const lb = Math.round(lightColor.rgb[2] * 255);
+            const isLightOn = blocksLightKey !== 'black';
+            const { spotX, spotY, spotRadius } = blocksState;
+
+            ctx.clearRect(0, 0, W, H);
+
+            // 1. Dark Stage Background & Grid
+            const bgGrad = ctx.createLinearGradient(0, 0, 0, H);
+            bgGrad.addColorStop(0, '#04060d');
+            bgGrad.addColorStop(1, '#0b1120');
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, 0, W, H);
+
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+            ctx.lineWidth = 1;
+            for (let x = 0; x < W; x += 32) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+            }
+            for (let y = 0; y < H; y += 32) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+            }
+
+            // Overhead lighting truss bar
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 4;
+            ctx.beginPath(); ctx.moveTo(24, 18); ctx.lineTo(W - 24, 18); ctx.stroke();
+
+            // 2. Ambient Unlit Blocks (Outside Spotlight)
+            blocksState.rects.forEach(b => {
+                ctx.save();
+                ctx.shadowColor = 'rgba(0,0,0,0.6)';
+                ctx.shadowBlur = 12;
+                ctx.shadowOffsetY = 6;
+
+                drawRoundedRectPath(ctx, b.x, b.y, b.w, b.h, 14);
+                ctx.fillStyle = blocksState.ambientLight ? b.ambientHex : '#07090f';
+                ctx.fill();
+
+                ctx.shadowBlur = 0;
+                ctx.shadowOffsetY = 0;
+                ctx.strokeStyle = blocksState.ambientLight ? 'rgba(255,255,255,0.16)' : 'rgba(148,163,184,0.14)';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                // Top Intrinsic Color Name (Always visible for identification)
+                ctx.fillStyle = '#cbd5e1';
+                ctx.font = 'bold 11px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(`原色：${b.label.replace('塊', '')}`, b.x + b.w / 2, b.y - 8);
+                ctx.restore();
+            });
+
+            // Overhead Lamp Position tracks spotlight smoothly
+            const lampX = W * 0.5 + (spotX - W * 0.5) * 0.6;
+            const lampY = 24;
+
+            // 3. Overhead Searchlight Volumetric Cone leading to Spotlight Circle
+            if (isLightOn) {
+                const dx = spotX - lampX;
+                const dy = Math.max(30, spotY - lampY);
+                const len = Math.hypot(dx, dy) || 1;
+                const nx = -dy / len;
+                const ny = dx / len;
+                const rimSpan = spotRadius * 0.94;
+
+                ctx.save();
+                ctx.beginPath();
+                ctx.moveTo(lampX - 14, lampY + 6);
+                ctx.lineTo(spotX - nx * rimSpan, spotY - ny * rimSpan);
+                ctx.lineTo(spotX + nx * rimSpan, spotY + ny * rimSpan);
+                ctx.lineTo(lampX + 14, lampY + 6);
+                ctx.closePath();
+
+                const coneGrad = ctx.createLinearGradient(lampX, lampY, spotX, spotY);
+                coneGrad.addColorStop(0, `rgba(${lr}, ${lg}, ${lb}, 0.34)`);
+                coneGrad.addColorStop(0.6, `rgba(${lr}, ${lg}, ${lb}, 0.14)`);
+                coneGrad.addColorStop(1, `rgba(${lr}, ${lg}, ${lb}, 0.04)`);
+                ctx.fillStyle = coneGrad;
+                ctx.fill();
+                ctx.restore();
+            }
+
+            // 4. Illuminated Spotlight Zone (Clipped Region: True Optical Reflection / Absorption)
+            if (isLightOn) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(spotX, spotY, spotRadius, 0, Math.PI * 2);
+                ctx.clip();
+
+                // Lit Floor Glow inside Spotlight
+                const floorGrad = ctx.createRadialGradient(spotX, spotY, 8, spotX, spotY, spotRadius);
+                floorGrad.addColorStop(0, `rgba(${lr}, ${lg}, ${lb}, 0.30)`);
+                floorGrad.addColorStop(0.7, `rgba(${lr}, ${lg}, ${lb}, 0.16)`);
+                floorGrad.addColorStop(1, `rgba(${lr}, ${lg}, ${lb}, 0.06)`);
+                ctx.fillStyle = floorGrad;
+                ctx.fillRect(spotX - spotRadius, spotY - spotRadius, spotRadius * 2, spotRadius * 2);
+
+                // Re-render blocks inside spotlight with true physics perception: P = Light * Block
+                blocksState.rects.forEach(b => {
+                    const perceivedRGB = multiplyRGB(lightColor.rgb, COLOR_DATA[b.key].rgb);
+                    const hasRefl = getIntensity(perceivedRGB) > 0;
+
+                    ctx.save();
+                    drawRoundedRectPath(ctx, b.x, b.y, b.w, b.h, 14);
+
+                    if (hasRefl) {
+                        const hex = rgbToHex(perceivedRGB);
+                        ctx.fillStyle = hex;
+                        ctx.fill();
+
+                        // Specular sheen gradient
+                        const sheen = ctx.createLinearGradient(b.x, b.y, b.x, b.y + b.h);
+                        sheen.addColorStop(0, 'rgba(255, 255, 255, 0.30)');
+                        sheen.addColorStop(0.5, 'rgba(255, 255, 255, 0.04)');
+                        sheen.addColorStop(1, 'rgba(0, 0, 0, 0.15)');
+                        ctx.fillStyle = sheen;
+                        ctx.fill();
+
+                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
+                        ctx.lineWidth = 2;
+                        ctx.stroke();
+
+                        // Inner status text if readable
+                        const lum = perceivedRGB[0] * 0.299 + perceivedRGB[1] * 0.587 + perceivedRGB[2] * 0.114;
+                        ctx.fillStyle = lum > 0.55 ? 'rgba(15, 23, 42, 0.85)' : 'rgba(255, 255, 255, 0.9)';
+                        ctx.font = 'bold 11px sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(`反射${getColorName(perceivedRGB)}`, b.x + b.w / 2, b.y + b.h / 2 + 4);
+                    } else {
+                        // Light Completely Absorbed -> Pure Pitch Black
+                        ctx.fillStyle = '#000000';
+                        ctx.fill();
+
+                        ctx.strokeStyle = 'rgba(248, 113, 113, 0.65)';
+                        ctx.lineWidth = 1.5;
+                        ctx.setLineDash([4, 3]);
+                        ctx.stroke();
+
+                        ctx.fillStyle = 'rgba(248, 113, 113, 0.88)';
+                        ctx.font = 'bold 11px sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('吸收 (黑色)', b.x + b.w / 2, b.y + b.h / 2 + 4);
+                    }
+                    ctx.restore();
+                });
+
+                ctx.restore();
+            }
+
+            // 5. Spotlight Boundary Ring & Draggable Handle
+            ctx.save();
+            if (isLightOn) {
+                ctx.shadowColor = lightColor.hex;
+                ctx.shadowBlur = 14;
+                ctx.strokeStyle = `rgba(${lr}, ${lg}, ${lb}, 0.85)`;
+                ctx.lineWidth = 2.5;
+                ctx.setLineDash([8, 6]);
+            } else {
+                ctx.strokeStyle = 'rgba(148, 163, 184, 0.4)';
+                ctx.lineWidth = 1.5;
+                ctx.setLineDash([6, 6]);
+            }
+            ctx.beginPath();
+            ctx.arc(spotX, spotY, spotRadius, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+
+            // Center Drag Crosshair / Grip Handle
+            ctx.save();
+            ctx.strokeStyle = isLightOn ? 'rgba(255, 255, 255, 0.55)' : 'rgba(148, 163, 184, 0.45)';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(spotX, spotY, 12, 0, Math.PI * 2);
+            ctx.moveTo(spotX - 18, spotY); ctx.lineTo(spotX - 6, spotY);
+            ctx.moveTo(spotX + 6, spotY); ctx.lineTo(spotX + 18, spotY);
+            ctx.moveTo(spotX, spotY - 18); ctx.lineTo(spotX, spotY - 6);
+            ctx.moveTo(spotX, spotY + 6); ctx.lineTo(spotX, spotY + 18);
+            ctx.stroke();
+            ctx.fillStyle = isLightOn ? lightColor.hex : '#334155';
+            ctx.beginPath(); ctx.arc(spotX, spotY, 4, 0, Math.PI * 2); ctx.fill();
+            ctx.restore();
+
+            // Overhead Lamp Housing Graphic
+            ctx.save();
+            const aimAngle = Math.atan2(spotY - lampY, spotX - lampX);
+            ctx.translate(lampX, lampY);
+            ctx.rotate(aimAngle);
+            ctx.fillStyle = '#1e293b';
+            ctx.strokeStyle = '#64748b';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(-10, -8); ctx.lineTo(10, -13); ctx.lineTo(10, 13); ctx.lineTo(-10, 8);
+            ctx.closePath(); ctx.fill(); ctx.stroke();
+            ctx.fillStyle = isLightOn ? lightColor.hex : '#0f172a';
+            if (isLightOn) {
+                ctx.shadowColor = lightColor.hex;
+                ctx.shadowBlur = 12;
+            }
+            ctx.beginPath(); ctx.ellipse(10, 0, 3, 12, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.restore();
+
+            // 6. Per-Block Hit Feedback Pill Below Each Block
+            blocksState.rects.forEach(b => {
+                const isHit = isLightOn && circleIntersectsRect(spotX, spotY, spotRadius, b.x, b.y, b.w, b.h);
+                if (!isHit) return;
+
+                const perceivedRGB = multiplyRGB(lightColor.rgb, COLOR_DATA[b.key].rgb);
+                const hasRefl = getIntensity(perceivedRGB) > 0;
+                const badgeText = hasRefl ? `✨ 反射${getColorName(perceivedRGB)}` : '⬛ 吸收 → 黑色';
+                const badgeBorder = hasRefl ? rgbToHex(perceivedRGB) : '#f87171';
+
+                ctx.save();
+                ctx.font = 'bold 10px sans-serif';
+                const tw = ctx.measureText(badgeText).width;
+                const bw = tw + 14;
+                const bh = 20;
+                const bx = b.x + b.w / 2 - bw / 2;
+                const by = b.y + b.h + 7;
+
+                ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
+                drawRoundedRectPath(ctx, bx, by, bw, bh, 6);
+                ctx.fill();
+                ctx.strokeStyle = badgeBorder;
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                ctx.fillStyle = hasRefl ? '#ffffff' : '#fca5a5';
+                ctx.textAlign = 'center';
+                ctx.fillText(badgeText, b.x + b.w / 2, by + 13.5);
+                ctx.restore();
+            });
+
+            // Friendly initial drag prompt
+            if (!blocksState.hasInteracted) {
+                ctx.save();
+                const hint = '✋ 手指或滑鼠直接拖曳探照燈照射不同色塊';
+                ctx.font = 'bold 12px sans-serif';
+                const hw = ctx.measureText(hint).width + 24;
+                const hx = Math.max(hw / 2 + 8, Math.min(W - hw / 2 - 8, spotX));
+                const hy = 52;
+                ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+                drawRoundedRectPath(ctx, hx - hw / 2, hy - 14, hw, 26, 13);
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(192, 132, 252, 0.7)';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+                ctx.fillStyle = '#e9d5ff';
+                ctx.textAlign = 'center';
+                ctx.fillText(hint, hx, hy + 3);
+                ctx.restore();
+            }
         }
 
         function updateBlocksStage() {
             const lightColor = COLOR_DATA[blocksLightKey];
+            const isLightOn = blocksLightKey !== 'black';
             document.getElementById('stage-light-name').innerText = lightColor.name;
-            
-            const spotlight = document.getElementById('spotlight-cone');
-            spotlight.style.background = `linear-gradient(to bottom, ${lightColor.hex}, transparent)`;
+            const dot = document.getElementById('stage-light-dot');
+            if (dot) dot.style.backgroundColor = lightColor.hex;
 
             const blockTypes = ['red', 'green', 'blue', 'black', 'white'];
             blockTypes.forEach((bKey, idx) => {
                 const blockColor = COLOR_DATA[bKey];
                 const perceivedRGB = multiplyRGB(lightColor.rgb, blockColor.rgb);
                 const perceivedHex = rgbToHex(perceivedRGB);
-                const perceivedName = getRGBName(perceivedRGB);
+                const hasRefl = getIntensity(perceivedRGB) > 0;
+                const colorLabel = getColorName(perceivedRGB);
 
-                document.getElementById(`block-view-${idx}`).style.backgroundColor = perceivedHex;
+                const rect = blocksState.rects[idx];
+                const isHit = isLightOn && rect && circleIntersectsRect(
+                    blocksState.spotX, blocksState.spotY, blocksState.spotRadius,
+                    rect.x, rect.y, rect.w, rect.h
+                );
+
+                const card = document.getElementById(`block-card-${idx}`);
+                const hitBadge = document.getElementById(`block-hit-${idx}`);
+                if (card && hitBadge) {
+                    if (isHit) {
+                        card.className = "block-card bg-slate-900 border border-purple-500 ring-1 ring-purple-500/40 rounded-2xl p-3 text-center flex flex-col items-center space-y-2 transition-all duration-200 shadow-lg";
+                        hitBadge.className = "px-1.5 py-0.5 rounded text-[10px] font-mono bg-purple-600/30 text-purple-300 border border-purple-500/40";
+                        hitBadge.innerText = "🔆 照射中";
+                    } else {
+                        card.className = "block-card bg-slate-900/75 border border-slate-800 rounded-2xl p-3 text-center flex flex-col items-center space-y-2 transition-all duration-200 opacity-80";
+                        hitBadge.className = "px-1.5 py-0.5 rounded text-[10px] font-mono bg-slate-800 text-slate-500";
+                        hitBadge.innerText = isLightOn ? "未照到" : "無光源";
+                    }
+                }
+
+                const swatch = document.getElementById(`block-view-${idx}`);
+                if (swatch) {
+                    swatch.style.backgroundColor = isHit ? perceivedHex : (blocksState.ambientLight ? STAGE_BLOCKS[idx].ambientHex : '#050811');
+                }
                 const res = document.getElementById(`block-res-${idx}`);
-                res.innerText = perceivedName;
-                res.className = `font-bold ${COLOR_DATA[bKey].textClass}`;
-                document.getElementById(`block-math-${idx}`).innerText = `RGB: (${perceivedRGB.join(',')})`;
+                if (res) {
+                    if (!isLightOn) {
+                        res.innerText = '無光 (黑色)';
+                        res.className = 'font-bold text-slate-400';
+                    } else {
+                        res.innerText = hasRefl ? `反射 ${colorLabel}` : '吸收 (黑色)';
+                        res.className = hasRefl ? `font-bold ${COLOR_DATA[bKey].textClass}` : 'font-bold text-rose-400';
+                    }
+                }
+                const mathEl = document.getElementById(`block-math-${idx}`);
+                if (mathEl) {
+                    mathEl.innerText = `RGB: (${perceivedRGB.join(',')})`;
+                }
             });
         }
 
@@ -1075,7 +1928,7 @@
         let currentPresetNum = 1;
 
         function initPaintCanvas() {
-            const penColors = ['#ef4444', '#22c55e', '#3b82f6', '#eab308', '#ec4899', '#06b6d4', '#ffffff', '#000000'];
+            const penColors = ['#ef4444', '#22c55e', '#0000ff', '#eab308', '#ec4899', '#06b6d4', '#ffffff', '#000000'];
             const container = document.getElementById('pen-colors');
             container.innerHTML = penColors.map(c => `
                 <button onclick="setPenColor('${c}')" id="btn-pen-${c.replace('#','')}" 
@@ -1104,7 +1957,7 @@
 
         function setPenColor(color) {
             freeState.penColor = color;
-            ['#ef4444', '#22c55e', '#3b82f6', '#eab308', '#ec4899', '#06b6d4', '#ffffff', '#000000'].forEach(c => {
+            ['#ef4444', '#22c55e', '#0000ff', '#eab308', '#ec4899', '#06b6d4', '#ffffff', '#000000'].forEach(c => {
                 const btn = document.getElementById(`btn-pen-${c.replace('#','')}`);
                 if (c === color) btn.className = "w-6 h-6 rounded-full border border-white/20 transition transform scale-110 ring-2 ring-emerald-400";
                 else btn.className = "w-6 h-6 rounded-full border border-white/20 transition transform hover:scale-110";
@@ -1267,11 +2120,13 @@
         // Window Onload
         window.onload = function () {
             initSideControls();
+            resizeOpticsCanvas();
             initBlocksModule();
             initPaintCanvas();
 
             window.addEventListener('resize', () => {
                 resizeOpticsCanvas();
+                resizeBlocksCanvas();
                 resizePaintCanvas();
             });
 
