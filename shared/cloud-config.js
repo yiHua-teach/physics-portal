@@ -9,7 +9,7 @@
     const LEVELS_SHEET_ID = '18SjUr3EBKQxNu6GyNoPkZR5SIp-uJzjAWF-W-xMsXHU';
 
     // 部署 gas/Code.gs 後，將 /exec 網址填入此處即可讓所有學生裝置直接讀寫上述兩張 Google 試算表
-    const DEFAULT_GAS_WEB_APP_URL = '';
+    const DEFAULT_GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycby8KD7Vr8xsnSBgR0BiCBmNuC3uAYFrtu0FnP0LAp0hTGEQo6J0XhczloxZadw2y2BA/exec';
 
     const STORAGE_GAS_KEY = 'PHYSICS_PORTAL_GAS_URL';
     const STORAGE_LB_PREFIX = 'PHYSICS_PORTAL_LB_';
