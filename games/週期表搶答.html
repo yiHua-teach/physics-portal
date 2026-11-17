@@ -1,0 +1,1755 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>週期表元素搶答與挑戰大賽</title>
+    <meta name="description" content="限時搶答與對戰挑戰！依原子序、元素符號或中文名稱快速搶答，支援共享英雄榜排名。">
+    <meta name="portal-type" content="game">
+    <script src="../shared/cloud-config.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Orbitron:wght@600;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Noto Sans TC', 'sans-serif'],
+                        mono: ['Orbitron', 'monospace']
+                    },
+                    animation: {
+                        'correct-pulse': 'pulseGlow 0.6s ease-in-out infinite alternate',
+                        'shake': 'shake 0.4s ease-in-out',
+                    },
+                    keyframes: {
+                        pulseGlow: {
+                            '0%': { boxShadow: '0 0 10px #22c55e, inset 0 0 10px #22c55e', transform: 'scale(1)' },
+                            '100%': { boxShadow: '0 0 25px #22c55e, inset 0 0 15px #22c55e', transform: 'scale(1.03)' }
+                        },
+                        shake: {
+                            '0%, 100%': { transform: 'translateX(0)' },
+                            '20%, 60%': { transform: 'translateX(-8px)' },
+                            '40%, 80%': { transform: 'translateX(8px)' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #0f172a;
+            color: #f8fafc;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.88);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .glass-card {
+            background: rgba(51, 65, 85, 0.6);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .flash-correct {
+            animation: pulseGlow 0.5s ease-in-out infinite alternate !important;
+            border-color: #22c55e !important;
+            background-color: rgba(34, 197, 94, 0.4) !important;
+            color: #86efac !important;
+        }
+        .flash-wrong {
+            animation: shake 0.4s ease-in-out !important;
+            border-color: #ef4444 !important;
+            background-color: rgba(239, 68, 68, 0.4) !important;
+            color: #fca5a5 !important;
+        }
+
+        /* Periodic Table Grid Selector Styles */
+        .ptable-grid {
+            display: grid;
+            grid-template-columns: repeat(19, minmax(36px, 1fr));
+            gap: 3px;
+        }
+        .el-card {
+            aspect-ratio: 1;
+            transition: all 0.15s ease-in-out;
+            cursor: pointer;
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.65rem;
+            position: relative;
+        }
+        .el-card:hover {
+            transform: scale(1.25);
+            z-index: 40;
+            box-shadow: 0 0 12px rgba(255, 255, 255, 0.9);
+        }
+        .el-card.active-selected {
+            box-shadow: 0 0 8px rgba(59, 130, 246, 0.9);
+            filter: brightness(1.15);
+            opacity: 1;
+            border: 1.5px solid #ffffff;
+        }
+        .el-card.inactive-selected {
+            opacity: 0.22;
+            filter: grayscale(0.85);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* Element Category Color Palette */
+        .cat-alkali { background-color: #ef4444; color: #ffffff; }
+        .cat-alkaline { background-color: #f97316; color: #ffffff; }
+        .cat-transition { background-color: #eab308; color: #1e293b; }
+        .cat-post-transition { background-color: #10b981; color: #ffffff; }
+        .cat-metalloid { background-color: #14b8a6; color: #ffffff; }
+        .cat-nonmetal { background-color: #3b82f6; color: #ffffff; }
+        .cat-halogen { background-color: #6366f1; color: #ffffff; }
+        .cat-noble { background-color: #a855f7; color: #ffffff; }
+        .cat-lanthanide { background-color: #ec4899; color: #ffffff; }
+        .cat-actinide { background-color: #f43f5e; color: #ffffff; }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.6); }
+        ::-webkit-scrollbar-thumb { background: rgba(100, 116, 139, 0.5); border-radius: 9999px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, 0.8); }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between overflow-x-hidden font-sans relative select-none">
+
+    <header class="w-full glass-panel sticky top-0 z-30 px-4 py-3 shadow-lg">
+        <div class="max-w-6xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-3 cursor-pointer" onclick="app.showHome()">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/30">
+                    <i class="fa-solid fa-atom text-white text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg md:text-xl tracking-wide bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
+                        週期表大冒險
+                    </h1>
+                    <p class="text-xs text-slate-400 hidden sm:block">元素符號化學搶答與挑戰</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 sm:gap-3">
+                <button onclick="app.openSettingsModal()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs sm:text-sm font-medium transition flex items-center gap-1.5 border border-slate-700">
+                    <i class="fa-solid fa-sliders text-cyan-400"></i>
+                    <span>設定範圍</span>
+                </button>
+
+                <button onclick="app.openPeriodicTableModal()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs sm:text-sm font-medium transition flex items-center gap-1.5 border border-slate-700">
+                    <i class="fa-solid fa-table-cells text-cyan-400"></i>
+                    <span class="hidden md:inline">週期表速查</span>
+                </button>
+
+                <button onclick="app.openLeaderboardModal()" class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs sm:text-sm font-bold transition flex items-center gap-1.5 shadow-md shadow-amber-500/20">
+                    <i class="fa-solid fa-trophy text-yellow-200"></i>
+                    <span>排行榜</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-5xl w-full mx-auto p-4 flex flex-col justify-center items-center relative my-4">
+
+        <!-- VIEW 1: HOME MENU -->
+        <section id="view-home" class="w-full max-w-4xl flex flex-col gap-6 animate-fade-in">
+            <div class="text-center space-y-3 my-2">
+                <span class="px-3 py-1 rounded-full text-xs font-semibold bg-cyan-950 text-cyan-400 border border-cyan-800">
+                    科學化學趣味學習
+                </span>
+                <h2 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
+                    選擇你的 <span class="bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-400 bg-clip-text text-transparent">挑戰模式</span>
+                </h2>
+                <p class="text-slate-400 text-sm max-w-lg mx-auto">
+                    鍛鍊你的元素符號記憶力，包含自主練習、雙人即時對決，以及 30 題極速衝榜挑戰！
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mt-2">
+                <!-- Mode 1: Single Player Practice -->
+                <div class="glass-panel p-6 rounded-2xl hover:border-cyan-500/50 transition-all duration-300 hover:-translate-y-1 group flex flex-col justify-between shadow-xl">
+                    <div>
+                        <div class="w-12 h-12 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">
+                            <i class="fa-solid fa-user-gear"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-2">單人練習模式</h3>
+                        <p class="text-slate-400 text-xs sm:text-sm leading-relaxed mb-4">
+                            於設定範圍內進行 <span class="text-cyan-300 font-bold">10 題測驗</span>，精準記錄完成總時間與正確率，無壓力自主鍛鍊！
+                        </p>
+                    </div>
+                    <button onclick="app.startPracticeSetup()" class="w-full py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 font-semibold text-white transition flex items-center justify-center gap-2 shadow-lg shadow-cyan-600/30">
+                        <span>開始練習</span>
+                        <i class="fa-solid fa-arrow-right text-xs"></i>
+                    </button>
+                </div>
+
+                <!-- Mode 2: Two Player VS -->
+                <div class="glass-panel p-6 rounded-2xl hover:border-purple-500/50 transition-all duration-300 hover:-translate-y-1 group flex flex-col justify-between shadow-xl">
+                    <div>
+                        <div class="w-12 h-12 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">
+                            <i class="fa-solid fa-users-rays"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-2">雙人搶十對決</h3>
+                        <p class="text-slate-400 text-xs sm:text-sm leading-relaxed mb-4">
+                            同螢幕對決！<span class="text-purple-300 font-bold">每題 5 秒極速搶答</span>，先獲得 <span class="text-amber-300 font-bold">10 分</span> 者獲勝！答錯者將暫時鎖定等待對方作答。
+                        </p>
+                    </div>
+                    <button onclick="app.startVersusGame()" class="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 font-semibold text-white transition flex items-center justify-center gap-2 shadow-lg shadow-purple-600/30">
+                        <span>雙人搶答</span>
+                        <i class="fa-solid fa-bolt text-xs text-yellow-300"></i>
+                    </button>
+                </div>
+
+                <!-- Mode 3: Speed Challenge (GAS Leaderboard) -->
+                <div class="glass-panel p-6 rounded-2xl hover:border-amber-500/50 transition-all duration-300 hover:-translate-y-1 group flex flex-col justify-between shadow-xl relative overflow-hidden">
+                    <div class="absolute -right-6 -top-6 w-20 h-20 bg-amber-500/10 rounded-full blur-xl pointer-events-none"></div>
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-12 h-12 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-2xl group-hover:scale-110 transition">
+                                <i class="fa-solid fa-stopwatch"></i>
+                            </div>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                                雲端英雄榜
+                            </span>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-2">30題極速挑戰</h3>
+                        <p class="text-slate-400 text-xs sm:text-sm leading-relaxed mb-4">
+                            範圍固定為 1~30 號元素，30 題全數出現，只能錯 1 次（錯第 2 次失敗）。過關上傳成績至 GAS 雲端榜！
+                        </p>
+                    </div>
+                    <button onclick="app.startChallengeGame()" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 font-bold text-slate-900 transition flex items-center justify-center gap-2 shadow-lg shadow-amber-500/25">
+                        <i class="fa-solid fa-trophy"></i>
+                        <span>開始挑戰</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW: PRACTICE SETUP -->
+        <section id="view-practice-setup" class="w-full max-w-lg glass-panel p-6 sm:p-8 rounded-2xl shadow-2xl hidden animate-fade-in">
+            <h3 class="text-2xl font-bold text-white mb-2 flex items-center gap-2">
+                <i class="fa-solid fa-sliders text-cyan-400"></i>
+                單人練習設定
+            </h3>
+            <p class="text-xs text-slate-400 mb-6">確認出題方向，開始 10 題測驗。出題元素可以透過右上角「設定範圍」來精確微調！</p>
+
+            <div class="space-y-5">
+                <div>
+                    <label class="block text-sm font-semibold text-slate-300 mb-2">當前已選擇的元素數量：</label>
+                    <div class="p-3 rounded-xl bg-slate-900 border border-slate-700 flex items-center justify-between">
+                        <span class="text-xs text-slate-400">已選取元素集:</span>
+                        <span id="practice-pool-count" class="text-base font-bold text-cyan-400 font-mono">20 個元素</span>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-slate-300 mb-2">題目方向：</label>
+                    <select id="practice-mode-direction" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-slate-200 focus:outline-none focus:border-cyan-500 text-sm">
+                        <option value="zh-to-symbol">中文名稱 ➔ 英文符號 (例如: 氫 ➔ H)</option>
+                        <option value="symbol-to-zh">英文符號 ➔ 中文名稱 (例如: H ➔ 氫)</option>
+                        <option value="random">兩者隨機混合</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3 mt-8">
+                <button onclick="app.showHome()" class="w-1/3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium transition text-sm">
+                    返回選單
+                </button>
+                <button onclick="app.startPracticeGame()" class="w-2/3 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold transition text-sm shadow-lg shadow-cyan-600/30">
+                    開始 10 題練習
+                </button>
+            </div>
+        </section>
+
+        <!-- VIEW: SINGLE PLAYER GAME (PRACTICE & CHALLENGE) -->
+        <section id="view-single-game" class="w-full max-w-2xl glass-panel p-6 sm:p-8 rounded-3xl shadow-2xl hidden relative">
+            <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-700/60">
+                <div class="flex items-center gap-2">
+                    <span id="single-mode-badge" class="px-3 py-1 rounded-full text-xs font-bold bg-cyan-950 text-cyan-300 border border-cyan-800">
+                        單人練習
+                    </span>
+                    <span id="single-question-tracker" class="text-xs text-slate-400 font-mono">
+                        第 1 / 10 題
+                    </span>
+                </div>
+
+                <div class="flex items-center gap-4">
+                    <!-- Challenge Heart Lives -->
+                    <div id="challenge-lives" class="hidden flex items-center gap-1 text-red-500 text-lg">
+                        <i class="fa-solid fa-heart" id="heart-1"></i>
+                        <i class="fa-solid fa-heart" id="heart-2"></i>
+                    </div>
+                    <!-- Timer Display -->
+                    <div class="flex items-center gap-1.5 font-mono text-cyan-400 text-lg font-bold bg-slate-900/80 px-3 py-1 rounded-xl border border-slate-800">
+                        <i class="fa-solid fa-stopwatch text-xs text-slate-400"></i>
+                        <span id="single-timer">00:00.0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Question Card -->
+            <div class="text-center py-6 glass-card rounded-2xl mb-6 relative overflow-hidden">
+                <p class="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-1" id="single-prompt-label">
+                    請選擇正確的元素符號
+                </p>
+                <h2 class="text-4xl sm:text-5xl font-extrabold text-white tracking-wider my-2" id="single-question-text">
+                    --
+                </h2>
+                <span class="text-xs text-slate-400 font-mono" id="single-atomic-hint">
+                    原子序：?
+                </span>
+            </div>
+
+            <!-- 4 Options Grid -->
+            <div class="grid grid-cols-2 gap-3.5" id="single-options-grid">
+                <!-- Options injected via JS -->
+            </div>
+
+            <!-- Bottom Progress bar -->
+            <div class="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between">
+                <button onclick="app.confirmQuitGame()" class="text-xs text-slate-400 hover:text-red-400 transition flex items-center gap-1">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    放棄並返回
+                </button>
+                <div class="w-32 bg-slate-800 h-2 rounded-full overflow-hidden">
+                    <div id="single-progress-bar" class="bg-gradient-to-r from-cyan-500 to-blue-500 h-full w-0 transition-all duration-300"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW: TWO PLAYER VS GAME -->
+        <section id="view-versus-game" class="w-full max-w-4xl glass-panel p-4 sm:p-6 rounded-3xl shadow-2xl hidden">
+            <!-- Top Bar -->
+            <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-700/60">
+                <button onclick="app.confirmQuitGame()" class="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition">
+                    <i class="fa-solid fa-arrow-left mr-1"></i> 返回主選單
+                </button>
+                <div class="text-center">
+                    <span class="text-xs font-bold text-purple-400 uppercase tracking-wider block">雙人搶十對決 (先獲得 10 分者勝)</span>
+                </div>
+                <div class="flex items-center gap-1.5 font-mono text-amber-400 text-sm sm:text-base font-bold bg-slate-900/80 px-3 py-1 rounded-xl border border-slate-800">
+                    <i class="fa-solid fa-stopwatch text-xs text-amber-400"></i>
+                    <span id="vs-timer-text">05.0s</span>
+                </div>
+            </div>
+
+            <!-- QUESTION CARD AT THE TOP -->
+            <div class="text-center py-5 glass-card rounded-2xl mb-4 relative border border-slate-700/80">
+                <p class="text-xs font-semibold text-slate-400 mb-1" id="vs-question-prompt">搶答！點選正確答案</p>
+                <h2 class="text-4xl sm:text-5xl font-extrabold text-white tracking-wider my-1" id="vs-question-text">
+                    --
+                </h2>
+                <!-- 5s Countdown Visual Progress Bar -->
+                <div class="w-full bg-slate-800 h-1.5 mt-3 rounded-full overflow-hidden">
+                    <div id="vs-timer-bar" class="bg-amber-400 h-full w-full transition-all duration-75 linear"></div>
+                </div>
+            </div>
+
+            <!-- SCOREBOARD BELOW QUESTION -->
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div class="bg-blue-950/40 border-2 border-blue-500/40 p-3 rounded-2xl flex items-center justify-between" id="p1-score-card">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center font-bold text-xs text-white">P1</div>
+                        <span class="font-bold text-sm text-blue-300">玩家一</span>
+                    </div>
+                    <span id="p1-score" class="font-mono text-2xl font-black text-blue-400">0 / 10</span>
+                </div>
+                <div class="bg-rose-950/40 border-2 border-rose-500/40 p-3 rounded-2xl flex items-center justify-between" id="p2-score-card">
+                    <span id="p2-score" class="font-mono text-2xl font-black text-rose-400">0 / 10</span>
+                    <div class="flex items-center gap-2">
+                        <span class="font-bold text-sm text-rose-300">玩家二</span>
+                        <div class="w-8 h-8 rounded-full bg-rose-600 flex items-center justify-center font-bold text-xs text-white">P2</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Split Answer Layout for 2 Players -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Player 1 Options Section -->
+                <div id="p1-zone" class="bg-blue-950/20 p-3.5 rounded-2xl border border-blue-500/20 transition-all duration-200">
+                    <div class="text-center text-xs font-bold text-blue-400 mb-2 flex items-center justify-center gap-1">
+                        <i class="fa-solid fa-hand-pointer"></i> 玩家 1 選擇區 
+                        <span id="p1-status-tag" class="text-[10px] hidden text-red-400 font-bold ml-1">(已鎖定)</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2" id="p1-options-grid">
+                        <!-- P1 options -->
+                    </div>
+                </div>
+
+                <!-- Player 2 Options Section -->
+                <div id="p2-zone" class="bg-rose-950/20 p-3.5 rounded-2xl border border-rose-500/20 transition-all duration-200">
+                    <div class="text-center text-xs font-bold text-rose-400 mb-2 flex items-center justify-center gap-1">
+                        <i class="fa-solid fa-hand-pointer"></i> 玩家 2 選擇區 
+                        <span id="p2-status-tag" class="text-[10px] hidden text-red-400 font-bold ml-1">(已鎖定)</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2" id="p2-options-grid">
+                        <!-- P2 options -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- RESULT VIEW: PRACTICE -->
+        <section id="view-practice-result" class="w-full max-w-lg glass-panel p-6 sm:p-8 rounded-3xl shadow-2xl hidden text-center animate-fade-in">
+            <div class="w-16 h-16 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-3xl mx-auto mb-4 border border-cyan-500/30">
+                <i class="fa-solid fa-square-check"></i>
+            </div>
+            <h3 class="text-2xl font-bold text-white mb-1">練習完成！</h3>
+            <p class="text-xs text-slate-400 mb-6">太棒了，持續練習能加深元素符號記憶。</p>
+
+            <div class="grid grid-cols-2 gap-3 mb-6">
+                <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700">
+                    <span class="text-xs text-slate-400 block mb-1">答對題數</span>
+                    <span id="practice-res-score" class="text-2xl font-black text-cyan-400 font-mono">10 / 10</span>
+                </div>
+                <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700">
+                    <span class="text-xs text-slate-400 block mb-1">花費總時間</span>
+                    <span id="practice-res-time" class="text-2xl font-black text-blue-400 font-mono">00:25.4</span>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <button onclick="app.showHome()" class="w-1/2 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium transition text-sm">
+                    返回主選單
+                </button>
+                <button onclick="app.startPracticeGame()" class="w-1/2 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold transition text-sm shadow-lg shadow-cyan-600/30">
+                    再練習一次
+                </button>
+            </div>
+        </section>
+
+        <!-- RESULT VIEW: CHALLENGE -->
+        <section id="view-challenge-result" class="w-full max-w-lg glass-panel p-6 sm:p-8 rounded-3xl shadow-2xl hidden text-center animate-fade-in">
+            <div id="challenge-res-icon-box" class="w-16 h-16 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-3xl mx-auto mb-4 border border-amber-500/30">
+                <i class="fa-solid fa-trophy" id="challenge-res-icon"></i>
+            </div>
+            <h3 class="text-2xl font-bold text-white mb-1" id="challenge-res-title">挑戰成功過關！</h3>
+            <p class="text-xs text-slate-400 mb-6" id="challenge-res-subtitle">已順利突破全部 30 題 1~30 號元素考驗！</p>
+
+            <div class="glass-card p-4 rounded-2xl mb-6 text-left border border-slate-700 space-y-2">
+                <div class="flex justify-between items-center text-sm">
+                    <span class="text-slate-400">過關狀態：</span>
+                    <span id="challenge-res-status" class="font-bold text-green-400">成功 (錯 0 題)</span>
+                </div>
+                <div class="flex justify-between items-center text-sm">
+                    <span class="text-slate-400">過關費時：</span>
+                    <span id="challenge-res-time" class="font-mono font-extrabold text-amber-400 text-lg">00:45.2</span>
+                </div>
+                <div class="flex justify-between items-center text-xs text-slate-400 border-t border-slate-700/60 pt-2">
+                    <span>考驗範圍：</span>
+                    <span>原子序 1 ~ 30 號 (30 題)</span>
+                </div>
+            </div>
+
+            <!-- GAS Submission Form -->
+            <div id="submit-score-section" class="mb-6 bg-slate-900/90 p-4 rounded-2xl border border-amber-500/30 text-left">
+                <label class="block text-xs font-bold text-amber-300 uppercase tracking-wider mb-1.5">
+                    登錄雲端英雄榜
+                </label>
+                <p class="text-xs text-slate-400 mb-3">輸入姓名上傳成績至 GAS 雲端「週期表搶答」分頁：</p>
+                <div class="flex gap-2">
+                    <input type="text" id="player-name-input" maxlength="12" placeholder="請輸入您的姓名或暱稱" class="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-amber-400">
+                    <button id="btn-submit-score" onclick="app.handleScoreSubmit()" class="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold text-sm transition flex items-center gap-1.5 shadow-md shadow-amber-500/20">
+                        <span id="submit-btn-text">送出成績</span>
+                        <i class="fa-solid fa-paper-plane text-xs"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <button onclick="app.showHome()" class="w-1/2 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium transition text-sm">
+                    返回主選單
+                </button>
+                <button onclick="app.startChallengeGame()" class="w-1/2 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold transition text-sm shadow-lg shadow-amber-500/20">
+                    再挑戰一次
+                </button>
+            </div>
+        </section>
+
+        <!-- RESULT VIEW: VERSUS -->
+        <section id="view-versus-result" class="w-full max-w-md glass-panel p-6 sm:p-8 rounded-3xl shadow-2xl hidden text-center animate-fade-in">
+            <div class="w-16 h-16 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-3xl mx-auto mb-4 border border-purple-500/30">
+                <i class="fa-solid fa-crown text-yellow-400"></i>
+            </div>
+            <h3 class="text-2xl font-bold text-white mb-1" id="vs-res-title">玩家 1 獲勝！</h3>
+            <p class="text-xs text-slate-400 mb-6">精彩的雙人搶十化學對決！</p>
+
+            <div class="grid grid-cols-2 gap-3 mb-6">
+                <div class="bg-blue-950/40 p-4 rounded-2xl border border-blue-500/30">
+                    <span class="text-xs text-blue-300 block mb-1">玩家 1 得分</span>
+                    <span id="vs-res-p1-score" class="text-3xl font-black text-blue-400 font-mono">0</span>
+                </div>
+                <div class="bg-rose-950/40 p-4 rounded-2xl border border-rose-500/30">
+                    <span class="text-xs text-rose-300 block mb-1">玩家 2 得分</span>
+                    <span id="vs-res-p2-score" class="text-3xl font-black text-rose-400 font-mono">0</span>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <button onclick="app.showHome()" class="w-1/2 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium transition text-sm">
+                    主選單
+                </button>
+                <button onclick="app.startVersusGame()" class="w-1/2 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold transition text-sm shadow-lg shadow-purple-600/30">
+                    再次對決
+                </button>
+            </div>
+        </section>
+    </main>
+
+    <aside class="fixed bottom-5 right-5 z-40 flex flex-col gap-3 items-end">
+        <button onclick="app.openLeaderboardModal()" class="px-4 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-extrabold text-sm shadow-2xl flex items-center gap-2 border border-amber-300/40 transition-transform active:scale-95">
+            <i class="fa-solid fa-trophy text-slate-900 text-lg"></i>
+            <span class="hidden sm:inline">觀看英雄榜</span>
+        </button>
+
+        <button onclick="app.openSettingsModal()" class="px-4 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-cyan-300 font-bold text-sm shadow-2xl flex items-center gap-2 border border-cyan-500/40 transition-transform active:scale-95">
+            <i class="fa-solid fa-sliders text-cyan-400 text-lg"></i>
+            <span class="hidden sm:inline">出題範圍設定</span>
+        </button>
+    </aside>
+
+    <!-- Modal Settings -->
+    <div id="modal-settings" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-2 sm:p-4 hidden">
+        <div class="w-full max-w-5xl glass-panel rounded-3xl p-4 sm:p-6 shadow-2xl border border-slate-700 flex flex-col max-h-[92vh]">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-700/80">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-sliders text-cyan-400 text-lg"></i>
+                    <div>
+                        <h3 class="font-bold text-base sm:text-lg text-white">週期表多功能範圍選擇器</h3>
+                        <p class="text-xs text-slate-400">支援單選、族號/週期欄列快選、快捷預設與顏色類別篩選</p>
+                    </div>
+                </div>
+                <button onclick="app.closeSettingsModal()" class="w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white transition flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto py-3 space-y-4">
+                <!-- Preset Action Buttons Bar -->
+                <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                    <span class="text-xs font-bold text-slate-400 mr-1">快捷預設:</span>
+                    <button onclick="app.selectPreset('1-20')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 border border-slate-700">1-20號 (國中)</button>
+                    <button onclick="app.selectPreset('1-36')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 border border-slate-700">1-36號 (高中)</button>
+                    <button onclick="app.selectPreset('maingroup')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 border border-slate-700">主族元素 (A族)</button>
+                    <button onclick="app.selectPreset('transition')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 border border-slate-700">過渡金屬 (B族)</button>
+                    <button onclick="app.selectPreset('lan_act')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 border border-slate-700">鑭/錒系</button>
+                    <button onclick="app.selectPreset('all')" class="px-2.5 py-1 rounded-lg bg-cyan-950 hover:bg-cyan-900 text-cyan-300 border border-cyan-700 font-bold">全選 118 元素</button>
+                    <button onclick="app.selectPreset('clear')" class="px-2.5 py-1 rounded-lg bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-700 font-bold">清除選擇</button>
+                </div>
+
+                <!-- 19-Column Grid Container -->
+                <div class="overflow-x-auto p-1 bg-slate-950/60 rounded-2xl border border-slate-800">
+                    <div id="ptable-grid-container" class="ptable-grid min-w-[700px]">
+                        <!-- Grid elements injected via JS -->
+                    </div>
+                </div>
+
+                <!-- Category Legend Filter Bar -->
+                <div>
+                    <span class="text-xs font-bold text-slate-400 block mb-2">元素分類顏色圖例 (點擊切換全類別):</span>
+                    <div class="flex flex-wrap gap-1.5 text-[11px]">
+                        <button onclick="app.toggleCategory('alkali')" class="px-2 py-1 rounded cat-alkali opacity-90 hover:opacity-100 font-medium">鹼金屬</button>
+                        <button onclick="app.toggleCategory('alkaline')" class="px-2 py-1 rounded cat-alkaline opacity-90 hover:opacity-100 font-medium">鹼土金屬</button>
+                        <button onclick="app.toggleCategory('transition')" class="px-2 py-1 rounded cat-transition opacity-90 hover:opacity-100 font-medium">過渡金屬</button>
+                        <button onclick="app.toggleCategory('post-transition')" class="px-2 py-1 rounded cat-post-transition opacity-90 hover:opacity-100 font-medium">主族金屬</button>
+                        <button onclick="app.toggleCategory('metalloid')" class="px-2 py-1 rounded cat-metalloid opacity-90 hover:opacity-100 font-medium">類金屬</button>
+                        <button onclick="app.toggleCategory('nonmetal')" class="px-2 py-1 rounded cat-nonmetal opacity-90 hover:opacity-100 font-medium">非金屬</button>
+                        <button onclick="app.toggleCategory('halogen')" class="px-2 py-1 rounded cat-halogen opacity-90 hover:opacity-100 font-medium">鹵素</button>
+                        <button onclick="app.toggleCategory('noble')" class="px-2 py-1 rounded cat-noble opacity-90 hover:opacity-100 font-medium">鈍氣</button>
+                        <button onclick="app.toggleCategory('lanthanide')" class="px-2 py-1 rounded cat-lanthanide opacity-90 hover:opacity-100 font-medium">鑭系</button>
+                        <button onclick="app.toggleCategory('actinide')" class="px-2 py-1 rounded cat-actinide opacity-90 hover:opacity-100 font-medium">錒系</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer Stats & Save -->
+            <div class="pt-3 border-t border-slate-800 flex items-center justify-between">
+                <div class="text-xs text-slate-300">
+                    已選取的元素數量：<span id="selected-count" class="text-base font-bold text-cyan-400 font-mono">20</span> / 118
+                </div>
+                <button onclick="app.closeSettingsModal()" class="px-5 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-sm shadow-lg shadow-cyan-600/30">
+                    確認儲存設定
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Leaderboard -->
+    <div id="modal-leaderboard" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="w-full max-w-2xl glass-panel rounded-3xl p-6 shadow-2xl border border-slate-700 flex flex-col max-h-[85vh]">
+            <div class="flex items-center justify-between pb-4 border-b border-slate-700/80">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-lg">
+                        <i class="fa-solid fa-trophy"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-lg text-white">30題極速挑戰英雄榜 (Top 20)</h3>
+                        <p class="text-xs text-slate-400">來源：GAS「週期表搶答」分頁 (自動過濾同名並保留最佳成績)</p>
+                    </div>
+                </div>
+                <button onclick="app.closeLeaderboardModal()" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto py-4 my-1">
+                <div id="leaderboard-loading" class="py-12 text-center text-slate-400 space-y-3">
+                    <i class="fa-solid fa-spinner fa-spin text-2xl text-amber-400"></i>
+                    <p class="text-sm">正在連線至 GAS 讀取排行榜中...</p>
+                </div>
+
+                <div id="leaderboard-error" class="hidden py-10 text-center text-rose-400 space-y-2">
+                    <i class="fa-solid fa-triangle-exclamation text-3xl"></i>
+                    <p class="text-sm" id="leaderboard-error-text">無法讀取排行榜資料</p>
+                    <button onclick="app.fetchLeaderboard()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 mt-2">
+                        重試連線
+                    </button>
+                </div>
+
+                <table id="leaderboard-table" class="w-full text-left text-sm hidden border-collapse">
+                    <thead>
+                        <tr class="text-xs uppercase text-slate-400 border-b border-slate-800 pb-2">
+                            <th class="py-2.5 px-3">名次</th>
+                            <th class="py-2.5 px-3">玩家姓名</th>
+                            <th class="py-2.5 px-3 text-right">過關費時</th>
+                            <th class="py-2.5 px-3 text-right">完成日期</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leaderboard-tbody" class="divide-y divide-slate-800/60 font-medium">
+                        <!-- Rows injected via JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="pt-3 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
+                <span>自動過濾重複姓名，僅保留每位玩家的最佳費時</span>
+                <button onclick="app.fetchLeaderboard()" class="text-cyan-400 hover:underline flex items-center gap-1">
+                    <i class="fa-solid fa-rotate-right"></i> 重新整理
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Duplicate Confirm -->
+    <div id="modal-duplicate-confirm" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="w-full max-w-md glass-panel rounded-2xl p-6 shadow-2xl border border-amber-500/40 text-center">
+            <div class="w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-2xl mx-auto mb-3">
+                <i class="fa-solid fa-user-tag"></i>
+            </div>
+            <h4 class="text-lg font-bold text-white mb-2">已有相同姓名紀錄</h4>
+            <p class="text-xs text-slate-300 leading-relaxed mb-6">
+                排行榜紀錄中已存在名字為 <span id="dup-name-text" class="text-amber-300 font-bold"></span> 的成績。<br>
+                是否仍要上傳？（系統會自動幫您保留最快的最佳成績紀錄）
+            </p>
+            <div class="flex gap-3">
+                <button onclick="app.cancelDuplicateSubmit()" class="w-1/2 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium text-xs">
+                    修改姓名
+                </button>
+                <button onclick="app.confirmDuplicateSubmit()" class="w-1/2 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-lg shadow-amber-500/20">
+                    確認送出
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Periodic Table Cheat Sheet -->
+    <div id="modal-periodic-table" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="w-full max-w-3xl glass-panel rounded-3xl p-6 shadow-2xl border border-slate-700 flex flex-col max-h-[85vh]">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-700/80">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-table-cells text-cyan-400 text-lg"></i>
+                    <h3 class="font-bold text-lg text-white">常用元素符號對照表 (1 ~ 30 號)</h3>
+                </div>
+                <button onclick="app.closePeriodicTableModal()" class="w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white transition flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto py-4">
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5" id="cheat-sheet-grid">
+                    <!-- Cards injected via JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="w-full text-center py-3 text-xs text-slate-500 border-t border-slate-900">
+        週期表搶答與挑戰大賽 &copy; 2026 化學元素互動學習平台
+    </footer>
+
+    <script>
+        class SoundEffects {
+            constructor() {
+                this.ctx = null;
+            }
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (AudioCtx) this.ctx = new AudioCtx();
+                }
+            }
+            playCorrect() {
+                this.init();
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(523.25, now);
+                osc.frequency.exponentialRampToValueAtTime(880, now + 0.15);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.25);
+            }
+            playWrong() {
+                this.init();
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(220, now);
+                osc.frequency.exponentialRampToValueAtTime(130.81, now + 0.2);
+                gain.gain.setValueAtTime(0.25, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.25);
+            }
+            playVictory() {
+                this.init();
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const notes = [523.25, 659.25, 783.99, 1046.50];
+                notes.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0.2, now + idx * 0.1);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.1 + 0.25);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + idx * 0.1);
+                    osc.stop(now + idx * 0.1 + 0.25);
+                });
+            }
+        }
+        const sfx = new SoundEffects();
+        const GAME_MODE = "週期表搶答";
+        const ELEMENTS_DATA = [
+            { num: 1, sym: 'H', name: '氫', r: 1, c: 1, cat: 'nonmetal' },
+            { num: 2, sym: 'He', name: '氦', r: 1, c: 18, cat: 'noble' },
+            { num: 3, sym: 'Li', name: '鋰', r: 2, c: 1, cat: 'alkali' },
+            { num: 4, sym: 'Be', name: '鈹', r: 2, c: 2, cat: 'alkaline' },
+            { num: 5, sym: 'B', name: '硼', r: 2, c: 13, cat: 'metalloid' },
+            { num: 6, sym: 'C', name: '碳', r: 2, c: 14, cat: 'nonmetal' },
+            { num: 7, sym: 'N', name: '氮', r: 2, c: 15, cat: 'nonmetal' },
+            { num: 8, sym: 'O', name: '氧', r: 2, c: 16, cat: 'nonmetal' },
+            { num: 9, sym: 'F', name: '氟', r: 2, c: 17, cat: 'halogen' },
+            { num: 10, sym: 'Ne', name: '氖', r: 2, c: 18, cat: 'noble' },
+            { num: 11, sym: 'Na', name: '鈉', r: 3, c: 1, cat: 'alkali' },
+            { num: 12, sym: 'Mg', name: '鎂', r: 3, c: 2, cat: 'alkaline' },
+            { num: 13, sym: 'Al', name: '鋁', r: 3, c: 13, cat: 'post-transition' },
+            { num: 14, sym: 'Si', name: '矽', r: 3, c: 14, cat: 'metalloid' },
+            { num: 15, sym: 'P', name: '磷', r: 3, c: 15, cat: 'nonmetal' },
+            { num: 16, sym: 'S', name: '硫', r: 3, c: 16, cat: 'nonmetal' },
+            { num: 17, sym: 'Cl', name: '氯', r: 3, c: 17, cat: 'halogen' },
+            { num: 18, sym: 'Ar', name: '氬', r: 3, c: 18, cat: 'noble' },
+            { num: 19, sym: 'K', name: '鉀', r: 4, c: 1, cat: 'alkali' },
+            { num: 20, sym: 'Ca', name: '鈣', r: 4, c: 2, cat: 'alkaline' },
+            { num: 21, sym: 'Sc', name: '鈧', r: 4, c: 3, cat: 'transition' },
+            { num: 22, sym: 'Ti', name: '鈦', r: 4, c: 4, cat: 'transition' },
+            { num: 23, sym: 'V', name: '釩', r: 4, c: 5, cat: 'transition' },
+            { num: 24, sym: 'Cr', name: '鉻', r: 4, c: 6, cat: 'transition' },
+            { num: 25, sym: 'Mn', name: '錳', r: 4, c: 7, cat: 'transition' },
+            { num: 26, sym: 'Fe', name: '鐵', r: 4, c: 8, cat: 'transition' },
+            { num: 27, sym: 'Co', name: '鈷', r: 4, c: 9, cat: 'transition' },
+            { num: 28, sym: 'Ni', name: '鎳', r: 4, c: 10, cat: 'transition' },
+            { num: 29, sym: 'Cu', name: '銅', r: 4, c: 11, cat: 'transition' },
+            { num: 30, sym: 'Zn', name: '鋅', r: 4, c: 12, cat: 'transition' },
+            { num: 31, sym: 'Ga', name: '鎵', r: 4, c: 13, cat: 'post-transition' },
+            { num: 32, sym: 'Ge', name: '鍺', r: 4, c: 14, cat: 'metalloid' },
+            { num: 33, sym: 'As', name: '砷', r: 4, c: 15, cat: 'metalloid' },
+            { num: 34, sym: 'Se', name: '硒', r: 4, c: 16, cat: 'nonmetal' },
+            { num: 35, sym: 'Br', name: '溴', r: 4, c: 17, cat: 'halogen' },
+            { num: 36, sym: 'Kr', name: '氪', r: 4, c: 18, cat: 'noble' },
+            { num: 37, sym: 'Rb', name: '銣', r: 5, c: 1, cat: 'alkali' },
+            { num: 38, sym: 'Sr', name: '鍶', r: 5, c: 2, cat: 'alkaline' },
+            { num: 39, sym: 'Y', name: '釔', r: 5, c: 3, cat: 'transition' },
+            { num: 40, sym: 'Zr', name: '鋯', r: 5, c: 4, cat: 'transition' },
+            { num: 41, sym: 'Nb', name: '鈮', r: 5, c: 5, cat: 'transition' },
+            { num: 42, sym: 'Mo', name: '鉬', r: 5, c: 6, cat: 'transition' },
+            { num: 43, sym: 'Tc', name: '鍀', r: 5, c: 7, cat: 'transition' },
+            { num: 44, sym: 'Ru', name: '釕', r: 5, c: 8, cat: 'transition' },
+            { num: 45, sym: 'Rh', name: '銠', r: 5, c: 9, cat: 'transition' },
+            { num: 46, sym: 'Pd', name: '鈀', r: 5, c: 10, cat: 'transition' },
+            { num: 47, sym: 'Ag', name: '銀', r: 5, c: 11, cat: 'transition' },
+            { num: 48, sym: 'Cd', name: '鎘', r: 5, c: 12, cat: 'transition' },
+            { num: 49, sym: 'In', name: '銦', r: 5, c: 13, cat: 'post-transition' },
+            { num: 50, sym: 'Sn', name: '錫', r: 5, c: 14, cat: 'post-transition' },
+            { num: 51, sym: 'Sb', name: '銻', r: 5, c: 15, cat: 'metalloid' },
+            { num: 52, sym: 'Te', name: '碲', r: 5, c: 16, cat: 'metalloid' },
+            { num: 53, sym: 'I', name: '碘', r: 5, c: 17, cat: 'halogen' },
+            { num: 54, sym: 'Xe', name: '氙', r: 5, c: 18, cat: 'noble' },
+            { num: 55, sym: 'Cs', name: '銫', r: 6, c: 1, cat: 'alkali' },
+            { num: 56, sym: 'Ba', name: '鋇', r: 6, c: 2, cat: 'alkaline' },
+            { num: 57, sym: 'La', name: '鑭', r: 9, c: 3, cat: 'lanthanide' },
+            { num: 58, sym: 'Ce', name: '鈰', r: 9, c: 4, cat: 'lanthanide' },
+            { num: 59, sym: 'Pr', name: '鐠', r: 9, c: 5, cat: 'lanthanide' },
+            { num: 60, sym: 'Nd', name: '釹', r: 9, c: 6, cat: 'lanthanide' },
+            { num: 61, sym: 'Pm', name: '鉕', r: 9, c: 7, cat: 'lanthanide' },
+            { num: 62, sym: 'Sm', name: '', r: 9, c: 8, cat: 'lanthanide' },
+            { num: 63, sym: 'Eu', name: '銪', r: 9, c: 9, cat: 'lanthanide' },
+            { num: 64, sym: 'Gd', name: '釓', r: 9, c: 10, cat: 'lanthanide' },
+            { num: 65, sym: 'Tb', name: '鋱', r: 9, c: 11, cat: 'lanthanide' },
+            { num: 66, sym: 'Dy', name: '鏑', r: 9, c: 12, cat: 'lanthanide' },
+            { num: 67, sym: 'Ho', name: '鈥', r: 9, c: 13, cat: 'lanthanide' },
+            { num: 68, sym: 'Er', name: '鉺', r: 9, c: 14, cat: 'lanthanide' },
+            { num: 69, sym: 'Tm', name: '銩', r: 9, c: 15, cat: 'lanthanide' },
+            { num: 70, sym: 'Yb', name: '鐿', r: 9, c: 16, cat: 'lanthanide' },
+            { num: 71, sym: 'Lu', name: '鎦', r: 9, c: 17, cat: 'lanthanide' },
+            { num: 72, sym: 'Hf', name: '鉿', r: 6, c: 4, cat: 'transition' },
+            { num: 73, sym: 'Ta', name: '鉭', r: 6, c: 5, cat: 'transition' },
+            { num: 74, sym: 'W', name: '鎢', r: 6, c: 6, cat: 'transition' },
+            { num: 75, sym: 'Re', name: '錸', r: 6, c: 7, cat: 'transition' },
+            { num: 76, sym: 'Os', name: '鋨', r: 6, c: 8, cat: 'transition' },
+            { num: 77, sym: 'Ir', name: '銥', r: 6, c: 9, cat: 'transition' },
+            { num: 78, sym: 'Pt', name: '鉑', r: 6, c: 10, cat: 'transition' },
+            { num: 79, sym: 'Au', name: '金', r: 6, c: 11, cat: 'transition' },
+            { num: 80, sym: 'Hg', name: '汞', r: 6, c: 12, cat: 'transition' },
+            { num: 81, sym: 'Tl', name: '鉈', r: 6, c: 13, cat: 'post-transition' },
+            { num: 82, sym: 'Pb', name: '鉛', r: 6, c: 14, cat: 'post-transition' },
+            { num: 83, sym: 'Bi', name: '鉍', r: 6, c: 15, cat: 'post-transition' },
+            { num: 84, sym: 'Po', name: '釙', r: 6, c: 16, cat: 'post-transition' },
+            { num: 85, sym: 'At', name: '砈', r: 6, c: 17, cat: 'halogen' },
+            { num: 86, sym: 'Rn', name: '氡', r: 6, c: 18, cat: 'noble' },
+            { num: 87, sym: 'Fr', name: '鍅', r: 7, c: 1, cat: 'alkali' },
+            { num: 88, sym: 'Ra', name: '鐳', r: 7, c: 2, cat: 'alkaline' },
+            { num: 89, sym: 'Ac', name: '錒', r: 10, c: 3, cat: 'actinide' },
+            { num: 90, sym: 'Th', name: '釷', r: 10, c: 4, cat: 'actinide' },
+            { num: 91, sym: 'Pa', name: '鏷', r: 10, c: 5, cat: 'actinide' },
+            { num: 92, sym: 'U', name: '鈾', r: 10, c: 6, cat: 'actinide' },
+            { num: 93, sym: 'Np', name: '鎿', r: 10, c: 7, cat: 'actinide' },
+            { num: 94, sym: 'Pu', name: '鈈', r: 10, c: 8, cat: 'actinide' },
+            { num: 95, sym: 'Am', name: '鋂', r: 10, c: 9, cat: 'actinide' },
+            { num: 96, sym: 'Cm', name: '鉕', r: 10, c: 10, cat: 'actinide' },
+            { num: 97, sym: 'Bk', name: '鉳', r: 10, c: 11, cat: 'actinide' },
+            { num: 98, sym: 'Cf', name: '鉲', r: 10, c: 12, cat: 'actinide' },
+            { num: 99, sym: 'Es', name: '鑀', r: 10, c: 13, cat: 'actinide' },
+            { num: 100, sym: 'Fm', name: '鐨', r: 10, c: 14, cat: 'actinide' },
+            { num: 101, sym: 'Md', name: '鍆', r: 10, c: 15, cat: 'actinide' },
+            { num: 102, sym: 'No', name: '鍩', r: 10, c: 16, cat: 'actinide' },
+            { num: 103, sym: 'Lr', name: '鐒', r: 10, c: 17, cat: 'actinide' },
+            { num: 104, sym: 'Rf', name: '鑪', r: 7, c: 4, cat: 'transition' },
+            { num: 105, sym: 'Db', name: '𨧀', r: 7, c: 5, cat: 'transition' },
+            { num: 106, sym: 'Sg', name: '𨭎', r: 7, c: 6, cat: 'transition' },
+            { num: 107, sym: 'Bh', name: '𨨏', r: 7, c: 7, cat: 'transition' },
+            { num: 108, sym: 'Hs', name: '𨭆', r: 7, c: 8, cat: 'transition' },
+            { num: 109, sym: 'Mt', name: '䥑', r: 7, c: 9, cat: 'transition' },
+            { num: 110, sym: 'Ds', name: '鐽', r: 7, c: 10, cat: 'transition' },
+            { num: 111, sym: 'Rg', name: '錀', r: 7, c: 11, cat: 'transition' },
+            { num: 112, sym: 'Cn', name: '鎶', r: 7, c: 12, cat: 'transition' },
+            { num: 113, sym: 'Nh', name: '鉨', r: 7, c: 13, cat: 'post-transition' },
+            { num: 114, sym: 'Fl', name: '𫓧', r: 7, c: 14, cat: 'post-transition' },
+            { num: 115, sym: 'Mc', name: '鏌', r: 7, c: 15, cat: 'post-transition' },
+            { num: 116, sym: 'Lv', name: '鉝', r: 7, c: 16, cat: 'post-transition' },
+            { num: 117, sym: 'Ts', name: '鿬', r: 7, c: 17, cat: 'halogen' },
+            { num: 118, sym: 'Og', name: '鿏', r: 7, c: 18, cat: 'noble' }
+        ];
+
+        const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbwe-N5PjAnT-9I6R1v4LpU-UoN0M_GkYm_z05A2j5qE4Xg-Yh99m3rU/exec';
+
+        class QuizApp {
+            constructor() {
+                this.selectedElementNums = new Set(Array.from({length: 20}, (_, i) => i + 1));
+                this.activeMode = null;
+
+                this.questionsList = [];
+                this.currentIndex = 0;
+                this.score = 0;
+                this.wrongCount = 0;
+                this.startTime = 0;
+                this.elapsedMs = 0;
+                this.timerInterval = null;
+
+                this.p1Score = 0;
+                this.p2Score = 0;
+                this.vsPool = [];
+                this.currentVsQuestion = null;
+                this.vsTimerInterval = null;
+                this.vsTimeLeftMs = 5000;
+                this.p1Locked = false;
+                this.p2Locked = false;
+                this.vsQuestionResolved = false;
+
+                this.leaderboardCache = [];
+                this.pendingName = '';
+
+                this.initApp();
+            }
+
+            initApp() {
+                this.renderPeriodicTableGrid();
+                this.renderCheatSheet();
+                this.updateSelectedCountUI();
+            }
+
+            hideAllViews() {
+                const views = ['view-home', 'view-practice-setup', 'view-single-game', 'view-versus-game', 'view-practice-result', 'view-challenge-result', 'view-versus-result'];
+                views.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.classList.add('hidden');
+                });
+                this.stopTimer();
+                this.stopVsTimer();
+            }
+
+            showHome() {
+                this.hideAllViews();
+                document.getElementById('view-home').classList.remove('hidden');
+            }
+
+            startPracticeSetup() {
+                this.hideAllViews();
+                document.getElementById('practice-pool-count').innerText = `${this.selectedElementNums.size} 個元素`;
+                document.getElementById('view-practice-setup').classList.remove('hidden');
+            }
+
+            startTimer() {
+                this.startTime = Date.now();
+                this.elapsedMs = 0;
+                const timerEl = document.getElementById('single-timer');
+                this.timerInterval = setInterval(() => {
+                    this.elapsedMs = Date.now() - this.startTime;
+                    timerEl.innerText = this.formatTime(this.elapsedMs);
+                }, 100);
+            }
+
+            stopTimer() {
+                if (this.timerInterval) clearInterval(this.timerInterval);
+                this.timerInterval = null;
+            }
+
+            formatTime(ms) {
+                const totalSec = Math.floor(ms / 1000);
+                const mins = Math.floor(totalSec / 60);
+                const secs = totalSec % 60;
+                const tenths = Math.floor((ms % 1000) / 100);
+                return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}.${tenths}`;
+            }
+
+            startPracticeGame() {
+                if (this.selectedElementNums.size < 4) {
+                    alert('請至少選擇 4 個元素以產生隨機選項！');
+                    this.openSettingsModal();
+                    return;
+                }
+
+                this.activeMode = 'practice';
+                this.hideAllViews();
+                document.getElementById('view-single-game').classList.remove('hidden');
+
+                document.getElementById('single-mode-badge').innerText = '單人練習';
+                document.getElementById('single-mode-badge').className = 'px-3 py-1 rounded-full text-xs font-bold bg-cyan-950 text-cyan-300 border border-cyan-800';
+                document.getElementById('challenge-lives').classList.add('hidden');
+
+                const dir = document.getElementById('practice-mode-direction').value;
+                const pool = ELEMENTS_DATA.filter(e => this.selectedElementNums.has(e.num));
+                this.questionsList = this.generateQuestionsList(pool, 10, dir);
+                
+                this.currentIndex = 0;
+                this.score = 0;
+                this.wrongCount = 0;
+
+                this.startTimer();
+                this.renderSingleQuestion();
+            }
+
+            startChallengeGame() {
+    this.activeMode = 'challenge';
+    this.hideAllViews();
+    document.getElementById('view-single-game').classList.remove('hidden');
+
+    document.getElementById('single-mode-badge').innerText = '30題極速挑戰';
+    document.getElementById('single-mode-badge').className = 'px-3 py-1 rounded-full text-xs font-bold bg-amber-950 text-amber-300 border border-amber-800';
+    document.getElementById('challenge-lives').classList.remove('hidden');
+    
+    document.getElementById('heart-1').className = 'fa-solid fa-heart text-red-500';
+    document.getElementById('heart-2').className = 'fa-solid fa-heart text-red-500';
+
+    const pool = ELEMENTS_DATA.filter(e => e.num >= 1 && e.num <= 30);
+    // 傳入第 4 個參數 isUnique = true，確保 30 個元素不重複出題
+    this.questionsList = this.generateQuestionsList(pool, 30, 'random', true);
+
+    this.currentIndex = 0;
+    this.score = 0;
+    this.wrongCount = 0;
+
+    this.startTimer();
+    this.renderSingleQuestion();
+}
+
+            generateQuestionsList(pool, count, direction, isUnique = false) {
+    const list = [];
+    // 若要求不重複（isUnique 為 true），先將元素陣列複製並隨機洗牌
+    const shuffledPool = isUnique ? [...pool].sort(() => Math.random() - 0.5) : null;
+
+    for (let i = 0; i < count; i++) {
+        // 不重複模式下依序取洗牌後的元素，否則隨機抽樣（允許重複）
+        const target = isUnique ? shuffledPool[i] : pool[Math.floor(Math.random() * pool.length)];
+        let qType = direction;
+        if (direction === 'random') {
+            qType = Math.random() > 0.5 ? 'zh-to-symbol' : 'symbol-to-zh';
+        }
+        list.push(this.generateQuestionObj(target, pool, qType));
+    }
+    return list;
+}
+
+            generateQuestionObj(target, pool, qType) {
+                const isZhToSym = (qType === 'zh-to-symbol');
+                const prompt = isZhToSym ? target.name : target.sym;
+                const correctAnswer = isZhToSym ? target.sym : target.name;
+
+                const distractors = new Set();
+                let attempts = 0;
+                while (distractors.size < 3 && attempts < 100) {
+                    attempts++;
+                    const randEl = pool[Math.floor(Math.random() * pool.length)];
+                    const optVal = isZhToSym ? randEl.sym : randEl.name;
+                    if (optVal !== correctAnswer) {
+                        distractors.add(optVal);
+                    }
+                }
+                if (distractors.size < 3) {
+                    ELEMENTS_DATA.forEach(e => {
+                        if (distractors.size < 3) {
+                            const optVal = isZhToSym ? e.sym : e.name;
+                            if (optVal !== correctAnswer) distractors.add(optVal);
+                        }
+                    });
+                }
+
+                const options = Array.from(distractors);
+                options.push(correctAnswer);
+                options.sort(() => Math.random() - 0.5);
+
+                return {
+                    target,
+                    qType,
+                    prompt,
+                    correctAnswer,
+                    options
+                };
+            }
+
+            renderSingleQuestion() {
+                const q = this.questionsList[this.currentIndex];
+                const total = this.questionsList.length;
+
+                document.getElementById('single-question-tracker').innerText = `第 ${this.currentIndex + 1} / ${total} 題`;
+                document.getElementById('single-prompt-label').innerText = (q.qType === 'zh-to-symbol') ? '請選擇正確的【英文符號】' : '請選擇正確的【中文名稱】';
+                document.getElementById('single-question-text').innerText = q.prompt;
+                document.getElementById('single-atomic-hint').innerText = `原子序：${q.target.num}`;
+
+                const pct = ((this.currentIndex) / total) * 100;
+                document.getElementById('single-progress-bar').style.width = `${pct}%`;
+
+                const grid = document.getElementById('single-options-grid');
+                grid.innerHTML = '';
+
+                q.options.forEach(opt => {
+                    const btn = document.createElement('button');
+                    btn.className = 'py-4 px-3 rounded-2xl bg-slate-800/90 hover:bg-slate-700/90 border border-slate-700/80 font-bold text-lg text-slate-100 transition duration-150 shadow-md active:scale-95 flex items-center justify-center';
+                    btn.innerText = opt;
+                    btn.onclick = () => this.handleSingleAnswer(opt, btn);
+                    grid.appendChild(btn);
+                });
+            }
+
+            handleSingleAnswer(selectedOpt, btnElement) {
+                const q = this.questionsList[this.currentIndex];
+                const isCorrect = (selectedOpt === q.correctAnswer);
+
+                const btns = document.querySelectorAll('#single-options-grid button');
+                btns.forEach(b => b.disabled = true);
+
+                if (isCorrect) {
+                    sfx.playCorrect();
+                    btnElement.classList.add('flash-correct');
+                    this.score++;
+                } else {
+                    sfx.playWrong();
+                    btnElement.classList.add('flash-wrong');
+                    this.wrongCount++;
+
+                    btns.forEach(b => {
+                        if (b.innerText === q.correctAnswer) {
+                            b.classList.add('flash-correct');
+                        }
+                    });
+
+                    if (this.activeMode === 'challenge') {
+                        if (this.wrongCount === 1) {
+                            document.getElementById('heart-2').className = 'fa-regular fa-heart text-slate-600';
+                        } else if (this.wrongCount >= 2) {
+                            document.getElementById('heart-1').className = 'fa-regular fa-heart text-slate-600';
+                            setTimeout(() => {
+                                this.finishSingleGame(false);
+                            }, 700);
+                            return;
+                        }
+                    }
+                }
+
+                setTimeout(() => {
+                    this.currentIndex++;
+                    if (this.currentIndex < this.questionsList.length) {
+                        this.renderSingleQuestion();
+                    } else {
+                        this.finishSingleGame(true);
+                    }
+                }, 750);
+            }
+
+            finishSingleGame(isSuccess) {
+                this.stopTimer();
+
+                if (this.activeMode === 'practice') {
+                    document.getElementById('practice-res-score').innerText = `${this.score} / ${this.questionsList.length}`;
+                    document.getElementById('practice-res-time').innerText = this.formatTime(this.elapsedMs);
+                    this.hideAllViews();
+                    document.getElementById('view-practice-result').classList.remove('hidden');
+                } else if (this.activeMode === 'challenge') {
+                    this.hideAllViews();
+                    document.getElementById('view-challenge-result').classList.remove('hidden');
+
+                    const iconBox = document.getElementById('challenge-res-icon-box');
+                    const title = document.getElementById('challenge-res-title');
+                    const subtitle = document.getElementById('challenge-res-subtitle');
+                    const statusText = document.getElementById('challenge-res-status');
+                    const timeText = document.getElementById('challenge-res-time');
+                    const submitSec = document.getElementById('submit-score-section');
+
+                    timeText.innerText = this.formatTime(this.elapsedMs);
+
+                    if (isSuccess) {
+                        sfx.playVictory();
+                        iconBox.className = 'w-16 h-16 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-3xl mx-auto mb-4 border border-amber-500/30';
+                        title.innerText = '挑戰成功過關！';
+                        subtitle.innerText = '太厲害了！已順利完成 30 題極速關卡！';
+                        statusText.innerText = `成功 (錯 ${this.wrongCount} 題)`;
+                        statusText.className = 'font-bold text-green-400';
+                        submitSec.classList.remove('hidden');
+                    } else {
+                        iconBox.className = 'w-16 h-16 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-3xl mx-auto mb-4 border border-rose-500/30';
+                        title.innerText = '挑戰失敗！';
+                        subtitle.innerText = '遺憾！答錯 2 題觸發淘汰，再接再勵！';
+                        statusText.innerText = '失敗 (答錯 2 題爆掉)';
+                        statusText.className = 'font-bold text-rose-400';
+                        submitSec.classList.add('hidden');
+                    }
+                }
+            }
+
+            // --- TWO PLAYER VERSUS GAME LOGIC ---
+            startVersusGame() {
+                if (this.selectedElementNums.size < 4) {
+                    alert('請至少選擇 4 個元素以產生雙人對決題目！');
+                    this.openSettingsModal();
+                    return;
+                }
+
+                this.activeMode = 'versus';
+                this.hideAllViews();
+                document.getElementById('view-versus-game').classList.remove('hidden');
+
+                this.p1Score = 0;
+                this.p2Score = 0;
+                this.vsPool = ELEMENTS_DATA.filter(e => this.selectedElementNums.has(e.num));
+
+                document.getElementById('p1-score').innerText = '0 / 10';
+                document.getElementById('p2-score').innerText = '0 / 10';
+
+                this.nextVersusQuestion();
+            }
+
+            nextVersusQuestion() {
+                const target = this.vsPool[Math.floor(Math.random() * this.vsPool.length)];
+                const qType = Math.random() > 0.5 ? 'zh-to-symbol' : 'symbol-to-zh';
+                this.currentVsQuestion = this.generateQuestionObj(target, this.vsPool, qType);
+
+                this.p1Locked = false;
+                this.p2Locked = false;
+                this.vsQuestionResolved = false;
+
+                ['p1', 'p2'].forEach(p => {
+                    const zone = document.getElementById(`${p}-zone`);
+                    if (zone) {
+                        zone.style.pointerEvents = 'auto';
+                        zone.style.opacity = '1';
+                    }
+                    const tag = document.getElementById(`${p}-status-tag`);
+                    if (tag) tag.classList.add('hidden');
+                });
+
+                const q = this.currentVsQuestion;
+                document.getElementById('vs-question-prompt').innerText = (q.qType === 'zh-to-symbol') ? '搶答！點選正確的【英文符號】' : '搶答！點選正確的【中文名稱】';
+                document.getElementById('vs-question-text').innerText = q.prompt;
+
+                this.renderVersusOptions();
+                this.startVsTimer();
+            }
+
+            renderVersusOptions() {
+                const q = this.currentVsQuestion;
+                const p1Grid = document.getElementById('p1-options-grid');
+                const p2Grid = document.getElementById('p2-options-grid');
+                p1Grid.innerHTML = '';
+                p2Grid.innerHTML = '';
+
+                q.options.forEach(opt => {
+                    const btn1 = document.createElement('button');
+                    btn1.className = 'py-3 px-2 rounded-xl bg-slate-800/90 hover:bg-blue-600/80 border border-blue-500/40 font-bold text-base text-slate-100 transition duration-150 shadow active:scale-95';
+                    btn1.innerText = opt;
+                    btn1.onpointerdown = (e) => {
+                        e.preventDefault();
+                        this.handleVersusAnswer(1, opt, btn1);
+                    };
+                    p1Grid.appendChild(btn1);
+
+                    const btn2 = document.createElement('button');
+                    btn2.className = 'py-3 px-2 rounded-xl bg-slate-800/90 hover:bg-rose-600/80 border border-rose-500/40 font-bold text-base text-slate-100 transition duration-150 shadow active:scale-95';
+                    btn2.innerText = opt;
+                    btn2.onpointerdown = (e) => {
+                        e.preventDefault();
+                        this.handleVersusAnswer(2, opt, btn2);
+                    };
+                    p2Grid.appendChild(btn2);
+                });
+            }
+
+            startVsTimer() {
+                this.stopVsTimer();
+                this.vsTimeLeftMs = 5000;
+                
+                const timerText = document.getElementById('vs-timer-text');
+                const timerBar = document.getElementById('vs-timer-bar');
+
+                timerText.innerText = '05.0s';
+                timerBar.style.width = '100%';
+
+                const start = Date.now();
+
+                this.vsTimerInterval = setInterval(() => {
+                    const elapsed = Date.now() - start;
+                    this.vsTimeLeftMs = Math.max(0, 5000 - elapsed);
+
+                    const secs = (this.vsTimeLeftMs / 1000).toFixed(1);
+                    timerText.innerText = `${secs}s`;
+
+                    const pct = (this.vsTimeLeftMs / 5000) * 100;
+                    timerBar.style.width = `${pct}%`;
+
+                    if (this.vsTimeLeftMs <= 0) {
+                        this.stopVsTimer();
+                        this.handleVsTimeout();
+                    }
+                }, 50);
+            }
+
+            stopVsTimer() {
+                if (this.vsTimerInterval) clearInterval(this.vsTimerInterval);
+                this.vsTimerInterval = null;
+            }
+
+            handleVsTimeout() {
+                if (this.vsQuestionResolved) return;
+                this.vsQuestionResolved = true;
+
+                sfx.playWrong();
+
+                const q = this.currentVsQuestion;
+                document.querySelectorAll('#p1-options-grid button, #p2-options-grid button').forEach(b => {
+                    if (b.innerText === q.correctAnswer) {
+                        b.classList.add('flash-correct');
+                    }
+                });
+
+                setTimeout(() => {
+                    this.nextVersusQuestion();
+                }, 1000);
+            }
+
+            handleVersusAnswer(playerNum, selectedOpt, btnElement) {
+                if (this.vsQuestionResolved) return;
+                if (playerNum === 1 && this.p1Locked) return;
+                if (playerNum === 2 && this.p2Locked) return;
+
+                const currentQ = this.currentVsQuestion;
+                const isCorrect = (selectedOpt === currentQ.correctAnswer);
+
+                if (isCorrect) {
+                    this.vsQuestionResolved = true;
+                    this.stopVsTimer();
+
+                    if (playerNum === 1) this.p1Score++;
+                    else this.p2Score++;
+
+                    document.getElementById('p1-score').innerText = `${this.p1Score} / 10`;
+                    document.getElementById('p2-score').innerText = `${this.p2Score} / 10`;
+
+                    btnElement.classList.add('flash-correct');
+                    sfx.playCorrect();
+
+                    setTimeout(() => {
+                        this.checkVersusWinnerOrNext();
+                    }, 800);
+
+                } else {
+                    sfx.playWrong();
+                    btnElement.classList.add('flash-wrong');
+
+                    if (playerNum === 1) {
+                        this.p1Locked = true;
+                        const p1Zone = document.getElementById('p1-zone');
+                        if (p1Zone) {
+                            p1Zone.style.pointerEvents = 'none';
+                            p1Zone.style.opacity = '0.5';
+                        }
+                        document.getElementById('p1-status-tag').classList.remove('hidden');
+                    } else {
+                        this.p2Locked = true;
+                        const p2Zone = document.getElementById('p2-zone');
+                        if (p2Zone) {
+                            p2Zone.style.pointerEvents = 'none';
+                            p2Zone.style.opacity = '0.5';
+                        }
+                        document.getElementById('p2-status-tag').classList.remove('hidden');
+                    }
+
+                    if (this.p1Locked && this.p2Locked) {
+                        this.vsQuestionResolved = true;
+                        this.stopVsTimer();
+
+                        document.querySelectorAll('#p1-options-grid button, #p2-options-grid button').forEach(b => {
+                            if (b.innerText === currentQ.correctAnswer) {
+                                b.classList.add('flash-correct');
+                            }
+                        });
+
+                        setTimeout(() => {
+                            this.nextVersusQuestion();
+                        }, 1000);
+                    }
+                }
+            }
+
+            checkVersusWinnerOrNext() {
+                if (this.p1Score >= 10 || this.p2Score >= 10) {
+                    this.finishVersusGame();
+                } else {
+                    this.nextVersusQuestion();
+                }
+            }
+
+            finishVersusGame() {
+                this.stopVsTimer();
+                this.hideAllViews();
+                document.getElementById('view-versus-result').classList.remove('hidden');
+
+                const title = document.getElementById('vs-res-title');
+                document.getElementById('vs-res-p1-score').innerText = `${this.p1Score} 分`;
+                document.getElementById('vs-res-p2-score').innerText = `${this.p2Score} 分`;
+
+                if (this.p1Score > this.p2Score) {
+                    title.innerText = '👑 玩家 1 搶十獲勝！';
+                    title.className = 'text-2xl font-bold text-blue-400 mb-1';
+                } else if (this.p2Score > this.p1Score) {
+                    title.innerText = '👑 玩家 2 搶十獲勝！';
+                    title.className = 'text-2xl font-bold text-rose-400 mb-1';
+                } else {
+                    title.innerText = '🤝 雙方平手！';
+                    title.className = 'text-2xl font-bold text-purple-300 mb-1';
+                }
+                sfx.playVictory();
+            }
+
+            confirmQuitGame() {
+                if (confirm('確定要放棄當前遊戲並返回主選單嗎？')) {
+                    this.showHome();
+                }
+            }
+
+            // --- PERIODIC TABLE MULTI-FUNCTION GRID SELECTOR ---
+            renderPeriodicTableGrid() {
+                const container = document.getElementById('ptable-grid-container');
+                container.innerHTML = '';
+
+                const emptyCorner = document.createElement('div');
+                emptyCorner.className = 'text-[10px] text-slate-500 flex items-center justify-center font-mono';
+                emptyCorner.innerText = '週期\\族';
+                container.appendChild(emptyCorner);
+
+                for (let g = 1; g <= 18; g++) {
+                    const btn = document.createElement('button');
+                    btn.className = 'text-[10px] font-bold text-slate-400 hover:text-cyan-300 bg-slate-900/60 rounded py-1 border border-slate-800 transition';
+                    btn.innerText = `${g}`;
+                    btn.title = `點擊全選/反選 第 ${g} 族`;
+                    btn.onclick = () => this.toggleGroupSelection(g);
+                    container.appendChild(btn);
+                }
+
+                const gridMap = Array.from({length: 10}, () => Array(19).fill(null));
+                ELEMENTS_DATA.forEach(e => {
+                    gridMap[e.r - 1][e.c] = e;
+                });
+
+                for (let r = 0; r < 10; r++) {
+                    const pNum = (r < 7) ? (r + 1) : (r === 8 ? '鑭' : (r === 9 ? '錒' : ''));
+                    const pBtn = document.createElement('button');
+                    if (pNum) {
+                        pBtn.className = 'text-[10px] font-bold text-slate-400 hover:text-cyan-300 bg-slate-900/60 rounded flex items-center justify-center border border-slate-800 transition';
+                        pBtn.innerText = pNum;
+                        pBtn.title = `點擊全選/反選 第 ${pNum} 週期/系`;
+                        pBtn.onclick = () => this.togglePeriodSelection(r + 1);
+                    } else {
+                        pBtn.className = 'pointer-events-none';
+                    }
+                    container.appendChild(pBtn);
+
+                    for (let c = 1; c <= 18; c++) {
+                        const elData = gridMap[r][c];
+                        if (elData) {
+                            const card = document.createElement('div');
+                            card.id = `el-card-${elData.num}`;
+                            const isSelected = this.selectedElementNums.has(elData.num);
+                            card.className = `el-card cat-${elData.cat} ${isSelected ? 'active-selected' : 'inactive-selected'}`;
+                            card.innerHTML = `
+                                <span class="text-[8px] opacity-75 absolute top-0.5 left-1 font-mono">${elData.num}</span>
+                                <span class="font-extrabold text-xs leading-none">${elData.sym}</span>
+                                <span class="text-[9px] opacity-90 scale-90">${elData.name}</span>
+                            `;
+                            card.onclick = () => this.toggleSingleElement(elData.num);
+                            container.appendChild(card);
+                        } else {
+                            const emptyCell = document.createElement('div');
+                            emptyCell.className = 'aspect-ratio-1 pointer-events-none';
+                            container.appendChild(emptyCell);
+                        }
+                    }
+                }
+            }
+
+            toggleSingleElement(num) {
+                if (this.selectedElementNums.has(num)) {
+                    this.selectedElementNums.delete(num);
+                } else {
+                    this.selectedElementNums.add(num);
+                }
+                this.updateElementCardUI(num);
+                this.updateSelectedCountUI();
+            }
+
+            toggleGroupSelection(groupNum) {
+                const groupElems = ELEMENTS_DATA.filter(e => e.c === groupNum);
+                const allSelected = groupElems.every(e => this.selectedElementNums.has(e.num));
+
+                groupElems.forEach(e => {
+                    if (allSelected) {
+                        this.selectedElementNums.delete(e.num);
+                    } else {
+                        this.selectedElementNums.add(e.num);
+                    }
+                    this.updateElementCardUI(e.num);
+                });
+                this.updateSelectedCountUI();
+            }
+
+            togglePeriodSelection(periodNum) {
+                const periodElems = ELEMENTS_DATA.filter(e => e.r === periodNum);
+                const allSelected = periodElems.every(e => this.selectedElementNums.has(e.num));
+
+                periodElems.forEach(e => {
+                    if (allSelected) {
+                        this.selectedElementNums.delete(e.num);
+                    } else {
+                        this.selectedElementNums.add(e.num);
+                    }
+                    this.updateElementCardUI(e.num);
+                });
+                this.updateSelectedCountUI();
+            }
+
+            toggleCategory(catName) {
+                const catElems = ELEMENTS_DATA.filter(e => e.cat === catName);
+                const allSelected = catElems.every(e => this.selectedElementNums.has(e.num));
+
+                catElems.forEach(e => {
+                    if (allSelected) {
+                        this.selectedElementNums.delete(e.num);
+                    } else {
+                        this.selectedElementNums.add(e.num);
+                    }
+                    this.updateElementCardUI(e.num);
+                });
+                this.updateSelectedCountUI();
+            }
+
+            selectPreset(presetKey) {
+                this.selectedElementNums.clear();
+
+                if (presetKey === '1-20') {
+                    for (let i = 1; i <= 20; i++) this.selectedElementNums.add(i);
+                } else if (presetKey === '1-36') {
+                    for (let i = 1; i <= 36; i++) this.selectedElementNums.add(i);
+                } else if (presetKey === 'maingroup') {
+                    ELEMENTS_DATA.filter(e => [1, 2, 13, 14, 15, 16, 17, 18].includes(e.c)).forEach(e => this.selectedElementNums.add(e.num));
+                } else if (presetKey === 'transition') {
+                    ELEMENTS_DATA.filter(e => e.cat === 'transition').forEach(e => this.selectedElementNums.add(e.num));
+                } else if (presetKey === 'lan_act') {
+                    ELEMENTS_DATA.filter(e => e.cat === 'lanthanide' || e.cat === 'actinide').forEach(e => this.selectedElementNums.add(e.num));
+                } else if (presetKey === 'all') {
+                    ELEMENTS_DATA.forEach(e => this.selectedElementNums.add(e.num));
+                }
+
+                ELEMENTS_DATA.forEach(e => this.updateElementCardUI(e.num));
+                this.updateSelectedCountUI();
+            }
+
+            updateElementCardUI(num) {
+                const card = document.getElementById(`el-card-${num}`);
+                if (!card) return;
+                const isSelected = this.selectedElementNums.has(num);
+                if (isSelected) {
+                    card.className = card.className.replace('inactive-selected', 'active-selected');
+                } else {
+                    card.className = card.className.replace('active-selected', 'inactive-selected');
+                }
+            }
+
+            updateSelectedCountUI() {
+                const count = this.selectedElementNums.size;
+                document.getElementById('selected-count').innerText = count;
+            }
+
+            openSettingsModal() {
+                document.getElementById('modal-settings').classList.remove('hidden');
+            }
+
+            closeSettingsModal() {
+                document.getElementById('modal-settings').classList.add('hidden');
+            }
+
+            renderCheatSheet() {
+                const grid = document.getElementById('cheat-sheet-grid');
+                grid.innerHTML = '';
+
+                const list = ELEMENTS_DATA.filter(e => e.num <= 30);
+                list.forEach(e => {
+                    const card = document.createElement('div');
+                    card.className = 'glass-card p-2.5 rounded-xl border border-slate-700 flex items-center gap-3';
+                    card.innerHTML = `
+                        <div class="w-9 h-9 rounded-lg cat-${e.cat} font-black text-sm flex items-center justify-center shrink-0">
+                            ${e.sym}
+                        </div>
+                        <div>
+                            <div class="font-bold text-white text-sm">${e.name}</div>
+                            <div class="text-[10px] text-slate-400 font-mono">原子序: ${e.num}</div>
+                        </div>
+                    `;
+                    grid.appendChild(card);
+                });
+            }
+
+            openPeriodicTableModal() {
+                document.getElementById('modal-periodic-table').classList.remove('hidden');
+            }
+
+            closePeriodicTableModal() {
+                document.getElementById('modal-periodic-table').classList.add('hidden');
+            }
+
+            openLeaderboardModal() {
+                document.getElementById('modal-leaderboard').classList.remove('hidden');
+                this.fetchLeaderboard();
+            }
+
+            closeLeaderboardModal() {
+                document.getElementById('modal-leaderboard').classList.add('hidden');
+            }
+
+            async fetchLeaderboard() {
+                const loading = document.getElementById('leaderboard-loading');
+                const errBox = document.getElementById('leaderboard-error');
+                const table = document.getElementById('leaderboard-table');
+
+                loading.classList.remove('hidden');
+                errBox.classList.add('hidden');
+                table.classList.add('hidden');
+
+                try {
+                    const { rows } = await window.PhysicsPortalCloud.fetchLeaderboard('週期表搶答');
+                    loading.classList.add('hidden');
+                    this.leaderboardCache = rows || [];
+                    this.renderLeaderboardTable(this.leaderboardCache);
+                    table.classList.remove('hidden');
+                } catch (err) {
+                    loading.classList.add('hidden');
+                    document.getElementById('leaderboard-error-text').innerText = `讀取英雄榜失敗: ${err.message}`;
+                    errBox.classList.remove('hidden');
+                }
+            }
+            renderLeaderboardTable(rows) {
+                const tbody = document.getElementById('leaderboard-tbody');
+                tbody.innerHTML = '';
+
+                const bestMap = new Map();
+
+                rows.forEach(item => {
+                    const name = String(item.name || item.player || '無名氏').trim();
+                    const rawTime = item.time || item.score || '99:99.9';
+                    const timeMs = this.parseTimeToMs(rawTime);
+                    const date = item.date || item.timestamp || '';
+
+                    if (!bestMap.has(name) || timeMs < bestMap.get(name).timeMs) {
+                        bestMap.set(name, { name, rawTime, timeMs, date });
+                    }
+                });
+
+                const sortedList = Array.from(bestMap.values()).sort((a, b) => a.timeMs - b.timeMs).slice(0, 20);
+
+                if (sortedList.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="py-6 text-center text-slate-500">目前尚無榜單紀錄，快成為第一位創革者！</td></tr>';
+                    return;
+                }
+
+                sortedList.forEach((item, idx) => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-slate-800/40 transition';
+
+                    let rankBadge = `<span class="font-mono text-slate-400 font-bold">${idx + 1}</span>`;
+                    if (idx === 0) rankBadge = '<span class="text-amber-400 font-black"><i class="fa-solid fa-crown text-yellow-400 mr-1"></i>1</span>';
+                    else if (idx === 1) rankBadge = '<span class="text-slate-200 font-bold"><i class="fa-solid fa-medal text-slate-300 mr-1"></i>2</span>';
+                    else if (idx === 2) rankBadge = '<span class="text-amber-600 font-bold"><i class="fa-solid fa-award text-amber-600 mr-1"></i>3</span>';
+
+                    tr.innerHTML = `
+                        <td class="py-2.5 px-3">${rankBadge}</td>
+                        <td class="py-2.5 px-3 font-bold text-white">${this.escapeHtml(item.name)}</td>
+                        <td class="py-2.5 px-3 text-right font-mono text-amber-400 font-bold">${item.rawTime}</td>
+                        <td class="py-2.5 px-3 text-right text-xs text-slate-400">${item.date}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+
+            parseTimeToMs(timeStr) {
+                try {
+                    const parts = String(timeStr).split(':');
+                    if (parts.length === 2) {
+                        const mins = parseFloat(parts[0]);
+                        const secs = parseFloat(parts[1]);
+                        return (mins * 60 + secs) * 1000;
+                    }
+                    return parseFloat(timeStr) * 1000 || 999999;
+                } catch (e) {
+                    return 999999;
+                }
+            }
+
+            escapeHtml(str) {
+                return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+            }
+
+            // SCORE SUBMISSION TO GAS
+            handleScoreSubmit() {
+                const nameInput = document.getElementById('player-name-input');
+                const name = nameInput.value.trim();
+                if (!name) {
+                    alert('請輸入您的姓名或暱稱！');
+                    return;
+                }
+
+                const isDup = this.leaderboardCache.some(item => {
+                    const existingName = String(item.name || item.player || '').trim();
+                    return existingName.toLowerCase() === name.toLowerCase();
+                });
+
+                this.pendingName = name;
+
+                if (isDup) {
+                    document.getElementById('dup-name-text').innerText = name;
+                    document.getElementById('modal-duplicate-confirm').classList.remove('hidden');
+                } else {
+                    this.executeScoreSubmit(name);
+                }
+            }
+
+            cancelDuplicateSubmit() {
+                document.getElementById('modal-duplicate-confirm').classList.add('hidden');
+            }
+
+            confirmDuplicateSubmit() {
+                document.getElementById('modal-duplicate-confirm').classList.add('hidden');
+                this.executeScoreSubmit(this.pendingName);
+            }
+
+            // 修正後的成績上傳函數
+            async executeScoreSubmit(name) {
+                const btn = document.getElementById('btn-submit-score');
+                const btnText = document.getElementById('submit-btn-text');
+                btn.disabled = true;
+                btnText.innerText = '上傳中...';
+
+                const timeStr = this.formatTime(this.elapsedMs);
+                const today = new Date().toISOString().split('T')[0];
+
+                const payload = {
+                    sheet: '週期表搶答',
+                    mode: '週期表搶答',
+                    name: name,
+                    time: timeStr,
+                    rawTime: this.elapsedMs,
+                    wrongClicks: 0,
+                    date: today
+                };
+
+                try {
+                    const result = await window.PhysicsPortalCloud.submitLeaderboard('週期表搶答', payload);
+                    alert(result.cloudSynced ? '成績已成功上傳至共享 Google 排行榜！' : '已暫存至本機排行榜（尚未設定雲端 GAS 網址，可於 cloud-config.js 填入）。');
+                    btnText.innerText = '已上傳';
+                    this.openLeaderboardModal();
+                } catch (err) {
+                    alert('上傳失敗：' + err.message);
+                    btn.disabled = false;
+                    btnText.innerText = '重試送出';
+                }
+            }
+        }
+
+        // 必須在此處實例化 app 物件，供 HTML 中的 onclick="app.xxx()" 呼叫
+        let app;
+        window.addEventListener('DOMContentLoaded', () => {
+            app = new QuizApp();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,1578 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>週期表序列連線迷宮</title>
+    <meta name="description" content="依照原子序一筆連線闖關！支援單人競速、雙人對戰與共享 Google 試算表排行榜。">
+    <meta name="portal-type" content="game">
+    <script src="../shared/cloud-config.js"></script>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --card-active: #0284c7;
+            --card-p1: #ef4444;
+            --card-p2: #3b82f6;
+            --text-color: #f8fafc;
+            --accent-color: #38bdf8;
+            --gold-color: #fbbf24;
+            --pink-color: #f43f5e;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+
+        .screen {
+            display: none;
+            width: 100%;
+            max-width: 960px;
+            min-height: 100vh;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px;
+            position: relative;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        /* 主頁畫面 */
+        #start-screen {
+            justify-content: center;
+            gap: 24px;
+            text-align: center;
+        }
+
+        .main-title {
+            font-size: 36px;
+            font-weight: 900;
+            background: linear-gradient(135deg, #38bdf8, #818cf8, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+        }
+
+        .subtitle {
+            font-size: 15px;
+            color: #94a3b8;
+        }
+
+        .btn-group-start {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            width: 100%;
+            max-width: 320px;
+            margin: 0 auto;
+        }
+
+        .btn-main {
+            background: linear-gradient(135deg, #0284c7, #2563eb);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 16px 24px;
+            font-size: 18px;
+            font-weight: 800;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(2, 132, 199, 0.4);
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+
+        .btn-main.challenge {
+            background: linear-gradient(135deg, #d97706, #dc2626);
+            box-shadow: 0 4px 15px rgba(220, 38, 38, 0.4);
+        }
+
+        .btn-main.versus {
+            background: linear-gradient(135deg, #7c3aed, #db2777);
+            box-shadow: 0 4px 15px rgba(219, 39, 119, 0.4);
+        }
+
+        .btn-main:active {
+            transform: scale(0.96);
+        }
+
+        /* 懸浮按鈕 */
+        .btn-floating {
+            position: fixed;
+            bottom: 24px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: #334155;
+            color: var(--accent-color);
+            border: 2px solid var(--accent-color);
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            z-index: 50;
+        }
+
+        .btn-floating.settings { right: 24px; }
+        .btn-floating.leaderboard { right: 86px; color: var(--gold-color); border-color: var(--gold-color); }
+
+        /* 遊戲頂部資訊列 */
+        .game-header {
+            width: 100%;
+            background: #1e293b;
+            border-radius: 14px;
+            padding: 10px 14px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+            border: 1px solid #334155;
+            z-index: 10;
+        }
+
+        .prompt-title {
+            font-size: 13px;
+            color: #94a3b8;
+        }
+
+        .prompt-target {
+            font-size: 16px;
+            font-weight: 800;
+            color: var(--gold-color);
+            text-align: center;
+            word-break: break-all;
+        }
+
+        /* 雙人比分條 */
+        .versus-scores {
+            display: none;
+            width: 100%;
+            justify-content: space-around;
+            align-items: center;
+            font-size: 16px;
+            font-weight: 900;
+            padding: 4px 0;
+            border-bottom: 1px dashed #334155;
+            margin-bottom: 4px;
+        }
+        .p1-badge { color: #f87171; }
+        .p2-badge { color: #60a5fa; }
+
+        .timer-container {
+            width: 100%;
+            height: 8px;
+            background: #334155;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .timer-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #10b981, #f59e0b, #ef4444);
+            width: 100%;
+            transition: width 0.1s linear;
+        }
+
+        .timer-text {
+            font-size: 11px;
+            color: #cbd5e1;
+            font-weight: bold;
+        }
+
+        /* 遊戲區域 */
+        .game-board-container {
+            position: relative;
+            width: 100%;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 6px 0;
+            overflow: auto; /* 允許滾輪與觸控滑動移動視角 */
+            touch-action: pan-x pan-y; /* 卡片外部區域允許滾動視角 */
+            padding: 10px;
+            border-radius: 12px;
+        }
+
+        /* 美化視角滾輪條 */
+        .game-board-container::-webkit-scrollbar,
+        .versus-side::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .game-board-container::-webkit-scrollbar-thumb,
+        .versus-side::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 3px;
+        }
+        .game-board-container::-webkit-scrollbar-track,
+        .versus-side::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .grid-layout {
+            display: grid;
+            gap: 6px;
+            width: 100%;
+            max-width: 500px;
+            max-height: calc(100vh - 180px);
+            justify-content: center;
+            align-content: center;
+            z-index: 2;
+        }
+
+        /* 雙人分割戰場 */
+        .versus-wrapper {
+            display: none;
+            width: 100%;
+            height: 100%;
+            gap: 12px;
+            position: relative;
+        }
+        .versus-wrapper.active {
+            display: flex;
+        }
+
+        .versus-side {
+            flex: 1;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            background: rgba(30, 41, 59, 0.5);
+            padding: 6px;
+            overflow: auto;
+            touch-action: pan-x pan-y;
+        }
+        .versus-side.p1-side { border: 2px solid rgba(239, 68, 68, 0.4); }
+        .versus-side.p2-side { border: 2px solid rgba(59, 130, 246, 0.4); }
+
+        .versus-header {
+            font-size: 14px;
+            font-weight: 800;
+            margin-bottom: 4px;
+        }
+
+        .line-canvas {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 5;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* 迷宮卡牌 */
+        .card-node {
+            background: var(--card-bg);
+            border: 2px solid #334155;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: var(--text-color);
+            cursor: pointer;
+            position: relative;
+            aspect-ratio: 1 / 1.1;
+            min-height: 52px;
+            touch-action: none; /* 觸碰卡片時觸發劃線 */
+        }
+
+        .card-node .atom-num {
+            font-size: 11px;
+            font-weight: 700;
+            color: #94a3b8;
+            position: absolute;
+            top: 3px;
+            left: 5px;
+        }
+
+        .card-node .symbol-text {
+            font-size: 22px;
+            font-weight: 900;
+            letter-spacing: 0.5px;
+        }
+
+        .card-node.active-path {
+            background: var(--card-active);
+            border-color: var(--accent-color);
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.6);
+            color: white;
+        }
+
+        .card-node.active-p1 {
+            background: var(--card-p1);
+            border-color: #f87171;
+            box-shadow: 0 0 12px rgba(239, 68, 68, 0.7);
+            color: white;
+        }
+
+        .card-node.active-p2 {
+            background: var(--card-p2);
+            border-color: #60a5fa;
+            box-shadow: 0 0 12px rgba(59, 130, 246, 0.7);
+            color: white;
+        }
+
+        .card-node.start-node {
+            border-color: var(--gold-color);
+            box-shadow: 0 0 8px rgba(251, 191, 36, 0.5);
+        }
+
+        /* 倒數計時遮罩 */
+        .countdown-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.92);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 30;
+        }
+
+        .countdown-num {
+            font-size: 80px;
+            font-weight: 900;
+            color: var(--accent-color);
+            text-shadow: 0 0 25px rgba(56, 189, 248, 0.8);
+        }
+
+        /* Modal 彈窗 */
+        .modal-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(4px);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .modal-card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 16px;
+            padding: 20px;
+            width: 100%;
+            max-width: 480px;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--accent-color);
+            margin-bottom: 14px;
+        }
+
+        .topic-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .topic-btn {
+            background: #0f172a;
+            color: #64748b;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            text-align: center;
+        }
+
+        .topic-btn.active {
+            background: #0284c7;
+            color: white;
+            border-color: var(--accent-color);
+        }
+
+        .btn-action {
+            width: 100%;
+            background: var(--accent-color);
+            color: #0f172a;
+            border: none;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 15px;
+            font-weight: 800;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+
+        .setting-row { margin-bottom: 14px; }
+        .setting-label { font-size: 13px; color: #cbd5e1; margin-bottom: 6px; display: block; }
+
+        select, input[type="text"] {
+            width: 100%;
+            background: #0f172a;
+            border: 1px solid #334155;
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 15px;
+        }
+
+        .leaderboard-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin: 12px 0;
+            max-height: 260px;
+            overflow-y: auto;
+        }
+
+        .leaderboard-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #0f172a;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .leaderboard-item.top3 {
+            border: 1px solid var(--gold-color);
+            background: rgba(251, 191, 36, 0.1);
+        }
+
+        .rank-badge {
+            font-weight: 900;
+            width: 24px;
+            color: var(--accent-color);
+        }
+
+        .top3 .rank-badge { color: var(--gold-color); }
+    </style>
+</head>
+<body>
+
+    <!-- 1. 主頁面 -->
+    <div id="start-screen" class="screen active">
+        <div>
+            <div class="main-title">週期表序列迷宮</div>
+            <div class="subtitle">依據元素順序快速連線對戰</div>
+        </div>
+        
+        <div class="btn-group-start">
+            <button class="btn-main challenge" onclick="startSession('challenge')">🔥 官方挑戰模式 (13關通關榜)</button>
+            <button class="btn-main" onclick="startSession('single')">👤 單人練習模式</button>
+            <button class="btn-main versus" onclick="startSession('versus')">⚔️ 雙人分割對戰 (先得10分獲勝)</button>
+        </div>
+
+        <button class="btn-floating leaderboard" onclick="openLeaderboardModal()">🏆</button>
+        <button class="btn-floating settings" onclick="openSettingsModal()">⚙️</button>
+    </div>
+
+    <!-- 2. 遊戲進行頁面 -->
+    <div id="game-screen" class="screen">
+        <div class="game-header">
+            <div id="versus-scores" class="versus-scores">
+                <span class="p1-badge">🔴 P1 得分: <span id="p1-score-val">0</span> / 10</span>
+                <span class="p2-badge">🔵 P2 得分: <span id="p2-score-val">0</span> / 10</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
+                <span class="prompt-title" id="topic-name">關卡名稱</span>
+                <span class="prompt-title" id="level-counter" style="color:var(--accent-color); font-weight:bold;">關卡 1 / 13</span>
+            </div>
+            <div class="prompt-target" id="prompt-target">目標序列鏈</div>
+            <div class="timer-container">
+                <div id="timer-bar" class="timer-bar"></div>
+            </div>
+            <div class="timer-text" id="timer-text">剩餘時間：10.0s</div>
+        </div>
+
+        <div class="game-board-container" id="board-container">
+            <!-- 單人/挑戰模式棋盤 -->
+            <canvas id="line-canvas" class="line-canvas"></canvas>
+            <div id="grid-layout" class="grid-layout"></div>
+
+            <!-- 雙人對戰模式棋盤 -->
+            <div id="versus-wrapper" class="versus-wrapper">
+                <div class="versus-side p1-side" id="p1-container">
+                    <div class="versus-header p1-badge">🔴 Player 1</div>
+                    <canvas id="line-canvas-p1" class="line-canvas"></canvas>
+                    <div id="grid-layout-p1" class="grid-layout"></div>
+                </div>
+                <div class="versus-side p2-side" id="p2-container">
+                    <div class="versus-header p2-badge">🔵 Player 2</div>
+                    <canvas id="line-canvas-p2" class="line-canvas"></canvas>
+                    <div id="grid-layout-p2" class="grid-layout"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3 秒倒數 -->
+        <div id="countdown-overlay" class="countdown-overlay">
+            <div class="prompt-title" style="font-size: 18px; color:#cbd5e1;" id="cd-topic">準備中</div>
+            <div id="countdown-num" class="countdown-num">3</div>
+        </div>
+    </div>
+
+    <!-- 3. 設定 Modal -->
+    <div id="settings-modal" class="modal-backdrop">
+        <div class="modal-card">
+            <div class="modal-title">⚙️ 練習模式設定</div>
+
+            <div class="setting-row">
+                <span class="setting-label">卡牌顯示語言：</span>
+                <select id="card-lang-select">
+                    <option value="mixed">隨機中英混合</option>
+                    <option value="chinese">全中文名稱 (例如：氫)</option>
+                    <option value="english">全英文符號 (例如：H)</option>
+                </select>
+            </div>
+
+            <div class="setting-row">
+                <span class="setting-label">練習主題選取（明亮者納入抽題）：</span>
+                <div class="topic-grid" id="topic-select-grid"></div>
+            </div>
+
+            <button class="btn-action" onclick="closeSettingsModal()">儲存並關閉</button>
+        </div>
+    </div>
+
+    <!-- 4. 排行榜 Modal -->
+    <div id="leaderboard-modal" class="modal-backdrop">
+        <div class="modal-card">
+            <div class="modal-title">🏆 全球英雄榜 (13關完整通關)</div>
+            <div style="font-size: 12px; color: #94a3b8; margin-bottom: 8px;">排名依據完整破關 13 大關總花費時間（越短越高）：</div>
+            
+            <div class="leaderboard-list" id="leaderboard-list">
+                <div style="text-align: center; color: #64748b; padding: 20px;">載入中...</div>
+            </div>
+
+            <button class="btn-action" onclick="closeLeaderboardModal()">關閉</button>
+        </div>
+    </div>
+
+    <!-- 5. 通關登錄 Modal -->
+    <div id="score-submit-modal" class="modal-backdrop">
+        <div class="modal-card" style="text-align: center;">
+            <div style="font-size: 56px; margin-bottom: 8px;">🎉</div>
+            <div class="modal-title" style="font-size: 24px;">官方挑戰 13 關全數突破！</div>
+            <div style="color: #cbd5e1; font-size: 14px; margin-bottom: 12px;" id="submit-total-time">總耗時：0.0 秒</div>
+
+            <div class="setting-row" style="text-align: left;">
+                <span class="setting-label">請輸入您的勇者暱稱登錄高分榜：</span>
+                <input type="text" id="player-name-input" placeholder="例如：元素大師" maxlength="12">
+                <div id="name-warning-msg" style="color: #f59e0b; font-size: 13px; margin-top: 6px; font-weight: bold; display: none;">⚠️ 提示：已有重複名稱，登錄將更新該名稱之最佳紀錄！</div>
+            </div>
+
+            <button id="btn-submit-score" class="btn-action" onclick="submitScore()">送出成績登錄榜單</button>
+        </div>
+    </div>
+
+    <!-- 6. 宣告/結果 Modal -->
+    <div id="result-modal" class="modal-backdrop">
+        <div class="modal-card" style="text-align: center;">
+            <div id="result-icon" style="font-size: 56px; margin-bottom: 8px;">❌</div>
+            <div id="result-title" class="modal-title" style="font-size: 24px;">任務失敗</div>
+            <div id="result-desc" style="color: #cbd5e1; font-size: 14px; margin-bottom: 16px;">時間倒數歸零，挑戰中斷！</div>
+            <button class="btn-action" onclick="returnToStartScreen()">返回主選單</button>
+        </div>
+    </div>
+
+    <script>
+        // Google Apps Script (GAS) 部署網址（若無則留空使用本機 localStorage 紀錄）
+        const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzw9fGPM-DZJK8qFBBTdPEsB33RU4AqoKaBU_1ozc0UTMqTRIE-oyZ6LtoCE61yaRr6/exec";
+        const GAME_MODE = "連線迷宮"; // 定義此遊戲對應的分頁名稱
+        // 全 118 化學元素資料庫
+        const ELEMENTS_DATA = [
+            { num: 1, sym: 'H', name: '氫' }, { num: 2, sym: 'He', name: '氦' },
+            { num: 3, sym: 'Li', name: '鋰' }, { num: 4, sym: 'Be', name: '鈹' },
+            { num: 5, sym: 'B', name: '硼' }, { num: 6, sym: 'C', name: '碳' },
+            { num: 7, sym: 'N', name: '氮' }, { num: 8, sym: 'O', name: '氧' },
+            { num: 9, sym: 'F', name: '氟' }, { num: 10, sym: 'Ne', name: '氖' },
+            { num: 11, sym: 'Na', name: '鈉' }, { num: 12, sym: 'Mg', name: '鎂' },
+            { num: 13, sym: 'Al', name: '鋁' }, { num: 14, sym: 'Si', name: '矽' },
+            { num: 15, sym: 'P', name: '磷' }, { num: 16, sym: 'S', name: '硫' },
+            { num: 17, sym: 'Cl', name: '氯' }, { num: 18, sym: 'Ar', name: '氬' },
+            { num: 19, sym: 'K', name: '鉀' }, { num: 20, sym: 'Ca', name: '鈣' },
+            { num: 21, sym: 'Sc', name: '鈧' }, { num: 22, sym: 'Ti', name: '鈦' },
+            { num: 23, sym: 'V', name: '釩' }, { num: 24, sym: 'Cr', name: '鉻' },
+            { num: 25, sym: 'Mn', name: '錳' }, { num: 26, sym: 'Fe', name: '鐵' },
+            { num: 27, sym: 'Co', name: '鈷' }, { num: 28, sym: 'Ni', name: '鎳' },
+            { num: 29, sym: 'Cu', name: '銅' }, { num: 30, sym: 'Zn', name: '鋅' },
+            { num: 31, sym: 'Ga', name: '鎵' }, { num: 32, sym: 'Ge', name: '鍺' },
+            { num: 33, sym: 'As', name: '砷' }, { num: 34, sym: 'Se', name: '硒' },
+            { num: 35, sym: 'Br', name: '溴' }, { num: 36, sym: 'Kr', name: '氪' },
+            { num: 37, sym: 'Rb', name: '銣' }, { num: 38, sym: 'Sr', name: '鍶' },
+            { num: 39, sym: 'Y', name: '釔' }, { num: 40, sym: 'Zr', name: '鋯' },
+            { num: 41, sym: 'Nb', name: '鈮' }, { num: 42, sym: 'Mo', name: '鉬' },
+            { num: 43, sym: 'Tc', name: '鎝' }, { num: 44, sym: 'Ru', name: '釕' },
+            { num: 45, sym: 'Rh', name: '銠' }, { num: 46, sym: 'Pd', name: '鈀' },
+            { num: 47, sym: 'Ag', name: '銀' }, { num: 48, sym: 'Cd', name: '鎘' },
+            { num: 49, sym: 'In', name: '銦' }, { num: 50, sym: 'Sn', name: '錫' },
+            { num: 51, sym: 'Sb', name: '銻' }, { num: 52, sym: 'Te', name: '碲' },
+            { num: 53, sym: 'I', name: '碘' }, { num: 54, sym: 'Xe', name: '氙' },
+            { num: 55, sym: 'Cs', name: '銫' }, { num: 56, sym: 'Ba', name: '鋇' },
+            { num: 57, sym: 'La', name: '鑭' }, { num: 58, sym: 'Ce', name: '鈰' },
+            { num: 59, sym: 'Pr', name: '鐠' }, { num: 60, sym: 'Nd', name: '釹' },
+            { num: 61, sym: 'Pm', name: '鉕' }, { num: 62, sym: 'Sm', name: '釤' },
+            { num: 63, sym: 'Eu', name: '銪' }, { num: 64, sym: 'Gd', name: '釓' },
+            { num: 65, sym: 'Tb', name: '鋱' }, { num: 66, sym: 'Dy', name: '鏑' },
+            { num: 67, sym: 'Ho', name: '鈥' }, { num: 68, sym: 'Er', name: '鉺' },
+            { num: 69, sym: 'Tm', name: '銩' }, { num: 70, sym: 'Yb', name: '鐿' },
+            { num: 71, sym: 'Lu', name: '鎦' }, { num: 72, sym: 'Hf', name: '鉿' },
+            { num: 73, sym: 'Ta', name: '鉭' }, { num: 74, sym: 'W', name: '鎢' },
+            { num: 75, sym: 'Re', name: '錸' }, { num: 76, sym: 'Os', name: '鋨' },
+            { num: 77, sym: 'Ir', name: '銥' }, { num: 78, sym: 'Pt', name: '鉑' },
+            { num: 79, sym: 'Au', name: '金' }, { num: 80, sym: 'Hg', name: '汞' },
+            { num: 81, sym: 'Tl', name: '鉈' }, { num: 82, sym: 'Pb', name: '鉛' },
+            { num: 83, sym: 'Bi', name: '鉍' }, { num: 84, sym: 'Po', name: '釙' },
+            { num: 85, sym: 'At', name: '砈' }, { num: 86, sym: 'Rn', name: '氡' },
+            { num: 87, sym: 'Fr', name: '鍅' }, { num: 88, sym: 'Ra', name: '鐳' },
+            { num: 89, sym: 'Ac', name: '錒' }, { num: 90, sym: 'Th', name: '釷' },
+            { num: 91, sym: 'Pa', name: '鏷' }, { num: 92, sym: 'U', name: '鈾' },
+            { num: 93, sym: 'Np', name: '錼' }, { num: 94, sym: 'Pu', name: '鈽' },
+            { num: 95, sym: 'Am', name: '鋂' }, { num: 96, sym: 'Cm', name: '鋦' },
+            { num: 97, sym: 'Bk', name: '鉳' }, { num: 98, sym: 'Cf', name: '鉲' },
+            { num: 99, sym: 'Es', name: '鑀' }, { num: 100, sym: 'Fm', name: '鐨' },
+            { num: 101, sym: 'Md', name: '鍆' }, { num: 102, sym: 'No', name: '鍩' },
+            { num: 103, sym: 'Lr', name: '鐒' }, { num: 104, sym: 'Rf', name: '鑪' },
+            { num: 105, sym: 'Db', name: '𨧀' }, { num: 106, sym: 'Sg', name: '𨭎' },
+            { num: 107, sym: 'Bh', name: '𨨏' }, { num: 108, sym: 'Hs', name: '𨭆' },
+            { num: 109, sym: 'Mt', name: '䥑' }, { num: 110, sym: 'Ds', name: '鐽' },
+            { num: 111, sym: 'Rg', name: '錀' }, { num: 112, sym: 'Cn', name: '鎶' },
+            { num: 113, sym: 'Nh', name: '鉨' }, { num: 114, sym: 'Fl', name: '鈇' },
+            { num: 115, sym: 'Mc', name: '鏌' }, { num: 116, sym: 'Lv', name: '鉝' },
+            { num: 117, sym: 'Ts', name: '鿬' }, { num: 118, sym: 'Og', name: '鿫' }
+        ];
+
+        // 題目主題設定 (全 13 關固定考核主題)
+        const TOPICS_CONFIG = [
+            { id: 'r1_20', name: '原子序 1 ~ 20 (必背)', seq: Array.from({length: 20}, (_, i) => i + 1) },
+            { id: 'r21_30', name: '原子序 21 ~ 30 (第一列過渡元素)', seq: Array.from({length: 10}, (_, i) => i + 21) },
+            { id: 'r1_30', name: '原子序 1 ~ 30 (大挑戰)', seq: Array.from({length: 30}, (_, i) => i + 1) },
+            { id: 'g1', name: '第 1 族 (鹼金屬)', seq: [1, 3, 11, 19, 37, 55, 87] },
+            { id: 'g2', name: '第 2 族 (鹼土金屬)', seq: [4, 12, 20, 38, 56, 88] },
+            { id: 'g13', name: '第 13 族 (硼族)', seq: [5, 13, 31, 49, 81, 113] },
+            { id: 'g14', name: '第 14 族 (碳族)', seq: [6, 14, 32, 50, 82, 114] },
+            { id: 'g15', name: '第 15 族 (氮族)', seq: [7, 15, 33, 51, 83, 115] },
+            { id: 'g16', name: '第 16 族 (氧族)', seq: [8, 16, 34, 52, 84, 116] },
+            { id: 'g17', name: '第 17 族 (鹵素)', seq: [9, 17, 35, 53, 85, 117] },
+            { id: 'g18', name: '第 18 族 (鈍氣)', seq: [2, 10, 18, 36, 54, 86, 118] },
+            { id: 'r1_10', name: '原子序 1 ~ 10', seq: Array.from({length: 10}, (_, i) => i + 1) },
+            { id: 'r11_20', name: '原子序 11 ~ 20', seq: Array.from({length: 10}, (_, i) => i + 11) }
+        ];
+
+        let gameMode = 'single'; // 'challenge', 'single', 'versus'
+        let enabledTopicIds = new Set(TOPICS_CONFIG.map(t => t.id));
+        let remainingTopicQueue = [];
+        let totalLevelCount = 13;
+        let currentLevelIdx = 0;
+        let currentTopic = null;
+
+        let cardDisplayLang = 'mixed';
+        let timerInterval = null;
+        let timeLimitSec = 10;
+        let timeLeft = 10;
+        let totalTimeAccumulator = 0;
+        let levelStartTime = 0;
+
+        // 單人/挑戰模式狀態
+        let pathSequence = [];
+        let userPath = [];
+        let gridNodes = [];
+        let isDragging = false;
+        let currentTouchPos = null;
+
+        // 雙人對戰模式狀態
+        let p1Score = 0;
+        let p2Score = 0;
+        let p1GridNodes = [];
+        let p2GridNodes = [];
+        let p1UserPath = [];
+        let p2UserPath = [];
+        let p1IsDragging = false;
+        let p2IsDragging = false;
+        let p1TouchPos = null;
+        let p2TouchPos = null;
+
+        function initSettingsUI() {
+            const grid = document.getElementById('topic-select-grid');
+            grid.innerHTML = '';
+            
+            TOPICS_CONFIG.forEach(t => {
+                const btn = document.createElement('div');
+                btn.className = `topic-btn ${enabledTopicIds.has(t.id) ? 'active' : ''}`;
+                btn.textContent = t.name;
+                btn.onclick = () => {
+                    if (enabledTopicIds.has(t.id)) {
+                        if (enabledTopicIds.size > 1) {
+                            enabledTopicIds.delete(t.id);
+                            btn.classList.remove('active');
+                        }
+                    } else {
+                        enabledTopicIds.add(t.id);
+                        btn.classList.add('active');
+                    }
+                };
+                grid.appendChild(btn);
+            });
+        }
+
+        function openSettingsModal() { document.getElementById('settings-modal').style.display = 'flex'; }
+        function closeSettingsModal() {
+            cardDisplayLang = document.getElementById('card-lang-select').value;
+            document.getElementById('settings-modal').style.display = 'none';
+        }
+
+        function startSession(mode) {
+            gameMode = mode;
+            totalTimeAccumulator = 0;
+            p1Score = 0;
+            p2Score = 0;
+
+            const scoresDiv = document.getElementById('versus-scores');
+            const singleGrid = document.getElementById('grid-layout');
+            const versusWrapper = document.getElementById('versus-wrapper');
+
+            if (mode === 'challenge') {
+                remainingTopicQueue = [...TOPICS_CONFIG];
+                scoresDiv.style.display = 'none';
+                singleGrid.style.display = 'grid';
+                versusWrapper.classList.remove('active');
+            } else if (mode === 'versus') {
+                remainingTopicQueue = [...TOPICS_CONFIG].sort(() => Math.random() - 0.5);
+                scoresDiv.style.display = 'flex';
+                singleGrid.style.display = 'none';
+                versusWrapper.classList.add('active');
+                updateVersusScoreUI();
+            } else { // single
+                remainingTopicQueue = TOPICS_CONFIG.filter(t => enabledTopicIds.has(t.id)).sort(() => Math.random() - 0.5);
+                scoresDiv.style.display = 'none';
+                singleGrid.style.display = 'grid';
+                versusWrapper.classList.remove('active');
+            }
+
+            totalLevelCount = remainingTopicQueue.length;
+            currentLevelIdx = 0;
+
+            document.getElementById('start-screen').classList.remove('active');
+            document.getElementById('game-screen').classList.add('active');
+
+            loadNextLevel();
+        }
+
+        function updateVersusScoreUI() {
+            document.getElementById('p1-score-val').textContent = p1Score;
+            document.getElementById('p2-score-val').textContent = p2Score;
+        }
+
+        function loadNextLevel() {
+            if (remainingTopicQueue.length === 0) {
+                if (gameMode === 'challenge') {
+                    openScoreSubmitModal();
+                } else if (gameMode === 'versus') {
+                    const winner = p1Score > p2Score ? 'P1 🔴' : (p2Score > p1Score ? 'P2 🔵' : '平手');
+                    showResultModal(true, `比賽結束！最終冠軍：${winner}`);
+                } else {
+                    showResultModal(true, '恭喜完成練習題目！');
+                }
+                return;
+            }
+
+            currentLevelIdx++;
+            currentTopic = remainingTopicQueue.shift();
+            userPath = [];
+            p1UserPath = [];
+            p2UserPath = [];
+            isDragging = false;
+            p1IsDragging = false;
+            p2IsDragging = false;
+
+            document.getElementById('level-counter').textContent = `關卡 ${currentLevelIdx} / ${totalLevelCount}`;
+            document.getElementById('cd-topic').textContent = currentTopic.name;
+
+            const cdOverlay = document.getElementById('countdown-overlay');
+            const cdNum = document.getElementById('countdown-num');
+            cdOverlay.style.display = 'flex';
+
+            let count = 3;
+            cdNum.textContent = count;
+            
+            const cdTimer = setInterval(() => {
+                count--;
+                if (count > 0) {
+                    cdNum.textContent = count;
+                } else {
+                    clearInterval(cdTimer);
+                    cdOverlay.style.display = 'none';
+                    buildMazeBoard();
+                    levelStartTime = Date.now();
+                    resetTimer();
+                }
+            }, 700);
+        }
+
+        function buildMazeBoard() {
+            const targetSeqNums = currentTopic.seq;
+            pathSequence = targetSeqNums.map(n => ELEMENTS_DATA.find(e => e.num === n));
+
+            const len = pathSequence.length;
+            let rows = 4, cols = 4;
+            if (len > 20) { rows = 6; cols = 5; }
+            else if (len > 12) { rows = 5; cols = 4; }
+
+            const distractorPool = ELEMENTS_DATA.filter(e => !targetSeqNums.includes(e.num));
+
+            if (gameMode === 'versus') {
+                p1GridNodes = generateSingleGrid(rows, cols, pathSequence, distractorPool);
+                p2GridNodes = generateSingleGrid(rows, cols, pathSequence, distractorPool);
+                renderVersusBoardUI(rows, cols);
+            } else {
+                gridNodes = generateSingleGrid(rows, cols, pathSequence, distractorPool);
+                renderBoardUI(rows, cols);
+            }
+        }
+
+        function getCardDisplayMode() {
+            if (cardDisplayLang === 'chinese') return 'name';
+            if (cardDisplayLang === 'english') return 'sym';
+            return Math.random() < 0.5 ? 'sym' : 'name';
+        }
+
+        function generateSnakePath(rows, cols, len) {
+            for (let attempt = 0; attempt < 80; attempt++) {
+                let startR = Math.floor(Math.random() * rows);
+                let startC = Math.floor(Math.random() * cols);
+                let visited = Array.from({length: rows}, () => Array(cols).fill(false));
+                let path = [{r: startR, c: startC}];
+                visited[startR][startC] = true;
+
+                if (dfsPath(startR, startC, path, visited, rows, cols, len)) {
+                    return path;
+                }
+            }
+
+            // 備用蛇形連續路徑
+            let fallback = [];
+            for (let r = 0; r < rows; r++) {
+                if (r % 2 === 0) {
+                    for (let c = 0; c < cols; c++) fallback.push({r, c});
+                } else {
+                    for (let c = cols - 1; c >= 0; c--) fallback.push({r, c});
+                }
+            }
+            return fallback.slice(0, len);
+        }
+
+        function dfsPath(r, c, path, visited, rows, cols, len) {
+            if (path.length === len) return true;
+            const dirs = [[-1,0],[1,0],[0,-1],[0,1]].sort(() => Math.random() - 0.5);
+            for (let [dr, dc] of dirs) {
+                let nr = r + dr, nc = c + dc;
+                if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && !visited[nr][nc]) {
+                    visited[nr][nc] = true;
+                    path.push({r: nr, c: nc});
+                    if (dfsPath(nr, nc, path, visited, rows, cols, len)) return true;
+                    path.pop();
+                    visited[nr][nc] = false;
+                }
+            }
+            return false;
+        }
+
+        function generateSingleGrid(rows, cols, pathSeq, distractorPool) {
+            const len = pathSeq.length;
+            const pathPositions = generateSnakePath(rows, cols, len);
+            const grid = Array.from({length: rows}, () => Array(cols).fill(null));
+
+            pathPositions.forEach((pos, idx) => {
+                grid[pos.r][pos.c] = {
+                    row: pos.r,
+                    col: pos.c,
+                    elem: pathSeq[idx],
+                    isTarget: true,
+                    displayMode: getCardDisplayMode()
+                };
+            });
+
+            let shuffledDistractors = [...distractorPool].sort(() => Math.random() - 0.5);
+            let distIdx = 0;
+
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    if (!grid[r][c]) {
+                        const distElem = shuffledDistractors[distIdx % shuffledDistractors.length];
+                        distIdx++;
+                        grid[r][c] = {
+                            row: r,
+                            col: c,
+                            elem: distElem,
+                            isTarget: false,
+                            displayMode: getCardDisplayMode()
+                        };
+                    }
+                }
+            }
+            return grid;
+        }
+
+        function renderBoardUI(rows, cols) {
+            document.getElementById('topic-name').textContent = currentTopic.name;
+            const chainText = pathSequence.map(e => `${e.name}(${e.sym})`).join(' ➔ ');
+            document.getElementById('prompt-target').textContent = chainText;
+
+            const gridContainer = document.getElementById('grid-layout');
+            gridContainer.innerHTML = '';
+            gridContainer.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    const nodeData = gridNodes[r][c];
+                    const card = createCardElement(nodeData, r, c);
+                    gridContainer.appendChild(card);
+                }
+            }
+
+            resizeCanvas();
+        }
+
+        function renderVersusBoardUI(rows, cols) {
+            document.getElementById('topic-name').textContent = `[雙人對戰] ${currentTopic.name}`;
+            const chainText = pathSequence.map(e => `${e.name}(${e.sym})`).join(' ➔ ');
+            document.getElementById('prompt-target').textContent = chainText;
+
+            const gridP1 = document.getElementById('grid-layout-p1');
+            const gridP2 = document.getElementById('grid-layout-p2');
+            
+            gridP1.innerHTML = '';
+            gridP2.innerHTML = '';
+            gridP1.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+            gridP2.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    gridP1.appendChild(createCardElement(p1GridNodes[r][c], r, c, 'p1'));
+                    gridP2.appendChild(createCardElement(p2GridNodes[r][c], r, c, 'p2'));
+                }
+            }
+
+            resizeCanvas();
+        }
+
+        function createCardElement(nodeData, r, c, playerPrefix = '') {
+            const card = document.createElement('div');
+            card.className = 'card-node';
+            card.dataset.row = r;
+            card.dataset.col = c;
+            if (playerPrefix) card.dataset.player = playerPrefix;
+
+            if (nodeData.elem.num === pathSequence[0].num) {
+                card.classList.add('start-node');
+            }
+
+            const isSym = nodeData.displayMode === 'sym';
+            card.innerHTML = `
+                <span class="atom-num">${nodeData.elem.num}</span>
+                <span class="symbol-text">${isSym ? nodeData.elem.sym : nodeData.elem.name}</span>
+            `;
+            return card;
+        }
+
+        function getNodeFromPoint(x, y, player = null) {
+            const el = document.elementFromPoint(x, y);
+            if (!el) return null;
+            const card = el.closest('.card-node');
+            if (!card) return null;
+            if (player && card.dataset.player !== player) return null;
+            const r = parseInt(card.dataset.row);
+            const c = parseInt(card.dataset.col);
+            return { r, c, card };
+        }
+
+        function processStep(nodeInfo, targetPlayer = null) {
+            let activePath = targetPlayer === 'p1' ? p1UserPath : (targetPlayer === 'p2' ? p2UserPath : userPath);
+            let activeGrid = targetPlayer === 'p1' ? p1GridNodes : (targetPlayer === 'p2' ? p2GridNodes : gridNodes);
+
+            const currentNode = activeGrid[nodeInfo.r][nodeInfo.c];
+
+            if (activePath.length === 0) {
+                if (currentNode.elem.num === pathSequence[0].num) {
+                    activePath.push(currentNode);
+                    updatePathDisplay(targetPlayer);
+                }
+            } else {
+                const lastNode = activePath[activePath.length - 1];
+                const existingIdx = activePath.findIndex(n => n.row === currentNode.row && n.col === currentNode.col);
+
+                if (existingIdx !== -1) {
+                    activePath.splice(existingIdx + 1);
+                    updatePathDisplay(targetPlayer);
+                    return;
+                }
+
+                const isAdjacent = Math.abs(currentNode.row - lastNode.row) + Math.abs(currentNode.col - lastNode.col) === 1;
+                if (isAdjacent) {
+                    const expectedNext = pathSequence[activePath.length];
+                    if (expectedNext && currentNode.elem.num === expectedNext.num) {
+                        activePath.push(currentNode);
+                        updatePathDisplay(targetPlayer);
+
+                        // 判斷該玩家是否通關本局
+                        if (activePath.length === pathSequence.length) {
+                            handleRoundComplete(targetPlayer);
+                        }
+                    }
+                }
+            }
+        }
+
+        function handleRoundComplete(winnerPlayer) {
+            clearInterval(timerInterval);
+            if (gameMode === 'versus') {
+                if (winnerPlayer === 'p1') p1Score++;
+                else if (winnerPlayer === 'p2') p2Score++;
+                updateVersusScoreUI();
+
+                if (p1Score >= 10 || p2Score >= 10) {
+                    const champ = p1Score >= 10 ? '🔴 P1 勇者' : '🔵 P2 勇者';
+                    setTimeout(() => showResultModal(true, `🏆 奪冠！${champ} 搶先取得 10 分！`), 200);
+                } else {
+                    setTimeout(loadNextLevel, 500);
+                }
+            } else { // single or challenge
+                const spent = (Date.now() - levelStartTime) / 1000;
+                totalTimeAccumulator += spent;
+                setTimeout(loadNextLevel, 300);
+            }
+        }
+
+        function setupGlobalTouchHandlers() {
+            const handleTouchStart = (e) => {
+                e.preventDefault();
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    const touch = e.changedTouches[i];
+                    if (gameMode === 'versus') {
+                        const p1Node = getNodeFromPoint(touch.clientX, touch.clientY, 'p1');
+                        if (p1Node) {
+                            p1IsDragging = true;
+                            p1TouchPos = { x: touch.clientX, y: touch.clientY };
+                            processStep(p1Node, 'p1');
+                            continue;
+                        }
+                        const p2Node = getNodeFromPoint(touch.clientX, touch.clientY, 'p2');
+                        if (p2Node) {
+                            p2IsDragging = true;
+                            p2TouchPos = { x: touch.clientX, y: touch.clientY };
+                            processStep(p2Node, 'p2');
+                        }
+                    } else {
+                        const node = getNodeFromPoint(touch.clientX, touch.clientY);
+                        if (node) {
+                            isDragging = true;
+                            currentTouchPos = { x: touch.clientX, y: touch.clientY };
+                            processStep(node);
+                        }
+                    }
+                }
+            };
+
+            const handleTouchMove = (e) => {
+                e.preventDefault();
+                for (let i = 0; i < e.touches.length; i++) {
+                    const touch = e.touches[i];
+                    if (gameMode === 'versus') {
+                        const p1Node = getNodeFromPoint(touch.clientX, touch.clientY, 'p1');
+                        if (p1Node && p1IsDragging) {
+                            p1TouchPos = { x: touch.clientX, y: touch.clientY };
+                            processStep(p1Node, 'p1');
+                        }
+                        const p2Node = getNodeFromPoint(touch.clientX, touch.clientY, 'p2');
+                        if (p2Node && p2IsDragging) {
+                            p2TouchPos = { x: touch.clientX, y: touch.clientY };
+                            processStep(p2Node, 'p2');
+                        }
+                    } else {
+                        if (isDragging) {
+                            currentTouchPos = { x: touch.clientX, y: touch.clientY };
+                            const node = getNodeFromPoint(touch.clientX, touch.clientY);
+                            if (node) processStep(node);
+                        }
+                    }
+                }
+                drawCanvasLines();
+            };
+
+            const handleTouchEnd = (e) => {
+                e.preventDefault();
+                if (gameMode === 'versus') {
+                    p1IsDragging = false;
+                    p2IsDragging = false;
+                    p1TouchPos = null;
+                    p2TouchPos = null;
+                } else {
+                    isDragging = false;
+                    currentTouchPos = null;
+                }
+                drawCanvasLines();
+            };
+
+            const gameArea = document.getElementById('board-container');
+            gameArea.addEventListener('touchstart', handleTouchStart, { passive: false });
+            gameArea.addEventListener('touchmove', handleTouchMove, { passive: false });
+            gameArea.addEventListener('touchend', handleTouchEnd, { passive: false });
+
+            // 支援滑鼠操作
+            gameArea.addEventListener('mousedown', (e) => {
+                const node = getNodeFromPoint(e.clientX, e.clientY);
+                if (node) {
+                    isDragging = true;
+                    currentTouchPos = { x: e.clientX, y: e.clientY };
+                    processStep(node);
+                }
+            });
+            window.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                currentTouchPos = { x: e.clientX, y: e.clientY };
+                const node = getNodeFromPoint(e.clientX, e.clientY);
+                if (node) processStep(node);
+                drawCanvasLines();
+            });
+            window.addEventListener('mouseup', () => {
+                isDragging = false;
+                currentTouchPos = null;
+                drawCanvasLines();
+            });
+        }
+
+        function setupGlobalTouchHandlers() {
+            const handleTouchStart = (e) => {
+                let touchedCard = false;
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    const touch = e.changedTouches[i];
+                    if (gameMode === 'versus') {
+                        const p1Node = getNodeFromPoint(touch.clientX, touch.clientY, 'p1');
+                        if (p1Node) {
+                            p1IsDragging = true;
+                            touchedCard = true;
+                            p1TouchPos = { x: touch.clientX, y: touch.clientY };
+                            processStep(p1Node, 'p1');
+                            continue;
+                        }
+                        const p2Node = getNodeFromPoint(touch.clientX, touch.clientY, 'p2');
+                        if (p2Node) {
+                            p2IsDragging = true;
+                            touchedCard = true;
+                            p2TouchPos = { x: touch.clientX, y: touch.clientY };
+                            processStep(p2Node, 'p2');
+                        }
+                    } else {
+                        const node = getNodeFromPoint(touch.clientX, touch.clientY);
+                        if (node) {
+                            isDragging = true;
+                            touchedCard = true;
+                            currentTouchPos = { x: touch.clientX, y: touch.clientY };
+                            processStep(node);
+                        }
+                    }
+                }
+                // 只在觸碰卡片連線時阻止預設滑動；在卡片外點擊滑動可正常移動視角
+                if (touchedCard) {
+                    e.preventDefault();
+                }
+            };
+
+            const handleTouchMove = (e) => {
+                let activeDrag = isDragging || p1IsDragging || p2IsDragging;
+                if (activeDrag) {
+                    e.preventDefault(); // 劃線拖曳中阻止捲動
+                }
+                for (let i = 0; i < e.touches.length; i++) {
+                    const touch = e.touches[i];
+                    if (gameMode === 'versus') {
+                        const p1Node = getNodeFromPoint(touch.clientX, touch.clientY, 'p1');
+                        if (p1Node && p1IsDragging) {
+                            p1TouchPos = { x: touch.clientX, y: touch.clientY };
+                            processStep(p1Node, 'p1');
+                        }
+                        const p2Node = getNodeFromPoint(touch.clientX, touch.clientY, 'p2');
+                        if (p2Node && p2IsDragging) {
+                            p2TouchPos = { x: touch.clientX, y: touch.clientY };
+                            processStep(p2Node, 'p2');
+                        }
+                    } else {
+                        if (isDragging) {
+                            currentTouchPos = { x: touch.clientX, y: touch.clientY };
+                            const node = getNodeFromPoint(touch.clientX, touch.clientY);
+                            if (node) processStep(node);
+                        }
+                    }
+                }
+                drawCanvasLines();
+            };
+
+            const handleTouchEnd = (e) => {
+                if (gameMode === 'versus') {
+                    p1IsDragging = false;
+                    p2IsDragging = false;
+                    p1TouchPos = null;
+                    p2TouchPos = null;
+                } else {
+                    isDragging = false;
+                    currentTouchPos = null;
+                }
+                drawCanvasLines();
+            };
+
+            const gameArea = document.getElementById('board-container');
+            gameArea.addEventListener('touchstart', handleTouchStart, { passive: false });
+            gameArea.addEventListener('touchmove', handleTouchMove, { passive: false });
+            gameArea.addEventListener('touchend', handleTouchEnd, { passive: false });
+
+            // 支援滑鼠操作
+            gameArea.addEventListener('mousedown', (e) => {
+                const node = getNodeFromPoint(e.clientX, e.clientY);
+                if (node) {
+                    isDragging = true;
+                    currentTouchPos = { x: e.clientX, y: e.clientY };
+                    processStep(node);
+                }
+            });
+            window.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                currentTouchPos = { x: e.clientX, y: e.clientY };
+                const node = getNodeFromPoint(e.clientX, e.clientY);
+                if (node) processStep(node);
+                drawCanvasLines();
+            });
+            window.addEventListener('mouseup', () => {
+                isDragging = false;
+                currentTouchPos = null;
+                drawCanvasLines();
+            });
+        }
+
+        function updatePathDisplay(player = null) {
+            if (player === 'p1') {
+                document.querySelectorAll('#grid-layout-p1 .card-node').forEach(c => c.classList.remove('active-p1'));
+                p1UserPath.forEach(n => {
+                    const c = document.querySelector(`#grid-layout-p1 .card-node[data-row="${n.row}"][data-col="${n.col}"]`);
+                    if (c) c.classList.add('active-p1');
+                });
+            } else if (player === 'p2') {
+                document.querySelectorAll('#grid-layout-p2 .card-node').forEach(c => c.classList.remove('active-p2'));
+                p2UserPath.forEach(n => {
+                    const c = document.querySelector(`#grid-layout-p2 .card-node[data-row="${n.row}"][data-col="${n.col}"]`);
+                    if (c) c.classList.add('active-p2');
+                });
+            } else {
+                document.querySelectorAll('#grid-layout .card-node').forEach(c => c.classList.remove('active-path'));
+                userPath.forEach(n => {
+                    const c = document.querySelector(`#grid-layout .card-node[data-row="${n.row}"][data-col="${n.col}"]`);
+                    if (c) c.classList.add('active-path');
+                });
+            }
+            drawCanvasLines();
+        }
+
+        function drawCanvasLines() {
+            if (gameMode === 'versus') {
+                drawSingleCanvas('line-canvas-p1', 'grid-layout-p1', p1UserPath, p1IsDragging, p1TouchPos, '#f87171');
+                drawSingleCanvas('line-canvas-p2', 'grid-layout-p2', p2UserPath, p2IsDragging, p2TouchPos, '#60a5fa');
+            } else {
+                drawSingleCanvas('line-canvas', 'grid-layout', userPath, isDragging, currentTouchPos, '#38bdf8');
+            }
+        }
+
+        function drawSingleCanvas(canvasId, gridId, pathArray, dragging, touchPos, strokeColor) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (pathArray.length === 0) return;
+
+            const containerRect = canvas.getBoundingClientRect();
+            const container = canvas.parentElement;
+            const scrollLeft = container ? container.scrollLeft : 0;
+            const scrollTop = container ? container.scrollTop : 0;
+
+            const getCenter = (node) => {
+                const card = document.querySelector(`#${gridId} .card-node[data-row="${node.row}"][data-col="${node.col}"]`);
+                if (!card) return { x: 0, y: 0 };
+                const rect = card.getBoundingClientRect();
+                return {
+                    x: rect.left + rect.width / 2 - containerRect.left + scrollLeft,
+                    y: rect.top + rect.height / 2 - containerRect.top + scrollTop
+                };
+            };
+
+            ctx.shadowColor = strokeColor;
+            ctx.shadowBlur = 12;
+            ctx.strokeStyle = strokeColor;
+            ctx.lineWidth = 6;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            ctx.beginPath();
+            const startPt = getCenter(pathArray[0]);
+            ctx.moveTo(startPt.x, startPt.y);
+
+            for (let i = 1; i < pathArray.length; i++) {
+                const pt = getCenter(pathArray[i]);
+                ctx.lineTo(pt.x, pt.y);
+            }
+
+            if (dragging && touchPos) {
+                ctx.lineTo(touchPos.x - containerRect.left + scrollLeft, touchPos.y - containerRect.top + scrollTop);
+            }
+            ctx.stroke();
+
+            ctx.shadowBlur = 0;
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        function resizeCanvas() {
+            if (gameMode === 'versus') {
+                const c1 = document.getElementById('line-canvas-p1');
+                const p1Cont = document.getElementById('p1-container');
+                if (c1 && p1Cont) { 
+                    c1.width = Math.max(p1Cont.clientWidth, p1Cont.scrollWidth); 
+                    c1.height = Math.max(p1Cont.clientHeight, p1Cont.scrollHeight); 
+                }
+
+                const c2 = document.getElementById('line-canvas-p2');
+                const p2Cont = document.getElementById('p2-container');
+                if (c2 && p2Cont) { 
+                    c2.width = Math.max(p2Cont.clientWidth, p2Cont.scrollWidth); 
+                    c2.height = Math.max(p2Cont.clientHeight, p2Cont.scrollHeight); 
+                }
+            } else {
+                const canvas = document.getElementById('line-canvas');
+                const container = document.getElementById('board-container');
+                if (canvas && container) {
+                    canvas.width = Math.max(container.clientWidth, container.scrollWidth);
+                    canvas.height = Math.max(container.clientHeight, container.scrollHeight);
+                }
+            }
+            drawCanvasLines();
+        }
+
+        window.onresize = resizeCanvas;
+
+        function resetTimer() {
+            clearInterval(timerInterval);
+
+            // 每關時間固定為需要的連線數量 + 5 秒
+            timeLimitSec = pathSequence.length + 5;
+            timeLeft = timeLimitSec;
+            updateTimerUI();
+
+            timerInterval = setInterval(() => {
+                timeLeft -= 0.1;
+                if (timeLeft <= 0) {
+                    timeLeft = 0;
+                    clearInterval(timerInterval);
+                    updateTimerUI();
+                    
+                    if (gameMode === 'versus') {
+                        showResultModal(false, '本局逾時未連線完畢，進入下一關！');
+                        setTimeout(loadNextLevel, 1200);
+                    } else if (gameMode === 'challenge') {
+                        showResultModal(false, '挑戰失敗！時間歸零，挑戰中斷！');
+                    } else {
+                        showResultModal(false, '時間歸零，請再接再厲！');
+                    }
+                } else {
+                    updateTimerUI();
+                }
+            }, 100);
+        }
+
+        function updateTimerUI() {
+            const pct = Math.max(0, (timeLeft / timeLimitSec) * 100);
+            document.getElementById('timer-bar').style.width = `${pct}%`;
+            document.getElementById('timer-text').textContent = `剩餘時間：${timeLeft.toFixed(1)}s (固定 ${timeLimitSec}s)`;
+        }
+
+        function showResultModal(isWin, msg) {
+            clearInterval(timerInterval);
+            const modal = document.getElementById('result-modal');
+            const icon = document.getElementById('result-icon');
+            const title = document.getElementById('result-title');
+            const desc = document.getElementById('result-desc');
+
+            if (isWin) {
+                icon.textContent = '🏆';
+                title.textContent = '獲勝完成！';
+                desc.textContent = msg || '您已順利完成任務！';
+            } else {
+                icon.textContent = '❌';
+                title.textContent = '任務結束';
+                desc.textContent = msg || '時間倒數歸零，請再接再厲！';
+            }
+
+            modal.style.display = 'flex';
+        }
+
+        let isSubmittingScore = false;
+
+        function checkDuplicateNameInput() {
+            const inputName = document.getElementById('player-name-input').value.trim();
+            const warningEl = document.getElementById('name-warning-msg');
+            if (!inputName || !warningEl) return;
+
+            let localScores = JSON.parse(localStorage.getItem('ptable_leaderboard') || '[]');
+            const exists = localScores.some(s => (s.name || '').trim() === inputName);
+            if (exists) {
+                warningEl.style.display = 'block';
+            } else {
+                warningEl.style.display = 'none';
+            }
+        }
+
+        function openScoreSubmitModal() {
+            clearInterval(timerInterval);
+            isSubmittingScore = false;
+
+            const submitBtn = document.getElementById('btn-submit-score');
+            if (submitBtn) submitBtn.disabled = false;
+
+            const nameInput = document.getElementById('player-name-input');
+            if (nameInput) {
+                nameInput.value = '';
+                nameInput.oninput = checkDuplicateNameInput;
+            }
+
+            const warningEl = document.getElementById('name-warning-msg');
+            if (warningEl) warningEl.style.display = 'none';
+
+            document.getElementById('submit-total-time').textContent = `13 大關總耗時：${totalTimeAccumulator.toFixed(1)} 秒`;
+            document.getElementById('score-submit-modal').style.display = 'flex';
+        }
+
+        async function submitScore() {
+             if (isSubmittingScore) return;
+            isSubmittingScore = true;
+
+            const submitBtn = document.getElementById('btn-submit-score');
+            if (submitBtn) submitBtn.disabled = true;
+
+            const name = document.getElementById('player-name-input').value.trim() || '匿名勇者';
+            const spentTime = parseFloat(totalTimeAccumulator.toFixed(1));
+
+            const scoreData = {
+                mode: GAME_MODE,
+                name: name,
+                time: spentTime + " 秒",
+                rawTime: spentTime,
+                wrongClicks: 0,
+                date: new Date().toLocaleDateString()
+            };
+
+            try {
+                await window.PhysicsPortalCloud.submitLeaderboard(GAME_MODE, scoreData);
+            } catch (e) { console.error('Leaderboard submit error:', e); }
+
+            document.getElementById('score-submit-modal').style.display = 'none';
+            if (submitBtn) submitBtn.disabled = false;
+            isSubmittingScore = false;
+
+            returnToStartScreen();
+            openLeaderboardModal();
+        }
+        async function openLeaderboardModal() {
+            const list = document.getElementById('leaderboard-list');
+            list.innerHTML = '<div style="text-align: center; color: #64748b; padding: 20px;">資料載入中...</div>';
+            document.getElementById('leaderboard-modal').style.display = 'flex';
+
+            let scores = [];
+            try {
+                const res = await window.PhysicsPortalCloud.fetchLeaderboard(GAME_MODE);
+                scores = (res.rows || [])
+                    .sort((a, b) => (Number(a.rawTime) || 999999) - (Number(b.rawTime) || 999999))
+                    .slice(0, 20);
+            } catch (e) {
+                console.error(e);
+            }
+
+            list.innerHTML = '';
+            if (!scores || scores.length === 0) {
+                list.innerHTML = '<div style="text-align: center; color: #64748b; padding: 20px;">尚無排行榜紀錄</div>';
+                return;
+            }
+
+            // 顯示前 20 名
+            scores.forEach((s, idx) => {
+                const item = document.createElement('div');
+                item.className = `leaderboard-item ${idx < 3 ? 'top3' : ''}`;
+                item.innerHTML = `
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span class="rank-badge">#${idx + 1}</span>
+                        <span style="font-weight:bold;">${s.name}</span>
+                    </div>
+                    <span style="font-weight:bold; color:var(--accent-color);">${s.time || s.rawTime + ' 秒'}</span>
+                `;
+                list.appendChild(item);
+            });
+        }
+        function closeLeaderboardModal() { document.getElementById('leaderboard-modal').style.display = 'none'; }
+
+        function returnToStartScreen() {
+            clearInterval(timerInterval);
+            document.getElementById('result-modal').style.display = 'none';
+            document.getElementById('game-screen').classList.remove('active');
+            document.getElementById('start-screen').classList.add('active');
+        }
+
+        window.onload = () => {
+            initSettingsUI();
+            setupGlobalTouchHandlers();
+
+            const boardContainer = document.getElementById('board-container');
+            if (boardContainer) {
+                boardContainer.addEventListener('scroll', drawCanvasLines, { passive: true });
+            }
+            const p1Cont = document.getElementById('p1-container');
+            if (p1Cont) {
+                p1Cont.addEventListener('scroll', drawCanvasLines, { passive: true });
+            }
+            const p2Cont = document.getElementById('p2-container');
+            if (p2Cont) {
+                p2Cont.addEventListener('scroll', drawCanvasLines, { passive: true });
+            }
+        };
+    </script>
+</body>
+</html>

@@ -2,11 +2,12 @@
 <html lang="zh-TW" class="dark">
 <head>
     <title>幾何光學與三稜鏡闖關實驗室</title>
-    <meta name="description" content="探索光學折射與反射，調整三稜鏡挑戰打靶闖關！">
+    <meta name="description" content="探索光學折射與反射，調整三稜鏡、分光鏡與傳送門挑戰打靶闖關，並登上共享排行榜！">
     <meta name="portal-type" content="game">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>光學繪鏡與三稜鏡打靶闖關實驗室 (含關卡編輯器)</title>
+    <!-- Cloud Shared Config -->
+    <script src="../shared/cloud-config.js"></script>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
@@ -71,23 +72,22 @@
                 </div>
                 <div>
                     <h1 class="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 via-teal-300 to-pink-500">
-                        光學實驗室 (含關卡編輯器)
+                        幾何光學與三稜鏡闖關實驗室
                     </h1>
-                    <p class="text-xs text-slate-400">折射率修正 ✕ 雙指召喚三稜鏡 ✕ 貫穿多靶 ✕ 自由創作關卡</p>
+                    <p class="text-xs text-slate-400">反射定律 ✕ 折射三稜鏡 ✕ 分光與傳送門 ✕ 雲端關卡挑戰</p>
                 </div>
             </div>
 
-            <!-- Mode Switcher Tabs -->
-            <div class="flex items-center bg-slate-900/90 border border-slate-800 p-1 rounded-xl">
-                <button id="mode-play-btn" onclick="switchAppMode('play')" class="px-4 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow">
-                    <i class="fa-solid fa-gamepad"></i> 遊玩模式
+            <div class="flex items-center gap-2 flex-wrap">
+                <span id="cloud-levels-badge" class="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700 text-[11px] font-mono text-slate-300">
+                    📱 預設關卡 (11 關)
+                </span>
+                <button onclick="syncCloudLevels(true)" class="px-3 py-1.5 rounded-lg bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/30 text-xs font-bold flex items-center gap-1.5 transition">
+                    <i class="fa-solid fa-rotate"></i> 同步雲端關卡
                 </button>
-                <button id="mode-editor-btn" onclick="switchAppMode('editor')" class="px-4 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-cyan-400 transition flex items-center gap-2">
-                    <i class="fa-solid fa-pen-ruler"></i> 🛠️ 關卡編輯器
+                <button onclick="openLeaderboardModal()" class="px-3 py-1.5 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-300 hover:bg-amber-500/30 text-xs font-bold flex items-center gap-1.5 transition">
+                    <i class="fa-solid fa-trophy"></i> 英雄榜
                 </button>
-            </div>
-
-            <div class="flex items-center gap-3">
                 <button id="mute-btn" onclick="toggleMute()" class="w-9 h-9 rounded-lg bg-slate-900 border border-cyber-border hover:border-cyan-500 text-slate-300 hover:text-cyan-400 flex items-center justify-center transition">
                     <i id="mute-icon" class="fa-solid fa-volume-high"></i>
                 </button>
@@ -128,35 +128,11 @@
                 <button id="game-test-launch-btn" onclick="triggerGameTestLaunch()" class="px-5 py-1.5 rounded-lg bg-gradient-to-r from-cyan-500 to-pink-500 hover:from-cyan-400 hover:to-pink-400 text-white font-bold text-xs glow-pink flex items-center gap-1.5 transition transform active:scale-95">
                     <i class="fa-solid fa-play"></i> 測試發射
                 </button>
-            </div>
-        </div>
 
-        <!-- EDITOR MODE HEADER CONTROLS -->
-        <div id="editor-mode-toolbar" class="bg-cyber-card border border-purple-500/40 rounded-2xl p-4 hidden flex flex-wrap items-center justify-between gap-4">
-            <div class="flex items-center gap-3">
-                <div class="px-3 py-1 bg-purple-950 border border-purple-800 rounded-xl font-bold text-purple-400 text-xs flex items-center gap-2">
-                    <i class="fa-solid fa-pen-ruler"></i>
-                    <span>關卡創作模式</span>
+                <div class="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs font-mono text-amber-300 flex items-center gap-1.5">
+                    <i class="fa-solid fa-stopwatch text-amber-400"></i>
+                    <span id="game-timer-display">0.0 秒</span>
                 </div>
-                <span class="text-xs text-slate-300 hidden lg:inline">拖曳新增元件、點選變更顏色/尺寸/折射率，創作完成後可直接試玩或匯出 JSON！</span>
-            </div>
-
-            <div class="flex items-center gap-2 flex-wrap">
-                <button onclick="playCustomLevelFromEditor()" class="px-4 py-1.5 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-bold text-xs glow-green flex items-center gap-1.5 transition">
-                    <i class="fa-solid fa-gamepad"></i> ▶️ 試玩此關卡
-                </button>
-
-                <button onclick="openExportModal()" class="px-3 py-1.5 rounded-lg bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/30 text-xs font-semibold flex items-center gap-1">
-                    <i class="fa-solid fa-file-export"></i> 匯出關卡 JSON
-                </button>
-
-                <button onclick="openImportModal()" class="px-3 py-1.5 rounded-lg bg-purple-500/20 border border-purple-500/40 text-purple-300 hover:bg-purple-500/30 text-xs font-semibold flex items-center gap-1">
-                    <i class="fa-solid fa-file-import"></i> 匯入關卡 JSON
-                </button>
-
-                <button onclick="clearEditorLevel()" class="px-3 py-1.5 rounded-lg bg-rose-500/20 border border-rose-500/30 text-rose-300 hover:bg-rose-500/30 text-xs font-semibold flex items-center gap-1">
-                    <i class="fa-solid fa-trash-can"></i> 清空畫布
-                </button>
             </div>
         </div>
 
@@ -272,113 +248,6 @@
                     </div>
                 </div>
             </div>
-
-            <!-- SIDEBAR: EDITOR MODE SIDEBAR -->
-            <div id="editor-sidebar" class="space-y-4 hidden">
-                <!-- Element Palette -->
-                <div class="bg-cyber-card border border-purple-500/30 rounded-2xl p-4 space-y-3">
-                    <h3 class="text-xs font-bold text-purple-300 uppercase tracking-wider border-b border-cyber-border pb-2 flex items-center gap-2">
-                        <i class="fa-solid fa-plus-circle text-purple-400"></i> 元件調色盤 (新增)
-                    </h3>
-
-                    <div class="grid grid-cols-2 gap-2">
-                        <button onclick="addEditorElement('emitter')" class="p-2 bg-slate-900 border border-slate-700 hover:border-cyan-500 rounded-xl text-xs font-bold text-cyan-300 flex items-center gap-1.5 transition">
-                            <i class="fa-solid fa-bolt"></i> + 光源發射器
-                        </button>
-
-                        <button onclick="addEditorElement('target')" class="p-2 bg-slate-900 border border-slate-700 hover:border-pink-500 rounded-xl text-xs font-bold text-pink-300 flex items-center gap-1.5 transition">
-                            <i class="fa-solid fa-bullseye"></i> + 感應標靶
-                        </button>
-
-                        <button onclick="addEditorElement('wall')" class="p-2 bg-slate-900 border border-slate-700 hover:border-slate-400 rounded-xl text-xs font-bold text-slate-300 flex items-center gap-1.5 transition">
-                            <i class="fa-solid fa-square"></i> + 障礙牆
-                        </button>
-
-                        <button onclick="addEditorElement('glass')" class="p-2 bg-slate-900 border border-slate-700 hover:border-blue-400 rounded-xl text-xs font-bold text-blue-300 flex items-center gap-1.5 transition">
-                            <i class="fa-solid fa-cubes"></i> + 矩形玻璃
-                        </button>
-
-                        <button onclick="addEditorElement('prism')" class="p-2 bg-slate-900 border border-slate-700 hover:border-amber-400 rounded-xl text-xs font-bold text-amber-300 flex items-center gap-1.5 transition">
-                            <i class="fa-solid fa-play -rotate-90"></i> + 三稜鏡
-                        </button>
-
-                        <button onclick="addEditorElement('splitter')" class="p-2 bg-slate-900 border border-slate-700 hover:border-cyan-400 rounded-xl text-xs font-bold text-cyan-300 flex items-center gap-1.5 transition">
-                            <i class="fa-solid fa-code-branch"></i> + 分光鏡
-                        </button>
-
-                        <button onclick="addEditorElement('sensor')" class="p-2 bg-slate-900 border border-slate-700 hover:border-emerald-400 rounded-xl text-xs font-bold text-emerald-300 flex items-center gap-1.5 transition">
-                            <i class="fa-solid fa-solar-panel"></i> + 光敏開關
-                        </button>
-
-                        <button onclick="addEditorElement('gate')" class="p-2 bg-slate-900 border border-slate-700 hover:border-rose-400 rounded-xl text-xs font-bold text-rose-300 flex items-center gap-1.5 transition">
-                            <i class="fa-solid fa-shield-halved"></i> + 防護閘門
-                        </button>
-
-                        <button onclick="addEditorElement('filter')" class="p-2 bg-slate-900 border border-slate-700 hover:border-pink-400 rounded-xl text-xs font-bold text-pink-300 flex items-center gap-1.5 transition">
-                            <i class="fa-solid fa-filter"></i> + 彩色濾鏡
-                        </button>
-
-                        <button onclick="addEditorElement('portal')" class="p-2 bg-slate-900 border border-slate-700 hover:border-purple-400 rounded-xl text-xs font-bold text-purple-300 flex items-center gap-1.5 transition">
-                            <i class="fa-solid fa-circle-notch"></i> + 傳送門組
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Selected Element Inspector Panel -->
-                <div class="bg-cyber-card border border-purple-500/30 rounded-2xl p-4 space-y-3">
-                    <h3 class="text-xs font-bold text-purple-300 uppercase tracking-wider border-b border-cyber-border pb-2 flex items-center justify-between">
-                        <span class="flex items-center gap-2"><i class="fa-solid fa-sliders text-purple-400"></i> 屬性檢視面板</span>
-                        <span id="selected-element-badge" class="text-[10px] text-slate-500 font-mono">未選取</span>
-                    </h3>
-
-                    <div id="inspector-controls" class="space-y-3 opacity-40 pointer-events-none">
-                        <!-- Color Picker -->
-                        <div id="prop-color-group" class="space-y-1">
-                            <label class="text-[11px] text-slate-400 font-bold">元件顏色 (Color):</label>
-                            <div class="flex items-center gap-2 flex-wrap">
-                                <button onclick="setSelectedColor('#06b6d4')" class="w-6 h-6 rounded-full bg-cyan-500 border border-white/20 hover:scale-110 transition" title="青色"></button>
-                                <button onclick="setSelectedColor('#f43f5e')" class="w-6 h-6 rounded-full bg-rose-500 border border-white/20 hover:scale-110 transition" title="紅色"></button>
-                                <button onclick="setSelectedColor('#10b981')" class="w-6 h-6 rounded-full bg-emerald-500 border border-white/20 hover:scale-110 transition" title="綠色"></button>
-                                <button onclick="setSelectedColor('#a855f7')" class="w-6 h-6 rounded-full bg-purple-500 border border-white/20 hover:scale-110 transition" title="紫色"></button>
-                                <button onclick="setSelectedColor('#f59e0b')" class="w-6 h-6 rounded-full bg-amber-500 border border-white/20 hover:scale-110 transition" title="橙黃色"></button>
-                                <button onclick="setSelectedColor('#ffffff')" class="w-6 h-6 rounded-full bg-white border border-slate-300 hover:scale-110 transition" title="自然白光"></button>
-                            </div>
-                        </div>
-
-                        <!-- Rotation Angle Slider -->
-                        <div class="space-y-1">
-                            <div class="flex justify-between text-[11px]">
-                                <span class="text-slate-400 font-bold">旋轉角度 (Angle):</span>
-                                <span id="prop-angle-val" class="text-cyan-400 font-mono">0°</span>
-                            </div>
-                            <input id="prop-angle-slider" type="range" min="0" max="360" value="0" oninput="updateSelectedProperty('angle', parseInt(this.value))" class="w-full accent-cyan-500">
-                        </div>
-
-                        <!-- Size Controls -->
-                        <div id="prop-size-group" class="space-y-1">
-                            <div class="flex justify-between text-[11px]">
-                                <span class="text-slate-400 font-bold">尺寸 / 邊長 (Size):</span>
-                                <span id="prop-size-val" class="text-cyan-400 font-mono">80</span>
-                            </div>
-                            <input id="prop-size-slider" type="range" min="20" max="300" value="80" oninput="updateSelectedProperty('size', parseInt(this.value))" class="w-full accent-cyan-500">
-                        </div>
-
-                        <!-- Refractive Index n Slider -->
-                        <div id="prop-n-group" class="space-y-1">
-                            <div class="flex justify-between text-[11px]">
-                                <span class="text-slate-400 font-bold">折射率 (n):</span>
-                                <span id="prop-n-val" class="text-cyan-400 font-mono">1.52 (玻璃)</span>
-                            </div>
-                            <input id="prop-n-slider" type="range" min="1.00" max="2.50" step="0.01" value="1.52" oninput="updateSelectedProperty('n', parseFloat(this.value))" class="w-full accent-cyan-500">
-                        </div>
-
-                        <!-- Delete Button -->
-                        <button onclick="deleteSelectedElement()" class="w-full py-2 bg-rose-500/20 border border-rose-500/40 text-rose-300 hover:bg-rose-500/30 text-xs font-bold rounded-xl transition flex items-center justify-center gap-2">
-                            <i class="fa-solid fa-trash-can"></i> 刪除此元件
-                        </button>
-                    </div>
-                </div>
-            </div>
         </div>
     </main>
 
@@ -411,18 +280,22 @@
                 <p id="victory-level-name" class="text-cyan-400 text-sm font-semibold">關卡 1: 平面鏡反射入門</p>
             </div>
 
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-3 gap-3">
                 <div class="bg-slate-900/90 p-3 rounded-xl border border-slate-800 text-center">
-                    <div class="text-[11px] text-slate-400">本關卡放置元件</div>
-                    <div id="victory-this-count" class="text-xl font-bold font-mono text-cyan-400">1 個</div>
+                    <div class="text-[11px] text-slate-400">過關耗時</div>
+                    <div id="victory-time-val" class="text-lg font-bold font-mono text-amber-400">0.0 秒</div>
                 </div>
                 <div class="bg-slate-900/90 p-3 rounded-xl border border-slate-800 text-center">
-                    <div class="text-[11px] text-slate-400">標靶完全命中</div>
-                    <div id="victory-target-count" class="text-xl font-bold font-mono text-emerald-400">100%</div>
+                    <div class="text-[11px] text-slate-400">使用元件</div>
+                    <div id="victory-this-count" class="text-lg font-bold font-mono text-cyan-400">1 個</div>
+                </div>
+                <div class="bg-slate-900/90 p-3 rounded-xl border border-slate-800 text-center">
+                    <div class="text-[11px] text-slate-400">關卡得分</div>
+                    <div id="victory-score-val" class="text-lg font-bold font-mono text-emerald-400">1000</div>
                 </div>
             </div>
 
-            <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-800 text-left text-xs text-slate-300 space-y-2">
+            <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-800 text-left text-xs text-slate-300 space-y-1.5">
                 <div class="font-bold text-cyan-300 flex items-center gap-1">
                     <i class="fa-solid fa-graduation-cap"></i> 光學原理解析:
                 </div>
@@ -431,7 +304,20 @@
                 </p>
             </div>
 
-            <div class="flex items-center justify-center gap-3 pt-2">
+            <!-- Shared GSheet Leaderboard Submit -->
+            <div class="bg-slate-900/90 border border-amber-500/30 rounded-xl p-3 space-y-2 text-left">
+                <label class="text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                    <i class="fa-solid fa-ranking-star"></i> 登錄成績到共享英雄榜
+                </label>
+                <div class="flex gap-2">
+                    <input id="reflection-player-name" type="text" maxlength="16" placeholder="輸入姓名 / 班級座號..." class="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:border-amber-400 outline-none">
+                    <button id="btn-submit-reflection" onclick="submitReflectionScore()" class="px-4 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition whitespace-nowrap">
+                        送出成績
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-center gap-3 pt-1">
                 <button onclick="toggleVictoryModal(false);" class="px-4 py-2 rounded-xl bg-slate-800 border border-slate-700 hover:border-slate-500 text-slate-200 text-xs font-bold">
                     再試一次
                 </button>
@@ -442,45 +328,42 @@
         </div>
     </div>
 
-    <!-- Export JSON Modal -->
-    <div id="export-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center hidden p-4">
-        <div class="bg-cyber-card border border-cyan-500/50 rounded-2xl p-6 max-w-lg w-full space-y-4 shadow-2xl relative">
-            <h3 class="text-lg font-bold text-cyan-400 flex items-center gap-2">
-                <i class="fa-solid fa-file-export"></i> 匯出關卡 JSON 程式碼
-            </h3>
-            <p class="text-xs text-slate-300">複製下方 JSON 代碼，分享給朋友匯入測試您設計的光學關卡：</p>
-            <textarea id="export-json-area" readonly class="w-full h-48 bg-slate-950 border border-slate-800 rounded-xl p-3 font-mono text-xs text-cyan-300 focus:outline-none"></textarea>
-            <div class="flex justify-end gap-2">
-                <button onclick="copyExportJSON()" class="px-4 py-2 rounded-lg bg-cyan-500 text-slate-950 font-bold hover:bg-cyan-400 text-xs flex items-center gap-1">
-                    <i class="fa-solid fa-copy"></i> 複製代碼
+    <!-- Shared Leaderboard Modal -->
+    <div id="leaderboard-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-cyber-card border border-amber-500/40 rounded-2xl p-6 max-w-xl w-full space-y-4 shadow-2xl relative">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h3 class="text-lg font-bold text-amber-400 flex items-center gap-2">
+                    <i class="fa-solid fa-trophy"></i> 光學反射迷宮 共享英雄榜
+                </h3>
+                <button onclick="document.getElementById('leaderboard-modal').classList.add('hidden')" class="text-slate-400 hover:text-white text-lg">
+                    <i class="fa-solid fa-xmark"></i>
                 </button>
-                <button onclick="toggleExportModal(false)" class="px-4 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-xs font-bold">
+            </div>
+            <div class="max-h-80 overflow-y-auto">
+                <table class="w-full text-xs text-left">
+                    <thead class="text-slate-400 border-b border-slate-800">
+                        <tr>
+                            <th class="py-2 px-2">名次</th>
+                            <th class="py-2 px-2">玩家</th>
+                            <th class="py-2 px-2">關卡</th>
+                            <th class="py-2 px-2 text-right">得分</th>
+                            <th class="py-2 px-2 text-right">耗時</th>
+                        </tr>
+                    </thead>
+                    <tbody id="reflection-lb-tbody" class="divide-y divide-slate-800/60 text-slate-200">
+                        <tr><td colspan="5" class="py-6 text-center text-slate-500">載入中...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="flex justify-end">
+                <button onclick="document.getElementById('leaderboard-modal').classList.add('hidden')" class="px-4 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-xs font-bold">
                     關閉
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Import JSON Modal -->
-    <div id="import-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center hidden p-4">
-        <div class="bg-cyber-card border border-purple-500/50 rounded-2xl p-6 max-w-lg w-full space-y-4 shadow-2xl relative">
-            <h3 class="text-lg font-bold text-purple-400 flex items-center gap-2">
-                <i class="fa-solid fa-file-import"></i> 匯入關卡 JSON 代碼
-            </h3>
-            <p class="text-xs text-slate-300">請在下方貼上您收到的關卡 JSON 代碼：</p>
-            <textarea id="import-json-area" placeholder="貼上 JSON 關卡內容..." class="w-full h-48 bg-slate-950 border border-slate-800 rounded-xl p-3 font-mono text-xs text-purple-300 focus:outline-none focus:border-purple-500"></textarea>
-            <div class="flex justify-end gap-2">
-                <button onclick="submitImportJSON()" class="px-4 py-2 rounded-lg bg-purple-500 text-white font-bold hover:bg-purple-400 text-xs flex items-center gap-1">
-                    <i class="fa-solid fa-check"></i> 載入並遊玩
-                </button>
-                <button onclick="toggleImportModal(false)" class="px-4 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-xs font-bold">
-                    取消
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- JavaScript Optics Engine & Editor Logic -->
+    <!-- JavaScript Optics Engine -->
     <script>
         /* ==========================================================================
            1. Audio Synthesizer (Web Audio API)
@@ -900,7 +783,7 @@
         /* ==========================================================================
            3. Game Levels Setup
            ========================================================================== */
-        const GAME_LEVELS = [
+        let GAME_LEVELS = [
             {
                 title: "關卡 1: 平面鏡反射入門",
                 desc: "固定青色光源！請劃出一面平面鏡反射光線繞過障礙物擊中青色靶心。",
@@ -1172,6 +1055,43 @@
             }
         }
 
+        let levelStartTimestamp = Date.now();
+        let lastClearElapsedSec = 0;
+        let lastClearScore = 1000;
+        let levelTimerInterval = null;
+
+        function startLevelTimer() {
+            levelStartTimestamp = Date.now();
+            if (levelTimerInterval) clearInterval(levelTimerInterval);
+            const timerEl = document.getElementById('game-timer-display');
+            if (timerEl) timerEl.textContent = '0.0 秒';
+            levelTimerInterval = setInterval(() => {
+                const sec = ((Date.now() - levelStartTimestamp) / 1000).toFixed(1);
+                if (timerEl) timerEl.textContent = `${sec} 秒`;
+            }, 100);
+        }
+
+        async function syncCloudLevels(showAlert = false) {
+            const badge = document.getElementById('cloud-levels-badge');
+            if (badge) badge.textContent = '☁️ 同步關卡中...';
+            try {
+                const res = await window.PhysicsPortalCloud.fetchReflectionLevels({ includeDisabled: false });
+                if (res.levels && res.levels.length > 0) {
+                    GAME_LEVELS = res.levels;
+                    if (badge) badge.textContent = `☁️ 雲端關卡 (${GAME_LEVELS.length} 關)`;
+                    initLevelSelect();
+                    if (currentGameLevelIdx >= GAME_LEVELS.length) currentGameLevelIdx = 0;
+                    loadGameLevel(currentGameLevelIdx);
+                    if (showAlert) alert(`✅ 已同步 Google 試算表最新關卡（共 ${GAME_LEVELS.length} 關）！`);
+                } else {
+                    if (badge) badge.textContent = `📱 預設關卡 (${GAME_LEVELS.length} 關)`;
+                    if (showAlert) alert('目前雲端試算表尚無公開關卡或未設定連線，使用內建預設關卡！');
+                }
+            } catch (e) {
+                if (badge) badge.textContent = `📱 預設關卡 (${GAME_LEVELS.length} 關)`;
+            }
+        }
+
         function loadGameLevel(idx) {
             currentGameLevelIdx = idx;
             let level = GAME_LEVELS[idx];
@@ -1179,16 +1099,20 @@
             if (idx === 999 && customPlayLevel) {
                 level = customPlayLevel;
             }
+            if (!level) return;
 
             document.getElementById('game-level-title').textContent = level.title;
-            document.getElementById('game-level-desc').textContent = level.desc;
+            document.getElementById('game-level-desc').textContent = level.desc || '';
             document.getElementById('game-level-select').value = idx;
 
-            gameEmitters = JSON.parse(JSON.stringify(level.emitters));
-            gameTargets = JSON.parse(JSON.stringify(level.targets));
-            gameFixedObjects = JSON.parse(JSON.stringify(level.fixedObjects));
+            gameEmitters = JSON.parse(JSON.stringify(level.emitters || []));
+            gameTargets = JSON.parse(JSON.stringify(level.targets || []));
+            gameFixedObjects = JSON.parse(JSON.stringify(level.fixedObjects || []));
             gamePlayerObjects = [];
+            selectedPlayObject = null;
+            updatePlaySelectedPanel();
 
+            startLevelTimer();
             updateGameStats();
             recalcGameRay();
         }
@@ -1381,6 +1305,9 @@
             const allTargetsHit = gameTargets.length > 0 && gameTargets.every(t => t.hit);
             if (allTargetsHit) {
                 playWinSound();
+                lastClearElapsedSec = Number(((Date.now() - levelStartTimestamp) / 1000).toFixed(1));
+                lastClearScore = Math.max(100, Math.round(1200 - lastClearElapsedSec * 12 - gamePlayerObjects.length * 40));
+                if (levelTimerInterval) clearInterval(levelTimerInterval);
                 setTimeout(() => toggleVictoryModal(true), 300);
             }
         }
@@ -1407,8 +1334,16 @@
                 if (currentGameLevelIdx === 999 && customPlayLevel) level = customPlayLevel;
 
                 document.getElementById('victory-level-name').textContent = level.title;
-                document.getElementById('victory-physics-explain').textContent = level.physics;
+                document.getElementById('victory-physics-explain').textContent = level.physics || '利用反射與折射定律完成多路徑導引！';
                 document.getElementById('victory-this-count').textContent = `${gamePlayerObjects.length} 個`;
+                document.getElementById('victory-time-val').textContent = `${lastClearElapsedSec} 秒`;
+                document.getElementById('victory-score-val').textContent = `${lastClearScore}`;
+
+                const subBtn = document.getElementById('btn-submit-reflection');
+                if (subBtn) {
+                    subBtn.disabled = false;
+                    subBtn.textContent = '送出成績';
+                }
 
                 if (currentGameLevelIdx === GAME_LEVELS.length - 1) {
                     document.getElementById('victory-header-text').textContent = "🎉 恭喜通關全部關卡！Grand Master!";
@@ -1419,6 +1354,70 @@
                 modal.classList.remove('hidden');
             } else {
                 modal.classList.add('hidden');
+            }
+        }
+
+        async function submitReflectionScore() {
+            const input = document.getElementById('reflection-player-name');
+            const name = input.value.trim();
+            if (!name) {
+                alert('請輸入姓名或班級座號！');
+                return;
+            }
+            const btn = document.getElementById('btn-submit-reflection');
+            btn.disabled = true;
+            btn.textContent = '上傳中...';
+
+            const level = GAME_LEVELS[currentGameLevelIdx] || { title: '未知關卡' };
+            const now = new Date();
+            const dateStr = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')}`;
+
+            const res = await window.PhysicsPortalCloud.submitLeaderboard('光學反射迷宮', {
+                mode: '光學反射迷宮',
+                name: name,
+                score: lastClearScore,
+                time: `${lastClearElapsedSec} 秒`,
+                rawTime: lastClearElapsedSec,
+                levelIdx: currentGameLevelIdx + 1,
+                levelTitle: level.title,
+                date: dateStr
+            });
+
+            btn.textContent = '已登錄 ✓';
+            alert(res.cloudSynced ? '🎉 成績已上傳至共享 Google 英雄榜！' : '📌 成績已暫存於本機英雄榜！');
+            openLeaderboardModal();
+        }
+
+        async function openLeaderboardModal() {
+            const modal = document.getElementById('leaderboard-modal');
+            const tbody = document.getElementById('reflection-lb-tbody');
+            modal.classList.remove('hidden');
+            tbody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-slate-400">載入共享英雄榜中...</td></tr>';
+
+            try {
+                const { rows } = await window.PhysicsPortalCloud.fetchLeaderboard('光學反射迷宮');
+                const sorted = (rows || []).slice().sort((a, b) => {
+                    const sd = (Number(b.score) || 0) - (Number(a.score) || 0);
+                    if (sd !== 0) return sd;
+                    return (Number(a.rawTime) || 999999) - (Number(b.rawTime) || 999999);
+                }).slice(0, 20);
+
+                if (sorted.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-slate-500">目前尚無英雄榜紀錄，快來挑戰成為第一名！</td></tr>';
+                    return;
+                }
+                const esc = (s) => String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[c]));
+                tbody.innerHTML = sorted.map((r, idx) => `
+                    <tr class="hover:bg-slate-900/60">
+                        <td class="py-2 px-2 font-mono font-bold ${idx === 0 ? 'text-amber-400' : idx === 1 ? 'text-slate-200' : idx === 2 ? 'text-amber-600' : 'text-slate-400'}">#${idx + 1}</td>
+                        <td class="py-2 px-2 font-bold text-white">${esc(r.name)}</td>
+                        <td class="py-2 px-2 text-slate-300 truncate max-w-[140px]">${esc(r.levelTitle || ('關卡 ' + (r.levelIdx || '')))}</td>
+                        <td class="py-2 px-2 text-right font-mono font-bold text-emerald-400">${Number(r.score) || 0}</td>
+                        <td class="py-2 px-2 text-right font-mono text-cyan-300">${esc(r.time || (r.rawTime + ' 秒'))}</td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                tbody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-rose-400">讀取失敗，請稍後再試</td></tr>';
             }
         }
 
@@ -2569,10 +2568,11 @@
         }
 
         /* Initialization */
-        window.onload = function () {
+        window.onload = async function () {
             initLevelSelect();
             loadGameLevel(0);
             requestAnimationFrame(renderGame);
+            await syncCloudLevels(false);
         };
     </script>
 </body>

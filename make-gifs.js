@@ -5,7 +5,7 @@ const GIFEncoder = require('gif-encoder-2');
 const { PNG } = require('pngjs');
 
 const rootDir = __dirname;
-const ignoreDirs = ['.git', '.vercel', 'node_modules'];
+const ignoreDirs = ['.git', '.vercel', 'node_modules', 'gas', 'shared'];
 
 // 注入視覺化虛擬滑鼠游標
 async function injectCursor(page) {

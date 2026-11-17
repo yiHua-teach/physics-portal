@@ -1,0 +1,1523 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>週期表賓果排排看 (Periodic Table Bingo)</title>
+  <meta name="description" content="趣味賓果機抽出化學元素，考驗你在週期表精準定位的能力，支援前 30 號與全表競速及共享排行榜。">
+  <meta name="portal-type" content="game">
+  <script src="../shared/cloud-config.js"></script>
+  <style>
+    :root {
+      --bg-color: #0f172a;
+      --panel-bg: #1e293b;
+      --accent-cyan: #38bdf8;
+      --accent-cyan-bright: #22d3ee;
+      --accent-red: #f43f5e;
+      --accent-green: #10b981;
+      --accent-gold: #f59e0b;
+      --text-light: #f8fafc;
+      --border-color: #334155;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-light);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 12px;
+      overflow-x: auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 8px;
+    }
+
+    h1 {
+      font-size: 1.7rem;
+      color: var(--accent-cyan);
+      text-shadow: 0 0 12px rgba(56, 189, 248, 0.4);
+      letter-spacing: 1px;
+    }
+
+    .status-bar {
+      display: flex;
+      gap: 20px;
+      margin-top: 6px;
+      font-size: 0.95rem;
+      color: #94a3b8;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .status-bar strong {
+      color: #f1f5f9;
+    }
+
+    .mode-badge {
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: bold;
+      background: rgba(56, 189, 248, 0.2);
+      color: var(--accent-cyan);
+      border: 1px solid var(--accent-cyan);
+    }
+
+    .mode-badge.challenge {
+      background: rgba(245, 158, 11, 0.2);
+      color: var(--accent-gold);
+      border-color: var(--accent-gold);
+    }
+
+    .game-arena {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      max-width: 1400px;
+    }
+
+    .bingo-machine {
+      background: var(--panel-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 12px 24px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+    }
+
+    .timer-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(15, 23, 42, 0.6);
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      min-width: 130px;
+    }
+
+    .timer-label {
+      font-size: 0.75rem;
+      color: #94a3b8;
+    }
+
+    .timer-value {
+      font-size: 1.4rem;
+      font-family: monospace;
+      font-weight: bold;
+      color: var(--accent-cyan-bright);
+    }
+
+    .queue-display {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .current-card-slot {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .current-card-slot::after {
+      content: "點擊對應元素格";
+      font-size: 0.7rem;
+      color: var(--accent-cyan);
+      margin-top: 4px;
+      font-weight: 600;
+    }
+
+    .card {
+      width: 76px;
+      height: 76px;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+      position: relative;
+    }
+
+    .card.active {
+      transform: scale(1.05);
+      border: 2px solid #ffffff;
+    }
+
+    .card.next {
+      width: 50px;
+      height: 50px;
+      opacity: 0.65;
+      transform: scale(0.9);
+    }
+
+    .card .number {
+      font-size: 0.7rem;
+      position: absolute;
+      top: 4px;
+      left: 6px;
+      opacity: 0.85;
+    }
+
+    .card .symbol {
+      font-size: 1.5rem;
+      line-height: 1;
+    }
+
+    .card.next .symbol {
+      font-size: 1rem;
+    }
+
+    .card .name {
+      font-size: 0.8rem;
+      margin-top: 2px;
+    }
+
+    .card.next .name {
+      display: none;
+    }
+
+    /* Category Gradients */
+    .cat-alkali { background: linear-gradient(135deg, #ef4444, #dc2626); color: #fff; }
+    .cat-alkaline { background: linear-gradient(135deg, #f97316, #ea580c); color: #fff; }
+    .cat-transition { background: linear-gradient(135deg, #0ea5e9, #0284c7); color: #fff; }
+    .cat-post-transition { background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff; }
+    .cat-metalloid { background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: #fff; }
+    .cat-nonmetal { background: linear-gradient(135deg, #10b981, #059669); color: #fff; }
+    .cat-halogen { background: linear-gradient(135deg, #ec4899, #db2777); color: #fff; }
+    .cat-noble { background: linear-gradient(135deg, #06b6d4, #0891b2); color: #fff; }
+    .cat-lanthanide { background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; }
+    .cat-actinide { background: linear-gradient(135deg, #e11d48, #be123c); color: #fff; }
+
+    .periodic-table {
+      display: grid;
+      grid-template-columns: repeat(18, 1fr);
+      grid-gap: 4px;
+      width: 100%;
+      background: var(--panel-bg);
+      padding: 10px;
+      border-radius: 12px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.6);
+      border: 1px solid var(--border-color);
+    }
+
+    .cell {
+      aspect-ratio: 1;
+      border: 1px dashed var(--border-color);
+      border-radius: 6px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      background: rgba(255,255,255,0.02);
+      cursor: pointer;
+      font-size: 0.55rem;
+      transition: all 0.2s ease;
+    }
+
+    .cell[data-z]:not(.filled) {
+      border: 2px solid rgba(56, 189, 248, 0.85);
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.95));
+      box-shadow: 0 0 8px rgba(56, 189, 248, 0.3);
+    }
+
+    .cell:hover:not(.filled):not(.placeholder) {
+      background: rgba(6, 182, 212, 0.45) !important;
+      border-color: #38bdf8 !important;
+      box-shadow: 0 0 16px rgba(56, 189, 248, 0.8) !important;
+      transform: scale(1.15);
+      z-index: 10;
+    }
+
+    .cell.placeholder {
+      border: none;
+      background: transparent;
+      cursor: default;
+    }
+
+    .cell.filled {
+      border: none;
+      cursor: default;
+      animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    }
+
+    .cell.wrong-flash {
+      animation: shake 0.3s ease-in-out;
+      border-color: var(--accent-red) !important;
+      background-color: rgba(244, 63, 94, 0.4) !important;
+    }
+
+    @keyframes popIn {
+      0% { transform: scale(0.4); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-4px); }
+      40%, 80% { transform: translateX(4px); }
+    }
+
+    .ptable-selector-grid {
+      display: grid;
+      grid-template-columns: repeat(19, 1fr);
+      gap: 3px;
+      width: 100%;
+      background: rgba(15, 23, 42, 0.7);
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      overflow-x: auto;
+    }
+
+    .header-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--border-color);
+      color: var(--accent-cyan);
+      font-size: 0.65rem;
+      font-weight: bold;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      aspect-ratio: 1;
+      transition: all 0.15s ease;
+    }
+
+    .header-btn:hover {
+      background: var(--accent-cyan);
+      color: #0f172a;
+      transform: scale(1.1);
+    }
+
+    .el-card {
+      aspect-ratio: 1;
+      border-radius: 4px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.55rem;
+      cursor: pointer;
+      transition: all 0.15s ease-in-out;
+      position: relative;
+      user-select: none;
+    }
+
+    .el-card:hover {
+      transform: scale(1.25);
+      z-index: 30;
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+    }
+
+    .el-card.active-selected {
+      border: 1.5px solid #ffffff;
+      box-shadow: 0 0 8px rgba(56, 189, 248, 0.9);
+      filter: brightness(1.15);
+      opacity: 1;
+    }
+
+    .el-card.inactive-selected {
+      opacity: 0.22;
+      filter: grayscale(0.85);
+    }
+
+    .el-card .el-z {
+      font-size: 0.45rem;
+      position: absolute;
+      top: 1px;
+      left: 2px;
+      opacity: 0.85;
+    }
+
+    .el-card .el-sym {
+      font-size: 0.75rem;
+      font-weight: bold;
+      line-height: 1;
+    }
+
+    .floating-buttons {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      display: flex;
+      gap: 12px;
+      z-index: 50;
+    }
+
+    .fab {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: var(--accent-cyan);
+      color: #0f172a;
+      border: none;
+      font-size: 1.4rem;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(56, 189, 248, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .fab:hover {
+      transform: scale(1.1);
+      background: var(--accent-cyan-bright);
+    }
+
+    .fab.gold {
+      background: var(--accent-gold);
+      box-shadow: 0 4px 15px rgba(245, 158, 11, 0.5);
+    }
+
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(15, 23, 42, 0.88);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+      z-index: 100;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-card {
+      background: var(--panel-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 24px;
+      width: 95%;
+      max-width: 900px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.8);
+    }
+
+    .modal-card h2 {
+      color: var(--accent-cyan);
+      font-size: 1.4rem;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+
+    .tab-nav {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 8px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 8px 12px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      color: #94a3b8;
+      cursor: pointer;
+      font-weight: bold;
+      transition: all 0.2s;
+    }
+
+    .tab-btn.active {
+      background: var(--accent-cyan);
+      color: #0f172a;
+      border-color: var(--accent-cyan);
+    }
+
+    .setting-section {
+      margin-bottom: 16px;
+      background: rgba(0,0,0,0.2);
+      padding: 12px;
+      border-radius: 8px;
+    }
+
+    .setting-section h3 {
+      font-size: 0.9rem;
+      color: var(--accent-cyan-bright);
+      margin-bottom: 8px;
+    }
+
+    .preset-btns {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .btn-chip {
+      padding: 5px 10px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      color: var(--text-light);
+      font-size: 0.78rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-chip:hover {
+      background: rgba(56, 189, 248, 0.2);
+      border-color: var(--accent-cyan);
+    }
+
+    .btn-primary {
+      width: 100%;
+      padding: 12px;
+      background: var(--accent-cyan);
+      border: none;
+      border-radius: 8px;
+      color: #0f172a;
+      font-weight: bold;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-cyan-bright);
+    }
+
+    .btn-primary:disabled {
+      background: #64748b;
+      cursor: not-allowed;
+    }
+
+    .leaderboard-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 0.88rem;
+    }
+
+    .leaderboard-table th, .leaderboard-table td {
+      padding: 8px 10px;
+      text-align: center;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .leaderboard-table th {
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--accent-cyan-bright);
+    }
+
+    .leaderboard-table tr:nth-child(even) {
+      background: rgba(255,255,255,0.02);
+    }
+
+    .game-dialog {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.9);
+      background: var(--panel-bg);
+      border: 2px solid var(--accent-cyan);
+      padding: 24px;
+      border-radius: 16px;
+      text-align: center;
+      z-index: 200;
+      display: none;
+      box-shadow: 0 0 40px rgba(56, 189, 248, 0.4);
+      width: 90%;
+      max-width: 420px;
+    }
+
+    .game-dialog.show {
+      display: block;
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    .input-field {
+      width: 100%;
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      background: rgba(0,0,0,0.3);
+      color: #fff;
+      font-size: 0.95rem;
+      margin: 12px 0;
+      text-align: center;
+    }
+
+    .toast-msg {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(244, 63, 94, 0.95);
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      font-weight: bold;
+      z-index: 300;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+
+    .toast-msg.show {
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Toast Notification -->
+  <div id="toast-msg" class="toast-msg">提示訊息</div>
+
+  <header>
+    <h1>週期表賓果排排看</h1>
+    <div class="status-bar">
+      <span id="mode-badge" class="mode-badge">自由練習</span>
+      <span>已完成: <strong id="score-display">0 / 0</strong></span>
+      <span>錯誤點擊: <strong id="wrong-count-display" style="color: var(--accent-red);">0</strong> 次</span>
+    </div>
+  </header>
+
+  <div class="game-arena">
+    <div class="bingo-machine">
+      <div class="timer-box">
+        <span class="timer-label">進行時間</span>
+        <span class="timer-value" id="game-timer">00:00.0</span>
+      </div>
+
+      <div class="queue-display">
+        <div class="current-card-slot">
+          <div id="current-card-container"></div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+          <span style="font-size: 0.65rem; color: #94a3b8;">下一張</span>
+          <div id="next-card-container"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="periodic-table" id="periodic-table"></div>
+  </div>
+
+  <!-- 浮動按鈕區 -->
+  <div class="floating-buttons">
+    <button class="fab gold" id="open-leaderboard" title="英雄排行榜">🏆</button>
+    <button class="fab" id="open-settings" title="遊戲主選單與設定">⚙️</button>
+  </div>
+
+  <!-- 起始頁面 / 設定 Modal -->
+  <div class="modal-overlay active" id="settings-modal">
+    <div class="modal-card">
+      <h2>🧪 週期表賓果排排看 - 主選單</h2>
+
+      <!-- 模式頁籤 -->
+      <div class="tab-nav">
+        <button class="tab-btn active" id="tab-practice-btn" onclick="switchMode('practice')">🎮 自由練習模式</button>
+        <button class="tab-btn" id="tab-c30-btn" onclick="switchMode('challenge30')">🔥 挑戰模式 (1-30)</button>
+        <button class="tab-btn" id="tab-cfull-btn" onclick="switchMode('challengeFull')">🚀 挑戰模式 (全週期表)</button>
+      </div>
+
+      <!-- 自由練習模式設定 -->
+      <div id="practice-panel">
+        <div class="setting-section">
+          <h3>⚡ 快捷範圍選擇</h3>
+          <div class="preset-btns">
+            <button class="btn-chip" onclick="selectPreset('1-20')">1-20 號</button>
+            <button class="btn-chip" onclick="selectPreset('1-36')">1-36 號</button>
+            <button class="btn-chip" onclick="selectPreset('maingroup')">主族元素 (A族)</button>
+            <button class="btn-chip" onclick="selectPreset('transition')">過渡金屬 (B族)</button>
+            <button class="btn-chip" onclick="selectPreset('lan_act')">鑭/錒系</button>
+            <button class="btn-chip" onclick="selectPreset('all')">全選 (118個)</button>
+            <button class="btn-chip" onclick="selectPreset('clear')">全清</button>
+            <span style="margin-left: auto; align-self: center; font-size: 0.85rem; color: var(--accent-cyan-bright);">
+              已選擇：<strong id="selected-count" style="font-size: 1.1rem; color: #fff;">118</strong> 個元素
+            </span>
+          </div>
+        </div>
+
+        <div class="setting-section">
+          <h3>🎨 元素分類圖例快選</h3>
+          <div class="preset-btns" id="category-buttons"></div>
+        </div>
+
+        <div class="setting-section">
+          <h3>🗺️ 週期表全網格互動選擇器 (點擊族/週期號可整欄列快選)</h3>
+          <div class="ptable-selector-grid" id="ptable-selector-container"></div>
+        </div>
+      </div>
+
+      <!-- 挑戰模式 (1-30) 說明面板 -->
+      <div id="challenge30-panel" style="display: none;">
+        <div class="setting-section" style="line-height: 1.6; font-size: 0.9rem;">
+          <p style="color: var(--accent-gold); font-weight: bold; margin-bottom: 8px;">🔥 挑戰模式 (1-30號) 規則：</p>
+          <ul style="padding-left: 20px; color: #cbd5e1;">
+            <li>題目範圍為 <strong>1 ~ 30 號元素 (H ~ Zn)</strong>。</li>
+            <li>抽卡機<strong>不會顯示原子序</strong>，僅顯示元素符號與中文名稱。</li>
+            <li>系統將紀錄您的<strong>總耗時</strong>與<strong>錯誤點擊次數</strong>，通關後可上傳至排行榜！</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- 挑戰模式 (全週期表) 說明面板 -->
+      <div id="challengeFull-panel" style="display: none;">
+        <div class="setting-section" style="line-height: 1.6; font-size: 0.9rem;">
+          <p style="color: var(--accent-cyan-bright); font-weight: bold; margin-bottom: 8px;">🚀 挑戰模式 (全週期表 1-118) 規則：</p>
+          <ul style="padding-left: 20px; color: #cbd5e1;">
+            <li>題目範圍為 <strong>全週期表 1 ~ 118 號元素</strong>。</li>
+            <li>抽卡機<strong>不會顯示原子序</strong>，僅顯示元素符號與中文名稱。</li>
+            <li>系統將紀錄您的<strong>總耗時</strong>與<strong>錯誤點擊次數</strong>，通關後可上傳至排行榜！</li>
+          </ul>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 12px; margin-top: 16px; align-items: center; justify-content: space-between;">
+        <button class="btn-primary" id="start-game-btn" onclick="restartGame()" style="flex: 1;">🚀 開始遊戲</button>
+        <button class="btn-chip" onclick="openLeaderboard()" style="padding: 12px 18px; font-size: 0.92rem; background: rgba(245, 158, 11, 0.2); border: 1px solid var(--accent-gold); color: var(--accent-gold); font-weight: bold; white-space: nowrap; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px;" title="查看英雄排行榜 (前20名)">
+          🏆 排行榜 (前20名)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 排行榜彈窗 -->
+  <div class="modal-overlay" id="leaderboard-modal">
+    <div class="modal-card">
+      <h2>🏆 挑戰模式全球排行榜 (Top 20)</h2>
+      <div class="tab-nav" style="margin-bottom: 12px;">
+        <button class="tab-btn active" id="lb-c30-btn" onclick="switchLeaderboardTab('challenge30')">🔥 1-30號榜單</button>
+        <button class="tab-btn" id="lb-cfull-btn" onclick="switchLeaderboardTab('challengeFull')">🚀 全週期表榜單</button>
+      </div>
+      <div style="max-height: 400px; overflow-y: auto;">
+        <table class="leaderboard-table">
+          <thead>
+            <tr>
+              <th>名次</th>
+              <th>挑戰者姓名</th>
+              <th>過關時間</th>
+              <th>錯誤點擊</th>
+              <th>日期</th>
+            </tr>
+          </thead>
+          <tbody id="leaderboard-body">
+            <tr><td colspan="5" style="color: #94a3b8;">載入中...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <button class="btn-primary" style="margin-top: 16px;" onclick="closeLeaderboard()">關閉</button>
+    </div>
+  </div>
+
+  <!-- 結算 / 紀錄姓名彈窗 -->
+  <div class="game-dialog" id="game-dialog">
+    <h2 id="dialog-title" style="font-size: 1.6rem; color: var(--accent-cyan); margin-bottom: 8px;">🎉 恭喜通關！</h2>
+    <p id="dialog-desc" style="color: #cbd5e1; font-size: 0.95rem;">
+      總耗時：<strong id="final-time-display" style="color: var(--accent-gold);">00:00.0</strong><br>
+      錯誤點擊：<strong id="final-wrong-display" style="color: var(--accent-red);">0</strong> 次
+    </p>
+
+    <!-- 挑戰模式輸入姓名 -->
+    <div id="submit-section" style="display: none; margin-top: 10px;">
+      <input type="text" id="player-name-input" class="input-field" placeholder="請輸入您的姓名/暱稱" maxlength="12">
+      <button class="btn-primary" id="submit-score-btn" onclick="handleScoreSubmit()">📤 提交成績並返回主選單</button>
+    </div>
+
+    <button class="btn-primary" onclick="restartGame()" style="margin-top: 12px; background: rgba(255,255,255,0.1); color: #fff;">↺ 再試一次</button>
+    <button class="btn-chip" onclick="openStartModal()" style="margin-top: 10px; width: 100%;">⚙️ 主選單設定</button>
+  </div>
+
+  <!-- 覆蓋重複姓名確認 Modal -->
+  <div class="game-dialog" id="confirm-dialog" style="z-index: 250;">
+    <h3 style="color: var(--accent-gold); font-size: 1.2rem; margin-bottom: 8px;">⚠️ 發現重複姓名</h3>
+    <p id="confirm-msg" style="color: #cbd5e1; font-size: 0.9rem; margin-bottom: 16px;"></p>
+    <div style="display: flex; gap: 10px;">
+      <button class="btn-primary" onclick="confirmSubmitOverride(true)">確定覆蓋/送出</button>
+      <button class="btn-primary" style="background: rgba(255,255,255,0.15); color: #fff;" onclick="confirmSubmitOverride(false)">取消</button>
+    </div>
+  </div>
+
+  <script>
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbzw9fGPM-DZJK8qFBBTdPEsB33RU4AqoKaBU_1ozc0UTMqTRIE-oyZ6LtoCE61yaRr6/exec";
+
+    // 118 完整元素資料
+    const ELEMENTS_DATA = [
+      { num: 1, sym: "H", name: "氫", r: 1, c: 1, cat: "nonmetal" },
+      { num: 2, sym: "He", name: "氦", r: 1, c: 18, cat: "noble" },
+      { num: 3, sym: "Li", name: "鋰", r: 2, c: 1, cat: "alkali" },
+      { num: 4, sym: "Be", name: "鈹", r: 2, c: 2, cat: "alkaline" },
+      { num: 5, sym: "B", name: "硼", r: 2, c: 13, cat: "metalloid" },
+      { num: 6, sym: "C", name: "碳", r: 2, c: 14, cat: "nonmetal" },
+      { num: 7, sym: "N", name: "氮", r: 2, c: 15, cat: "nonmetal" },
+      { num: 8, sym: "O", name: "氧", r: 2, c: 16, cat: "nonmetal" },
+      { num: 9, sym: "F", name: "氟", r: 2, c: 17, cat: "halogen" },
+      { num: 10, sym: "Ne", name: "氖", r: 2, c: 18, cat: "noble" },
+      { num: 11, sym: "Na", name: "鈉", r: 3, c: 1, cat: "alkali" },
+      { num: 12, sym: "Mg", name: "鎂", r: 3, c: 2, cat: "alkaline" },
+      { num: 13, sym: "Al", name: "鋁", r: 3, c: 13, cat: "post-transition" },
+      { num: 14, sym: "Si", name: "矽", r: 3, c: 14, cat: "metalloid" },
+      { num: 15, sym: "P", name: "磷", r: 3, c: 15, cat: "nonmetal" },
+      { num: 16, sym: "S", name: "硫", r: 3, c: 16, cat: "nonmetal" },
+      { num: 17, sym: "Cl", name: "氯", r: 3, c: 17, cat: "halogen" },
+      { num: 18, sym: "Ar", name: "氬", r: 3, c: 18, cat: "noble" },
+      { num: 19, sym: "K", name: "鉀", r: 4, c: 1, cat: "alkali" },
+      { num: 20, sym: "Ca", name: "鈣", r: 4, c: 2, cat: "alkaline" },
+      { num: 21, sym: "Sc", name: "鈧", r: 4, c: 3, cat: "transition" },
+      { num: 22, sym: "Ti", name: "鈦", r: 4, c: 4, cat: "transition" },
+      { num: 23, sym: "V", name: "釩", r: 4, c: 5, cat: "transition" },
+      { num: 24, sym: "Cr", name: "鉻", r: 4, c: 6, cat: "transition" },
+      { num: 25, sym: "Mn", name: "錳", r: 4, c: 7, cat: "transition" },
+      { num: 26, sym: "Fe", name: "鐵", r: 4, c: 8, cat: "transition" },
+      { num: 27, sym: "Co", name: "鈷", r: 4, c: 9, cat: "transition" },
+      { num: 28, sym: "Ni", name: "鎳", r: 4, c: 10, cat: "transition" },
+      { num: 29, sym: "Cu", name: "銅", r: 4, c: 11, cat: "transition" },
+      { num: 30, sym: "Zn", name: "鋅", r: 4, c: 12, cat: "transition" },
+      { num: 31, sym: "Ga", name: "鎵", r: 4, c: 13, cat: "post-transition" },
+      { num: 32, sym: "Ge", name: "鍺", r: 4, c: 14, cat: "metalloid" },
+      { num: 33, sym: "As", name: "砷", r: 4, c: 15, cat: "metalloid" },
+      { num: 34, sym: "Se", name: "硒", r: 4, c: 16, cat: "nonmetal" },
+      { num: 35, sym: "Br", name: "溴", r: 4, c: 17, cat: "halogen" },
+      { num: 36, sym: "Kr", name: "氪", r: 4, c: 18, cat: "noble" },
+      { num: 37, sym: "Rb", name: "銣", r: 5, c: 1, cat: "alkali" },
+      { num: 38, sym: "Sr", name: "鍶", r: 5, c: 2, cat: "alkaline" },
+      { num: 39, sym: "Y", name: "釔", r: 5, c: 3, cat: "transition" },
+      { num: 40, sym: "Zr", name: "鋯", r: 5, c: 4, cat: "transition" },
+      { num: 41, sym: "Nb", name: "鈮", r: 5, c: 5, cat: "transition" },
+      { num: 42, sym: "Mo", name: "鉬", r: 5, c: 6, cat: "transition" },
+      { num: 43, sym: "Tc", name: "鍀", r: 5, c: 7, cat: "transition" },
+      { num: 44, sym: "Ru", name: "釕", r: 5, c: 8, cat: "transition" },
+      { num: 45, sym: "Rh", name: "銠", r: 5, c: 9, cat: "transition" },
+      { num: 46, sym: "Pd", name: "鈀", r: 5, c: 10, cat: "transition" },
+      { num: 47, sym: "Ag", name: "銀", r: 5, c: 11, cat: "transition" },
+      { num: 48, sym: "Cd", name: "鎘", r: 5, c: 12, cat: "transition" },
+      { num: 49, sym: "In", name: "銦", r: 5, c: 13, cat: "post-transition" },
+      { num: 50, sym: "Sn", name: "錫", r: 5, c: 14, cat: "post-transition" },
+      { num: 51, sym: "Sb", name: "銻", r: 5, c: 15, cat: "metalloid" },
+      { num: 52, sym: "Te", name: "碲", r: 5, c: 16, cat: "metalloid" },
+      { num: 53, sym: "I", name: "碘", r: 5, c: 17, cat: "halogen" },
+      { num: 54, sym: "Xe", name: "氙", r: 5, c: 18, cat: "noble" },
+      { num: 55, sym: "Cs", name: "銫", r: 6, c: 1, cat: "alkali" },
+      { num: 56, sym: "Ba", name: "鋇", r: 6, c: 2, cat: "alkaline" },
+      { num: 57, sym: "La", name: "鑭", r: 9, c: 4, cat: "lanthanide" },
+      { num: 58, sym: "Ce", name: "鈰", r: 9, c: 5, cat: "lanthanide" },
+      { num: 59, sym: "Pr", name: "鐠", r: 9, c: 6, cat: "lanthanide" },
+      { num: 60, sym: "Nd", name: "釹", r: 9, c: 7, cat: "lanthanide" },
+      { num: 61, sym: "Pm", name: "鉕", r: 9, c: 8, cat: "lanthanide" },
+      { num: 62, sym: "Sm", name: "釤", r: 9, c: 9, cat: "lanthanide" },
+      { num: 63, sym: "Eu", name: "銪", r: 9, c: 10, cat: "lanthanide" },
+      { num: 64, sym: "Gd", name: "釓", r: 9, c: 11, cat: "lanthanide" },
+      { num: 65, sym: "Tb", name: "鋱", r: 9, c: 12, cat: "lanthanide" },
+      { num: 66, sym: "Dy", name: "鏑", r: 9, c: 13, cat: "lanthanide" },
+      { num: 67, sym: "Ho", name: "鈥", r: 9, c: 14, cat: "lanthanide" },
+      { num: 68, sym: "Er", name: "鉺", r: 9, c: 15, cat: "lanthanide" },
+      { num: 69, sym: "Tm", name: "銩", r: 9, c: 16, cat: "lanthanide" },
+      { num: 70, sym: "Yb", name: "鐿", r: 9, c: 17, cat: "lanthanide" },
+      { num: 71, sym: "Lu", name: "鎦", r: 9, c: 18, cat: "lanthanide" },
+      { num: 72, sym: "Hf", name: "鉿", r: 6, c: 4, cat: "transition" },
+      { num: 73, sym: "Ta", name: "鉭", r: 6, c: 5, cat: "transition" },
+      { num: 74, sym: "W", name: "鎢", r: 6, c: 6, cat: "transition" },
+      { num: 75, sym: "Re", name: "錸", r: 6, c: 7, cat: "transition" },
+      { num: 76, sym: "Os", name: "鋨", r: 6, c: 8, cat: "transition" },
+      { num: 77, sym: "Ir", name: "銥", r: 6, c: 9, cat: "transition" },
+      { num: 78, sym: "Pt", name: "鉑", r: 6, c: 10, cat: "transition" },
+      { num: 79, sym: "Au", name: "金", r: 6, c: 11, cat: "transition" },
+      { num: 80, sym: "Hg", name: "汞", r: 6, c: 12, cat: "transition" },
+      { num: 81, sym: "Tl", name: "鉈", r: 6, c: 13, cat: "post-transition" },
+      { num: 82, sym: "Pb", name: "鉛", r: 6, c: 14, cat: "post-transition" },
+      { num: 83, sym: "Bi", name: "鉍", r: 6, c: 15, cat: "post-transition" },
+      { num: 84, sym: "Po", name: "釙", r: 6, c: 16, cat: "post-transition" },
+      { num: 85, sym: "At", name: "砹", r: 6, c: 17, cat: "halogen" },
+      { num: 86, sym: "Rn", name: "氡", r: 6, c: 18, cat: "noble" },
+      { num: 87, sym: "Fr", name: "鈁", r: 7, c: 1, cat: "alkali" },
+      { num: 88, sym: "Ra", name: "鐳", r: 7, c: 2, cat: "alkaline" },
+      { num: 89, sym: "Ac", name: "錒", r: 10, c: 4, cat: "actinide" },
+      { num: 90, sym: "Th", name: "釷", r: 10, c: 5, cat: "actinide" },
+      { num: 91, sym: "Pa", name: "鏷", r: 10, c: 6, cat: "actinide" },
+      { num: 92, sym: "U", name: "鈾", r: 10, c: 7, cat: "actinide" },
+      { num: 93, sym: "Np", name: "鎿", r: 10, c: 8, cat: "actinide" },
+      { num: 94, sym: "Pu", name: "鈈", r: 10, c: 9, cat: "actinide" },
+      { num: 95, sym: "Am", name: "鋂", r: 10, c: 10, cat: "actinide" },
+      { num: 96, sym: "Cm", name: "鋦", r: 10, c: 11, cat: "actinide" },
+      { num: 97, sym: "Bk", name: "錇", r: 10, c: 12, cat: "actinide" },
+      { num: 98, sym: "Cf", name: "鉲", r: 10, c: 13, cat: "actinide" },
+      { num: 99, sym: "Es", name: "鑀", r: 10, c: 14, cat: "actinide" },
+      { num: 100, sym: "Fm", name: "鐨", r: 10, c: 15, cat: "actinide" },
+      { num: 101, sym: "Md", name: "鍆", r: 10, c: 16, cat: "actinide" },
+      { num: 102, sym: "No", name: "鍩", r: 10, c: 17, cat: "actinide" },
+      { num: 103, sym: "Lr", name: "鐒", r: 10, c: 18, cat: "actinide" },
+      { num: 104, sym: "Rf", name: "𪠳", r: 7, c: 4, cat: "transition" },
+      { num: 105, sym: "Db", name: "𨧀", r: 7, c: 5, cat: "transition" },
+      { num: 106, sym: "Sg", name: "𨭎", r: 7, c: 6, cat: "transition" },
+      { num: 107, sym: "Bh", name: "𨨏", r: 7, c: 7, cat: "transition" },
+      { num: 108, sym: "Hs", name: "𨭆", r: 7, c: 8, cat: "transition" },
+      { num: 109, sym: "Mt", name: "䥑", r: 7, c: 9, cat: "transition" },
+      { num: 110, sym: "Ds", name: "鐽", r: 7, c: 10, cat: "transition" },
+      { num: 111, sym: "Rg", name: "錀", r: 7, c: 11, cat: "transition" },
+      { num: 112, sym: "Cn", name: "鎶", r: 7, c: 12, cat: "transition" },
+      { num: 113, sym: "Nh", name: "鉨", r: 7, c: 13, cat: "post-transition" },
+      { num: 114, sym: "Fl", name: "𪡏", r: 7, c: 14, cat: "post-transition" },
+      { num: 115, sym: "Mc", name: "鏌", r: 7, c: 15, cat: "post-transition" },
+      { num: 116, sym: "Lv", name: "鉝", r: 7, c: 16, cat: "post-transition" },
+      { num: 117, sym: "Ts", name: "鿬", r: 7, c: 17, cat: "halogen" },
+      { num: 118, sym: "Og", name: "鿫", r: 7, c: 18, cat: "noble" }
+    ];
+
+    const categoryNames = {
+      alkali: "鹼金屬",
+      alkaline: "鹼土金屬",
+      transition: "過渡金屬",
+      "post-transition": "其他金屬",
+      metalloid: "類金屬",
+      nonmetal: "非金屬",
+      halogen: "鹵素",
+      noble: "鈍氣",
+      lanthanide: "鑭系元素",
+      actinide: "錒系元素"
+    };
+
+    // 選取狀態集合 (預設全選)
+    const selectedElementNums = new Set(ELEMENTS_DATA.map(e => e.num));
+
+    let gameMode = 'practice'; // 'practice' | 'challenge30' | 'challengeFull'
+    let currentLeaderboardTab = 'challenge30'; // 'challenge30' | 'challengeFull'
+    let queue = [];
+    let placedCount = 0;
+    let wrongClicksCount = 0;
+    let totalTargetCount = 0;
+    let isGameOver = false;
+    let isSubmitting = false;
+
+    // 計時器變數
+    let timerInterval = null;
+    let startTime = 0;
+    let elapsedTime = 0;
+
+    // 排行榜快取
+    let cachedLeaderboard = [];
+
+    // DOM 元素
+    const tableEl = document.getElementById("periodic-table");
+    const currentCardSlot = document.getElementById("current-card-container");
+    const nextCardSlot = document.getElementById("next-card-container");
+    const gameTimerEl = document.getElementById("game-timer");
+    const scoreDisplay = document.getElementById("score-display");
+    const wrongCountDisplay = document.getElementById("wrong-count-display");
+    const modeBadge = document.getElementById("mode-badge");
+    const modal = document.getElementById("settings-modal");
+    const gameDialog = document.getElementById("game-dialog");
+
+    function switchMode(mode) {
+      gameMode = mode;
+      document.getElementById("tab-practice-btn").className = `tab-btn ${mode === 'practice' ? 'active' : ''}`;
+      document.getElementById("tab-c30-btn").className = `tab-btn ${mode === 'challenge30' ? 'active' : ''}`;
+      document.getElementById("tab-cfull-btn").className = `tab-btn ${mode === 'challengeFull' ? 'active' : ''}`;
+
+      document.getElementById("practice-panel").style.display = mode === 'practice' ? 'block' : 'none';
+      document.getElementById("challenge30-panel").style.display = mode === 'challenge30' ? 'block' : 'none';
+      document.getElementById("challengeFull-panel").style.display = mode === 'challengeFull' ? 'block' : 'none';
+    }
+
+    function initPTableSelector() {
+      const container = document.getElementById("ptable-selector-container");
+      if (!container) return;
+      container.innerHTML = "";
+
+      // 產生分類圖例按鈕
+      const catContainer = document.getElementById("category-buttons");
+      if (catContainer && catContainer.children.length === 0) {
+        Object.keys(categoryNames).forEach(cat => {
+          const btn = document.createElement("button");
+          btn.className = "btn-chip";
+          btn.innerText = categoryNames[cat];
+          btn.onclick = () => toggleCategory(cat);
+          catContainer.appendChild(btn);
+        });
+      }
+
+      // 第 0 列：族標頭
+      const corner = document.createElement("div");
+      corner.className = "header-btn";
+      corner.innerText = "週\\族";
+      container.appendChild(corner);
+
+      for (let c = 1; c <= 18; c++) {
+        const gBtn = document.createElement("div");
+        gBtn.className = "header-btn";
+        gBtn.innerText = c;
+        gBtn.onclick = () => toggleGroup(c);
+        container.appendChild(gBtn);
+      }
+
+      // 1~7 週期列
+      const periodLabels = ["一", "二", "三", "四", "五", "六", "七"];
+      for (let r = 1; r <= 7; r++) {
+        const pBtn = document.createElement("div");
+        pBtn.className = "header-btn";
+        pBtn.innerText = periodLabels[r - 1];
+        pBtn.onclick = () => togglePeriod(r);
+        container.appendChild(pBtn);
+
+        for (let c = 1; c <= 18; c++) {
+          if (r === 6 && c === 3) {
+            const holder = document.createElement("div");
+            holder.style.fontSize = "0.5rem";
+            holder.style.color = "#f59e0b";
+            holder.style.display = "flex";
+            holder.style.alignItems = "center";
+            holder.style.justifyContent = "center";
+            holder.innerText = "57-71";
+            container.appendChild(holder);
+            continue;
+          }
+          if (r === 7 && c === 3) {
+            const holder = document.createElement("div");
+            holder.style.fontSize = "0.5rem";
+            holder.style.color = "#e11d48";
+            holder.style.display = "flex";
+            holder.style.alignItems = "center";
+            holder.style.justifyContent = "center";
+            holder.innerText = "89-103";
+            container.appendChild(holder);
+            continue;
+          }
+
+          const el = ELEMENTS_DATA.find(e => e.r === r && e.c === c);
+          if (el) {
+            container.appendChild(createPTableCell(el));
+          } else {
+            container.appendChild(document.createElement("div"));
+          }
+        }
+      }
+
+      // 分隔間距
+      for (let i = 0; i < 19; i++) {
+        const spacer = document.createElement("div");
+        spacer.style.height = "6px";
+        container.appendChild(spacer);
+      }
+
+      // 鑭系 (r=9)
+      const lanBtn = document.createElement("div");
+      lanBtn.className = "header-btn";
+      lanBtn.innerText = "鑭";
+      lanBtn.onclick = () => togglePeriod(9);
+      container.appendChild(lanBtn);
+      container.appendChild(document.createElement("div"));
+      container.appendChild(document.createElement("div"));
+      for (let c = 4; c <= 18; c++) {
+        const el = ELEMENTS_DATA.find(e => e.r === 9 && e.c === c);
+        if (el) container.appendChild(createPTableCell(el));
+      }
+
+      // 錒系 (r=10)
+      const actBtn = document.createElement("div");
+      actBtn.className = "header-btn";
+      actBtn.innerText = "錒";
+      actBtn.onclick = () => togglePeriod(10);
+      container.appendChild(actBtn);
+      container.appendChild(document.createElement("div"));
+      container.appendChild(document.createElement("div"));
+      for (let c = 4; c <= 18; c++) {
+        const el = ELEMENTS_DATA.find(e => e.r === 10 && e.c === c);
+        if (el) container.appendChild(createPTableCell(el));
+      }
+
+      updatePTableUI();
+    }
+
+    function createPTableCell(el) {
+      const card = document.createElement("div");
+      card.id = `el-card-${el.num}`;
+      card.className = `el-card cat-${el.cat}`;
+      card.innerHTML = `
+        <span class="el-z">${el.num}</span>
+        <span class="el-sym">${el.sym}</span>
+      `;
+      card.onclick = () => toggleElementSelection(el.num);
+      return card;
+    }
+
+    function toggleElementSelection(num) {
+      if (selectedElementNums.has(num)) {
+        selectedElementNums.delete(num);
+      } else {
+        selectedElementNums.add(num);
+      }
+      updatePTableUI();
+    }
+
+    function selectPreset(preset) {
+      if (preset === 'clear') {
+        selectedElementNums.clear();
+      } else if (preset === 'all') {
+        ELEMENTS_DATA.forEach(el => selectedElementNums.add(el.num));
+      } else {
+        const targetNums = [];
+        ELEMENTS_DATA.forEach(el => {
+          if (preset === '1-20' && el.num <= 20) targetNums.push(el.num);
+          else if (preset === '1-36' && el.num <= 36) targetNums.push(el.num);
+          else if (preset === 'maingroup' && (el.c <= 2 || el.c >= 13) && el.r <= 7) targetNums.push(el.num);
+          else if (preset === 'transition' && el.cat === 'transition') targetNums.push(el.num);
+          else if (preset === 'lan_act' && (el.cat === 'lanthanide' || el.cat === 'actinide')) targetNums.push(el.num);
+        });
+
+        const allSelected = targetNums.every(n => selectedElementNums.has(n));
+        targetNums.forEach(n => {
+          if (allSelected) selectedElementNums.delete(n);
+          else selectedElementNums.add(n);
+        });
+      }
+      updatePTableUI();
+    }
+
+    function toggleGroup(c) {
+      const groupElements = ELEMENTS_DATA.filter(el => el.c === c);
+      const allSelected = groupElements.every(el => selectedElementNums.has(el.num));
+      groupElements.forEach(el => {
+        if (allSelected) selectedElementNums.delete(el.num);
+        else selectedElementNums.add(el.num);
+      });
+      updatePTableUI();
+    }
+
+    function togglePeriod(r) {
+      let targetElements;
+      if (r === 6) targetElements = ELEMENTS_DATA.filter(el => el.r === 6 || el.r === 9);
+      else if (r === 7) targetElements = ELEMENTS_DATA.filter(el => el.r === 7 || el.r === 10);
+      else targetElements = ELEMENTS_DATA.filter(el => el.r === r);
+
+      const allSelected = targetElements.every(el => selectedElementNums.has(el.num));
+      targetElements.forEach(el => {
+        if (allSelected) selectedElementNums.delete(el.num);
+        else selectedElementNums.add(el.num);
+      });
+      updatePTableUI();
+    }
+
+    function toggleCategory(cat) {
+      const catElements = ELEMENTS_DATA.filter(el => el.cat === cat);
+      const allSelected = catElements.every(el => selectedElementNums.has(el.num));
+      catElements.forEach(el => {
+        if (allSelected) selectedElementNums.delete(el.num);
+        else selectedElementNums.add(el.num);
+      });
+      updatePTableUI();
+    }
+
+    function updatePTableUI() {
+      ELEMENTS_DATA.forEach(el => {
+        const card = document.getElementById(`el-card-${el.num}`);
+        if (!card) return;
+        if (selectedElementNums.has(el.num)) {
+          card.classList.add('active-selected');
+          card.classList.remove('inactive-selected');
+        } else {
+          card.classList.remove('active-selected');
+          card.classList.add('inactive-selected');
+        }
+      });
+
+      document.getElementById('selected-count').textContent = selectedElementNums.size;
+    }
+
+    function initMainBoard() {
+      tableEl.innerHTML = "";
+      for (let r = 1; r <= 10; r++) {
+        for (let c = 1; c <= 18; c++) {
+          const cell = document.createElement("div");
+
+          if (r === 8) {
+            cell.className = "cell placeholder";
+            tableEl.appendChild(cell);
+            continue;
+          }
+
+          if (r === 6 && c === 3) {
+            cell.className = "cell placeholder";
+            cell.style.fontSize = "0.6rem";
+            cell.style.color = "#f59e0b";
+            cell.innerText = "57-71";
+            tableEl.appendChild(cell);
+            continue;
+          }
+          if (r === 7 && c === 3) {
+            cell.className = "cell placeholder";
+            cell.style.fontSize = "0.6rem";
+            cell.style.color = "#e11d48";
+            cell.innerText = "89-103";
+            tableEl.appendChild(cell);
+            continue;
+          }
+
+          const elData = ELEMENTS_DATA.find(e => e.r === r && e.c === c);
+          if (elData) {
+            cell.className = "cell";
+            cell.dataset.z = elData.num;
+            cell.addEventListener("click", () => handleCellClick(cell, elData));
+          } else {
+            cell.className = "cell placeholder";
+          }
+          tableEl.appendChild(cell);
+        }
+      }
+    }
+
+    function restartGame() {
+      isGameOver = false;
+      placedCount = 0;
+      wrongClicksCount = 0;
+      updateWrongCount();
+
+      gameDialog.classList.remove("show");
+      document.getElementById("confirm-dialog").classList.remove("show");
+      modal.classList.remove("active");
+
+      let pool = [];
+      if (gameMode === 'challenge30') {
+        modeBadge.innerText = "🔥 挑戰模式 (1-30號)";
+        modeBadge.className = "mode-badge challenge";
+        pool = ELEMENTS_DATA.filter(e => e.num >= 1 && e.num <= 30);
+      } else if (gameMode === 'challengeFull') {
+        modeBadge.innerText = "🚀 挑戰模式 (全週期表)";
+        modeBadge.className = "mode-badge challenge";
+        pool = [...ELEMENTS_DATA];
+      } else {
+        modeBadge.innerText = "🎮 自由練習模式";
+        modeBadge.className = "mode-badge";
+        pool = ELEMENTS_DATA.filter(e => selectedElementNums.has(e.num));
+      }
+
+      if (pool.length === 0) {
+        showToast("請至少選擇一個元素！");
+        openStartModal();
+        return;
+      }
+
+      queue = shuffleArray([...pool]);
+      totalTargetCount = queue.length;
+
+      document.querySelectorAll(".cell[data-z]").forEach(cell => {
+        cell.className = "cell";
+        cell.innerHTML = "";
+      });
+
+      updateScore();
+      updateBingoUI();
+      startStopwatch();
+    }
+
+    function shuffleArray(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function startStopwatch() {
+      clearInterval(timerInterval);
+      startTime = Date.now();
+      elapsedTime = 0;
+      updateTimerDisplay();
+
+      timerInterval = setInterval(() => {
+        elapsedTime = Date.now() - startTime;
+        updateTimerDisplay();
+      }, 100);
+    }
+
+    function stopStopwatch() {
+      clearInterval(timerInterval);
+      elapsedTime = Date.now() - startTime;
+    }
+
+    function updateTimerDisplay() {
+      const totalDeci = Math.floor(elapsedTime / 100);
+      const deci = totalDeci % 10;
+      const totalSec = Math.floor(totalDeci / 10);
+      const sec = totalSec % 60;
+      const min = Math.floor(totalSec / 60);
+
+      const formatted = `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}.${deci}`;
+      gameTimerEl.innerText = formatted;
+    }
+
+    function updateBingoUI() {
+      currentCardSlot.innerHTML = "";
+      nextCardSlot.innerHTML = "";
+
+      if (queue.length > 0) {
+        currentCardSlot.appendChild(createCardElement(queue[0], "active"));
+        if (queue.length > 1) {
+          nextCardSlot.appendChild(createCardElement(queue[1], "next"));
+        } else {
+          nextCardSlot.innerHTML = "<span style='font-size:0.7rem; color:#64748b;'>無</span>";
+        }
+      }
+    }
+
+    function createCardElement(el, type = "active") {
+      const card = document.createElement("div");
+      card.className = `card ${type} cat-${el.cat}`;
+
+      const isChallenge = (gameMode === 'challenge30' || gameMode === 'challengeFull');
+      const showZ = !isChallenge;
+
+      card.innerHTML = `
+        ${showZ ? `<span class="number">${el.num}</span>` : ''}
+        <span class="symbol">${el.sym}</span>
+        <span class="name">${el.name}</span>
+      `;
+      return card;
+    }
+
+    function handleCellClick(cell, cellData) {
+      if (isGameOver || queue.length === 0 || cell.classList.contains("filled")) return;
+
+      const currentEl = queue[0];
+
+      if (cellData.num === currentEl.num) {
+        cell.classList.add("filled", `cat-${currentEl.cat}`);
+        cell.innerHTML = `
+          <span style="font-size:0.55rem; position:absolute; top:2px; left:2px; opacity:0.8;">${currentEl.num}</span>
+          <strong style="font-size:0.85rem;">${currentEl.sym}</strong>
+        `;
+
+        placedCount++;
+        queue.shift();
+        updateScore();
+
+        if (queue.length === 0) {
+          triggerGameWin();
+        } else {
+          updateBingoUI();
+        }
+      } else {
+        cell.classList.add("wrong-flash");
+        wrongClicksCount++;
+        updateWrongCount();
+        setTimeout(() => cell.classList.remove("wrong-flash"), 300);
+      }
+    }
+
+    function updateScore() {
+      scoreDisplay.innerText = `${placedCount} / ${totalTargetCount}`;
+    }
+
+    function updateWrongCount() {
+      if (wrongCountDisplay) {
+        wrongCountDisplay.innerText = wrongClicksCount;
+      }
+    }
+
+    function triggerGameWin() {
+      isGameOver = true;
+      stopStopwatch();
+
+      const finalTimeStr = gameTimerEl.innerText;
+      document.getElementById("final-time-display").innerText = finalTimeStr;
+      document.getElementById("final-wrong-display").innerText = wrongClicksCount;
+
+      const submitSec = document.getElementById("submit-section");
+      const submitBtn = document.getElementById("submit-score-btn");
+
+      if (gameMode === 'challenge30' || gameMode === 'challengeFull') {
+        submitSec.style.display = "block";
+        submitBtn.disabled = false;
+        submitBtn.innerText = "📤 提交成績並返回主選單";
+        fetchLeaderboardData(gameMode);
+      } else {
+        submitSec.style.display = "none";
+      }
+
+      gameDialog.className = "game-dialog show";
+    }
+
+    async function handleScoreSubmit() {
+      if (isSubmitting) return;
+
+      const nameInput = document.getElementById("player-name-input");
+      const name = nameInput.value.trim();
+
+      if (!name) {
+        showToast("請輸入您的姓名或暱稱！");
+        return;
+      }
+
+      const isDuplicate = cachedLeaderboard.some(item => item.name === name);
+      if (isDuplicate) {
+        document.getElementById("confirm-msg").innerText = `排行榜中已存在玩家「${name}」的紀錄！\n是否確定要送出此新成績？`;
+        document.getElementById("confirm-dialog").classList.add("show");
+        return;
+      }
+
+      executePostScore(name);
+    }
+
+    function confirmSubmitOverride(confirmed) {
+      document.getElementById("confirm-dialog").classList.remove("show");
+      if (confirmed) {
+        const name = document.getElementById("player-name-input").value.trim();
+        executePostScore(name);
+      }
+    }
+
+    async function executePostScore(name) {
+      isSubmitting = true;
+      const submitBtn = document.getElementById("submit-score-btn");
+      submitBtn.disabled = true;
+      submitBtn.innerText = "傳送中...";
+
+      try {
+        // 修正 2：統一日期格式為 YYYY/MM/DD
+        const now = new Date();
+        const dateStr = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')}`;
+
+        const payload = {
+          mode: gameMode,
+          name: name,
+          time: gameTimerEl.innerText,
+          rawTime: elapsedTime,
+          wrongClicks: wrongClicksCount,
+          date: dateStr
+        };
+
+        const result = await window.PhysicsPortalCloud.submitLeaderboard(gameMode, payload);
+
+        showToast(result.cloudSynced ? "🎉 成績已上傳至共享 Google 排行榜！" : "📌 成績已暫存本機（尚未設定雲端 GAS）");
+        submitBtn.innerText = "✅ 已成功提交";
+    
+        setTimeout(() => {
+          openStartModal();
+        }, 1200);
+
+      } catch (err) {
+        console.error("Submission error:", err);
+        showToast("提交失敗，請檢查網路連線。");
+        submitBtn.disabled = false;
+        submitBtn.innerText = "📤 重新提交";
+      } finally {
+        isSubmitting = false;
+      }
+}
+    function switchLeaderboardTab(mode) {
+      currentLeaderboardTab = mode;
+      document.getElementById("lb-c30-btn").className = `tab-btn ${mode === 'challenge30' ? 'active' : ''}`;
+      document.getElementById("lb-cfull-btn").className = `tab-btn ${mode === 'challengeFull' ? 'active' : ''}`;
+      fetchLeaderboardData(mode);
+    }
+
+    async function fetchLeaderboardData(mode = currentLeaderboardTab) {
+      const tbody = document.getElementById("leaderboard-body");
+      tbody.innerHTML = `<tr><td colspan="5" style="color: #94a3b8;">載入數據中...</td></tr>`;
+
+      try {
+        const res = await window.PhysicsPortalCloud.fetchLeaderboard(mode);
+        const data = res.rows || [];
+
+        if (Array.isArray(data)) {
+          const bestRecords = {};
+          data.forEach(item => {
+            if (!item.name) return;
+            const itemRaw = item.rawTime || 99999999;
+            if (!bestRecords[item.name] || itemRaw < bestRecords[item.name].rawTime) {
+              bestRecords[item.name] = item;
+            }
+          });
+
+          const sortedList = Object.values(bestRecords)
+            .sort((a, b) => (a.rawTime || 0) - (b.rawTime || 0))
+            .slice(0, 20);
+
+          cachedLeaderboard = sortedList;
+
+          if (sortedList.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" style="color: #64748b;">尚無榜單紀錄</td></tr>`;
+            return;
+          }
+
+          tbody.innerHTML = sortedList.map((item, idx) => `
+            <tr>
+              <td>${idx === 0 ? '🥇 1' : idx === 1 ? '🥈 2' : idx === 2 ? '🥉 3' : idx + 1}</td>
+              <td style="font-weight: bold; color: var(--accent-cyan);">${escapeHtml(item.name)}</td>
+              <td style="color: var(--accent-gold); font-family: monospace;">${item.time}</td>
+              <td style="color: var(--accent-red); font-weight: bold;">${item.wrongClicks || 0}</td>
+              <td style="color: #64748b; font-size: 0.75rem;">${item.date || '-'}</td>
+            </tr>
+          `).join('');
+        }
+      } catch (err) {
+        console.error("Leaderboard fetch error:", err);
+        tbody.innerHTML = `<tr><td colspan="5" style="color: #f43f5e;">排行榜載入失敗</td></tr>`;
+      }
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById("toast-msg");
+      toast.innerText = msg;
+      toast.classList.add("show");
+      setTimeout(() => toast.classList.remove("show"), 2500);
+    }
+
+    function escapeHtml(text) {
+      return String(text).replace(/[&<>"']/g, function(m) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m];
+      });
+    }
+
+    function openLeaderboard() {
+      document.getElementById("leaderboard-modal").classList.add("active");
+      switchLeaderboardTab(currentLeaderboardTab);
+    }
+
+    function closeLeaderboard() {
+      document.getElementById("leaderboard-modal").classList.remove("active");
+    }
+
+    function openStartModal() {
+      gameDialog.classList.remove("show");
+      document.getElementById("confirm-dialog").classList.remove("show");
+      modal.classList.add("active");
+    }
+
+    document.getElementById("open-settings").onclick = openStartModal;
+    document.getElementById("open-leaderboard").onclick = openLeaderboard;
+
+    initPTableSelector();
+    initMainBoard();
+  </script>
+</body>
+</html>

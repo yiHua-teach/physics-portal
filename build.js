@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 const rootDir = __dirname;
-const ignoreDirs = ['.git', '.vercel', 'node_modules'];
+const ignoreDirs = ['.git', '.vercel', 'node_modules', 'gas', 'shared'];
 
 // 單元分類中文對照（可自由增修資料夾名稱）
 const categoryNames = {
@@ -12,7 +12,7 @@ const categoryNames = {
     'waves': '🌊 波動與聲學',
     'thermodynamics': '🔥 熱學與分子動力',
     'modern-physics': '⚛️ 近代物理',
-    'games': '🎮 物理遊戲'
+    'games': '🧪 化學週期表遊戲'
 };
 
 const simGroups = {};
@@ -55,6 +55,9 @@ items.forEach(item => {
         }
 
         const entry = { item, file, title, desc, relPath, imgPath };
+        if (portalType === 'editor' || portalType === 'tool') {
+            return;
+        }
         const isGame = portalType === 'game' || item.toLowerCase() === 'games';
 
         if (isGame) {
@@ -116,7 +119,8 @@ function renderPortalPage({
     ctaLabel,
     placeholderIcon,
     accentColor,
-    headingColor
+    headingColor,
+    extraHeaderHtml = ''
 }) {
     const { categoriesHtml, filterButtonsHtml } = buildSectionContent(groups, ctaLabel, placeholderIcon);
     const emptyStateHtml = !categoriesHtml
@@ -226,6 +230,7 @@ function renderPortalPage({
 
         <h1>${heading}</h1>
         <p class="subtitle">${subtitle}</p>
+        ${extraHeaderHtml}
 
         <div class="controls">
             <input type="text" id="searchInput" class="search-input" placeholder="🔍 搜尋名稱或關鍵字..." oninput="handleSearch()">
@@ -296,15 +301,27 @@ const simHtml = renderPortalPage({
 });
 
 const gameHtml = renderPortalPage({
-    pageTitle: '物理互動挑戰遊戲大廳',
-    heading: '🎮 物理互動挑戰遊戲大廳',
-    subtitle: '結合物理原理的趣味解謎與闖關遊戲',
+    pageTitle: '物理與化學互動遊戲大廳',
+    heading: '🎮 理化互動挑戰遊戲大廳',
+    subtitle: '結合物理光學與化學週期表的趣味闖關與共享排行榜遊戲',
     activeMode: 'game',
     groups: gameGroups,
     ctaLabel: '開始挑戰 🎮',
     placeholderIcon: '🎮',
     accentColor: '#7c3aed',
-    headingColor: '#4c1d95'
+    headingColor: '#4c1d95',
+    extraHeaderHtml: `
+        <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin:0 auto 20px;">
+            <a href="optics/reflection editor.html" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:10px;background:#f3e8ff;color:#6b21a8;text-decoration:none;font-size:0.86rem;font-weight:700;border:1px solid #d8b4fe;">
+                🛠️ 光學關卡編輯器（教師出題端） ↗
+            </a>
+            <a href="https://docs.google.com/spreadsheets/d/17izy_vJCd539R4V5VZIKdfsUMJ8DofpnyL9TL1KBdXo/edit" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:10px;background:#ecfdf5;color:#065f46;text-decoration:none;font-size:0.86rem;font-weight:700;border:1px solid #6ee7b7;">
+                🏆 共享排行榜 Google 試算表 ↗
+            </a>
+            <a href="https://docs.google.com/spreadsheets/d/18SjUr3EBKQxNu6GyNoPkZR5SIp-uJzjAWF-W-xMsXHU/edit" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:10px;background:#eff6ff;color:#1e40af;text-decoration:none;font-size:0.86rem;font-weight:700;border:1px solid #93c5fd;">
+                🗂️ 光學關卡 Google 試算表 ↗
+            </a>
+        </div>`
 });
 
 fs.writeFileSync(path.join(rootDir, 'index.html'), simHtml, 'utf-8');
