@@ -1,0 +1,1652 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>華爸的物理園地 | 力學 × 波動 × 光學 × 電磁 × 化學 × 近代物理 × 遊戲 3D 實驗室</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js r128 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #070a12;
+            color: #f8fafc;
+        }
+        #canvas-container {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.80);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+        }
+        .glass-pill {
+            background: rgba(15, 23, 42, 0.68);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .glass-pill:hover {
+            transform: translateY(-2px);
+            border-color: rgba(56, 189, 248, 0.65);
+            box-shadow: 0 8px 25px rgba(56, 189, 248, 0.25);
+        }
+        .hotspot-label {
+            position: absolute;
+            transform: translate(-50%, -100%);
+            pointer-events: auto;
+            cursor: pointer;
+            transition: transform 0.2s ease, opacity 0.2s ease, border-color 0.2s ease;
+            z-index: 10;
+        }
+        .hotspot-label:hover {
+            transform: translate(-50%, -108%) scale(1.06);
+            z-index: 20;
+        }
+        .custom-scroll::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scroll::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.4);
+            border-radius: 8px;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 0.4);
+            border-radius: 8px;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb:hover {
+            background: rgba(56, 189, 248, 0.7);
+        }
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 15px rgba(56, 189, 248, 0.3); }
+            50% { box-shadow: 0 0 28px rgba(192, 132, 252, 0.6); }
+        }
+        .glow-badge {
+            animation: pulse-glow 3s infinite;
+        }
+        /* 省電 / 節能模式：關閉毛玻璃模糊與常駐發光動畫以降低 GPU 負載 */
+        body.eco-mode .glass-panel,
+        body.eco-mode .glass-pill {
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+            background: rgba(15, 23, 42, 0.94);
+        }
+        body.eco-mode .glow-badge {
+            animation: none;
+        }
+    </style>
+</head>
+<body class="font-sans antialiased">
+
+    <!-- 3D 畫布容器 -->
+    <div id="canvas-container"></div>
+
+    <!-- WebGL 不支援時的備援背景 -->
+    <div id="webgl-fallback" class="hidden fixed inset-0 z-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black"></div>
+
+    <!-- 3D 桌面道具浮動標籤層 -->
+    <div id="labels-container" class="fixed inset-0 pointer-events-none z-10 overflow-hidden"></div>
+
+    <!-- 頂部品牌導覽列 -->
+    <header class="fixed top-0 left-0 right-0 z-30 p-3 sm:p-5 pointer-events-none flex flex-wrap items-center justify-between gap-3">
+        <!-- 左側：華爸的物理園地標誌 -->
+        <div class="glass-panel rounded-2xl px-4 py-2.5 pointer-events-auto flex items-center gap-3.5 glow-badge cursor-pointer" onclick="resetCameraAndCloseDrawer()">
+            <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-sky-400 via-indigo-500 to-purple-600 flex items-center justify-center text-white font-black text-xl shadow-lg">
+                <i class="fa-solid fa-atom"></i>
+            </div>
+            <div>
+                <div class="flex items-center gap-2">
+                    <h1 class="text-base sm:text-lg font-black tracking-wide bg-gradient-to-r from-white via-sky-200 to-purple-300 bg-clip-text text-transparent">
+                        華爸的物理園地
+                    </h1>
+                    <span class="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-400/30">
+                        3D Lab
+                    </span>
+                </div>
+                <p class="text-xs text-slate-300 hidden sm:block">
+                    力學 × 波動 × 光學 × 電磁學 × 化學 × 近代物理 × 理化遊戲
+                </p>
+            </div>
+        </div>
+
+        <!-- 右側：快速工具與教師資源按鈕 -->
+        <div class="flex items-center gap-2 pointer-events-auto">
+            <button onclick="focusDeskItem('all')" class="glass-pill px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold text-sky-300 flex items-center gap-2">
+                <i class="fa-solid fa-compass"></i>
+                <span>瀏覽全部工具</span>
+                <span id="total-projects-badge" class="px-1.5 py-0.5 text-[11px] rounded-md bg-sky-500/30 text-white font-mono">0</span>
+            </button>
+
+            <button onclick="focusDeskItem('games')" class="glass-pill px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold text-purple-300 flex items-center gap-1.5">
+                <i class="fa-solid fa-gamepad"></i>
+                <span class="hidden sm:inline">理化遊戲</span>
+            </button>
+
+            <button onclick="openTeacherModal()" class="glass-pill px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold text-amber-300 flex items-center gap-1.5" title="教師出題端與共享排行榜試算表">
+                <i class="fa-solid fa-screwdriver-wrench"></i>
+                <span class="hidden md:inline">教師工具與資料庫</span>
+            </button>
+
+            <button id="eco-toggle-btn" onclick="toggleEcoMode()" class="glass-pill px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold text-slate-300 flex items-center gap-1.5" title="開啟節能模式：降低 3D 更新率並關閉毛玻璃特效，適合省電或舊裝置">
+                <i class="fa-solid fa-leaf text-emerald-400"></i>
+                <span class="hidden lg:inline">節能</span>
+            </button>
+
+            <a id="github-profile-link" href="https://github.com/yiHua-teach/physics-portal" target="_blank" rel="noopener noreferrer" class="glass-pill w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-slate-200 hover:text-white text-base" title="GitHub 專案倉庫">
+                <i class="fa-brands fa-github"></i>
+            </a>
+        </div>
+    </header>
+
+    <!-- 左下角操作提示 -->
+    <div id="scene-hint" class="fixed bottom-20 left-4 z-20 pointer-events-none hidden lg:flex items-center gap-2.5 glass-pill px-3.5 py-2 rounded-xl text-xs text-slate-300">
+        <i class="fa-solid fa-computer-mouse text-sky-400 animate-bounce"></i>
+        <span>拖曳旋轉 3D 實驗桌・滾輪縮放・點擊桌上<strong>發光道具</strong>開啟對應教材與遊戲</span>
+    </div>
+
+    <!-- 底部快速分類工作列 (Dock) -->
+    <nav class="fixed bottom-3 sm:bottom-5 left-1/2 -translate-x-1/2 z-30 w-[96%] max-w-5xl pointer-events-auto">
+        <div class="glass-panel rounded-2xl p-1.5 sm:p-2 flex items-center justify-between gap-1 sm:gap-1.5 overflow-x-auto custom-scroll">
+            <button onclick="focusDeskItem('all')" id="dock-all" class="dock-btn shrink-0 px-3 py-2 rounded-xl flex items-center justify-center gap-1.5 text-xs font-bold transition-all bg-white/15 text-white border border-white/25">
+                <i class="fa-solid fa-book-journal-whills text-amber-300 text-sm"></i>
+                <span class="whitespace-nowrap">全部</span>
+            </button>
+            <button onclick="focusDeskItem('mechanics')" id="dock-mechanics" class="dock-btn shrink-0 px-3 py-2 rounded-xl flex items-center justify-center gap-1.5 text-xs font-bold text-slate-300 hover:text-white hover:bg-white/10 transition-all">
+                <i class="fa-solid fa-gears text-sky-400 text-sm"></i>
+                <span class="whitespace-nowrap">力學</span>
+            </button>
+            <button onclick="focusDeskItem('waves')" id="dock-waves" class="dock-btn shrink-0 px-3 py-2 rounded-xl flex items-center justify-center gap-1.5 text-xs font-bold text-slate-300 hover:text-white hover:bg-white/10 transition-all">
+                <i class="fa-solid fa-water text-cyan-400 text-sm"></i>
+                <span class="whitespace-nowrap">波動</span>
+            </button>
+            <button onclick="focusDeskItem('optics')" id="dock-optics" class="dock-btn shrink-0 px-3 py-2 rounded-xl flex items-center justify-center gap-1.5 text-xs font-bold text-slate-300 hover:text-white hover:bg-white/10 transition-all">
+                <i class="fa-solid fa-lightbulb text-yellow-300 text-sm"></i>
+                <span class="whitespace-nowrap">光學</span>
+            </button>
+            <button onclick="focusDeskItem('electromagnetism')" id="dock-electromagnetism" class="dock-btn shrink-0 px-3 py-2 rounded-xl flex items-center justify-center gap-1.5 text-xs font-bold text-slate-300 hover:text-white hover:bg-white/10 transition-all">
+                <i class="fa-solid fa-magnet text-rose-400 text-sm"></i>
+                <span class="whitespace-nowrap">電磁學</span>
+            </button>
+            <button onclick="focusDeskItem('chemistry')" id="dock-chemistry" class="dock-btn shrink-0 px-3 py-2 rounded-xl flex items-center justify-center gap-1.5 text-xs font-bold text-slate-300 hover:text-white hover:bg-white/10 transition-all">
+                <i class="fa-solid fa-flask text-emerald-400 text-sm"></i>
+                <span class="whitespace-nowrap">化學</span>
+            </button>
+            <button onclick="focusDeskItem('modern-physics')" id="dock-modern-physics" class="dock-btn shrink-0 px-3 py-2 rounded-xl flex items-center justify-center gap-1.5 text-xs font-bold text-slate-300 hover:text-white hover:bg-white/10 transition-all">
+                <i class="fa-solid fa-atom text-indigo-400 text-sm"></i>
+                <span class="whitespace-nowrap">近代物理</span>
+            </button>
+            <button onclick="focusDeskItem('games')" id="dock-games" class="dock-btn shrink-0 px-3 py-2 rounded-xl flex items-center justify-center gap-1.5 text-xs font-bold text-slate-300 hover:text-white hover:bg-white/10 transition-all">
+                <i class="fa-solid fa-gamepad text-purple-400 text-sm"></i>
+                <span class="whitespace-nowrap">理化遊戲</span>
+            </button>
+            <button onclick="resetCameraAndCloseDrawer()" class="shrink-0 py-2 px-3 rounded-xl flex items-center justify-center text-xs font-bold text-slate-400 hover:text-white hover:bg-white/10 transition-all" title="重置 3D 鏡頭">
+                <i class="fa-solid fa-rotate-left"></i>
+            </button>
+        </div>
+    </nav>
+
+    <!-- 右側滑出式「物理園地工具箱」抽屜面板 -->
+    <aside id="tools-drawer" class="fixed top-0 right-0 bottom-0 z-40 w-full sm:w-[460px] md:w-[540px] glass-panel border-l border-white/15 transform translate-x-full transition-transform duration-300 ease-out flex flex-col">
+        <!-- 抽屜頂部標題 -->
+        <div class="p-4 sm:p-5 border-b border-white/10 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <div id="drawer-category-icon" class="w-10 h-10 rounded-xl bg-sky-500/20 border border-sky-400/40 flex items-center justify-center text-sky-300 text-lg">
+                    <i class="fa-solid fa-atom"></i>
+                </div>
+                <div>
+                    <h2 id="drawer-title" class="text-lg font-black text-white">華爸的物理園地</h2>
+                    <p id="drawer-subtitle" class="text-xs text-slate-300">打開瀏覽器即可用於課堂演示與學生自主探究</p>
+                </div>
+            </div>
+            <button onclick="closeDrawer()" class="w-9 h-9 rounded-xl bg-white/5 hover:bg-white/15 flex items-center justify-center text-slate-300 hover:text-white transition">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+
+        <!-- 搜尋與標籤過濾列 -->
+        <div class="px-4 sm:px-5 py-3 border-b border-white/10 bg-slate-900/50 flex flex-col gap-2.5">
+            <div class="relative">
+                <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                <input id="search-input" type="text" oninput="renderProjectsList()" placeholder="搜尋動畫名稱、物理單元或關鍵字..." class="w-full pl-9 pr-8 py-2 rounded-xl bg-slate-950/80 border border-white/10 text-xs sm:text-sm text-white placeholder-slate-400 focus:outline-none focus:border-sky-400">
+                <button id="clear-search-btn" onclick="clearSearch()" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs">
+                    <i class="fa-solid fa-circle-xmark"></i>
+                </button>
+            </div>
+            <!-- 分類快速切換膠囊 (由 JS 動態渲染數量) -->
+            <div id="drawer-cat-pills" class="flex items-center gap-1.5 overflow-x-auto custom-scroll pb-1"></div>
+        </div>
+
+        <!-- 數位工具卡片清單 -->
+        <div id="projects-list" class="flex-1 overflow-y-auto custom-scroll p-4 sm:p-5 space-y-3.5">
+            <!-- 由 JS 動態渲染 -->
+        </div>
+
+        <!-- 抽屜底部統計與教師資源 -->
+        <div class="p-3.5 px-5 border-t border-white/10 bg-slate-950/70 flex items-center justify-between text-xs text-slate-400">
+            <span id="drawer-count-info">共顯示 0 項互動工具</span>
+            <button onclick="openTeacherModal()" class="text-amber-300 hover:text-amber-200 font-semibold flex items-center gap-1.5">
+                <i class="fa-solid fa-screwdriver-wrench"></i>
+                <span>教師工具與資料庫</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- 模態框 1：QR Code 與課堂快速分享小幫手 -->
+    <div id="share-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+        <div class="glass-panel rounded-3xl max-w-sm w-full p-6 border border-white/20 text-center relative">
+            <button onclick="closeShareModal()" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-slate-300">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div class="w-12 h-12 rounded-2xl bg-sky-500/20 border border-sky-400/30 flex items-center justify-center text-sky-400 text-xl mx-auto mb-3">
+                <i class="fa-solid fa-qrcode"></i>
+            </div>
+            <h3 id="share-modal-title" class="text-lg font-black text-white mb-1">工具名稱</h3>
+            <p class="text-xs text-slate-300 mb-4">課堂投影或研習分享時，請學生直接掃描下方 QR Code 開啟</p>
+
+            <div class="bg-white p-4 rounded-2xl inline-block mx-auto mb-4 shadow-xl">
+                <img id="share-qr-img" src="" alt="QR Code" class="w-44 h-44 object-contain mx-auto">
+            </div>
+
+            <div class="flex items-center gap-2 bg-slate-950/90 border border-white/10 rounded-xl p-2 mb-2">
+                <input id="share-url-input" type="text" readonly class="bg-transparent text-xs text-slate-300 font-mono flex-1 focus:outline-none px-1">
+                <button onclick="copyShareUrl()" class="px-3 py-1.5 rounded-lg bg-sky-500 hover:bg-sky-400 text-white text-xs font-bold transition whitespace-nowrap">
+                    複製連結
+                </button>
+            </div>
+            <p id="share-local-hint" class="hidden text-[11px] text-amber-300 mb-2">
+                💡 目前為本機檔案預覽模式，部署上線後 QR Code 將自動帶入正式網址。
+            </p>
+            <div id="copy-toast" class="text-xs text-emerald-400 font-semibold h-4 opacity-0 transition-opacity">
+                ✓ 已複製到剪貼簿！
+            </div>
+        </div>
+    </div>
+
+    <!-- 模態框 2：教師工具、資料庫與資料夾架構指南 -->
+    <div id="teacher-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/75 backdrop-blur-md">
+        <div class="glass-panel rounded-3xl max-w-xl w-full max-h-[88vh] flex flex-col border border-white/20 overflow-hidden">
+            <div class="p-5 border-b border-white/10 flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <i class="fa-solid fa-screwdriver-wrench text-amber-400 text-xl"></i>
+                    <h3 class="text-lg font-black text-white">教師工具與教學資料庫</h3>
+                </div>
+                <button onclick="closeTeacherModal()" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-slate-300">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="p-5 overflow-y-auto custom-scroll space-y-4 text-xs sm:text-sm">
+                <!-- 快捷工具連結 -->
+                <div class="space-y-2.5">
+                    <h4 class="font-bold text-purple-300 flex items-center gap-2">
+                        <i class="fa-solid fa-sliders"></i>
+                        <span>遊戲出題與共享試算表</span>
+                    </h4>
+                    <div class="grid grid-cols-1 gap-2.5">
+                        <a href="optics/reflection%20editor.html" target="_blank" rel="noopener noreferrer" class="p-3.5 rounded-2xl bg-purple-500/15 hover:bg-purple-500/25 border border-purple-400/30 flex items-center justify-between transition group">
+                            <div class="flex items-center gap-3">
+                                <span class="w-9 h-9 rounded-xl bg-purple-500/25 flex items-center justify-center text-lg">🛠️</span>
+                                <div>
+                                    <div class="font-bold text-white group-hover:text-purple-200">光學反射關卡編輯器（教師出題端）</div>
+                                    <div class="text-xs text-slate-300">設計發射源、鏡面障礙與三稜鏡關卡並同步至雲端</div>
+                                </div>
+                            </div>
+                            <i class="fa-solid fa-arrow-up-right-from-square text-purple-300"></i>
+                        </a>
+
+                        <a href="https://docs.google.com/spreadsheets/d/17izy_vJCd539R4V5VZIKdfsUMJ8DofpnyL9TL1KBdXo/edit" target="_blank" rel="noopener noreferrer" class="p-3.5 rounded-2xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-400/30 flex items-center justify-between transition group">
+                            <div class="flex items-center gap-3">
+                                <span class="w-9 h-9 rounded-xl bg-emerald-500/25 flex items-center justify-center text-lg">🏆</span>
+                                <div>
+                                    <div class="font-bold text-white group-hover:text-emerald-200">共享排行榜 Google 試算表</div>
+                                    <div class="text-xs text-slate-300">檢視光學挑戰與週期表遊戲的學生闖關紀錄</div>
+                                </div>
+                            </div>
+                            <i class="fa-solid fa-arrow-up-right-from-square text-emerald-300"></i>
+                        </a>
+
+                        <a href="https://docs.google.com/spreadsheets/d/18SjUr3EBKQxNu6GyNoPkZR5SIp-uJzjAWF-W-xMsXHU/edit" target="_blank" rel="noopener noreferrer" class="p-3.5 rounded-2xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-400/30 flex items-center justify-between transition group">
+                            <div class="flex items-center gap-3">
+                                <span class="w-9 h-9 rounded-xl bg-sky-500/25 flex items-center justify-center text-lg">🗂️</span>
+                                <div>
+                                    <div class="font-bold text-white group-hover:text-sky-200">光學關卡資料庫 Google 試算表</div>
+                                    <div class="text-xs text-slate-300">管理雲端發布的學生挑戰關卡資料</div>
+                                </div>
+                            </div>
+                            <i class="fa-solid fa-arrow-up-right-from-square text-sky-300"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- 自動建置說明 -->
+                <div class="p-4 rounded-2xl bg-slate-900/80 border border-white/10 space-y-2.5">
+                    <h4 class="font-bold text-sky-300 flex items-center gap-2">
+                        <i class="fa-solid fa-folder-tree"></i>
+                        <span>如何新增動畫或遊戲？（資料夾自動上架）</span>
+                    </h4>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        本網站由 <code class="text-amber-300">build.js</code> 自動掃描各分類資料夾內的 <code class="text-sky-300">.html</code> 與同名 <code class="text-emerald-300">.gif</code> 預覽圖生成：
+                    </p>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-[11px] font-mono">
+                        <div class="px-2 py-1.5 rounded-lg bg-slate-950 border border-white/10 text-sky-300">mechanics/ <span class="text-slate-400">力學</span></div>
+                        <div class="px-2 py-1.5 rounded-lg bg-slate-950 border border-white/10 text-cyan-300">waves/ <span class="text-slate-400">波動</span></div>
+                        <div class="px-2 py-1.5 rounded-lg bg-slate-950 border border-white/10 text-yellow-300">optics/ <span class="text-slate-400">光學</span></div>
+                        <div class="px-2 py-1.5 rounded-lg bg-slate-950 border border-white/10 text-rose-300">electromagnetism/ <span class="text-slate-400">電磁</span></div>
+                        <div class="px-2 py-1.5 rounded-lg bg-slate-950 border border-white/10 text-emerald-300">chemistry/ <span class="text-slate-400">化學</span></div>
+                        <div class="px-2 py-1.5 rounded-lg bg-slate-950 border border-white/10 text-indigo-300">modern-physics/ <span class="text-slate-400">近代</span></div>
+                        <div class="px-2 py-1.5 rounded-lg bg-slate-950 border border-white/10 text-purple-300">games/ <span class="text-slate-400">遊戲</span></div>
+                    </div>
+                    <p class="text-[11px] text-slate-400 leading-relaxed">
+                        放入新檔案後執行 <code class="text-emerald-300">node make-gifs.js</code>（製作 GIF 縮圖）與 <code class="text-sky-300">node build.js</code> 即可自動更新入口。於網頁中加入 <code class="text-slate-200">&lt;meta name="portal-type" content="game"&gt;</code> 可歸類進遊戲專區。
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**************************************************************************
+         * ★ 由 build.js 自動掃描資料夾注入的教材與遊戲清單 ★
+         **************************************************************************/
+        const PORTAL_CONFIG = {
+            repoUrl: "https://github.com/yiHua-teach/physics-portal",
+            siteTitle: "華爸的物理園地"
+        };
+
+        const PROJECTS_DATA = /*__PROJECTS_DATA__*/[];
+        const CATEGORY_COUNTS = /*__CATEGORY_COUNTS__*/{};
+
+        const CATEGORY_ORDER = [
+            'all',
+            'mechanics',
+            'waves',
+            'optics',
+            'electromagnetism',
+            'chemistry',
+            'modern-physics',
+            'games'
+        ];
+
+        const CATEGORY_META = {
+            all: {
+                shortName: "全部",
+                title: "華爸的物理園地・全部工具",
+                subtitle: "彙整力學、波動、光學、電磁學、化學、近代物理與理化遊戲",
+                icon: "fa-book-journal-whills",
+                emoji: "📓",
+                badgeClass: "bg-amber-500/20 text-amber-300 border-amber-400/40",
+                pillColor: "bg-amber-500 text-slate-950",
+                camPos: { x: 0, y: 9.2, z: 13.8 },
+                lookAt: { x: 0, y: 0.8, z: 0.1 }
+            },
+            mechanics: {
+                shortName: "力學",
+                title: "基礎力學互動模擬",
+                subtitle: "動量守恆、質心爆炸、一維碰撞與牛頓運動定律實驗",
+                icon: "fa-gears",
+                emoji: "📘",
+                badgeClass: "bg-sky-500/20 text-sky-300 border-sky-400/40",
+                pillColor: "bg-sky-500 text-white",
+                camPos: { x: -4.8, y: 4.5, z: 4.5 },
+                lookAt: { x: -4.1, y: 1.1, z: -1.1 }
+            },
+            waves: {
+                shortName: "波動",
+                title: "波動與聲學互動模擬",
+                subtitle: "橫波縱波、駐波粒子、都卜勒效應、水波干涉與回聲探究",
+                icon: "fa-water",
+                emoji: "🌊",
+                badgeClass: "bg-cyan-500/20 text-cyan-300 border-cyan-400/40",
+                pillColor: "bg-cyan-500 text-slate-950",
+                camPos: { x: -1.2, y: 4.4, z: 4.8 },
+                lookAt: { x: -1.2, y: 1.6, z: -2.1 }
+            },
+            optics: {
+                shortName: "光學",
+                title: "幾何與物理光學實驗室",
+                subtitle: "針孔成像、折射反射、3D 透鏡、光學平台、色散與雙狹縫繞射",
+                icon: "fa-lightbulb",
+                emoji: "💡",
+                badgeClass: "bg-yellow-500/20 text-yellow-300 border-yellow-400/40",
+                pillColor: "bg-yellow-400 text-slate-950",
+                camPos: { x: -4.5, y: 3.6, z: 6.4 },
+                lookAt: { x: -3.7, y: 0.7, z: 1.7 }
+            },
+            electromagnetism: {
+                shortName: "電磁學",
+                title: "電磁學互動模擬",
+                subtitle: "庫侖靜電力、磁場分布、法拉第電磁感應與電路模擬（持續擴充中）",
+                icon: "fa-magnet",
+                emoji: "🧲",
+                badgeClass: "bg-rose-500/20 text-rose-300 border-rose-400/40",
+                pillColor: "bg-rose-500 text-white",
+                camPos: { x: 2.9, y: 4.2, z: 4.8 },
+                lookAt: { x: 2.6, y: 0.9, z: -1.9 }
+            },
+            chemistry: {
+                shortName: "化學",
+                title: "化學與分子模擬",
+                subtitle: "週期表性質、化學反應平衡、酸鹼滴定與分子結構（持續擴充中）",
+                icon: "fa-flask",
+                emoji: "🧪",
+                badgeClass: "bg-emerald-500/20 text-emerald-300 border-emerald-400/40",
+                pillColor: "bg-emerald-500 text-slate-950",
+                camPos: { x: 4.8, y: 4.0, z: 5.8 },
+                lookAt: { x: 4.3, y: 0.9, z: 0.4 }
+            },
+            'modern-physics': {
+                shortName: "近代物理",
+                title: "近代物理與量子現象",
+                subtitle: "光電效應、原子能階躍遷、康普頓散射與波粒二象性（持續擴充中）",
+                icon: "fa-atom",
+                emoji: "⚛️",
+                badgeClass: "bg-indigo-500/20 text-indigo-300 border-indigo-400/40",
+                pillColor: "bg-indigo-500 text-white",
+                camPos: { x: 0.9, y: 3.9, z: 5.6 },
+                lookAt: { x: 0.85, y: 1.1, z: -0.1 }
+            },
+            games: {
+                shortName: "理化遊戲",
+                title: "物理與化學互動挑戰遊戲",
+                subtitle: "光學反射闖關、週期表搶答／排排看／連線迷宮（含雲端共享排行榜）",
+                icon: "fa-gamepad",
+                emoji: "🎮",
+                badgeClass: "bg-purple-500/20 text-purple-300 border-purple-400/40",
+                pillColor: "bg-purple-500 text-white",
+                camPos: { x: -0.7, y: 3.8, z: 6.8 },
+                lookAt: { x: -0.6, y: 0.9, z: 2.0 }
+            }
+        };
+
+        /**************************************************************************
+         * Three.js 3D 奇幻物理實驗桌場景建構
+         **************************************************************************/
+        let scene, camera, renderer, raycaster, mouse;
+        let clock = new THREE.Clock();
+        let deskInteractiveGroups = [];
+        let hotspotItems = [];
+
+        // 動態動畫物件參照
+        let newtonPendulumLeft, newtonPendulumRight;
+        let holoWavePoints;
+        let emMagnetGroup, emLedMeshes = [];
+        let atomOrbitsGroup;
+        let chemMoleculesGroup;
+        let floatingCardsGroup, magicRingMesh;
+
+        // 鏡頭平滑過渡狀態
+        let targetCamPos = new THREE.Vector3(0, 9.2, 13.8);
+        let targetLookAt = new THREE.Vector3(0, 0.8, 0.1);
+        let currentLookAt = new THREE.Vector3(0, 0.8, 0.1);
+
+        // 滑鼠拖曳旋轉控制與效能排程狀態
+        let isDragging = false;
+        let pointerDownPos = { x: 0, y: 0 };
+        let prevPointerPos = { x: 0, y: 0 };
+        let sphericalAzimuth = 0;
+        let sphericalElevation = 0.60;
+        let cameraDistance = 16.0;
+        let isFocusedMode = false;
+        let hasWebGL = false;
+
+        let mainSpotLight = null;
+        let rafId = null;
+        let elapsedSimTime = 0;
+        let lastFrameTimestamp = 0;
+        let activeCameraFrames = 60;
+        let isEcoMode = localStorage.getItem('hwaba_eco_mode') === 'true';
+
+        function initThreeScene() {
+            const container = document.getElementById('canvas-container');
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x070a12);
+            scene.fog = new THREE.FogExp2(0x070a12, 0.025);
+
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+            camera.position.set(0, 9.2, 13.8);
+
+            renderer = new THREE.WebGLRenderer({ antialias: !isEcoMode, powerPreference: "default" });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(isEcoMode ? 1 : Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = !isEcoMode;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(renderer.domElement);
+
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+
+            setupLights();
+            buildLabDeskEnvironment();
+            buildMechanicsProp();          // 1. 左後：牛頓擺（力學）
+            buildWavesProp();              // 2. 中後：全息波動黑板（波動）
+            buildElectromagnetismProp();   // 3. 右後：線圈與N-S磁鐵（電磁學）
+            buildModernPhysicsProp();      // 4. 中央：量子原子軌域模型（近代物理）
+            buildChemistryProp();          // 5. 右中：發光錐形瓶與分子（化學）
+            buildOpticsProp();             // 6. 左前：三稜鏡色散與凸透鏡（光學）
+            buildGamesProp();              // 7. 中前：漂浮卡牌與遊戲光環（理化遊戲）
+            buildNotebookProp();           // 8. 右前：實驗筆記本（全部工具）
+            buildFloatingParticles();
+
+            createHTMLHotspotLabels();
+            bindEvents();
+            hasWebGL = true;
+            applyEcoModeState();
+        }
+
+        function setupLights() {
+            const ambientLight = new THREE.AmbientLight(0x334155, 1.35);
+            scene.add(ambientLight);
+
+            mainSpotLight = new THREE.SpotLight(0xf8fafc, 1.65);
+            mainSpotLight.position.set(1, 15, 7);
+            mainSpotLight.angle = Math.PI / 2.6;
+            mainSpotLight.penumbra = 0.65;
+            mainSpotLight.castShadow = !isEcoMode;
+            mainSpotLight.shadow.mapSize.width = 512;
+            mainSpotLight.shadow.mapSize.height = 512;
+            scene.add(mainSpotLight);
+
+            const blueLight = new THREE.PointLight(0x38bdf8, 1.8, 10);
+            blueLight.position.set(-4.2, 3.2, 0.2);
+            scene.add(blueLight);
+
+            const greenLight = new THREE.PointLight(0x10b981, 1.6, 9);
+            greenLight.position.set(4.5, 2.8, 0.4);
+            scene.add(greenLight);
+
+            const purpleLight = new THREE.PointLight(0xc084fc, 1.8, 9);
+            purpleLight.position.set(-0.5, 2.5, 2.4);
+            scene.add(purpleLight);
+
+            const roseLight = new THREE.PointLight(0xfb7185, 1.4, 8);
+            roseLight.position.set(2.6, 2.6, -2.0);
+            scene.add(roseLight);
+        }
+
+        function buildLabDeskEnvironment() {
+            const deskGroup = new THREE.Group();
+
+            // 加寬實木與碳纖維質感主桌面 (14 x 8.8)
+            const tableGeo = new THREE.BoxGeometry(14, 0.5, 8.8);
+            const tableMat = new THREE.MeshStandardMaterial({
+                color: 0x151e2e,
+                roughness: 0.4,
+                metalness: 0.3
+            });
+            const tableMesh = new THREE.Mesh(tableGeo, tableMat);
+            tableMesh.position.y = -0.25;
+            tableMesh.receiveShadow = true;
+            deskGroup.add(tableMesh);
+
+            // 桌面科技切割墊
+            const matGeo = new THREE.PlaneGeometry(12.6, 7.6);
+            const matMaterial = new THREE.MeshStandardMaterial({
+                color: 0x0f172a,
+                roughness: 0.6,
+                metalness: 0.1
+            });
+            const cuttingMat = new THREE.Mesh(matGeo, matMaterial);
+            cuttingMat.rotation.x = -Math.PI / 2;
+            cuttingMat.position.y = 0.01;
+            cuttingMat.receiveShadow = true;
+            deskGroup.add(cuttingMat);
+
+            // 科技網格線
+            const gridHelper = new THREE.GridHelper(12.4, 24, 0x38bdf8, 0x1e3a5f);
+            gridHelper.position.y = 0.02;
+            gridHelper.material.transparent = true;
+            gridHelper.material.opacity = 0.25;
+            deskGroup.add(gridHelper);
+
+            // 霓虹外框線
+            const borderGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(14.06, 0.52, 8.86));
+            const borderMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.42 });
+            const borderLines = new THREE.LineSegments(borderGeo, borderMat);
+            borderLines.position.y = -0.25;
+            deskGroup.add(borderLines);
+
+            scene.add(deskGroup);
+        }
+
+        // 1. 【力學】牛頓擺
+        function buildMechanicsProp() {
+            const group = new THREE.Group();
+            group.position.set(-4.4, 0, -1.3);
+
+            const base = new THREE.Mesh(
+                new THREE.BoxGeometry(2.3, 0.2, 1.35),
+                new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.3, metalness: 0.6 })
+            );
+            base.position.y = 0.1;
+            base.castShadow = true;
+            group.add(base);
+
+            const frameMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.9, roughness: 0.15 });
+            [[-0.95, -0.48], [0.95, -0.48], [-0.95, 0.48], [0.95, 0.48]].forEach(([px, pz]) => {
+                const post = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 1.85, 12), frameMat);
+                post.position.set(px, 1.02, pz);
+                group.add(post);
+            });
+            [-0.48, 0.48].forEach(pz => {
+                const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 1.98, 12), frameMat);
+                bar.rotation.z = Math.PI / 2;
+                bar.position.set(0, 1.95, pz);
+                group.add(bar);
+            });
+
+            const sphereMat = new THREE.MeshStandardMaterial({
+                color: 0x38bdf8,
+                metalness: 0.92,
+                roughness: 0.08,
+                emissive: 0x0284c7,
+                emissiveIntensity: 0.25
+            });
+            const radius = 0.185;
+            for (let i = -2; i <= 2; i++) {
+                const pivot = new THREE.Group();
+                pivot.position.set(i * (radius * 2.04), 1.95, 0);
+
+                const stringMesh = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.01, 0.01, 1.25, 8),
+                    new THREE.MeshBasicMaterial({ color: 0x94a3b8 })
+                );
+                stringMesh.position.y = -0.625;
+                pivot.add(stringMesh);
+
+                const ball = new THREE.Mesh(new THREE.SphereGeometry(radius, 20, 20), sphereMat);
+                ball.position.y = -1.25;
+                ball.castShadow = true;
+                pivot.add(ball);
+
+                group.add(pivot);
+                if (i === -2) newtonPendulumLeft = pivot;
+                if (i === 2) newtonPendulumRight = pivot;
+            }
+
+            registerInteractiveGroup(group, 'mechanics', '📘 力學', '牛頓擺與動量碰撞', new THREE.Vector3(-4.4, 2.45, -1.3));
+            scene.add(group);
+        }
+
+        // 2. 【波動】全息投影波動黑板
+        function buildWavesProp() {
+            const group = new THREE.Group();
+            group.position.set(-1.2, 0, -2.3);
+
+            const stand = new THREE.Mesh(
+                new THREE.BoxGeometry(3.2, 0.22, 0.6),
+                new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.7, roughness: 0.2 })
+            );
+            stand.position.y = 0.11;
+            group.add(stand);
+
+            const boardGeo = new THREE.PlaneGeometry(3.5, 1.95);
+            const board = new THREE.Mesh(
+                boardGeo,
+                new THREE.MeshBasicMaterial({ color: 0x0f172a, transparent: true, opacity: 0.85, side: THREE.DoubleSide })
+            );
+            board.position.y = 1.45;
+            group.add(board);
+
+            const frame = new THREE.LineSegments(
+                new THREE.EdgesGeometry(boardGeo),
+                new THREE.LineBasicMaterial({ color: 0x22d3ee })
+            );
+            frame.position.y = 1.45;
+            group.add(frame);
+
+            const waveGeo = new THREE.BufferGeometry();
+            const numPoints = 64;
+            const positions = new Float32Array(numPoints * 3);
+            for (let i = 0; i < numPoints; i++) {
+                const x = -1.55 + (i / (numPoints - 1)) * 3.1;
+                positions[i * 3] = x;
+                positions[i * 3 + 1] = 1.45 + Math.sin(x * 3.2) * 0.4;
+                positions[i * 3 + 2] = 0.05;
+            }
+            waveGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            holoWavePoints = new THREE.Line(waveGeo, new THREE.LineBasicMaterial({ color: 0x38bdf8 }));
+            group.add(holoWavePoints);
+
+            registerInteractiveGroup(group, 'waves', '🌊 波動', '駐波與都卜勒波動儀', new THREE.Vector3(-1.2, 2.85, -2.3));
+            scene.add(group);
+        }
+
+        // 3. 【電磁學】銅線圈螺線管與 N-S 磁鐵
+        function buildElectromagnetismProp() {
+            const group = new THREE.Group();
+            group.position.set(2.6, 0, -2.1);
+
+            // 絕緣實驗底座
+            const base = new THREE.Mesh(
+                new THREE.BoxGeometry(2.5, 0.2, 1.3),
+                new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.4, metalness: 0.4 })
+            );
+            base.position.y = 0.1;
+            base.castShadow = true;
+            group.add(base);
+
+            // 銅色螺旋管線圈 (多組環狀繞線)
+            const coilMat = new THREE.MeshStandardMaterial({
+                color: 0xd97706,
+                metalness: 0.85,
+                roughness: 0.22
+            });
+            for (let i = 0; i < 8; i++) {
+                const ring = new THREE.Mesh(new THREE.TorusGeometry(0.45, 0.045, 12, 28), coilMat);
+                ring.rotation.y = Math.PI / 2;
+                ring.position.set(-0.55 + i * 0.12, 0.65, 0);
+                group.add(ring);
+            }
+
+            // 往返移動的 N-S 條形磁鐵
+            emMagnetGroup = new THREE.Group();
+            emMagnetGroup.position.set(0.65, 0.65, 0);
+            const northHalf = new THREE.Mesh(
+                new THREE.BoxGeometry(0.5, 0.24, 0.24),
+                new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0x991b1b, emissiveIntensity: 0.35 })
+            );
+            northHalf.position.x = -0.25;
+            const southHalf = new THREE.Mesh(
+                new THREE.BoxGeometry(0.5, 0.24, 0.24),
+                new THREE.MeshStandardMaterial({ color: 0x3b82f6, emissive: 0x1d4ed8, emissiveIntensity: 0.35 })
+            );
+            southHalf.position.x = 0.25;
+            emMagnetGroup.add(northHalf, southHalf);
+            group.add(emMagnetGroup);
+
+            // 感應指示 LED 燈
+            [0xf43f5e, 0x38bdf8].forEach((col, idx) => {
+                const led = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.085, 14, 14),
+                    new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 1.0 })
+                );
+                led.position.set(-0.85 + idx * 0.3, 0.28, 0.42);
+                group.add(led);
+                emLedMeshes.push(led);
+            });
+
+            registerInteractiveGroup(group, 'electromagnetism', '🧲 電磁學', '電磁感應線圈與磁場', new THREE.Vector3(2.6, 1.75, -2.1));
+            scene.add(group);
+        }
+
+        // 4. 【近代物理】量子原子軌域模型
+        function buildModernPhysicsProp() {
+            const group = new THREE.Group();
+            group.position.set(0.85, 0, -0.1);
+
+            const pedestal = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.55, 0.7, 0.16, 24),
+                new THREE.MeshStandardMaterial({ color: 0x1e1b4b, metalness: 0.6, roughness: 0.3 })
+            );
+            pedestal.position.y = 0.08;
+            group.add(pedestal);
+
+            // 原子核發光中心
+            const nucleus = new THREE.Mesh(
+                new THREE.SphereGeometry(0.24, 24, 24),
+                new THREE.MeshStandardMaterial({
+                    color: 0xf472b6,
+                    emissive: 0xec4899,
+                    emissiveIntensity: 0.75,
+                    roughness: 0.2
+                })
+            );
+            nucleus.position.y = 1.05;
+            group.add(nucleus);
+
+            atomOrbitsGroup = new THREE.Group();
+            atomOrbitsGroup.position.y = 1.05;
+
+            const orbitColors = [0x818cf8, 0x38bdf8, 0xc084fc];
+            const tilts = [
+                [0.4, 0, 0.3],
+                [-0.5, 0.4, -0.6],
+                [0.8, -0.5, 0.8]
+            ];
+            tilts.forEach(([rx, ry, rz], idx) => {
+                const orbitWrapper = new THREE.Group();
+                orbitWrapper.rotation.set(rx, ry, rz);
+
+                const ring = new THREE.Mesh(
+                    new THREE.TorusGeometry(0.82, 0.02, 10, 48),
+                    new THREE.MeshBasicMaterial({ color: orbitColors[idx], transparent: true, opacity: 0.85 })
+                );
+                orbitWrapper.add(ring);
+
+                const electron = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.075, 14, 14),
+                    new THREE.MeshStandardMaterial({ color: 0xe0f2fe, emissive: orbitColors[idx], emissiveIntensity: 1.4 })
+                );
+                electron.position.set(0.82, 0, 0);
+                orbitWrapper.add(electron);
+
+                atomOrbitsGroup.add(orbitWrapper);
+            });
+            group.add(atomOrbitsGroup);
+
+            registerInteractiveGroup(group, 'modern-physics', '⚛️ 近代物理', '量子能階與原子軌域', new THREE.Vector3(0.85, 2.25, -0.1));
+            scene.add(group);
+        }
+
+        // 5. 【化學】發光實驗錐形瓶與分子模型
+        function buildChemistryProp() {
+            const group = new THREE.Group();
+            group.position.set(4.6, 0, 0.35);
+
+            // 實驗墊板
+            const pad = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.95, 1.0, 0.1, 24),
+                new THREE.MeshStandardMaterial({ color: 0x064e3b, metalness: 0.3, roughness: 0.4 })
+            );
+            pad.position.y = 0.05;
+            group.add(pad);
+
+            // 發光綠液體錐形瓶下層
+            const liquid = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.28, 0.65, 0.72, 24),
+                new THREE.MeshStandardMaterial({
+                    color: 0x10b981,
+                    emissive: 0x059669,
+                    emissiveIntensity: 0.75,
+                    transparent: true,
+                    opacity: 0.88
+                })
+            );
+            liquid.position.y = 0.46;
+            group.add(liquid);
+
+            // 玻璃外瓶身與瓶頸
+            const glassMat = new THREE.MeshPhysicalMaterial({
+                color: 0xd1fae5,
+                transparent: true,
+                opacity: 0.42,
+                roughness: 0.08
+            });
+            const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.28, 0.55, 20), glassMat);
+            neck.position.y = 1.08;
+            group.add(neck);
+
+            // 瓶口上漂浮旋轉的水/分子鍵結模型
+            chemMoleculesGroup = new THREE.Group();
+            chemMoleculesGroup.position.set(0, 1.72, 0);
+            const centerAtom = new THREE.Mesh(
+                new THREE.SphereGeometry(0.16, 18, 18),
+                new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0x991b1b, emissiveIntensity: 0.3 })
+            );
+            chemMoleculesGroup.add(centerAtom);
+
+            [[-0.32, -0.18], [0.32, -0.18]].forEach(([ax, ay]) => {
+                const hAtom = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.11, 14, 14),
+                    new THREE.MeshStandardMaterial({ color: 0xf8fafc, emissive: 0x38bdf8, emissiveIntensity: 0.2 })
+                );
+                hAtom.position.set(ax, ay, 0);
+                chemMoleculesGroup.add(hAtom);
+            });
+            group.add(chemMoleculesGroup);
+
+            registerInteractiveGroup(group, 'chemistry', '🧪 化學', '分子模型與反應實驗', new THREE.Vector3(4.6, 2.3, 0.35));
+            scene.add(group);
+        }
+
+        // 6. 【光學】三稜鏡彩虹色散 + 透鏡支架
+        function buildOpticsProp() {
+            const group = new THREE.Group();
+            group.position.set(-4.1, 0, 1.85);
+
+            // 黑色光學平台底座
+            const opticalBench = new THREE.Mesh(
+                new THREE.BoxGeometry(2.5, 0.14, 1.3),
+                new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.6, roughness: 0.3 })
+            );
+            opticalBench.position.y = 0.07;
+            opticalBench.castShadow = true;
+            group.add(opticalBench);
+
+            // 等邊玻璃三稜鏡
+            const prism = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.48, 0.48, 0.72, 3),
+                new THREE.MeshPhysicalMaterial({
+                    color: 0xe0f2fe,
+                    transparent: true,
+                    opacity: 0.78,
+                    roughness: 0.05,
+                    metalness: 0.1
+                })
+            );
+            prism.position.set(-0.2, 0.50, 0);
+            group.add(prism);
+
+            // 入射白光束
+            const whiteBeam = new THREE.Mesh(
+                new THREE.PlaneGeometry(0.95, 0.065),
+                new THREE.MeshBasicMaterial({ color: 0xf8fafc, side: THREE.DoubleSide, transparent: true, opacity: 0.9 })
+            );
+            whiteBeam.rotation.x = -Math.PI / 2;
+            whiteBeam.rotation.z = 0.15;
+            whiteBeam.position.set(-0.82, 0.42, -0.08);
+            group.add(whiteBeam);
+
+            // 彩虹五色散光束
+            const rainbowColors = [0xef4444, 0xf59e0b, 0x10b981, 0x38bdf8, 0xa855f7];
+            rainbowColors.forEach((col, idx) => {
+                const beam = new THREE.Mesh(
+                    new THREE.PlaneGeometry(1.15, 0.055),
+                    new THREE.MeshBasicMaterial({ color: col, side: THREE.DoubleSide, transparent: true, opacity: 0.9 })
+                );
+                beam.rotation.x = -Math.PI / 2;
+                beam.rotation.z = -0.22 + idx * 0.08;
+                beam.position.set(0.65, 0.40, 0.05 + idx * 0.09);
+                group.add(beam);
+            });
+
+            // 小型直立凸透鏡元件
+            const lens = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.36, 0.36, 0.08, 24),
+                new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.65, emissive: 0x0284c7, emissiveIntensity: 0.3 })
+            );
+            lens.rotation.z = Math.PI / 2;
+            lens.position.set(0.9, 0.48, -0.35);
+            group.add(lens);
+
+            registerInteractiveGroup(group, 'optics', '💡 光學', '三稜鏡色散與透鏡成像', new THREE.Vector3(-4.1, 1.55, 1.85));
+            scene.add(group);
+        }
+
+        // 7. 【理化遊戲】漂浮互動卡牌陣與魔法遊戲光環
+        function buildGamesProp() {
+            const group = new THREE.Group();
+            group.position.set(-0.7, 0, 2.15);
+
+            magicRingMesh = new THREE.Mesh(
+                new THREE.RingGeometry(0.88, 1.04, 36),
+                new THREE.MeshBasicMaterial({ color: 0xc084fc, side: THREE.DoubleSide, transparent: true, opacity: 0.78 })
+            );
+            magicRingMesh.rotation.x = -Math.PI / 2;
+            magicRingMesh.position.y = 0.03;
+            group.add(magicRingMesh);
+
+            floatingCardsGroup = new THREE.Group();
+            floatingCardsGroup.position.y = 0.78;
+
+            const cardGeo = new THREE.BoxGeometry(0.62, 0.025, 0.9);
+            const cardColors = [0xc084fc, 0x38bdf8, 0xf43f5e, 0xf59e0b, 0x10b981];
+
+            for (let i = 0; i < 5; i++) {
+                const card = new THREE.Mesh(
+                    cardGeo,
+                    new THREE.MeshStandardMaterial({
+                        color: 0xffffff,
+                        emissive: cardColors[i],
+                        emissiveIntensity: 0.25,
+                        roughness: 0.2
+                    })
+                );
+                const angle = (i - 2) * 0.34;
+                card.position.set(Math.sin(angle) * 0.68, i * 0.06, Math.cos(angle) * 0.18);
+                card.rotation.z = -angle * 0.6;
+                card.rotation.x = 0.35;
+                card.castShadow = true;
+                floatingCardsGroup.add(card);
+            }
+            group.add(floatingCardsGroup);
+
+            registerInteractiveGroup(group, 'games', '🎮 理化遊戲', '光學闖關與週期表競技', new THREE.Vector3(-0.7, 1.9, 2.15));
+            scene.add(group);
+        }
+
+        // 8. 【全部工具】華爸的物理筆記本
+        function buildNotebookProp() {
+            const group = new THREE.Group();
+            group.position.set(3.9, 0, 2.45);
+            group.rotation.y = 0.32;
+
+            const book = new THREE.Mesh(
+                new THREE.BoxGeometry(1.45, 0.18, 1.85),
+                new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.4, metalness: 0.2 })
+            );
+            book.position.y = 0.09;
+            book.castShadow = true;
+            group.add(book);
+
+            const pages = new THREE.Mesh(
+                new THREE.BoxGeometry(1.37, 0.14, 1.77),
+                new THREE.MeshStandardMaterial({ color: 0xfef3c7 })
+            );
+            pages.position.set(0.03, 0.09, 0);
+            group.add(pages);
+
+            registerInteractiveGroup(group, 'all', '📓 全部總覽', '一覽所有模擬與遊戲', new THREE.Vector3(3.9, 1.05, 2.45));
+            scene.add(group);
+        }
+
+        function buildFloatingParticles() {
+            const partGeo = new THREE.BufferGeometry();
+            const count = 130;
+            const pos = new Float32Array(count * 3);
+            for (let i = 0; i < count; i++) {
+                pos[i * 3] = (Math.random() - 0.5) * 18;
+                pos[i * 3 + 1] = Math.random() * 6.5 + 0.3;
+                pos[i * 3 + 2] = (Math.random() - 0.5) * 12;
+            }
+            partGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+            const particles = new THREE.Points(
+                partGeo,
+                new THREE.PointsMaterial({ color: 0x7dd3fc, size: 0.06, transparent: true, opacity: 0.5 })
+            );
+            scene.add(particles);
+        }
+
+        function registerInteractiveGroup(group, category, title, subtitle, labelWorldPos) {
+            group.userData.category = category;
+            group.traverse(child => {
+                if (child.isMesh) {
+                    child.userData.category = category;
+                    deskInteractiveGroups.push(child);
+                }
+            });
+            hotspotItems.push({ category, title, subtitle, worldPos: labelWorldPos, element: null });
+        }
+
+        function createHTMLHotspotLabels() {
+            const container = document.getElementById('labels-container');
+            container.innerHTML = '';
+
+            hotspotItems.forEach(item => {
+                const count = item.category === 'all'
+                    ? PROJECTS_DATA.length
+                    : (CATEGORY_COUNTS[item.category] || 0);
+                const countClass = count > 0
+                    ? 'bg-sky-500/30 text-sky-200 border-sky-400/40'
+                    : 'bg-slate-700/50 text-slate-400 border-white/10';
+
+                const el = document.createElement('div');
+                el.className = 'hotspot-label glass-pill px-2.5 py-1.5 rounded-2xl shadow-lg flex items-center gap-2 border border-white/20';
+                el.innerHTML = `
+                    <div class="text-left">
+                        <div class="text-xs font-extrabold text-white whitespace-nowrap flex items-center gap-1.5">
+                            <span>${item.title}</span>
+                            <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono border ${countClass}">${count}</span>
+                            <i class="fa-solid fa-chevron-right text-[9px] text-sky-400"></i>
+                        </div>
+                        <div class="text-[10px] text-slate-300 whitespace-nowrap hidden sm:block">${item.subtitle}</div>
+                    </div>
+                `;
+                el.onclick = (e) => {
+                    e.stopPropagation();
+                    focusDeskItem(item.category);
+                };
+                container.appendChild(el);
+                item.element = el;
+            });
+        }
+
+        function applyEcoModeState() {
+            document.body.classList.toggle('eco-mode', isEcoMode);
+            const btn = document.getElementById('eco-toggle-btn');
+            if (btn) {
+                btn.innerHTML = isEcoMode
+                    ? '<i class="fa-solid fa-leaf text-emerald-400"></i><span class="hidden lg:inline">節能中</span>'
+                    : '<i class="fa-solid fa-leaf text-slate-400"></i><span class="hidden lg:inline">節能</span>';
+                btn.classList.toggle('border-emerald-400/50', isEcoMode);
+                btn.classList.toggle('bg-emerald-500/15', isEcoMode);
+            }
+            if (hasWebGL && renderer) {
+                renderer.setPixelRatio(isEcoMode ? 1 : Math.min(window.devicePixelRatio, 2));
+                renderer.shadowMap.enabled = !isEcoMode;
+                if (mainSpotLight) mainSpotLight.castShadow = !isEcoMode;
+                renderer.render(scene, camera);
+            }
+        }
+
+        function toggleEcoMode() {
+            isEcoMode = !isEcoMode;
+            localStorage.setItem('hwaba_eco_mode', String(isEcoMode));
+            activeCameraFrames = 30;
+            applyEcoModeState();
+        }
+
+        function updateHotspotLabelsPosition(forceUpdate = false) {
+            const halfW = window.innerWidth / 2;
+            const halfH = window.innerHeight / 2;
+
+            hotspotItems.forEach(item => {
+                if (!item.element) return;
+                const proj = item.worldPos.clone().project(camera);
+
+                if (proj.z > 1) {
+                    if (item.lastVisible !== false) {
+                        item.element.style.opacity = '0';
+                        item.element.style.pointerEvents = 'none';
+                        item.lastVisible = false;
+                    }
+                    return;
+                }
+
+                const x = Math.round((proj.x * halfW) + halfW);
+                const y = Math.round(-(proj.y * halfH) + halfH);
+
+                if (forceUpdate || item.lastVisible !== true || item.lastX !== x || item.lastY !== y) {
+                    item.element.style.left = `${x}px`;
+                    item.element.style.top = `${y}px`;
+                    if (item.lastVisible !== true) {
+                        item.element.style.opacity = '1';
+                        item.element.style.pointerEvents = 'auto';
+                        item.lastVisible = true;
+                    }
+                    item.lastX = x;
+                    item.lastY = y;
+                }
+            });
+        }
+
+        function animate(timestamp = 0) {
+            if (document.hidden || !hasWebGL) {
+                rafId = null;
+                return;
+            }
+            rafId = requestAnimationFrame(animate);
+
+            const isCameraActive = isDragging || activeCameraFrames > 0;
+            // 節能模式下：閒置時降為約 18fps 省電；拖曳或運鏡期間維持流暢幀率
+            if (isEcoMode && !isCameraActive && timestamp - lastFrameTimestamp < 55) {
+                return;
+            }
+            lastFrameTimestamp = timestamp;
+
+            const dt = Math.min(clock.getDelta(), 0.1);
+            elapsedSimTime += dt;
+            const t = elapsedSimTime;
+
+            // 1. 牛頓擺
+            if (newtonPendulumLeft && newtonPendulumRight) {
+                const swing = Math.sin(t * 4.2) * 0.48;
+                newtonPendulumLeft.rotation.z = swing < 0 ? swing : 0;
+                newtonPendulumRight.rotation.z = swing > 0 ? swing : 0;
+            }
+
+            // 2. 全息波動黑板
+            if (holoWavePoints) {
+                const posAttr = holoWavePoints.geometry.attributes.position;
+                for (let i = 0; i < posAttr.count; i++) {
+                    const x = posAttr.getX(i);
+                    posAttr.setY(i, 1.45 + Math.sin(x * 3.2 - t * 3.6) * 0.38);
+                }
+                posAttr.needsUpdate = true;
+            }
+
+            // 3. 電磁感應磁鐵往復運動與 LED 感應亮滅
+            if (emMagnetGroup) {
+                const vx = Math.cos(t * 2.2);
+                emMagnetGroup.position.x = 0.62 + Math.sin(t * 2.2) * 0.32;
+                emLedMeshes.forEach((led, idx) => {
+                    const pulse = idx === 0 ? Math.max(0, vx) : Math.max(0, -vx);
+                    led.material.emissiveIntensity = 0.25 + pulse * 1.6;
+                });
+            }
+
+            // 4. 近代物理原子軌域自轉（改為時間 delta，不同幀率速度一致）
+            if (atomOrbitsGroup) {
+                atomOrbitsGroup.children.forEach((orbit, idx) => {
+                    orbit.rotation.z += dt * 0.9 * (idx % 2 === 0 ? 1 : -1.2);
+                });
+            }
+
+            // 5. 化學分子模型漂浮旋轉
+            if (chemMoleculesGroup) {
+                chemMoleculesGroup.position.y = 1.72 + Math.sin(t * 2.0) * 0.08;
+                chemMoleculesGroup.rotation.y = t * 0.9;
+            }
+
+            // 6. 遊戲卡牌漂浮與光環旋轉
+            if (floatingCardsGroup && magicRingMesh) {
+                floatingCardsGroup.position.y = 0.78 + Math.sin(t * 2.2) * 0.11;
+                floatingCardsGroup.rotation.y = Math.sin(t * 0.8) * 0.25;
+                magicRingMesh.rotation.z = t * 0.8;
+            }
+
+            // 鏡頭平滑阻尼（只在鏡頭移動或運鏡收斂期間更新位置與標籤）
+            if (!isFocusedMode) {
+                targetCamPos.x = Math.sin(sphericalAzimuth) * Math.cos(sphericalElevation) * cameraDistance;
+                targetCamPos.y = Math.sin(sphericalElevation) * cameraDistance;
+                targetCamPos.z = Math.cos(sphericalAzimuth) * Math.cos(sphericalElevation) * cameraDistance;
+            }
+
+            const camDistSq = camera.position.distanceToSquared(targetCamPos) + currentLookAt.distanceToSquared(targetLookAt);
+            if (camDistSq > 1e-5 || isDragging || activeCameraFrames > 0) {
+                camera.position.lerp(targetCamPos, 0.075);
+                currentLookAt.lerp(targetLookAt, 0.085);
+                camera.lookAt(currentLookAt);
+                updateHotspotLabelsPosition();
+                if (activeCameraFrames > 0) activeCameraFrames--;
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        function bindEvents() {
+            const dom = renderer.domElement;
+
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                activeCameraFrames = 10;
+                updateHotspotLabelsPosition(true);
+            });
+
+            // 切換至其他分頁或開啟實驗模擬頁時自動休眠，回來再恢復
+            document.addEventListener('visibilitychange', () => {
+                if (!hasWebGL) return;
+                if (document.hidden) {
+                    if (rafId !== null) {
+                        cancelAnimationFrame(rafId);
+                        rafId = null;
+                    }
+                } else {
+                    clock.getDelta();
+                    lastFrameTimestamp = 0;
+                    if (rafId === null) animate();
+                }
+            });
+
+            dom.addEventListener('pointerdown', (e) => {
+                isDragging = true;
+                activeCameraFrames = 30;
+                pointerDownPos = { x: e.clientX, y: e.clientY };
+                prevPointerPos = { x: e.clientX, y: e.clientY };
+            });
+
+            window.addEventListener('pointermove', (e) => {
+                if (!isDragging) return;
+                const dx = e.clientX - prevPointerPos.x;
+                const dy = e.clientY - prevPointerPos.y;
+                prevPointerPos = { x: e.clientX, y: e.clientY };
+
+                if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
+                    isFocusedMode = false;
+                    targetLookAt.set(0, 0.8, 0.1);
+                }
+
+                activeCameraFrames = 30;
+                sphericalAzimuth -= dx * 0.0055;
+                sphericalElevation = Math.max(0.25, Math.min(1.25, sphericalElevation + dy * 0.005));
+            });
+
+            window.addEventListener('pointerup', (e) => {
+                if (!isDragging) return;
+                isDragging = false;
+                const moveDist = Math.hypot(e.clientX - pointerDownPos.x, e.clientY - pointerDownPos.y);
+                if (moveDist < 6 && e.target === dom) {
+                    handleCanvasClick(e);
+                }
+            });
+
+            dom.addEventListener('wheel', (e) => {
+                isFocusedMode = false;
+                activeCameraFrames = 35;
+                cameraDistance = Math.max(8, Math.min(22, cameraDistance + e.deltaY * 0.01));
+            }, { passive: true });
+        }
+
+        function handleCanvasClick(e) {
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(deskInteractiveGroups, true);
+
+            if (intersects.length > 0) {
+                const hitCategory = intersects[0].object.userData.category;
+                if (hitCategory) {
+                    focusDeskItem(hitCategory);
+                }
+            }
+        }
+
+        /**************************************************************************
+         * UI 抽屜、分類篩選與專案卡片渲染
+         **************************************************************************/
+        let currentCategoryFilter = 'all';
+        let isDrawerOpen = false;
+        let closeClearTimer = null;
+
+        function escapeHtml(str) {
+            return String(str || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function focusDeskItem(category) {
+            const cat = CATEGORY_META[category] ? category : 'all';
+            currentCategoryFilter = cat;
+            const meta = CATEGORY_META[cat];
+
+            isFocusedMode = true;
+            activeCameraFrames = 75;
+            const offsetX = window.innerWidth > 768 ? 1.35 : 0;
+            targetCamPos.set(meta.camPos.x + offsetX, meta.camPos.y, meta.camPos.z);
+            targetLookAt.set(meta.lookAt.x + offsetX * 0.65, meta.lookAt.y, meta.lookAt.z);
+
+            updateDockHighlight(cat);
+            openDrawerWithCategory(cat);
+        }
+
+        function resetCameraAndCloseDrawer() {
+            isFocusedMode = false;
+            activeCameraFrames = 75;
+            sphericalAzimuth = 0;
+            sphericalElevation = 0.60;
+            cameraDistance = 16.0;
+            targetLookAt.set(0, 0.8, 0.1);
+            closeDrawer();
+            updateDockHighlight('all');
+        }
+
+        function openDrawerWithCategory(category) {
+            if (closeClearTimer) {
+                clearTimeout(closeClearTimer);
+                closeClearTimer = null;
+            }
+            isDrawerOpen = true;
+            const drawer = document.getElementById('tools-drawer');
+            const meta = CATEGORY_META[category] || CATEGORY_META.all;
+
+            document.getElementById('drawer-title').textContent = meta.title;
+            document.getElementById('drawer-subtitle').textContent = meta.subtitle;
+            document.getElementById('drawer-category-icon').innerHTML = `<i class="fa-solid ${meta.icon}"></i>`;
+
+            switchCategoryFilter(category);
+            drawer.classList.remove('translate-x-full');
+        }
+
+        function closeDrawer() {
+            isDrawerOpen = false;
+            document.getElementById('tools-drawer').classList.add('translate-x-full');
+            // 關閉抽屜後清空卡片 DOM，釋放已解碼的 GIF 記憶體
+            closeClearTimer = setTimeout(() => {
+                if (!isDrawerOpen) {
+                    const list = document.getElementById('projects-list');
+                    if (list) list.innerHTML = '';
+                }
+            }, 320);
+        }
+
+        function renderDrawerCategoryPills() {
+            const container = document.getElementById('drawer-cat-pills');
+            container.innerHTML = CATEGORY_ORDER.map(cat => {
+                const meta = CATEGORY_META[cat];
+                const count = cat === 'all' ? PROJECTS_DATA.length : (CATEGORY_COUNTS[cat] || 0);
+                const isActive = currentCategoryFilter === cat;
+                const cls = isActive
+                    ? 'cat-pill px-2.5 py-1 rounded-lg text-xs font-bold whitespace-nowrap bg-sky-500 text-white shadow'
+                    : 'cat-pill px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap bg-white/5 text-slate-300 hover:bg-white/10';
+                return `<button onclick="switchCategoryFilter('${cat}')" data-cat="${cat}" class="${cls}">${meta.emoji} ${meta.shortName} (${count})</button>`;
+            }).join('');
+        }
+
+        function switchCategoryFilter(category) {
+            currentCategoryFilter = CATEGORY_META[category] ? category : 'all';
+            const meta = CATEGORY_META[currentCategoryFilter];
+            document.getElementById('drawer-title').textContent = meta.title;
+            document.getElementById('drawer-subtitle').textContent = meta.subtitle;
+            document.getElementById('drawer-category-icon').innerHTML = `<i class="fa-solid ${meta.icon}"></i>`;
+
+            updateDockHighlight(currentCategoryFilter);
+            renderDrawerCategoryPills();
+            renderProjectsList();
+        }
+
+        function updateDockHighlight(category) {
+            document.querySelectorAll('.dock-btn').forEach(btn => {
+                btn.className = 'dock-btn shrink-0 px-3 py-2 rounded-xl flex items-center justify-center gap-1.5 text-xs font-bold text-slate-300 hover:text-white hover:bg-white/10 transition-all';
+            });
+            const activeBtn = document.getElementById(`dock-${category}`);
+            if (activeBtn) {
+                activeBtn.className = 'dock-btn shrink-0 px-3 py-2 rounded-xl flex items-center justify-center gap-1.5 text-xs font-bold transition-all bg-white/15 text-white border border-white/25 shadow-lg';
+            }
+        }
+
+        function clearSearch() {
+            document.getElementById('search-input').value = '';
+            renderProjectsList();
+        }
+
+        function renderProjectsList() {
+            document.getElementById('total-projects-badge').textContent = PROJECTS_DATA.length;
+            if (!isDrawerOpen) return;
+
+            const container = document.getElementById('projects-list');
+            const query = document.getElementById('search-input').value.trim().toLowerCase();
+            const clearBtn = document.getElementById('clear-search-btn');
+
+            clearBtn.classList.toggle('hidden', query.length === 0);
+
+            const filtered = PROJECTS_DATA.filter(item => {
+                const matchCat = currentCategoryFilter === 'all' || item.category === currentCategoryFilter;
+                const matchQuery = !query ||
+                    item.title.toLowerCase().includes(query) ||
+                    item.description.toLowerCase().includes(query) ||
+                    (item.tags && item.tags.some(t => t.toLowerCase().includes(query)));
+                return matchCat && matchQuery;
+            });
+
+            document.getElementById('drawer-count-info').textContent = `共顯示 ${filtered.length} 項互動工具`;
+
+            // 若目前在理化遊戲分類，附上教師編輯器與 Google 試算表捷徑
+            const gamesShortcutBanner = currentCategoryFilter === 'games' ? `
+                <div class="p-3 rounded-2xl bg-purple-500/10 border border-purple-400/25 flex flex-wrap gap-2">
+                    <a href="optics/reflection%20editor.html" target="_blank" rel="noopener noreferrer" class="px-2.5 py-1.5 rounded-xl bg-purple-500/20 hover:bg-purple-500/35 text-purple-200 text-[11px] font-bold flex items-center gap-1 transition">
+                        <span>🛠️ 光學關卡編輯器 ↗</span>
+                    </a>
+                    <a href="https://docs.google.com/spreadsheets/d/17izy_vJCd539R4V5VZIKdfsUMJ8DofpnyL9TL1KBdXo/edit" target="_blank" rel="noopener noreferrer" class="px-2.5 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/35 text-emerald-200 text-[11px] font-bold flex items-center gap-1 transition">
+                        <span>🏆 共享排行榜 ↗</span>
+                    </a>
+                    <a href="https://docs.google.com/spreadsheets/d/18SjUr3EBKQxNu6GyNoPkZR5SIp-uJzjAWF-W-xMsXHU/edit" target="_blank" rel="noopener noreferrer" class="px-2.5 py-1.5 rounded-xl bg-sky-500/20 hover:bg-sky-500/35 text-sky-200 text-[11px] font-bold flex items-center gap-1 transition">
+                        <span>🗂️ 關卡資料庫 ↗</span>
+                    </a>
+                </div>` : '';
+
+            if (filtered.length === 0) {
+                const isPlannedEmpty = !query && currentCategoryFilter !== 'all' && (CATEGORY_COUNTS[currentCategoryFilter] || 0) === 0;
+                const emptyTitle = isPlannedEmpty ? `${CATEGORY_META[currentCategoryFilter].emoji} ${CATEGORY_META[currentCategoryFilter].shortName}單元建置中，敬請期待！` : '找不到符合條件的互動工具';
+                const emptyHint = isPlannedEmpty
+                    ? `資料夾 <code class="text-sky-300">${currentCategoryFilter}/</code> 已預先建立，未來放入 HTML 檔案並執行 <code class="text-emerald-300">node build.js</code> 即可自動上架！`
+                    : '試試切換其他分類或清除搜尋關鍵字';
+
+                container.innerHTML = gamesShortcutBanner + `
+                    <div class="text-center py-12 px-5 rounded-2xl bg-white/5 border border-white/10">
+                        <i class="fa-solid ${isPlannedEmpty ? CATEGORY_META[currentCategoryFilter].icon : 'fa-flask'} text-3xl text-slate-400 mb-3"></i>
+                        <p class="text-sm font-bold text-slate-200">${emptyTitle}</p>
+                        <p class="text-xs text-slate-400 mt-1.5 leading-relaxed">${emptyHint}</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const cardsHtml = filtered.map(proj => {
+                const meta = CATEGORY_META[proj.category] || CATEGORY_META.mechanics;
+                const isGame = proj.category === 'games';
+                const ctaText = isGame ? '開始挑戰 🎮' : '開啟動畫 ↗';
+                const ctaGrad = isGame
+                    ? 'from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400'
+                    : 'from-sky-500 to-indigo-500 hover:from-sky-400 hover:to-indigo-400';
+
+                const previewHtml = proj.imgUrl
+                    ? `<div class="relative h-36 sm:h-40 w-full overflow-hidden rounded-xl mb-3 bg-slate-950 border border-white/10">
+                           <img src="${escapeHtml(proj.imgUrl)}" alt="${escapeHtml(proj.title)}" loading="lazy" decoding="async" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                       </div>`
+                    : `<div class="h-24 w-full rounded-xl mb-3 bg-gradient-to-br from-slate-800 to-slate-900 border border-white/10 flex items-center justify-center text-slate-300 font-bold text-sm gap-2">
+                           <span>${meta.emoji}</span>
+                           <span>${escapeHtml(proj.title)}</span>
+                       </div>`;
+
+                const tagsHtml = (proj.tags || []).map(tag =>
+                    `<span class="px-2 py-0.5 rounded-md bg-slate-800/90 border border-white/10 text-[11px] text-slate-300">#${escapeHtml(tag)}</span>`
+                ).join('');
+
+                return `
+                    <article class="p-4 rounded-2xl bg-slate-900/80 hover:bg-slate-900/95 border border-white/10 hover:border-sky-400/50 transition-all duration-200 shadow-lg group">
+                        ${previewHtml}
+                        <div class="flex items-start justify-between gap-2 mb-2">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="px-2 py-0.5 rounded-full text-[11px] font-bold border ${meta.badgeClass}">
+                                    <i class="fa-solid ${meta.icon} mr-1"></i>${escapeHtml(proj.badge || meta.shortName)}
+                                </span>
+                                ${proj.featured ? `<span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-400/30">★ 推薦</span>` : ''}
+                            </div>
+                        </div>
+
+                        <h3 class="text-base font-extrabold text-white group-hover:text-sky-300 transition mb-1.5">
+                            ${escapeHtml(proj.title)}
+                        </h3>
+                        <p class="text-xs text-slate-300 leading-relaxed mb-3">
+                            ${escapeHtml(proj.description)}
+                        </p>
+
+                        <div class="flex flex-wrap gap-1.5 mb-3.5">
+                            ${tagsHtml}
+                        </div>
+
+                        <div class="flex items-center gap-2 pt-2.5 border-t border-white/10">
+                            <a href="${escapeHtml(proj.demoUrl)}" target="_blank" rel="noopener noreferrer" class="flex-1 py-2 px-3 rounded-xl bg-gradient-to-r ${ctaGrad} text-white text-xs font-bold text-center flex items-center justify-center gap-1.5 shadow-md transition">
+                                <i class="fa-solid fa-play text-[10px]"></i>
+                                <span>${ctaText}</span>
+                            </a>
+                            <a href="${escapeHtml(proj.repoUrl)}" target="_blank" rel="noopener noreferrer" class="py-2 px-3 rounded-xl bg-white/5 hover:bg-white/15 border border-white/10 text-slate-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition" title="檢視 GitHub 原始碼">
+                                <i class="fa-brands fa-github"></i>
+                                <span>原始碼</span>
+                            </a>
+                            <button onclick="openShareModalById('${escapeHtml(proj.id)}')" class="py-2 px-3 rounded-xl bg-white/5 hover:bg-sky-500/20 border border-white/10 hover:border-sky-400/40 text-sky-300 text-xs font-semibold flex items-center justify-center gap-1 transition" title="課堂投影 QR Code">
+                                <i class="fa-solid fa-qrcode"></i>
+                            </button>
+                        </div>
+                    </article>
+                `;
+            }).join('');
+
+            container.innerHTML = gamesShortcutBanner + cardsHtml;
+        }
+
+        /**************************************************************************
+         * 課堂分享 QR Code 與教師工具彈窗
+         **************************************************************************/
+        function openShareModalById(projId) {
+            const proj = PROJECTS_DATA.find(p => p.id === projId);
+            if (!proj) return;
+
+            const resolvedUrl = new URL(proj.demoUrl, window.location.href).href;
+            document.getElementById('share-modal-title').textContent = proj.title;
+            document.getElementById('share-url-input').value = resolvedUrl;
+            document.getElementById('share-qr-img').src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(resolvedUrl)}`;
+
+            const localHint = document.getElementById('share-local-hint');
+            localHint.classList.toggle('hidden', !window.location.protocol.startsWith('file'));
+
+            const modal = document.getElementById('share-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeShareModal() {
+            const modal = document.getElementById('share-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function copyShareUrl() {
+            const input = document.getElementById('share-url-input');
+            const val = input.value;
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(val).catch(() => {});
+            } else {
+                input.select();
+                document.execCommand('copy');
+            }
+            const toast = document.getElementById('copy-toast');
+            toast.style.opacity = '1';
+            setTimeout(() => { toast.style.opacity = '0'; }, 2000);
+        }
+
+        function openTeacherModal() {
+            const modal = document.getElementById('teacher-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeTeacherModal() {
+            const modal = document.getElementById('teacher-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function checkInitialDeepLink() {
+            const params = new URLSearchParams(window.location.search);
+            const fromQuery = params.get('category') || params.get('cat');
+            const fromHash = window.location.hash.replace('#', '').trim();
+            const initialCat = fromQuery || fromHash;
+            if (initialCat && CATEGORY_META[initialCat]) {
+                focusDeskItem(initialCat);
+            }
+        }
+
+        window.onload = function () {
+            document.getElementById('total-projects-badge').textContent = PROJECTS_DATA.length;
+            renderDrawerCategoryPills();
+            applyEcoModeState();
+
+            try {
+                initThreeScene();
+                animate();
+            } catch (err) {
+                console.warn('WebGL 初始化失敗，自動切換為清單導覽模式：', err);
+                document.getElementById('webgl-fallback').classList.remove('hidden');
+                openDrawerWithCategory('all');
+            }
+
+            checkInitialDeepLink();
+        };
+    </script>
+</body>
+</html>

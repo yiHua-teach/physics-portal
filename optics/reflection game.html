@@ -144,7 +144,7 @@
                 
                 <div id="game-canvas-status-tip" class="absolute bottom-4 left-6 bg-slate-900/90 border border-slate-800 text-slate-300 text-xs px-3 py-1.5 rounded-lg pointer-events-none flex items-center gap-2">
                     <i class="fa-solid fa-hand-pointer text-yellow-400"></i>
-                    <span id="canvas-tip-text">【點選工具後點擊畫布】：放置分光鏡/濾光片/傳送門/三稜鏡｜【拖曳】：畫鏡或旋轉元件｜【雙指】：召喚三稜鏡！</span>
+                    <span id="canvas-tip-text">【操作提示】：可放置平面鏡、分光片、濾光片與三稜鏡｜【拖曳】：畫鏡或移動旋轉元件｜【雙指】：召喚三稜鏡！</span>
                 </div>
             </div>
 
@@ -163,7 +163,7 @@
 
                         <button id="tool-place-splitter" onclick="setGameTool('place_splitter')" class="p-2.5 rounded-xl border bg-slate-900 border-slate-700 text-slate-300 text-xs font-bold flex flex-col items-center justify-center gap-1 hover:border-slate-500 transition">
                             <i class="fa-solid fa-code-branch text-base text-cyan-400"></i>
-                            <span>🪞 放置分光鏡</span>
+                            <span>🪞 放置分光片</span>
                         </button>
 
                         <button id="tool-place-filter" onclick="setGameTool('place_filter')" class="p-2.5 rounded-xl border bg-slate-900 border-slate-700 text-slate-300 text-xs font-bold flex flex-col items-center justify-center gap-1 hover:border-slate-500 transition">
@@ -171,19 +171,14 @@
                             <span>🔴🟢 放置濾光片</span>
                         </button>
 
-                        <button id="tool-place-portal" onclick="setGameTool('place_portal')" class="p-2.5 rounded-xl border bg-slate-900 border-slate-700 text-slate-300 text-xs font-bold flex flex-col items-center justify-center gap-1 hover:border-slate-500 transition">
-                            <i class="fa-solid fa-circle-notch text-base text-purple-400"></i>
-                            <span>🌀 放置傳送門</span>
-                        </button>
-
                         <button id="tool-place-prism" onclick="setGameTool('place_prism')" class="p-2.5 rounded-xl border bg-slate-900 border-slate-700 text-slate-300 text-xs font-bold flex flex-col items-center justify-center gap-1 hover:border-slate-500 transition">
                             <i class="fa-solid fa-play -rotate-90 text-base text-amber-400"></i>
                             <span>📐 放置三稜鏡</span>
                         </button>
 
-                        <button id="tool-eraser" onclick="setGameTool('eraser')" class="p-2.5 rounded-xl border bg-slate-900 border-slate-700 text-slate-300 text-xs font-bold flex flex-col items-center justify-center gap-1 hover:border-slate-500 transition">
+                        <button id="tool-eraser" onclick="setGameTool('eraser')" class="col-span-2 p-2 rounded-xl border bg-slate-900 border-slate-700 text-slate-300 text-xs font-bold flex items-center justify-center gap-2 hover:border-slate-500 transition">
                             <i class="fa-solid fa-eraser text-base text-rose-400"></i>
-                            <span>🧹 橡皮擦</span>
+                            <span>🧹 橡皮擦 (移除已放置元件)</span>
                         </button>
                     </div>
 
@@ -503,7 +498,17 @@
 
         function getPolygonEdges(obj) {
             let pts = [];
-            if (obj.shape === 'rect' || obj.type === 'wall' || obj.type === 'glass' || obj.type === 'gate') {
+            if (obj.shape === 'prism') {
+                const size = obj.size || 90;
+                const rad = (obj.angle || 0) * Math.PI / 180;
+                const h = size * Math.sqrt(3) / 2;
+                const localPts = [
+                    { x: 0, y: -h * (2/3) },
+                    { x: -size / 2, y: h * (1/3) },
+                    { x: size / 2, y: h * (1/3) }
+                ];
+                pts = localPts.map(p => Vec.add(obj.center, Vec.rot(p, rad)));
+            } else if (obj.shape === 'rect' || obj.type === 'wall' || obj.type === 'glass' || obj.type === 'gate') {
                 const w = obj.w || obj.size || 60;
                 const h = obj.h || obj.size || 60;
                 const rad = (obj.angle || 0) * Math.PI / 180;
@@ -512,16 +517,6 @@
                     { x: -w/2, y: h/2 },
                     { x: w/2, y: h/2 },
                     { x: w/2, y: -h/2 }
-                ];
-                pts = localPts.map(p => Vec.add(obj.center, Vec.rot(p, rad)));
-            } else if (obj.shape === 'prism') {
-                const size = obj.size || 90;
-                const rad = (obj.angle || 0) * Math.PI / 180;
-                const h = size * Math.sqrt(3) / 2;
-                const localPts = [
-                    { x: 0, y: -h * (2/3) },
-                    { x: -size / 2, y: h * (1/3) },
-                    { x: size / 2, y: h * (1/3) }
                 ];
                 pts = localPts.map(p => Vec.add(obj.center, Vec.rot(p, rad)));
             }
@@ -1019,7 +1014,7 @@
                 playSidebar.classList.remove('hidden');
                 editorSidebar.classList.add('hidden');
 
-                tipText.textContent = "【點選工具後點擊畫布】：放置分光鏡/濾光片/傳送門/三稜鏡｜【拖曳】：畫鏡或旋轉元件｜【雙指】：召喚三稜鏡！";
+                tipText.textContent = "【點選工具後點擊畫布】：放置分光鏡/濾光片/三稜鏡｜【拖曳】：畫鏡或旋轉元件｜【雙指】：召喚三稜鏡！";
 
                 loadGameLevel(currentGameLevelIdx);
             } else {
@@ -1125,7 +1120,6 @@
                 'tool-draw-mirror',
                 'tool-place-splitter',
                 'tool-place-filter',
-                'tool-place-portal',
                 'tool-place-prism',
                 'tool-eraser'
             ];
@@ -1133,19 +1127,22 @@
             toolIds.forEach(id => {
                 const btn = document.getElementById(id);
                 if (!btn) return;
-                btn.className = "p-2.5 rounded-xl border bg-slate-900 border-slate-700 text-slate-300 text-xs font-bold flex flex-col items-center justify-center gap-1 hover:border-slate-500 transition";
+                if (id === 'tool-eraser') {
+                    btn.className = "col-span-2 p-2 rounded-xl border bg-slate-900 border-slate-700 text-slate-300 text-xs font-bold flex items-center justify-center gap-2 hover:border-slate-500 transition";
+                } else {
+                    btn.className = "p-2.5 rounded-xl border bg-slate-900 border-slate-700 text-slate-300 text-xs font-bold flex flex-col items-center justify-center gap-1 hover:border-slate-500 transition";
+                }
             });
 
             const activeBtn = document.getElementById(
                 tool === 'draw_mirror' ? 'tool-draw-mirror' :
                 tool === 'place_splitter' ? 'tool-place-splitter' :
                 tool === 'place_filter' ? 'tool-place-filter' :
-                tool === 'place_portal' ? 'tool-place-portal' :
                 tool === 'place_prism' ? 'tool-place-prism' : 'tool-eraser'
             );
             if (activeBtn) {
                 if (tool === 'eraser') {
-                    activeBtn.className = "p-2.5 rounded-xl border bg-rose-950/60 border-rose-500 text-rose-300 text-xs font-bold flex flex-col items-center justify-center gap-1 transition glow-pink";
+                    activeBtn.className = "col-span-2 p-2 rounded-xl border bg-rose-950/60 border-rose-500 text-rose-300 text-xs font-bold flex items-center justify-center gap-2 transition glow-pink";
                 } else {
                     activeBtn.className = "p-2.5 rounded-xl border bg-cyan-950/60 border-cyan-500 text-cyan-300 text-xs font-bold flex flex-col items-center justify-center gap-1 transition glow-cyan";
                 }
@@ -1803,38 +1800,6 @@
                     };
                     gamePlayerObjects.push(newObj);
                     selectPlayObject(newObj);
-                    playClickSound();
-                    updateGameStats();
-                    recalcGameRay();
-                } else if (gameActiveTool === 'place_portal') {
-                    const idA = 'pA_' + Date.now();
-                    const idB = 'pB_' + Date.now();
-                    const pA = {
-                        id: idA,
-                        type: 'portal',
-                        pairId: idB,
-                        pairRole: 'A',
-                        center: { x: Math.max(50, pos.x - 60), y: pos.y },
-                        size: 50,
-                        angle: 0,
-                        color: '#c084fc',
-                        label: 'PORTAL A',
-                        isPlayer: true
-                    };
-                    const pB = {
-                        id: idB,
-                        type: 'portal',
-                        pairId: idA,
-                        pairRole: 'B',
-                        center: { x: Math.min(gameCanvas.width - 50, pos.x + 60), y: pos.y },
-                        size: 50,
-                        angle: 0,
-                        color: '#38bdf8',
-                        label: 'PORTAL B',
-                        isPlayer: true
-                    };
-                    gamePlayerObjects.push(pA, pB);
-                    selectPlayObject(pA);
                     playClickSound();
                     updateGameStats();
                     recalcGameRay();
