@@ -48,6 +48,41 @@
             width: 100%;
             height: 100%;
             z-index: 1;
+            touch-action: none;
+        }
+        /* 手機單手底部滑出面板 (Bottom Sheet)，桌機/平板右側滑出抽屜 */
+        #tools-drawer {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 70vh;
+            border-top-left-radius: 1.5rem;
+            border-top-right-radius: 1.5rem;
+            transform: translateY(105%);
+            transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+            z-index: 40;
+        }
+        #tools-drawer.drawer-open {
+            transform: translate(0, 0) !important;
+        }
+        @media (min-width: 640px) {
+            #tools-drawer {
+                top: 0;
+                left: auto;
+                right: 0;
+                bottom: 0;
+                height: auto;
+                width: 460px;
+                border-radius: 0;
+                border-left: 1px solid rgba(255, 255, 255, 0.15);
+                transform: translateX(105%);
+            }
+        }
+        @media (min-width: 768px) {
+            #tools-drawer {
+                width: 540px;
+            }
         }
         .glass-panel {
             background: rgba(15, 23, 42, 0.80);
@@ -165,6 +200,15 @@
                 <span class="hidden md:inline">教師工具與資料庫</span>
             </button>
 
+            <button id="gyro-toggle-btn" onclick="toggleGyroParallax()" class="glass-pill px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold text-slate-300 flex items-center gap-1.5" title="手機傾斜體感視差：打開後傾斜手機可像裸視 3D 櫥窗移動視角">
+                <i class="fa-solid fa-mobile-screen-button text-cyan-400"></i>
+                <span class="hidden lg:inline">體感</span>
+            </button>
+
+            <button id="sound-toggle-btn" onclick="toggleSoundEffects()" class="glass-pill w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-sky-300 hover:text-white text-sm" title="開啟/關閉 3D 物理道具互動音效">
+                <i class="fa-solid fa-volume-high"></i>
+            </button>
+
             <button id="eco-toggle-btn" onclick="toggleEcoMode()" class="glass-pill px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold text-slate-300 flex items-center gap-1.5" title="開啟節能模式：降低 3D 更新率並關閉毛玻璃特效，適合省電或舊裝置">
                 <i class="fa-solid fa-leaf text-emerald-400"></i>
                 <span class="hidden lg:inline">節能</span>
@@ -176,10 +220,17 @@
         </div>
     </header>
 
+    <!-- 互動彩蛋即時提示氣泡 (顯示於底部導覽列上方) -->
+    <div id="lab-toast" class="fixed bottom-20 left-1/2 -translate-x-1/2 z-30 pointer-events-none opacity-0 transition-all duration-300 max-w-[92vw]">
+        <div class="glass-panel px-4 py-2 rounded-2xl text-xs sm:text-sm font-semibold text-sky-200 border border-sky-400/40 shadow-2xl whitespace-nowrap overflow-hidden text-ellipsis">
+            <span id="lab-toast-text">互動提示</span>
+        </div>
+    </div>
+
     <!-- 左下角操作提示 -->
     <div id="scene-hint" class="fixed bottom-20 left-4 z-20 pointer-events-none hidden lg:flex items-center gap-2.5 glass-pill px-3.5 py-2 rounded-xl text-xs text-slate-300">
-        <i class="fa-solid fa-computer-mouse text-sky-400 animate-bounce"></i>
-        <span>拖曳旋轉 3D 實驗桌・滾輪縮放・點擊桌上<strong>發光道具</strong>開啟對應教材與遊戲</span>
+        <i class="fa-solid fa-hand-pointer text-sky-400 animate-bounce"></i>
+        <span>點／拖曳<strong> 3D 道具</strong>現場玩物理彩蛋・點擊<strong>浮動標籤</strong>開啟教學工具箱</span>
     </div>
 
     <!-- 底部快速分類工作列 (Dock) -->
@@ -223,10 +274,14 @@
         </div>
     </nav>
 
-    <!-- 右側滑出式「物理園地工具箱」抽屜面板 -->
-    <aside id="tools-drawer" class="fixed top-0 right-0 bottom-0 z-40 w-full sm:w-[460px] md:w-[540px] glass-panel border-l border-white/15 transform translate-x-full transition-transform duration-300 ease-out flex flex-col">
+    <!-- 滑出式「物理園地工具箱」面板（手機底部抽屜 / 桌機右側抽屜） -->
+    <aside id="tools-drawer" class="glass-panel flex flex-col">
+        <!-- 手機版頂部手把列（向下滑或點擊即可收合） -->
+        <div id="drawer-mobile-handle" onclick="closeDrawer()" class="sm:hidden pt-2.5 pb-1 flex flex-col items-center cursor-pointer">
+            <div class="w-12 h-1.5 rounded-full bg-white/30"></div>
+        </div>
         <!-- 抽屜頂部標題 -->
-        <div class="p-4 sm:p-5 border-b border-white/10 flex items-center justify-between gap-3">
+        <div id="drawer-header-drag" class="p-3.5 sm:p-5 border-b border-white/10 flex items-center justify-between gap-3">
             <div class="flex items-center gap-3">
                 <div id="drawer-category-icon" class="w-10 h-10 rounded-xl bg-sky-500/20 border border-sky-400/40 flex items-center justify-center text-sky-300 text-lg">
                     <i class="fa-solid fa-atom"></i>
@@ -507,18 +562,54 @@
         // 動態動畫物件參照
         let newtonPendulumLeft, newtonPendulumRight;
         let holoWavePoints;
-        let emMagnetGroup, emLedMeshes = [];
-        let atomOrbitsGroup;
-        let chemMoleculesGroup;
+        let emMagnetGroup, emLedMeshes = [], emCoilMeshes = [];
+        let atomOrbitsGroup, atomNucleusMesh, atomPhotonRing;
+        let chemMoleculesGroup, chemLiquidMesh, chemBubbles = [];
+        let opticsPrismGroup, opticsRainbowGroup;
         let floatingCardsGroup, magicRingMesh;
+
+        // 互動物理彩蛋狀態（各道具即時物理參數）
+        let pendulumAmp = 0.45, pendulumManualAngle = null, pendulumPhaseOffset = 0;
+        let pendulumPrevHalf = 1, pendulumSoundSwings = 0;
+
+        let waveAmp = 0.38, waveFreq = 3.2, wavePresetIdx = 0;
+
+        let emMagnetManualX = null, emInducedVel = 0, emLastMoveTs = 0;
+
+        let chemColorIdx = 0, chemBounce = 0, chemBubbleBoost = 0;
+        const CHEM_PALETTE = [
+            { color: 0x10b981, emissive: 0x059669, label: '中性・翠綠指示劑' },
+            { color: 0x0ea5e9, emissive: 0x0284c7, label: '弱鹼・晴空藍' },
+            { color: 0xa855f7, emissive: 0x7e22ce, label: '強鹼・夢幻紫' },
+            { color: 0xec4899, emissive: 0xbe185d, label: '酚酞顯色・洋紅' },
+            { color: 0xf59e0b, emissive: 0xb45309, label: '酸性・琥珀金黃' }
+        ];
+
+        let atomExcite = 0, atomPhotonAge = 999;
+        const ATOM_PHOTON_COLORS = [0x38bdf8, 0xc084fc, 0x34d399, 0xfbbf24, 0xf43f5e];
+
+        let opticsPrismAngle = 0, cardSpinBoost = 0;
+
+        // Web Audio 輕量合成音效（無外部音檔）
+        let isSoundEnabled = localStorage.getItem('hwaba_sound_enabled') !== 'false';
+        let audioCtx = null;
+
+        // 陀螺儀裸視 3D 視差狀態
+        let isGyroEnabled = false;
+        let gyroBaseBeta = null, gyroBaseGamma = null;
+        let gyroTargetAz = 0, gyroTargetEl = 0;
+        let gyroOffsetAz = 0, gyroOffsetEl = 0;
 
         // 鏡頭平滑過渡狀態
         let targetCamPos = new THREE.Vector3(0, 9.2, 13.8);
         let targetLookAt = new THREE.Vector3(0, 0.8, 0.1);
         let currentLookAt = new THREE.Vector3(0, 0.8, 0.1);
 
-        // 滑鼠拖曳旋轉控制與效能排程狀態
+        // 滑鼠 / 觸控多指控制與道具互動拖曳狀態
         let isDragging = false;
+        let activePropDrag = null;
+        const activePointers = new Map();
+        let pinchStartDist = 0, pinchStartCamDist = 16.0;
         let pointerDownPos = { x: 0, y: 0 };
         let prevPointerPos = { x: 0, y: 0 };
         let sphericalAzimuth = 0;
@@ -763,17 +854,20 @@
             base.castShadow = true;
             group.add(base);
 
-            // 銅色螺旋管線圈 (多組環狀繞線)
-            const coilMat = new THREE.MeshStandardMaterial({
-                color: 0xd97706,
-                metalness: 0.85,
-                roughness: 0.22
-            });
+            // 銅色螺旋管線圈 (多組環狀繞線，支援感應電流發光)
             for (let i = 0; i < 8; i++) {
-                const ring = new THREE.Mesh(new THREE.TorusGeometry(0.45, 0.045, 12, 28), coilMat);
+                const ringMat = new THREE.MeshStandardMaterial({
+                    color: 0xd97706,
+                    emissive: 0x38bdf8,
+                    emissiveIntensity: 0.0,
+                    metalness: 0.85,
+                    roughness: 0.22
+                });
+                const ring = new THREE.Mesh(new THREE.TorusGeometry(0.45, 0.045, 12, 28), ringMat);
                 ring.rotation.y = Math.PI / 2;
                 ring.position.set(-0.55 + i * 0.12, 0.65, 0);
                 group.add(ring);
+                emCoilMeshes.push(ring);
             }
 
             // 往返移動的 N-S 條形磁鐵
@@ -820,7 +914,7 @@
             group.add(pedestal);
 
             // 原子核發光中心
-            const nucleus = new THREE.Mesh(
+            atomNucleusMesh = new THREE.Mesh(
                 new THREE.SphereGeometry(0.24, 24, 24),
                 new THREE.MeshStandardMaterial({
                     color: 0xf472b6,
@@ -829,8 +923,22 @@
                     roughness: 0.2
                 })
             );
-            nucleus.position.y = 1.05;
-            group.add(nucleus);
+            atomNucleusMesh.position.y = 1.05;
+            group.add(atomNucleusMesh);
+
+            // 電子躍遷放射的光子波環
+            atomPhotonRing = new THREE.Mesh(
+                new THREE.RingGeometry(0.32, 0.44, 36),
+                new THREE.MeshBasicMaterial({
+                    color: 0x38bdf8,
+                    side: THREE.DoubleSide,
+                    transparent: true,
+                    opacity: 0
+                })
+            );
+            atomPhotonRing.rotation.x = -Math.PI / 2;
+            atomPhotonRing.position.y = 1.05;
+            group.add(atomPhotonRing);
 
             atomOrbitsGroup = new THREE.Group();
             atomOrbitsGroup.position.y = 1.05;
@@ -879,8 +987,8 @@
             pad.position.y = 0.05;
             group.add(pad);
 
-            // 發光綠液體錐形瓶下層
-            const liquid = new THREE.Mesh(
+            // 發光綠液體錐形瓶下層（點擊可切換指示劑顏色）
+            chemLiquidMesh = new THREE.Mesh(
                 new THREE.CylinderGeometry(0.28, 0.65, 0.72, 24),
                 new THREE.MeshStandardMaterial({
                     color: 0x10b981,
@@ -890,8 +998,21 @@
                     opacity: 0.88
                 })
             );
-            liquid.position.y = 0.46;
-            group.add(liquid);
+            chemLiquidMesh.position.y = 0.46;
+            group.add(chemLiquidMesh);
+
+            // 氣泡上升光粒群
+            for (let b = 0; b < 8; b++) {
+                const bubble = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.035 + (b % 3) * 0.012, 8, 8),
+                    new THREE.MeshBasicMaterial({ color: 0xe0f2fe, transparent: true, opacity: 0.8 })
+                );
+                bubble.userData.phase = b * 0.75;
+                bubble.userData.rx = (Math.random() - 0.5) * 0.36;
+                bubble.userData.rz = (Math.random() - 0.5) * 0.36;
+                group.add(bubble);
+                chemBubbles.push(bubble);
+            }
 
             // 玻璃外瓶身與瓶頸
             const glassMat = new THREE.MeshPhysicalMaterial({
@@ -941,7 +1062,10 @@
             opticalBench.castShadow = true;
             group.add(opticalBench);
 
-            // 等邊玻璃三稜鏡
+            // 可旋轉的三稜鏡群組
+            opticsPrismGroup = new THREE.Group();
+            opticsPrismGroup.position.set(-0.2, 0.50, 0);
+
             const prism = new THREE.Mesh(
                 new THREE.CylinderGeometry(0.48, 0.48, 0.72, 3),
                 new THREE.MeshPhysicalMaterial({
@@ -952,8 +1076,8 @@
                     metalness: 0.1
                 })
             );
-            prism.position.set(-0.2, 0.50, 0);
-            group.add(prism);
+            opticsPrismGroup.add(prism);
+            group.add(opticsPrismGroup);
 
             // 入射白光束
             const whiteBeam = new THREE.Mesh(
@@ -965,18 +1089,21 @@
             whiteBeam.position.set(-0.82, 0.42, -0.08);
             group.add(whiteBeam);
 
-            // 彩虹五色散光束
+            // 彩虹五色散光束群組（隨三稜鏡旋轉即時偏折）
+            opticsRainbowGroup = new THREE.Group();
+            opticsRainbowGroup.position.set(-0.15, 0.40, 0);
             const rainbowColors = [0xef4444, 0xf59e0b, 0x10b981, 0x38bdf8, 0xa855f7];
             rainbowColors.forEach((col, idx) => {
                 const beam = new THREE.Mesh(
-                    new THREE.PlaneGeometry(1.15, 0.055),
+                    new THREE.PlaneGeometry(1.18, 0.055),
                     new THREE.MeshBasicMaterial({ color: col, side: THREE.DoubleSide, transparent: true, opacity: 0.9 })
                 );
                 beam.rotation.x = -Math.PI / 2;
-                beam.rotation.z = -0.22 + idx * 0.08;
-                beam.position.set(0.65, 0.40, 0.05 + idx * 0.09);
-                group.add(beam);
+                beam.rotation.z = -0.22 + idx * 0.085;
+                beam.position.set(0.75, 0, 0.04 + idx * 0.09);
+                opticsRainbowGroup.add(beam);
             });
+            group.add(opticsRainbowGroup);
 
             // 小型直立凸透鏡元件
             const lens = new THREE.Mesh(
@@ -1144,6 +1271,184 @@
             applyEcoModeState();
         }
 
+        /**************************************************************************
+         * Web Audio 合成物理音效、陀螺儀裸視 3D 視差與互動氣泡提示
+         **************************************************************************/
+        let labToastTimer = null;
+        function showLabToast(text) {
+            const box = document.getElementById('lab-toast');
+            const label = document.getElementById('lab-toast-text');
+            if (!box || !label) return;
+            label.textContent = text;
+            box.classList.remove('opacity-0');
+            box.classList.add('opacity-100');
+            if (labToastTimer) clearTimeout(labToastTimer);
+            labToastTimer = setTimeout(() => {
+                box.classList.remove('opacity-100');
+                box.classList.add('opacity-0');
+            }, 3000);
+        }
+
+        function ensureAudioContext() {
+            if (!isSoundEnabled) return null;
+            if (!audioCtx) {
+                const Ctx = window.AudioContext || window.webkitAudioContext;
+                if (Ctx) audioCtx = new Ctx();
+            }
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume().catch(() => {});
+            }
+            return audioCtx;
+        }
+
+        function applySoundButtonState() {
+            const btn = document.getElementById('sound-toggle-btn');
+            if (!btn) return;
+            btn.innerHTML = isSoundEnabled
+                ? '<i class="fa-solid fa-volume-high"></i>'
+                : '<i class="fa-solid fa-volume-xmark"></i>';
+            btn.classList.toggle('text-sky-300', isSoundEnabled);
+            btn.classList.toggle('text-slate-500', !isSoundEnabled);
+        }
+
+        function toggleSoundEffects() {
+            isSoundEnabled = !isSoundEnabled;
+            localStorage.setItem('hwaba_sound_enabled', String(isSoundEnabled));
+            applySoundButtonState();
+            if (isSoundEnabled) {
+                playQuantumChime();
+                showLabToast('🔊 已開啟 3D 物理道具互動音效');
+            } else {
+                showLabToast('🔇 已靜音 3D 道具音效');
+            }
+        }
+
+        // 牛頓擺清脆鋼珠撞擊聲
+        function playCradleClack(strength = 0.6) {
+            const ctx = ensureAudioContext();
+            if (!ctx) return;
+            const now = ctx.currentTime;
+            const vol = Math.min(0.28, 0.06 + strength * 0.2);
+
+            [1950, 3650].forEach((freq, idx) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, now);
+                osc.frequency.exponentialRampToValueAtTime(freq * 0.72, now + 0.045);
+
+                gain.gain.setValueAtTime(vol / (idx + 1), now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.055);
+            });
+        }
+
+        // 化學錐形瓶指示劑氣泡音效
+        function playBubblePop() {
+            const ctx = ensureAudioContext();
+            if (!ctx) return;
+            const now = ctx.currentTime;
+            [0, 0.065, 0.13].forEach((offset, i) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                const f0 = 360 + i * 160;
+                osc.frequency.setValueAtTime(f0, now + offset);
+                osc.frequency.exponentialRampToValueAtTime(f0 * 2.1, now + offset + 0.08);
+                gain.gain.setValueAtTime(0.09, now + offset);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.09);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(now + offset);
+                osc.stop(now + offset + 0.095);
+            });
+        }
+
+        // 原子能階躍遷放射光子清亮和弦
+        function playQuantumChime() {
+            const ctx = ensureAudioContext();
+            if (!ctx) return;
+            const now = ctx.currentTime;
+            [880, 1318.5].forEach((freq, idx) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(freq, now + idx * 0.04);
+                gain.gain.setValueAtTime(0.08, now + idx * 0.04);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35 + idx * 0.05);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(now + idx * 0.04);
+                osc.stop(now + 0.42);
+            });
+        }
+
+        function handleDeviceOrientation(e) {
+            if (!isGyroEnabled || e.gamma === null || e.beta === null) return;
+            if (gyroBaseBeta === null || gyroBaseGamma === null) {
+                gyroBaseBeta = e.beta;
+                gyroBaseGamma = e.gamma;
+            }
+            const dGamma = Math.max(-35, Math.min(35, e.gamma - gyroBaseGamma));
+            const dBeta = Math.max(-35, Math.min(35, e.beta - gyroBaseBeta));
+            gyroTargetAz = (dGamma / 35) * 0.24;
+            gyroTargetEl = (dBeta / 35) * 0.16;
+            activeCameraFrames = Math.max(activeCameraFrames, 12);
+        }
+
+        function applyGyroButtonState() {
+            const btn = document.getElementById('gyro-toggle-btn');
+            if (!btn) return;
+            btn.classList.toggle('border-cyan-400/60', isGyroEnabled);
+            btn.classList.toggle('bg-cyan-500/20', isGyroEnabled);
+            btn.classList.toggle('text-cyan-200', isGyroEnabled);
+            btn.innerHTML = isGyroEnabled
+                ? '<i class="fa-solid fa-mobile-screen-button text-cyan-300 animate-pulse"></i><span class="hidden lg:inline">體感開</span>'
+                : '<i class="fa-solid fa-mobile-screen-button text-cyan-400"></i><span class="hidden lg:inline">體感</span>';
+        }
+
+        async function toggleGyroParallax() {
+            if (isGyroEnabled) {
+                isGyroEnabled = false;
+                window.removeEventListener('deviceorientation', handleDeviceOrientation);
+                gyroTargetAz = 0;
+                gyroTargetEl = 0;
+                gyroBaseBeta = null;
+                gyroBaseGamma = null;
+                activeCameraFrames = 30;
+                applyGyroButtonState();
+                showLabToast('📱 已關閉手機陀螺儀視差');
+                return;
+            }
+
+            if (typeof DeviceOrientationEvent === 'undefined') {
+                showLabToast('ℹ️ 此裝置無陀螺儀感測器（可用拖曳與雙指縮放）');
+                return;
+            }
+
+            try {
+                if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+                    const perm = await DeviceOrientationEvent.requestPermission();
+                    if (perm !== 'granted') {
+                        showLabToast('⚠️ 未取得體感感測權限');
+                        return;
+                    }
+                }
+                gyroBaseBeta = null;
+                gyroBaseGamma = null;
+                isGyroEnabled = true;
+                window.addEventListener('deviceorientation', handleDeviceOrientation);
+                applyGyroButtonState();
+                showLabToast('📱 陀螺儀 3D 櫥窗已開啟：傾斜手機即可裸視切換視角！');
+            } catch (err) {
+                showLabToast('⚠️ 無法啟用陀螺儀（需 HTTPS 或行動裝置）');
+            }
+        }
+
         function updateHotspotLabelsPosition(forceUpdate = false) {
             const halfW = window.innerWidth / 2;
             const halfH = window.innerHeight / 2;
@@ -1185,8 +1490,8 @@
             }
             rafId = requestAnimationFrame(animate);
 
-            const isCameraActive = isDragging || activeCameraFrames > 0;
-            // 節能模式下：閒置時降為約 18fps 省電；拖曳或運鏡期間維持流暢幀率
+            const isCameraActive = isDragging || activeCameraFrames > 0 || activePropDrag !== null;
+            // 節能模式下：閒置時降為約 18fps 省電；拖曳、道具互動或運鏡期間維持流暢幀率
             if (isEcoMode && !isCameraActive && timestamp - lastFrameTimestamp < 55) {
                 return;
             }
@@ -1196,62 +1501,136 @@
             elapsedSimTime += dt;
             const t = elapsedSimTime;
 
-            // 1. 牛頓擺
+            // 1. 力學牛頓擺（支援手動撥動＋碰撞清脆音效＋阻尼回到常態擺動）
             if (newtonPendulumLeft && newtonPendulumRight) {
-                const swing = Math.sin(t * 4.2) * 0.48;
+                let swing;
+                if (pendulumManualAngle !== null) {
+                    swing = pendulumManualAngle;
+                } else {
+                    const phase = t * 4.4 + pendulumPhaseOffset;
+                    swing = Math.sin(phase) * pendulumAmp;
+                    const curHalf = swing >= 0 ? 1 : -1;
+                    if (curHalf !== pendulumPrevHalf) {
+                        pendulumPrevHalf = curHalf;
+                        if (pendulumSoundSwings > 0) {
+                            playCradleClack(pendulumAmp);
+                            pendulumSoundSwings--;
+                        }
+                    }
+                    // 額外能量漸進衰減回到預設 0.45 弧度
+                    if (pendulumAmp > 0.45) {
+                        pendulumAmp = Math.max(0.45, pendulumAmp - dt * 0.12);
+                    }
+                }
                 newtonPendulumLeft.rotation.z = swing < 0 ? swing : 0;
                 newtonPendulumRight.rotation.z = swing > 0 ? swing : 0;
             }
 
-            // 2. 全息波動黑板
+            // 2. 全息波動黑板（即時振幅 waveAmp 與空間頻率 waveFreq）
             if (holoWavePoints) {
                 const posAttr = holoWavePoints.geometry.attributes.position;
                 for (let i = 0; i < posAttr.count; i++) {
                     const x = posAttr.getX(i);
-                    posAttr.setY(i, 1.45 + Math.sin(x * 3.2 - t * 3.6) * 0.38);
+                    posAttr.setY(i, 1.45 + Math.sin(x * waveFreq - t * 3.6) * waveAmp);
                 }
                 posAttr.needsUpdate = true;
             }
 
-            // 3. 電磁感應磁鐵往復運動與 LED 感應亮滅
+            // 3. 電磁感應磁鐵往復運動與法拉第速度感應 LED / 線圈發光
             if (emMagnetGroup) {
-                const vx = Math.cos(t * 2.2);
-                emMagnetGroup.position.x = 0.62 + Math.sin(t * 2.2) * 0.32;
+                let absVel = 0;
+                let signedVel = 0;
+                if (emMagnetManualX !== null) {
+                    emMagnetGroup.position.x = emMagnetManualX;
+                    signedVel = emInducedVel;
+                    absVel = Math.abs(emInducedVel);
+                    emInducedVel *= Math.exp(-dt * 5.0);
+                } else {
+                    const vx = Math.cos(t * 2.2);
+                    emMagnetGroup.position.x = 0.62 + Math.sin(t * 2.2) * 0.32;
+                    signedVel = vx;
+                    absVel = Math.abs(vx) * 0.85;
+                }
                 emLedMeshes.forEach((led, idx) => {
-                    const pulse = idx === 0 ? Math.max(0, vx) : Math.max(0, -vx);
-                    led.material.emissiveIntensity = 0.25 + pulse * 1.6;
+                    const dirActive = idx === 0 ? Math.max(0, signedVel) : Math.max(0, -signedVel);
+                    led.material.emissiveIntensity = 0.2 + Math.min(3.5, dirActive * 1.9);
+                });
+                const coilGlow = Math.min(1.8, Math.max(0, absVel - 0.5) * 0.55);
+                emCoilMeshes.forEach(ring => {
+                    ring.material.emissiveIntensity = coilGlow;
                 });
             }
 
-            // 4. 近代物理原子軌域自轉（改為時間 delta，不同幀率速度一致）
+            // 4. 近代物理原子軌域自轉（點擊觸發量子躍遷擴張 + 放射光子波環）
             if (atomOrbitsGroup) {
+                if (atomExcite > 0) {
+                    atomExcite = Math.max(0, atomExcite - dt * 0.7);
+                }
+                const orbitScale = 1 + atomExcite * 0.35;
+                atomOrbitsGroup.scale.set(orbitScale, orbitScale, orbitScale);
+                const spinMult = 1 + atomExcite * 3.2;
                 atomOrbitsGroup.children.forEach((orbit, idx) => {
-                    orbit.rotation.z += dt * 0.9 * (idx % 2 === 0 ? 1 : -1.2);
+                    orbit.rotation.z += dt * 0.9 * spinMult * (idx % 2 === 0 ? 1 : -1.2);
+                });
+                if (atomNucleusMesh) {
+                    atomNucleusMesh.material.emissiveIntensity = 0.75 + atomExcite * 1.8;
+                }
+                if (atomPhotonRing && atomPhotonAge < 1.1) {
+                    atomPhotonAge += dt;
+                    const progress = atomPhotonAge / 1.1;
+                    const s = 0.4 + progress * 4.5;
+                    atomPhotonRing.scale.set(s, s, s);
+                    atomPhotonRing.material.opacity = Math.max(0, 1 - progress);
+                } else if (atomPhotonRing) {
+                    atomPhotonRing.material.opacity = 0;
+                }
+            }
+
+            // 5. 化學錐形瓶果凍彈跳、氣泡上升與分子漂浮
+            if (chemMoleculesGroup) {
+                chemMoleculesGroup.position.y = 1.72 + Math.sin(t * 2.0) * 0.08 + chemBounce * 0.12;
+                chemMoleculesGroup.rotation.y = t * (0.9 + chemBounce * 3.0);
+            }
+            if (chemLiquidMesh && chemBounce > 0) {
+                chemBounce = Math.max(0, chemBounce - dt * 2.2);
+                const sXZ = 1 + Math.sin(chemBounce * Math.PI * 3) * chemBounce * 0.14;
+                const sY = 1 - Math.sin(chemBounce * Math.PI * 3) * chemBounce * 0.10;
+                chemLiquidMesh.scale.set(sXZ, sY, sXZ);
+            } else if (chemLiquidMesh) {
+                chemLiquidMesh.scale.set(1, 1, 1);
+            }
+            if (chemBubbles.length > 0) {
+                chemBubbleBoost = Math.max(0, chemBubbleBoost - dt * 0.8);
+                const bSpeed = 0.45 + chemBubbleBoost * 1.4;
+                chemBubbles.forEach(b => {
+                    const p = ((t * bSpeed + b.userData.phase) % 1);
+                    b.position.set(b.userData.rx * (1 - p * 0.5), 0.22 + p * 0.95, b.userData.rz * (1 - p * 0.5));
+                    b.material.opacity = Math.sin(p * Math.PI) * (0.45 + chemBubbleBoost * 0.5);
                 });
             }
 
-            // 5. 化學分子模型漂浮旋轉
-            if (chemMoleculesGroup) {
-                chemMoleculesGroup.position.y = 1.72 + Math.sin(t * 2.0) * 0.08;
-                chemMoleculesGroup.rotation.y = t * 0.9;
-            }
-
-            // 6. 遊戲卡牌漂浮與光環旋轉
+            // 6. 遊戲卡牌漂浮與洗牌加速
             if (floatingCardsGroup && magicRingMesh) {
-                floatingCardsGroup.position.y = 0.78 + Math.sin(t * 2.2) * 0.11;
-                floatingCardsGroup.rotation.y = Math.sin(t * 0.8) * 0.25;
-                magicRingMesh.rotation.z = t * 0.8;
+                if (cardSpinBoost > 0) cardSpinBoost = Math.max(0, cardSpinBoost - dt * 1.8);
+                floatingCardsGroup.position.y = 0.78 + Math.sin(t * 2.2) * 0.11 + cardSpinBoost * 0.25;
+                floatingCardsGroup.rotation.y = Math.sin(t * 0.8) * 0.25 + cardSpinBoost * Math.PI * 2;
+                magicRingMesh.rotation.z = t * (0.8 + cardSpinBoost * 5.0);
             }
 
-            // 鏡頭平滑阻尼（只在鏡頭移動或運鏡收斂期間更新位置與標籤）
+            // 鏡頭平滑阻尼（結合陀螺儀視差偏移與運鏡）
+            gyroOffsetAz += (gyroTargetAz - gyroOffsetAz) * 0.08;
+            gyroOffsetEl += (gyroTargetEl - gyroOffsetEl) * 0.08;
+
             if (!isFocusedMode) {
-                targetCamPos.x = Math.sin(sphericalAzimuth) * Math.cos(sphericalElevation) * cameraDistance;
-                targetCamPos.y = Math.sin(sphericalElevation) * cameraDistance;
-                targetCamPos.z = Math.cos(sphericalAzimuth) * Math.cos(sphericalElevation) * cameraDistance;
+                const az = sphericalAzimuth + gyroOffsetAz;
+                const el = Math.max(0.22, Math.min(1.28, sphericalElevation + gyroOffsetEl));
+                targetCamPos.x = Math.sin(az) * Math.cos(el) * cameraDistance;
+                targetCamPos.y = Math.sin(el) * cameraDistance;
+                targetCamPos.z = Math.cos(az) * Math.cos(el) * cameraDistance;
             }
 
             const camDistSq = camera.position.distanceToSquared(targetCamPos) + currentLookAt.distanceToSquared(targetLookAt);
-            if (camDistSq > 1e-5 || isDragging || activeCameraFrames > 0) {
+            if (camDistSq > 1e-5 || isDragging || activeCameraFrames > 0 || isGyroEnabled) {
                 camera.position.lerp(targetCamPos, 0.075);
                 currentLookAt.lerp(targetLookAt, 0.085);
                 camera.lookAt(currentLookAt);
@@ -1260,6 +1639,76 @@
             }
 
             renderer.render(scene, camera);
+        }
+
+        // 觸發 3D 道具單點擊物理彩蛋（大屏/手機不用進子頁面就能現場示範物理現象）
+        function triggerPropTapEasterEgg(category) {
+            if (category === 'mechanics') {
+                pendulumAmp = 0.88;
+                pendulumSoundSwings = 8;
+                playCradleClack(0.9);
+                showLabToast('📘 力學牛頓擺：動量守恆撞擊！（可左右撥動鋼珠，或點上方標籤進單元）');
+            } else if (category === 'electromagnetism') {
+                emMagnetManualX = null;
+                emInducedVel = 2.8;
+                showLabToast('🧲 電磁感應：在線圈上快速左右搓動磁鐵，LED 會隨速度爆閃！');
+            } else if (category === 'chemistry') {
+                chemColorIdx = (chemColorIdx + 1) % CHEM_PALETTE.length;
+                const pal = CHEM_PALETTE[chemColorIdx];
+                if (chemLiquidMesh) {
+                    chemLiquidMesh.material.color.setHex(pal.color);
+                    chemLiquidMesh.material.emissive.setHex(pal.emissive);
+                }
+                chemBounce = 1.0;
+                chemBubbleBoost = 1.0;
+                playBubblePop();
+                showLabToast(`🧪 酸鹼指示劑反應：${pal.label}！（點上方「🧪 化學」開啟工具）`);
+            } else if (category === 'modern-physics') {
+                atomExcite = 1.0;
+                atomPhotonAge = 0;
+                if (atomPhotonRing) {
+                    const col = ATOM_PHOTON_COLORS[Math.floor(Math.random() * ATOM_PHOTON_COLORS.length)];
+                    atomPhotonRing.material.color.setHex(col);
+                }
+                playQuantumChime();
+                showLabToast('⚛️ 量子能階躍遷：電子獲得能量跳向高軌域並放出光子！');
+            } else if (category === 'waves') {
+                const presets = [
+                    { amp: 0.56, freq: 4.8, name: '高頻高能波' },
+                    { amp: 0.24, freq: 2.0, name: '長波長緩波' },
+                    { amp: 0.38, freq: 3.2, name: '標準駐波' }
+                ];
+                wavePresetIdx = (wavePresetIdx + 1) % presets.length;
+                waveAmp = presets[wavePresetIdx].amp;
+                waveFreq = presets[wavePresetIdx].freq;
+                showLabToast(`🌊 波動黑板已切換為【${presets[wavePresetIdx].name}】（在黑板上下/左右滑動可直接調波！）`);
+            } else if (category === 'optics') {
+                opticsPrismAngle += 0.35;
+                if (opticsPrismAngle > 0.85) opticsPrismAngle = -0.7;
+                if (opticsPrismGroup) opticsPrismGroup.rotation.y = opticsPrismAngle;
+                if (opticsRainbowGroup) opticsRainbowGroup.rotation.y = opticsPrismAngle * 0.85;
+                showLabToast('💡 三稜鏡色散：左右拖曳稜鏡可即時偏折彩虹角度！');
+            } else if (category === 'games') {
+                cardSpinBoost = 1.0;
+                playQuantumChime();
+                showLabToast('🃏 魔法卡牌已洗牌！點擊上方「🎮 理化遊戲」標籤立刻挑戰');
+            } else if (category === 'all') {
+                focusDeskItem('all');
+            }
+        }
+
+        function pickDeskCategoryAt(clientX, clientY) {
+            mouse.x = (clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(deskInteractiveGroups, true);
+            return intersects.length > 0 ? intersects[0].object.userData.category : null;
+        }
+
+        function getPinchDistance() {
+            const pts = Array.from(activePointers.values());
+            if (pts.length < 2) return 0;
+            return Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
         }
 
         function bindEvents() {
@@ -1289,13 +1738,100 @@
             });
 
             dom.addEventListener('pointerdown', (e) => {
-                isDragging = true;
+                activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+                // 雙指捏合縮放模式
+                if (activePointers.size === 2) {
+                    isDragging = false;
+                    activePropDrag = null;
+                    pendulumManualAngle = null;
+                    emMagnetManualX = null;
+                    pinchStartDist = getPinchDistance();
+                    pinchStartCamDist = cameraDistance;
+                    return;
+                }
+
+                if (activePointers.size !== 1) return;
+
                 activeCameraFrames = 30;
                 pointerDownPos = { x: e.clientX, y: e.clientY };
                 prevPointerPos = { x: e.clientX, y: e.clientY };
+
+                const hitCat = pickDeskCategoryAt(e.clientX, e.clientY);
+                if (hitCat) {
+                    activePropDrag = {
+                        category: hitCat,
+                        startX: e.clientX,
+                        startY: e.clientY,
+                        prevX: e.clientX,
+                        prevY: e.clientY,
+                        moved: false,
+                        startWaveAmp: waveAmp,
+                        startWaveFreq: waveFreq,
+                        startPrismAngle: opticsPrismAngle
+                    };
+                    if (hitCat === 'electromagnetism') {
+                        emMagnetManualX = emMagnetGroup ? emMagnetGroup.position.x : 0.62;
+                        emLastMoveTs = performance.now();
+                    }
+                    isDragging = false;
+                } else {
+                    activePropDrag = null;
+                    isDragging = true;
+                }
             });
 
             window.addEventListener('pointermove', (e) => {
+                if (activePointers.has(e.pointerId)) {
+                    activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+                }
+
+                // 雙指縮放鏡頭距離
+                if (activePointers.size >= 2 && pinchStartDist > 10) {
+                    const curDist = getPinchDistance();
+                    if (curDist > 10) {
+                        isFocusedMode = false;
+                        activeCameraFrames = 35;
+                        cameraDistance = Math.max(6.5, Math.min(22, pinchStartCamDist * (pinchStartDist / curDist)));
+                    }
+                    return;
+                }
+
+                // 直接操縱 3D 桌上的物理道具
+                if (activePropDrag) {
+                    const totalDist = Math.hypot(e.clientX - activePropDrag.startX, e.clientY - activePropDrag.startY);
+                    if (totalDist > 6) activePropDrag.moved = true;
+
+                    const dx = e.clientX - activePropDrag.prevX;
+                    const dy = e.clientY - activePropDrag.prevY;
+                    const totalDx = e.clientX - activePropDrag.startX;
+                    const totalDy = e.clientY - activePropDrag.startY;
+                    activePropDrag.prevX = e.clientX;
+                    activePropDrag.prevY = e.clientY;
+
+                    if (activePropDrag.moved) {
+                        const cat = activePropDrag.category;
+                        if (cat === 'mechanics') {
+                            pendulumManualAngle = Math.max(-0.98, Math.min(0.98, totalDx * 0.009));
+                        } else if (cat === 'electromagnetism') {
+                            const nowTs = performance.now();
+                            const dtMs = Math.max(8, nowTs - emLastMoveTs);
+                            emLastMoveTs = nowTs;
+                            emMagnetManualX = Math.max(-0.9, Math.min(0.95, (emMagnetManualX ?? 0.62) + dx * 0.011));
+                            const instantVel = (dx / dtMs) * 3.8;
+                            emInducedVel = emInducedVel * 0.45 + instantVel * 0.55;
+                        } else if (cat === 'waves') {
+                            waveAmp = Math.max(0.12, Math.min(0.68, activePropDrag.startWaveAmp - totalDy * 0.004));
+                            waveFreq = Math.max(1.5, Math.min(6.4, activePropDrag.startWaveFreq + totalDx * 0.025));
+                        } else if (cat === 'optics') {
+                            opticsPrismAngle = Math.max(-0.95, Math.min(0.95, activePropDrag.startPrismAngle + totalDx * 0.012));
+                            if (opticsPrismGroup) opticsPrismGroup.rotation.y = opticsPrismAngle;
+                            if (opticsRainbowGroup) opticsRainbowGroup.rotation.y = opticsPrismAngle * 0.85;
+                        }
+                    }
+                    return;
+                }
+
                 if (!isDragging) return;
                 const dx = e.clientX - prevPointerPos.x;
                 const dy = e.clientY - prevPointerPos.y;
@@ -1311,35 +1847,47 @@
                 sphericalElevation = Math.max(0.25, Math.min(1.25, sphericalElevation + dy * 0.005));
             });
 
-            window.addEventListener('pointerup', (e) => {
-                if (!isDragging) return;
-                isDragging = false;
-                const moveDist = Math.hypot(e.clientX - pointerDownPos.x, e.clientY - pointerDownPos.y);
-                if (moveDist < 6 && e.target === dom) {
-                    handleCanvasClick(e);
+            function handlePointerEnd(e) {
+                activePointers.delete(e.pointerId);
+                if (activePointers.size < 2) pinchStartDist = 0;
+
+                if (activePropDrag) {
+                    const dragInfo = activePropDrag;
+                    activePropDrag = null;
+
+                    if (dragInfo.category === 'mechanics' && dragInfo.moved) {
+                        const rawManual = pendulumManualAngle ?? 0.5;
+                        pendulumManualAngle = null;
+                        pendulumAmp = Math.max(0.45, Math.abs(rawManual));
+                        pendulumPhaseOffset = (rawManual >= 0 ? Math.PI / 2 : -Math.PI / 2) - elapsedSimTime * 4.4;
+                        pendulumSoundSwings = 8;
+                        showLabToast('📘 已釋放牛頓擺！（點上方「📘 力學」標籤看更多動畫）');
+                    } else if (dragInfo.category === 'electromagnetism' && dragInfo.moved) {
+                        setTimeout(() => { if (!activePropDrag) emMagnetManualX = null; }, 1600);
+                        showLabToast('🧲 法拉第電磁感應！快速往復拖動越快、LED 感應越強');
+                    } else if (dragInfo.category === 'waves' && dragInfo.moved) {
+                        showLabToast(`🌊 已即時調整振幅與頻率（點擊「🌊 波動」標籤進入模擬）`);
+                    } else if (dragInfo.category === 'optics' && dragInfo.moved) {
+                        showLabToast('💡 三稜鏡角度已偏折彩虹光束（點「💡 光學」開光學教材）');
+                    } else if (!dragInfo.moved && e.target === dom) {
+                        triggerPropTapEasterEgg(dragInfo.category);
+                    }
+                    return;
                 }
-            });
+
+                if (isDragging) {
+                    isDragging = false;
+                }
+            }
+
+            window.addEventListener('pointerup', handlePointerEnd);
+            window.addEventListener('pointercancel', handlePointerEnd);
 
             dom.addEventListener('wheel', (e) => {
                 isFocusedMode = false;
                 activeCameraFrames = 35;
-                cameraDistance = Math.max(8, Math.min(22, cameraDistance + e.deltaY * 0.01));
+                cameraDistance = Math.max(6.5, Math.min(22, cameraDistance + e.deltaY * 0.01));
             }, { passive: true });
-        }
-
-        function handleCanvasClick(e) {
-            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-
-            raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObjects(deskInteractiveGroups, true);
-
-            if (intersects.length > 0) {
-                const hitCategory = intersects[0].object.userData.category;
-                if (hitCategory) {
-                    focusDeskItem(hitCategory);
-                }
-            }
         }
 
         /**************************************************************************
@@ -1365,9 +1913,11 @@
 
             isFocusedMode = true;
             activeCameraFrames = 75;
+            const isMobile = window.innerWidth < 640;
             const offsetX = window.innerWidth > 768 ? 1.35 : 0;
+            const offsetY = isMobile ? -1.1 : 0;
             targetCamPos.set(meta.camPos.x + offsetX, meta.camPos.y, meta.camPos.z);
-            targetLookAt.set(meta.lookAt.x + offsetX * 0.65, meta.lookAt.y, meta.lookAt.z);
+            targetLookAt.set(meta.lookAt.x + offsetX * 0.65, meta.lookAt.y + offsetY, meta.lookAt.z);
 
             updateDockHighlight(cat);
             openDrawerWithCategory(cat);
@@ -1398,12 +1948,12 @@
             document.getElementById('drawer-category-icon').innerHTML = `<i class="fa-solid ${meta.icon}"></i>`;
 
             switchCategoryFilter(category);
-            drawer.classList.remove('translate-x-full');
+            drawer.classList.add('drawer-open');
         }
 
         function closeDrawer() {
             isDrawerOpen = false;
-            document.getElementById('tools-drawer').classList.add('translate-x-full');
+            document.getElementById('tools-drawer').classList.remove('drawer-open');
             // 關閉抽屜後清空卡片 DOM，釋放已解碼的 GIF 記憶體
             closeClearTimer = setTimeout(() => {
                 if (!isDrawerOpen) {
@@ -1411,6 +1961,32 @@
                     if (list) list.innerHTML = '';
                 }
             }, 320);
+        }
+
+        function initMobileDrawerSwipe() {
+            const headerEl = document.getElementById('drawer-header-drag');
+            const handleEl = document.getElementById('drawer-mobile-handle');
+            if (!headerEl) return;
+
+            let swipeStartY = null;
+            const onStart = (e) => {
+                if (window.innerWidth >= 640 || !e.touches || e.touches.length !== 1) return;
+                swipeStartY = e.touches[0].clientY;
+            };
+            const onMove = (e) => {
+                if (swipeStartY === null || !e.touches || e.touches.length !== 1) return;
+                if (e.touches[0].clientY - swipeStartY > 65) {
+                    swipeStartY = null;
+                    closeDrawer();
+                }
+            };
+            const onEnd = () => { swipeStartY = null; };
+
+            [headerEl, handleEl].filter(Boolean).forEach(el => {
+                el.addEventListener('touchstart', onStart, { passive: true });
+                el.addEventListener('touchmove', onMove, { passive: true });
+                el.addEventListener('touchend', onEnd, { passive: true });
+            });
         }
 
         function renderDrawerCategoryPills() {
@@ -1635,6 +2211,9 @@
             document.getElementById('total-projects-badge').textContent = PROJECTS_DATA.length;
             renderDrawerCategoryPills();
             applyEcoModeState();
+            applySoundButtonState();
+            applyGyroButtonState();
+            initMobileDrawerSwipe();
 
             try {
                 initThreeScene();
