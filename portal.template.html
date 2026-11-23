@@ -253,7 +253,7 @@
                 <span class="whitespace-nowrap">光學</span>
             </button>
             <button onclick="focusDeskItem('electromagnetism')" id="dock-electromagnetism" class="dock-btn shrink-0 px-3 py-2 rounded-xl flex items-center justify-center gap-1.5 text-xs font-bold text-slate-300 hover:text-white hover:bg-white/10 transition-all">
-                <i class="fa-solid fa-magnet text-rose-400 text-sm"></i>
+                <i class="fa-solid fa-bolt text-purple-400 text-sm"></i>
                 <span class="whitespace-nowrap">電磁學</span>
             </button>
             <button onclick="focusDeskItem('chemistry')" id="dock-chemistry" class="dock-btn shrink-0 px-3 py-2 rounded-xl flex items-center justify-center gap-1.5 text-xs font-bold text-slate-300 hover:text-white hover:bg-white/10 transition-all">
@@ -508,13 +508,13 @@
             electromagnetism: {
                 shortName: "電磁學",
                 title: "電磁學互動模擬",
-                subtitle: "庫侖靜電力、磁場分布、法拉第電磁感應與電路模擬（持續擴充中）",
-                icon: "fa-magnet",
-                emoji: "🧲",
+                subtitle: "高壓電漿放電、靜電力、磁場分布與電磁感應模擬（持續擴充中）",
+                icon: "fa-bolt",
+                emoji: "⚡",
                 badgeClass: "bg-rose-500/20 text-rose-300 border-rose-400/40",
                 pillColor: "bg-rose-500 text-white",
-                camPos: { x: 2.9, y: 4.2, z: 4.8 },
-                lookAt: { x: 2.6, y: 0.9, z: -1.9 }
+                camPos: { x: 2.9, y: 4.3, z: 5.0 },
+                lookAt: { x: 2.6, y: 1.35, z: -2.0 }
             },
             chemistry: {
                 shortName: "化學",
@@ -562,7 +562,8 @@
         // 動態動畫物件參照
         let newtonPendulumLeft, newtonPendulumRight;
         let holoWavePoints;
-        let emMagnetGroup, emLedMeshes = [], emCoilMeshes = [];
+        let plasmaGlobeGroup, plasmaSphereMesh, plasmaCoreMesh, plasmaHaloMesh, plasmaLight;
+        let plasmaArcs = [];
         let atomOrbitsGroup, atomNucleusMesh, atomPhotonRing;
         let chemMoleculesGroup, chemLiquidMesh, chemBubbles = [];
         let opticsPrismGroup, opticsRainbowGroup;
@@ -574,7 +575,18 @@
 
         let waveAmp = 0.38, waveFreq = 3.2, wavePresetIdx = 0;
 
-        let emMagnetManualX = null, emInducedVel = 0, emLastMoveTs = 0;
+        const PLASMA_CENTER_Y = 1.55;
+        const PLASMA_RADIUS = 1.04;
+        let plasmaTouchDir = null, plasmaGasIdx = 0, plasmaSurge = 0, plasmaLastJitterTime = 0, plasmaLastBuzzTs = 0;
+        const PLASMA_PALETTES = [
+            { primary: 0xc084fc, secondary: 0x38bdf8, core: 0xf472b6, name: '經典霓虹紫電漿' },
+            { primary: 0x38bdf8, secondary: 0x22d3ee, core: 0xe0f2fe, name: '氬氣極光藍電弧' },
+            { primary: 0xfbbf24, secondary: 0xf97316, core: 0xfef08a, name: '氪氣黃金高壓弧' },
+            { primary: 0xf43f5e, secondary: 0xa855f7, core: 0xfda4af, name: '氦氖極光粉電漿' }
+        ];
+        const _pArcDir = new THREE.Vector3();
+        const _pAxisA = new THREE.Vector3();
+        const _pAxisB = new THREE.Vector3();
 
         let chemColorIdx = 0, chemBounce = 0, chemBubbleBoost = 0;
         const CHEM_PALETTE = [
@@ -840,65 +852,128 @@
             scene.add(group);
         }
 
-        // 3. 【電磁學】銅線圈螺線管與 N-S 磁鐵
+        // 3. 【電磁學】高壓特斯拉電漿球（3D 即時閃電電弧＋手觸匯聚）
         function buildElectromagnetismProp() {
-            const group = new THREE.Group();
-            group.position.set(2.6, 0, -2.1);
+            plasmaGlobeGroup = new THREE.Group();
+            plasmaGlobeGroup.position.set(2.6, 0, -2.1);
 
-            // 絕緣實驗底座
+            // 特斯拉線圈絕緣底座
             const base = new THREE.Mesh(
-                new THREE.BoxGeometry(2.5, 0.2, 1.3),
-                new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.4, metalness: 0.4 })
+                new THREE.CylinderGeometry(0.92, 1.08, 0.28, 24),
+                new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.35, metalness: 0.55 })
             );
-            base.position.y = 0.1;
+            base.position.y = 0.14;
             base.castShadow = true;
-            group.add(base);
+            plasmaGlobeGroup.add(base);
 
-            // 銅色螺旋管線圈 (多組環狀繞線，支援感應電流發光)
-            for (let i = 0; i < 8; i++) {
-                const ringMat = new THREE.MeshStandardMaterial({
-                    color: 0xd97706,
-                    emissive: 0x38bdf8,
-                    emissiveIntensity: 0.0,
-                    metalness: 0.85,
-                    roughness: 0.22
-                });
-                const ring = new THREE.Mesh(new THREE.TorusGeometry(0.45, 0.045, 12, 28), ringMat);
-                ring.rotation.y = Math.PI / 2;
-                ring.position.set(-0.55 + i * 0.12, 0.65, 0);
-                group.add(ring);
-                emCoilMeshes.push(ring);
+            // 銅色高壓初級線圈頸部 + 霓虹放電環
+            for (let i = 0; i < 3; i++) {
+                const coilRing = new THREE.Mesh(
+                    new THREE.TorusGeometry(0.42 - i * 0.04, 0.045, 10, 28),
+                    new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.88, roughness: 0.2 })
+                );
+                coilRing.rotation.x = Math.PI / 2;
+                coilRing.position.y = 0.32 + i * 0.08;
+                plasmaGlobeGroup.add(coilRing);
             }
 
-            // 往返移動的 N-S 條形磁鐵
-            emMagnetGroup = new THREE.Group();
-            emMagnetGroup.position.set(0.65, 0.65, 0);
-            const northHalf = new THREE.Mesh(
-                new THREE.BoxGeometry(0.5, 0.24, 0.24),
-                new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0x991b1b, emissiveIntensity: 0.35 })
+            const neckCollar = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.24, 0.32, 0.34, 20),
+                new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.7, roughness: 0.25 })
             );
-            northHalf.position.x = -0.25;
-            const southHalf = new THREE.Mesh(
-                new THREE.BoxGeometry(0.5, 0.24, 0.24),
-                new THREE.MeshStandardMaterial({ color: 0x3b82f6, emissive: 0x1d4ed8, emissiveIntensity: 0.35 })
-            );
-            southHalf.position.x = 0.25;
-            emMagnetGroup.add(northHalf, southHalf);
-            group.add(emMagnetGroup);
+            neckCollar.position.y = 0.52;
+            plasmaGlobeGroup.add(neckCollar);
 
-            // 感應指示 LED 燈
-            [0xf43f5e, 0x38bdf8].forEach((col, idx) => {
-                const led = new THREE.Mesh(
-                    new THREE.SphereGeometry(0.085, 14, 14),
-                    new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 1.0 })
+            // 中心高壓放電電極球與光暈
+            plasmaCoreMesh = new THREE.Mesh(
+                new THREE.SphereGeometry(0.22, 20, 20),
+                new THREE.MeshStandardMaterial({
+                    color: 0xffffff,
+                    emissive: 0xf472b6,
+                    emissiveIntensity: 1.6,
+                    roughness: 0.1
+                })
+            );
+            plasmaCoreMesh.position.y = PLASMA_CENTER_Y;
+            plasmaGlobeGroup.add(plasmaCoreMesh);
+
+            plasmaHaloMesh = new THREE.Mesh(
+                new THREE.SphereGeometry(0.35, 16, 16),
+                new THREE.MeshBasicMaterial({
+                    color: 0xc084fc,
+                    transparent: true,
+                    opacity: 0.28,
+                    depthWrite: false
+                })
+            );
+            plasmaHaloMesh.position.y = PLASMA_CENTER_Y;
+            plasmaGlobeGroup.add(plasmaHaloMesh);
+
+            // 電漿球內動態光源
+            plasmaLight = new THREE.PointLight(0xc084fc, 1.4, 5.5);
+            plasmaLight.position.y = PLASMA_CENTER_Y;
+            plasmaGlobeGroup.add(plasmaLight);
+
+            // 6 條立體閃電電弧與玻璃接觸光點
+            const arcCount = 6;
+            const segCount = 10;
+            for (let i = 0; i < arcCount; i++) {
+                const lineGeo = new THREE.BufferGeometry();
+                const positions = new Float32Array(segCount * 3);
+                lineGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+                const arcColor = i % 2 === 0 ? PLASMA_PALETTES[0].primary : PLASMA_PALETTES[0].secondary;
+                const lineMat = new THREE.LineBasicMaterial({
+                    color: arcColor,
+                    transparent: true,
+                    opacity: 0.95
+                });
+                const line = new THREE.Line(lineGeo, lineMat);
+                plasmaGlobeGroup.add(line);
+
+                const tip = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.065, 10, 10),
+                    new THREE.MeshBasicMaterial({ color: arcColor, transparent: true, opacity: 0.92 })
                 );
-                led.position.set(-0.85 + idx * 0.3, 0.28, 0.42);
-                group.add(led);
-                emLedMeshes.push(led);
-            });
+                plasmaGlobeGroup.add(tip);
 
-            registerInteractiveGroup(group, 'electromagnetism', '🧲 電磁學', '電磁感應線圈與磁場', new THREE.Vector3(2.6, 1.75, -2.1));
-            scene.add(group);
+                const theta = (i / arcCount) * Math.PI * 2;
+                const phi = (i % 2 === 0 ? 0.45 : -0.25);
+                const dir = new THREE.Vector3(
+                    Math.cos(theta) * Math.cos(phi),
+                    Math.sin(phi) + 0.15,
+                    Math.sin(theta) * Math.cos(phi)
+                ).normalize();
+
+                plasmaArcs.push({
+                    line,
+                    tip,
+                    dir,
+                    segCount,
+                    seed: i * 1.73,
+                    jitterOffsets: new Float32Array(segCount * 2)
+                });
+            }
+
+            // 外層透明電漿玻璃球體（depthWrite: false 確保內部閃電清晰透出）
+            plasmaSphereMesh = new THREE.Mesh(
+                new THREE.SphereGeometry(PLASMA_RADIUS, 28, 28),
+                new THREE.MeshPhysicalMaterial({
+                    color: 0xe0e7ff,
+                    emissive: 0x3b0764,
+                    emissiveIntensity: 0.25,
+                    transparent: true,
+                    opacity: 0.26,
+                    roughness: 0.06,
+                    metalness: 0.1,
+                    depthWrite: false
+                })
+            );
+            plasmaSphereMesh.position.y = PLASMA_CENTER_Y;
+            plasmaGlobeGroup.add(plasmaSphereMesh);
+
+            registerInteractiveGroup(plasmaGlobeGroup, 'electromagnetism', '⚡ 電磁學', '電漿球高壓電弧放電', new THREE.Vector3(2.6, 2.85, -2.1));
+            scene.add(plasmaGlobeGroup);
         }
 
         // 4. 【近代物理】量子原子軌域模型
@@ -1387,6 +1462,32 @@
             });
         }
 
+        // 電漿球高壓電弧嗡鳴與細碎放電聲
+        function playPlasmaBuzz(intense = false) {
+            const ctx = ensureAudioContext();
+            if (!ctx) return;
+            const now = ctx.currentTime;
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(intense ? 175 : 120, now);
+            osc.frequency.exponentialRampToValueAtTime(intense ? 260 : 145, now + (intense ? 0.16 : 0.09));
+
+            const filter = ctx.createBiquadFilter();
+            filter.type = 'bandpass';
+            filter.frequency.setValueAtTime(950, now);
+            filter.Q.setValueAtTime(3.0, now);
+
+            gain.gain.setValueAtTime(intense ? 0.09 : 0.045, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + (intense ? 0.18 : 0.1));
+
+            osc.connect(filter);
+            filter.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(now);
+            osc.stop(now + (intense ? 0.19 : 0.11));
+        }
+
         function handleDeviceOrientation(e) {
             if (!isGyroEnabled || e.gamma === null || e.beta === null) return;
             if (gyroBaseBeta === null || gyroBaseGamma === null) {
@@ -1536,28 +1637,88 @@
                 posAttr.needsUpdate = true;
             }
 
-            // 3. 電磁感應磁鐵往復運動與法拉第速度感應 LED / 線圈發光
-            if (emMagnetGroup) {
-                let absVel = 0;
-                let signedVel = 0;
-                if (emMagnetManualX !== null) {
-                    emMagnetGroup.position.x = emMagnetManualX;
-                    signedVel = emInducedVel;
-                    absVel = Math.abs(emInducedVel);
-                    emInducedVel *= Math.exp(-dt * 5.0);
-                } else {
-                    const vx = Math.cos(t * 2.2);
-                    emMagnetGroup.position.x = 0.62 + Math.sin(t * 2.2) * 0.32;
-                    signedVel = vx;
-                    absVel = Math.abs(vx) * 0.85;
+            // 3. 電漿球高壓電弧放電動畫（支援手觸表面匯聚閃電）
+            if (plasmaGlobeGroup && plasmaArcs.length > 0) {
+                if (plasmaSurge > 0) plasmaSurge = Math.max(0, plasmaSurge - dt * 1.6);
+                const pal = PLASMA_PALETTES[plasmaGasIdx];
+                const shouldRejitter = (t - plasmaLastJitterTime) > 0.045;
+                if (shouldRejitter) plasmaLastJitterTime = t;
+
+                if (plasmaCoreMesh) {
+                    const pulse = 1.45 + Math.sin(t * 14) * 0.25 + plasmaSurge * 1.6 + (plasmaTouchDir ? 0.8 : 0);
+                    plasmaCoreMesh.material.emissiveIntensity = pulse;
+                    const coreScale = 1 + Math.sin(t * 12) * 0.06 + plasmaSurge * 0.22;
+                    plasmaCoreMesh.scale.set(coreScale, coreScale, coreScale);
                 }
-                emLedMeshes.forEach((led, idx) => {
-                    const dirActive = idx === 0 ? Math.max(0, signedVel) : Math.max(0, -signedVel);
-                    led.material.emissiveIntensity = 0.2 + Math.min(3.5, dirActive * 1.9);
-                });
-                const coilGlow = Math.min(1.8, Math.max(0, absVel - 0.5) * 0.55);
-                emCoilMeshes.forEach(ring => {
-                    ring.material.emissiveIntensity = coilGlow;
+                if (plasmaHaloMesh) {
+                    plasmaHaloMesh.material.opacity = 0.22 + Math.sin(t * 9) * 0.06 + plasmaSurge * 0.25 + (plasmaTouchDir ? 0.16 : 0);
+                }
+                if (plasmaLight) {
+                    plasmaLight.intensity = 1.25 + Math.sin(t * 11) * 0.25 + plasmaSurge * 1.4 + (plasmaTouchDir ? 0.9 : 0);
+                }
+
+                plasmaArcs.forEach((arc, idx) => {
+                    // 決定每條電弧目標方向：手觸碰時前 4 條強烈匯聚向手指位置
+                    if (plasmaTouchDir && idx < 4) {
+                        const spread = idx === 0 ? 0.02 : 0.16;
+                        _pArcDir.set(
+                            plasmaTouchDir.x + Math.sin(t * 11 + arc.seed) * spread,
+                            plasmaTouchDir.y + Math.cos(t * 13 + arc.seed) * spread,
+                            plasmaTouchDir.z + Math.sin(t * 15 - arc.seed) * spread
+                        ).normalize();
+                        arc.dir.lerp(_pArcDir, Math.min(1, dt * 16)).normalize();
+                    } else {
+                        const theta = t * (0.55 + idx * 0.12) + arc.seed * 2.1;
+                        const phi = Math.sin(t * (0.7 + idx * 0.09) + arc.seed) * 0.65 + 0.15;
+                        _pArcDir.set(
+                            Math.cos(theta) * Math.cos(phi),
+                            Math.sin(phi),
+                            Math.sin(theta) * Math.cos(phi)
+                        ).normalize();
+                        arc.dir.lerp(_pArcDir, Math.min(1, dt * 3.2)).normalize();
+                    }
+
+                    // 構造與電弧方向正交的兩個基底向量以產生 3D 閃電鋸齒
+                    if (Math.abs(arc.dir.y) < 0.9) {
+                        _pAxisA.set(0, 1, 0).cross(arc.dir).normalize();
+                    } else {
+                        _pAxisA.set(1, 0, 0).cross(arc.dir).normalize();
+                    }
+                    _pAxisB.crossVectors(arc.dir, _pAxisA).normalize();
+
+                    if (shouldRejitter) {
+                        const ampScale = plasmaTouchDir && idx < 4 ? 0.085 : 0.145;
+                        for (let k = 1; k < arc.segCount - 1; k++) {
+                            const envelope = Math.sin((k / (arc.segCount - 1)) * Math.PI);
+                            arc.jitterOffsets[k * 2] = (Math.random() - 0.5) * ampScale * envelope;
+                            arc.jitterOffsets[k * 2 + 1] = (Math.random() - 0.5) * ampScale * envelope;
+                        }
+                    }
+
+                    const posAttr = arc.line.geometry.attributes.position;
+                    const endRadius = PLASMA_RADIUS - 0.03;
+                    for (let k = 0; k < arc.segCount; k++) {
+                        const frac = k / (arc.segCount - 1);
+                        const dist = 0.18 + frac * (endRadius - 0.18);
+                        const j1 = (k === 0 || k === arc.segCount - 1) ? 0 : arc.jitterOffsets[k * 2];
+                        const j2 = (k === 0 || k === arc.segCount - 1) ? 0 : arc.jitterOffsets[k * 2 + 1];
+
+                        posAttr.setXYZ(
+                            k,
+                            arc.dir.x * dist + _pAxisA.x * j1 + _pAxisB.x * j2,
+                            PLASMA_CENTER_Y + arc.dir.y * dist + _pAxisA.y * j1 + _pAxisB.y * j2,
+                            arc.dir.z * dist + _pAxisA.z * j1 + _pAxisB.z * j2
+                        );
+                    }
+                    posAttr.needsUpdate = true;
+
+                    arc.tip.position.set(
+                        arc.dir.x * endRadius,
+                        PLASMA_CENTER_Y + arc.dir.y * endRadius,
+                        arc.dir.z * endRadius
+                    );
+                    const tipScale = (plasmaTouchDir && idx < 4) ? 1.55 : 0.95;
+                    arc.tip.scale.set(tipScale, tipScale, tipScale);
                 });
             }
 
@@ -1649,9 +1810,19 @@
                 playCradleClack(0.9);
                 showLabToast('📘 力學牛頓擺：動量守恆撞擊！（可左右撥動鋼珠，或點上方標籤進單元）');
             } else if (category === 'electromagnetism') {
-                emMagnetManualX = null;
-                emInducedVel = 2.8;
-                showLabToast('🧲 電磁感應：在線圈上快速左右搓動磁鐵，LED 會隨速度爆閃！');
+                plasmaGasIdx = (plasmaGasIdx + 1) % PLASMA_PALETTE.length;
+                const pal = PLASMA_PALETTE[plasmaGasIdx];
+                if (plasmaCoreMesh) plasmaCoreMesh.material.emissive.setHex(pal.core);
+                if (plasmaHaloMesh) plasmaHaloMesh.material.color.setHex(pal.primary);
+                if (plasmaLight) plasmaLight.color.setHex(pal.primary);
+                plasmaArcs.forEach((arc, idx) => {
+                    const col = idx % 2 === 0 ? pal.primary : pal.secondary;
+                    arc.line.material.color.setHex(col);
+                    arc.tip.material.color.setHex(col);
+                });
+                plasmaSurge = 1.0;
+                playPlasmaBuzz(true);
+                showLabToast(`⚡ 電漿氣體光譜：${pal.name}！（按住並滑過球面可吸引閃電匯聚）`);
             } else if (category === 'chemistry') {
                 chemColorIdx = (chemColorIdx + 1) % CHEM_PALETTE.length;
                 const pal = CHEM_PALETTE[chemColorIdx];
@@ -1697,12 +1868,41 @@
             }
         }
 
-        function pickDeskCategoryAt(clientX, clientY) {
+        function pickDeskHitAt(clientX, clientY) {
             mouse.x = (clientX / window.innerWidth) * 2 - 1;
             mouse.y = -(clientY / window.innerHeight) * 2 + 1;
             raycaster.setFromCamera(mouse, camera);
             const intersects = raycaster.intersectObjects(deskInteractiveGroups, true);
-            return intersects.length > 0 ? intersects[0].object.userData.category : null;
+            if (intersects.length === 0) return null;
+            return {
+                category: intersects[0].object.userData.category,
+                point: intersects[0].point
+            };
+        }
+
+        function updatePlasmaTouchFromPointer(clientX, clientY) {
+            if (!plasmaGlobeGroup) return;
+            mouse.x = (clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+            const hits = plasmaSphereMesh
+                ? raycaster.intersectObject(plasmaSphereMesh, false)
+                : raycaster.intersectObject(plasmaGlobeGroup, true);
+
+            let worldPt = hits.length > 0 ? hits[0].point.clone() : null;
+            if (!worldPt) {
+                // 若手指滑到球緣附近，將射線投影至過球心的視平面方向
+                const globeCenterWorld = new THREE.Vector3(0, PLASMA_CENTER_Y, 0).applyMatrix4(plasmaGlobeGroup.matrixWorld);
+                const camDir = new THREE.Vector3().subVectors(camera.position, globeCenterWorld).normalize();
+                const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(camDir, globeCenterWorld);
+                worldPt = new THREE.Vector3();
+                if (!raycaster.ray.intersectPlane(plane, worldPt)) return;
+            }
+            const localPt = plasmaGlobeGroup.worldToLocal(worldPt);
+            localPt.y -= PLASMA_CENTER_Y;
+            if (localPt.lengthSq() > 1e-4) {
+                plasmaTouchDir = localPt.normalize();
+            }
         }
 
         function getPinchDistance() {
@@ -1745,7 +1945,7 @@
                     isDragging = false;
                     activePropDrag = null;
                     pendulumManualAngle = null;
-                    emMagnetManualX = null;
+                    plasmaTouchDir = null;
                     pinchStartDist = getPinchDistance();
                     pinchStartCamDist = cameraDistance;
                     return;
@@ -1757,10 +1957,10 @@
                 pointerDownPos = { x: e.clientX, y: e.clientY };
                 prevPointerPos = { x: e.clientX, y: e.clientY };
 
-                const hitCat = pickDeskCategoryAt(e.clientX, e.clientY);
-                if (hitCat) {
+                const hit = pickDeskHitAt(e.clientX, e.clientY);
+                if (hit && hit.category) {
                     activePropDrag = {
-                        category: hitCat,
+                        category: hit.category,
                         startX: e.clientX,
                         startY: e.clientY,
                         prevX: e.clientX,
@@ -1770,9 +1970,10 @@
                         startWaveFreq: waveFreq,
                         startPrismAngle: opticsPrismAngle
                     };
-                    if (hitCat === 'electromagnetism') {
-                        emMagnetManualX = emMagnetGroup ? emMagnetGroup.position.x : 0.62;
-                        emLastMoveTs = performance.now();
+                    if (hit.category === 'electromagnetism') {
+                        updatePlasmaTouchFromPointer(e.clientX, e.clientY);
+                        playPlasmaBuzz(false);
+                        plasmaLastBuzzTs = performance.now();
                     }
                     isDragging = false;
                 } else {
@@ -1814,12 +2015,12 @@
                         if (cat === 'mechanics') {
                             pendulumManualAngle = Math.max(-0.98, Math.min(0.98, totalDx * 0.009));
                         } else if (cat === 'electromagnetism') {
+                            updatePlasmaTouchFromPointer(e.clientX, e.clientY);
                             const nowTs = performance.now();
-                            const dtMs = Math.max(8, nowTs - emLastMoveTs);
-                            emLastMoveTs = nowTs;
-                            emMagnetManualX = Math.max(-0.9, Math.min(0.95, (emMagnetManualX ?? 0.62) + dx * 0.011));
-                            const instantVel = (dx / dtMs) * 3.8;
-                            emInducedVel = emInducedVel * 0.45 + instantVel * 0.55;
+                            if (nowTs - plasmaLastBuzzTs > 220) {
+                                playPlasmaBuzz(false);
+                                plasmaLastBuzzTs = nowTs;
+                            }
                         } else if (cat === 'waves') {
                             waveAmp = Math.max(0.12, Math.min(0.68, activePropDrag.startWaveAmp - totalDy * 0.004));
                             waveFreq = Math.max(1.5, Math.min(6.4, activePropDrag.startWaveFreq + totalDx * 0.025));
@@ -1854,6 +2055,9 @@
                 if (activePropDrag) {
                     const dragInfo = activePropDrag;
                     activePropDrag = null;
+                    if (dragInfo.category === 'electromagnetism') {
+                        plasmaTouchDir = null;
+                    }
 
                     if (dragInfo.category === 'mechanics' && dragInfo.moved) {
                         const rawManual = pendulumManualAngle ?? 0.5;
@@ -1863,8 +2067,8 @@
                         pendulumSoundSwings = 8;
                         showLabToast('📘 已釋放牛頓擺！（點上方「📘 力學」標籤看更多動畫）');
                     } else if (dragInfo.category === 'electromagnetism' && dragInfo.moved) {
-                        setTimeout(() => { if (!activePropDrag) emMagnetManualX = null; }, 1600);
-                        showLabToast('🧲 法拉第電磁感應！快速往復拖動越快、LED 感應越強');
+                        plasmaSurge = 0.6;
+                        showLabToast('⚡ 電漿球高壓電弧會優先匯聚到人體接觸的低電阻點！（點擊「⚡ 電磁學」看單元）');
                     } else if (dragInfo.category === 'waves' && dragInfo.moved) {
                         showLabToast(`🌊 已即時調整振幅與頻率（點擊「🌊 波動」標籤進入模擬）`);
                     } else if (dragInfo.category === 'optics' && dragInfo.moved) {
