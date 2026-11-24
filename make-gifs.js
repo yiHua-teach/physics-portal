@@ -21,6 +21,7 @@ const filterTerms = args.filter(a => !a.startsWith('-')).map(s => s.toLowerCase(
 async function launchBrowser() {
     return await puppeteer.launch({
         headless: 'new',
+        timeout: 90000,
         args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',

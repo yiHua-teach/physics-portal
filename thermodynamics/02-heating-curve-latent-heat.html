@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>02｜加熱曲線、比熱比較與「潛熱（相變）」微觀拔河賽</title>
+  <meta name="description" content="比較比熱大小與加熱爐火力對加熱曲線的影響，搭配冰塊／蠟相變曲線與分子鍵結微觀模擬器看懂潛熱與汽化。" />
+  <meta name="portal-tags" content="熱學, 國中理化, 比熱, 潛熱相變" />
+  <meta name="portal-badge" content="國中理化" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .energy-split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .e-card {
+      background: rgba(15, 23, 42, 0.78);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 10px 14px;
+      position: relative;
+      overflow: hidden;
+    }
+    .e-card.active-ke {
+      border-color: rgba(251, 113, 133, 0.7);
+      box-shadow: 0 0 18px rgba(251, 113, 133, 0.18);
+    }
+    .e-card.active-pe {
+      border-color: rgba(251, 191, 36, 0.75);
+      box-shadow: 0 0 18px rgba(251, 191, 36, 0.22);
+    }
+    .e-track {
+      height: 12px;
+      background: #1e293b;
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+    .e-fill {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 0.06s linear;
+    }
+    .phase-banner {
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-weight: 800;
+      font-size: 14px;
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      background: rgba(56, 189, 248, 0.14);
+      color: var(--accent-cyan);
+    }
+    .phase-banner.latent {
+      border-color: rgba(251, 191, 36, 0.7);
+      background: rgba(251, 191, 36, 0.18);
+      color: #fde68a;
+    }
+    .ctrl-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px 18px;
+      width: 100%;
+    }
+    .ctrl-cluster {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      align-items: center;
+      background: rgba(15, 23, 42, 0.52);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 6px 10px;
+    }
+    .ctrl-tag {
+      font-size: 13px;
+      color: var(--text-muted);
+      font-weight: 800;
+      margin-right: 2px;
+      white-space: nowrap;
+    }
+    .compare-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      padding: 8px 10px;
+      background: rgba(15, 23, 42, 0.65);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+    }
+    .compare-strip {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+      gap: 8px;
+    }
+    .cmp-chip {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid var(--border-subtle);
+      border-left-width: 4px;
+      border-radius: 8px;
+      padding: 7px 10px;
+      font-size: 12.5px;
+    }
+    .cmp-chip .cmp-title {
+      font-weight: 800;
+      color: #e2e8f0;
+      margin-bottom: 2px;
+    }
+    .cmp-chip .cmp-val {
+      font-weight: 800;
+      font-size: 15px;
+      font-variant-numeric: tabular-nums;
+    }
+    .sh-badge {
+      font-variant-numeric: tabular-nums;
+      color: var(--accent-amber);
+      font-weight: 800;
+      font-size: 13px;
+      padding: 2px 8px;
+      border-radius: 6px;
+      background: rgba(251, 191, 36, 0.12);
+      border: 1px solid rgba(251, 191, 36, 0.3);
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-left">
+      <a class="back-btn" href="../index.html#thermodynamics">← 返回主選單</a>
+      <span class="module-badge badge-junior">國中理化</span>
+      <h1 class="topbar-title">2. 加熱曲線、比熱與「潛熱（相變）」微觀拔河賽</h1>
+    </div>
+    <div class="topbar-right">
+      <div class="phase-banner" id="phaseBanner">固態升溫中</div>
+    </div>
+  </header>
+
+  <main class="sim-container">
+    <div class="callout" id="pedagogyCallout">
+      <strong>教學關鍵：</strong>
+      ① <strong>比熱大小</strong>決定升溫斜線的陡緩（$H = m \cdot s \cdot \Delta T$，比熱越小升溫越快、斜率越陡）；
+      ② <strong>加熱爐火力</strong>決定單位時間供熱速率（大火爐斜率較陡、水平段較短，但<strong>熔點與沸點溫度完全相同</strong>）；
+      ③ 進入 <strong>0°C 熔化 / 100°C 沸騰</strong>水平段時，熱量化為<strong>「剪刀 ✂️」</strong>剪斷分子鍵結（位能↑，動能不變，溫度計不動）！
+    </div>
+
+    <!-- Controls -->
+    <section class="control-bar" style="flex-direction:column; align-items:stretch; gap:12px;">
+      <div class="ctrl-row">
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn btn-primary" id="playBtn">▶ 開始加熱</button>
+          <button class="btn" id="resetBtn">↺ 重置歸零</button>
+        </div>
+
+        <div class="ctrl-cluster">
+          <span class="ctrl-tag">物質型態：</span>
+          <button class="btn btn-sm active" id="matIce">🧊 冰塊 (結晶體)</button>
+          <button class="btn btn-sm" id="matWax">🕯️ 蠟 (非晶體)</button>
+          <button class="btn btn-sm" id="matPure">🧪 純比熱探究 (無相變)</button>
+        </div>
+
+        <div class="ctrl-cluster">
+          <span class="ctrl-tag">質量：</span>
+          <button class="btn btn-sm active" id="mass100">100 g</button>
+          <button class="btn btn-sm" id="mass200">200 g (雙倍)</button>
+        </div>
+
+        <div class="control-group" style="flex:1 1 240px;">
+          <div class="control-label">
+            <span>加熱時間軸進度（可拖曳跳轉）</span>
+            <span class="control-value" id="timeLabel">0.0 min｜Q = 0.0 kJ</span>
+          </div>
+          <input type="range" id="timeSlider" min="0" max="100" step="0.2" value="0" />
+        </div>
+      </div>
+
+      <div class="ctrl-row">
+        <!-- Specific Heat Control -->
+        <div class="ctrl-cluster" style="flex:1 1 420px;">
+          <span class="ctrl-tag">比熱 $s$：</span>
+          <button class="btn btn-sm" data-sh="0.25">⚡ 低 0.25</button>
+          <button class="btn btn-sm" data-sh="0.5">🔸 中 0.50</button>
+          <button class="btn btn-sm active" data-sh="1.0">💧 標準 1.00</button>
+          <button class="btn btn-sm" data-sh="1.5">🛡️ 高 1.50</button>
+          <input type="range" id="shSlider" min="0.2" max="1.8" step="0.05" value="1.0" style="width:110px;" title="微調比熱數值" />
+          <span class="sh-badge" id="shBadge">s = 1.00 cal/g·°C</span>
+        </div>
+
+        <!-- Burner Power Comparison Control -->
+        <div class="ctrl-cluster" style="flex:1 1 380px;">
+          <span class="ctrl-tag">加熱爐火力：</span>
+          <button class="btn btn-sm" data-power="1">🔥 小火爐 (1x)</button>
+          <button class="btn btn-sm active" data-power="2">🔥🔥 中火爐 (2x)</button>
+          <button class="btn btn-sm" data-power="3">🔥🔥🔥 大火爐 (3x)</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Split View -->
+    <section class="split-grid">
+      <!-- Left: Heating Curve -->
+      <div class="panel">
+        <div class="panel-header" style="flex-wrap:wrap;">
+          <div class="panel-title">📈 即時「溫度－時間」加熱曲線</div>
+          <button class="btn btn-sm btn-emerald" id="pinCurveBtn">📌 釘選目前曲線為對照</button>
+        </div>
+
+        <div class="compare-bar">
+          <span class="ctrl-tag">同圖比較模式：</span>
+          <button class="btn btn-sm active" data-cmp="ref">標準 100g 冰塊中火</button>
+          <button class="btn btn-sm" data-cmp="sh">📊 比熱大小比較 (0.25~1.5)</button>
+          <button class="btn btn-sm" data-cmp="power">🔥 加熱爐火力比較 (小/中/大)</button>
+          <button class="btn btn-sm" data-cmp="none">僅顯示主曲線</button>
+        </div>
+
+        <div class="canvas-wrap">
+          <canvas id="curveCanvas" width="720" height="470"></canvas>
+        </div>
+
+        <!-- Live Comparison Readout Strip -->
+        <div class="compare-strip" id="compareStrip"></div>
+
+        <div class="metrics-row">
+          <div class="metric-box">
+            <div class="metric-label">主曲線目前溫度</div>
+            <div class="metric-val" id="tempVal" style="color:#38bdf8;">-20.0 °C</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">累積吸收熱量 Q</div>
+            <div class="metric-val" id="heatVal" style="color:#fbbf24;">0.0 kcal</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">目前相態 / 狀態</div>
+            <div class="metric-val" id="stateVal" style="color:#34d399; font-size:17px;">固態（冰晶格）</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Micro Lattice & Scissors -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">🔬 微觀拔河賽：分子晶格、加熱爐與熱能流向</div>
+          <span id="bondCountLabel" style="font-size:13px; font-weight:700; color:#fbbf24;">分子束縛完整度：100%</span>
+        </div>
+        <div class="canvas-wrap">
+          <canvas id="microCanvas" width="720" height="470"></canvas>
+        </div>
+        <div class="energy-split">
+          <div class="e-card" id="keCard">
+            <div class="control-label">
+              <span>🏃 分子平均動能（決定溫度高低）</span>
+              <span class="control-value" id="kePct" style="color:#fb7185;">吸收中</span>
+            </div>
+            <div class="e-track"><div class="e-fill" id="keBar" style="width:10%;background:#fb7185;"></div></div>
+          </div>
+          <div class="e-card" id="peCard">
+            <div class="control-label">
+              <span>✂️ 分子位能（剪斷鍵結＝相變）</span>
+              <span class="control-value" id="pePct" style="color:#fbbf24;">0%</span>
+            </div>
+            <div class="e-track"><div class="e-fill" id="peBar" style="width:0%;background:#fbbf24;"></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const state = {
+      material: 'ice',    // 'ice' | 'wax' | 'pure'
+      mass: 100,          // 100 | 200
+      specificHeat: 1.0,  // 0.2 .. 1.8
+      power: 2,           // 1 | 2 | 3
+      time: 0,            // 0 .. maxTime (min)
+      maxTime: 30,
+      playing: false,
+      compareMode: 'ref', // 'ref' | 'sh' | 'power' | 'none'
+      pinnedConfig: null, // { material, mass, specificHeat, power, label }
+      lastTs: 0
+    };
+
+    const curveCanvas = document.getElementById('curveCanvas');
+    const cctx = curveCanvas.getContext('2d');
+    const microCanvas = document.getElementById('microCanvas');
+    const mctx = microCanvas.getContext('2d');
+
+    // Elements
+    const playBtn = document.getElementById('playBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const timeSlider = document.getElementById('timeSlider');
+    const timeLabel = document.getElementById('timeLabel');
+    const tempVal = document.getElementById('tempVal');
+    const heatVal = document.getElementById('heatVal');
+    const stateVal = document.getElementById('stateVal');
+    const phaseBanner = document.getElementById('phaseBanner');
+    const bondCountLabel = document.getElementById('bondCountLabel');
+    const keCard = document.getElementById('keCard');
+    const peCard = document.getElementById('peCard');
+    const keBar = document.getElementById('keBar');
+    const peBar = document.getElementById('peBar');
+    const kePct = document.getElementById('kePct');
+    const pePct = document.getElementById('pePct');
+    const shSlider = document.getElementById('shSlider');
+    const shBadge = document.getElementById('shBadge');
+    const compareStrip = document.getElementById('compareStrip');
+    const pinCurveBtn = document.getElementById('pinCurveBtn');
+
+    // Render math-free crisp text in callout (replace inline $...$)
+    document.getElementById('pedagogyCallout').innerHTML =
+      '<strong>教學關鍵：</strong>' +
+      '① <strong>比熱大小</strong>決定升溫斜線的陡緩（<code>H = m · s · ΔT</code>，比熱越小升溫越快、斜率越陡）；' +
+      '② <strong>加熱爐火力</strong>決定單位時間供熱速率（大火爐斜率較陡、較快到達熔沸點且水平段較短，但<strong>熔點與沸點溫度完全相同</strong>）；' +
+      '③ 進入 <strong>0°C 熔化 / 100°C 沸騰</strong>水平段時，熱量化為<strong>「剪刀 ✂️」</strong>剪斷分子鍵結（位能↑，動能不變，溫度計不動）！';
+
+    // Replace $s$ in ctrl-tag
+    document.querySelectorAll('.ctrl-tag').forEach(el => {
+      el.innerHTML = el.innerHTML.replace('$s$', '<i>s</i>');
+    });
+
+    // Thermodynamic Curve Model
+    function evalCurve(tMin, mat, mass, power, sh = 1.0) {
+      const Q = tMin * power * 0.85; // kcal supplied (0.85 / 1.70 / 2.55 kcal/min)
+      const scale = mass / 100;
+
+      if (mat === 'ice') {
+        // Sensible heat segments scale with specificHeat; latent heat plateaus depend only on mass!
+        const q1 = 1.8 * scale * sh;  // -20 -> 0°C
+        const q2 = 4.6 * scale;       // 0°C melt plateau
+        const q3 = 6.2 * scale * sh;  // 0 -> 100°C
+        const q4 = 9.0 * scale;       // 100°C boil plateau
+        const q5 = 3.0 * scale * sh;  // 100 -> 135°C
+
+        let temp, phase, isLatent = false, keFrac, peFrac, bondIntegrity, modeLabel;
+        if (Q < q1) {
+          const u = Q / q1;
+          temp = -20 + 20 * u;
+          phase = 'solid';
+          modeLabel = '固態升溫（晶格振動加劇）';
+          keFrac = 0.08 + 0.14 * u;
+          peFrac = 0.0;
+          bondIntegrity = 1.0;
+        } else if (Q < q1 + q2) {
+          const u = (Q - q1) / q2;
+          temp = 0;
+          phase = 'melting';
+          isLatent = true;
+          modeLabel = '熔化水平段 0°C（熱量剪斷氫鍵！）';
+          keFrac = 0.22;
+          peFrac = 0.42 * u;
+          bondIntegrity = 1.0 - 0.55 * u;
+        } else if (Q < q1 + q2 + q3) {
+          const u = (Q - q1 - q2) / q3;
+          temp = 100 * u;
+          phase = 'liquid';
+          modeLabel = '液態升溫（分子運動加速）';
+          keFrac = 0.22 + 0.48 * u;
+          peFrac = 0.42;
+          bondIntegrity = 0.45 - 0.10 * u;
+        } else if (Q < q1 + q2 + q3 + q4) {
+          const u = (Q - q1 - q2 - q3) / q4;
+          temp = 100;
+          phase = 'boiling';
+          isLatent = true;
+          modeLabel = '沸騰水平段 100°C（剪斷全部束縛！）';
+          keFrac = 0.70;
+          peFrac = 0.42 + 0.58 * u;
+          bondIntegrity = 0.35 * (1 - u);
+        } else {
+          const u = Math.min(1, (Q - q1 - q2 - q3 - q4) / q5);
+          temp = 100 + 35 * u;
+          phase = 'gas';
+          modeLabel = '氣態升溫（水蒸氣高速飛散）';
+          keFrac = 0.70 + 0.30 * u;
+          peFrac = 1.0;
+          bondIntegrity = 0;
+        }
+        return { Q, temp, phase, isLatent, keFrac, peFrac, bondIntegrity, modeLabel };
+      } else if (mat === 'wax') {
+        const qNorm = Q / scale;
+        const t1 = 3.0 * sh;
+        const t2 = t1 + 9.0 * (0.4 + 0.6 * sh);
+        let temp;
+        if (qNorm < t1) {
+          temp = 20 + (qNorm / t1) * 25;
+        } else if (qNorm < t2) {
+          const u = (qNorm - t1) / (t2 - t1);
+          temp = 45 + 32 * (0.65 * u + 0.35 * u * u);
+        } else {
+          const u = Math.min(1.5, (qNorm - t2) / (10 * sh));
+          temp = 77 + 58 * u;
+        }
+        temp = Math.min(135, temp);
+        const softProg = Math.max(0, Math.min(1, (temp - 42) / 40));
+        return {
+          Q,
+          temp,
+          phase: temp < 45 ? 'wax_solid' : (temp < 78 ? 'wax_soft' : 'wax_liquid'),
+          isLatent: false,
+          keFrac: Math.max(0.15, Math.min(1, (temp - 10) / 125)),
+          peFrac: softProg * 0.65,
+          bondIntegrity: 1 - softProg * 0.85,
+          modeLabel: temp < 45 ? '非晶體固態升溫' : (temp < 78 ? '蠟逐漸軟化熔融（無固定熔點！）' : '液態蠟持續升溫')
+        };
+      } else {
+        // Pure Specific Heat Experiment (no phase change, linear ΔT = Q / (m * s))
+        const dT = (Q / (scale * sh)) * 3.0;
+        const temp = Math.min(135, 20 + dT);
+        const prog = (temp - 20) / 115;
+        return {
+          Q,
+          temp,
+          phase: 'pure_liquid',
+          isLatent: false,
+          keFrac: 0.14 + prog * 0.82,
+          peFrac: 0.25,
+          bondIntegrity: 0.25,
+          modeLabel: '純比熱升溫（無相變，斜率 ∝ 1/比熱）'
+        };
+      }
+    }
+
+    // Micro Lattice Particles (6x4 = 24 molecules)
+    const mols = [];
+    const bonds = [];
+    const scissors = [];
+    const COLS = 6, ROWS = 4;
+
+    function initMolecules() {
+      mols.length = 0;
+      bonds.length = 0;
+      scissors.length = 0;
+      const startX = 155, startY = 175, dx = 82, dy = 66;
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          const id = r * COLS + c;
+          const jitterX = (r % 2) * 18;
+          mols.push({
+            id,
+            hx: startX + c * dx + jitterX,
+            hy: startY + r * dy,
+            x: startX + c * dx + jitterX,
+            y: startY + r * dy,
+            vx: (Math.random() - 0.5) * 80,
+            vy: (Math.random() - 0.5) * 80,
+            phase: Math.random() * Math.PI * 2
+          });
+        }
+      }
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          const i = r * COLS + c;
+          if (c < COLS - 1) bonds.push({ a: i, b: i + 1, threshold: Math.random() * 0.95 });
+          if (r < ROWS - 1) bonds.push({ a: i, b: i + COLS, threshold: Math.random() * 0.95 });
+        }
+      }
+      for (let i = 0; i < 6; i++) {
+        scissors.push({
+          x: 200 + i * 70,
+          y: 440,
+          targetBondIdx: i % bonds.length,
+          snipPhase: Math.random() * Math.PI * 2
+        });
+      }
+    }
+
+    function getCompareSeries() {
+      const list = [];
+      if (state.compareMode === 'sh') {
+        const shValues = [
+          { sh: 0.25, color: '#fb7185', label: '低比熱 s=0.25 (如銅/金屬)' },
+          { sh: 0.50, color: '#fbbf24', label: '中比熱 s=0.50 (如冰/油)' },
+          { sh: 1.00, color: '#38bdf8', label: '標準 s=1.00 (如水)' },
+          { sh: 1.50, color: '#a78bfa', label: '高比熱 s=1.50' }
+        ];
+        shValues.forEach(item => {
+          list.push({
+            label: item.label,
+            short: `s=${item.sh.toFixed(2)}`,
+            color: item.color,
+            mat: state.material,
+            mass: state.mass,
+            power: state.power,
+            sh: item.sh,
+            isPrimary: Math.abs(item.sh - state.specificHeat) < 0.03
+          });
+        });
+      } else if (state.compareMode === 'power') {
+        const powers = [
+          { p: 1, color: '#38bdf8', label: '🔥 小火爐 (1x: 0.85 kcal/min)' },
+          { p: 2, color: '#fbbf24', label: '🔥🔥 中火爐 (2x: 1.70 kcal/min)' },
+          { p: 3, color: '#fb7185', label: '🔥🔥🔥 大火爐 (3x: 2.55 kcal/min)' }
+        ];
+        powers.forEach(item => {
+          list.push({
+            label: item.label,
+            short: `${item.p}x 火力`,
+            color: item.color,
+            mat: state.material,
+            mass: state.mass,
+            power: item.p,
+            sh: state.specificHeat,
+            isPrimary: item.p === state.power
+          });
+        });
+      }
+      return list;
+    }
+
+    function drawSingleOverlayCurve(toX, toY, mat, mass, power, sh, color, dashed, width = 2.5) {
+      cctx.save();
+      cctx.strokeStyle = color;
+      if (dashed) cctx.setLineDash([6, 5]);
+      cctx.lineWidth = width;
+      cctx.beginPath();
+      for (let t = 0; t <= state.maxTime; t += 0.25) {
+        const p = evalCurve(t, mat, mass, power, sh);
+        const x = toX(t), y = toY(p.temp);
+        if (t === 0) cctx.moveTo(x, y); else cctx.lineTo(x, y);
+      }
+      cctx.stroke();
+      cctx.restore();
+    }
+
+    function drawHeatingCurve(cur) {
+      const w = curveCanvas.width;
+      const h = curveCanvas.height;
+      cctx.clearRect(0, 0, w, h);
+
+      const pad = { left: 68, right: 32, top: 34, bottom: 52 };
+      const pw = w - pad.left - pad.right;
+      const ph = h - pad.top - pad.bottom;
+
+      const minTemp = -30, maxTemp = 140;
+      const toX = (t) => pad.left + (t / state.maxTime) * pw;
+      const toY = (T) => pad.top + ph - ((T - minTemp) / (maxTemp - minTemp)) * ph;
+
+      // Grid & Horizontal reference lines
+      cctx.strokeStyle = 'rgba(148,163,184,0.12)';
+      cctx.lineWidth = 1;
+      for (let T = -20; T <= 140; T += 20) {
+        const y = toY(T);
+        cctx.beginPath(); cctx.moveTo(pad.left, y); cctx.lineTo(w - pad.right, y); cctx.stroke();
+        cctx.fillStyle = (T === 0 || T === 100) ? '#fbbf24' : '#94a3b8';
+        cctx.font = (T === 0 || T === 100) ? 'bold 13px sans-serif' : '12px sans-serif';
+        cctx.textAlign = 'right';
+        cctx.fillText(`${T}°C`, pad.left - 10, y + 4);
+      }
+
+      // Highlight 0°C and 100°C dashed lines when ice is active
+      if (state.material === 'ice') {
+        [0, 100].forEach((T, idx) => {
+          const y = toY(T);
+          cctx.save();
+          cctx.strokeStyle = idx === 0 ? 'rgba(56,189,248,0.45)' : 'rgba(251,113,133,0.45)';
+          cctx.setLineDash([6, 5]);
+          cctx.lineWidth = 1.5;
+          cctx.beginPath(); cctx.moveTo(pad.left, y); cctx.lineTo(w - pad.right, y); cctx.stroke();
+          cctx.fillStyle = idx === 0 ? '#7dd3fc' : '#fda4af';
+          cctx.font = 'bold 12px Microsoft JhengHei';
+          cctx.textAlign = 'left';
+          cctx.fillText(idx === 0 ? '熔點 0°C (冰水共存)' : '沸點 100°C (水與水蒸氣共存)', pad.left + 8, y - 6);
+          cctx.restore();
+        });
+      }
+
+      // Vertical time ticks
+      for (let t = 0; t <= state.maxTime; t += 5) {
+        const x = toX(t);
+        cctx.strokeStyle = 'rgba(148,163,184,0.12)';
+        cctx.beginPath(); cctx.moveTo(x, pad.top); cctx.lineTo(x, pad.top + ph); cctx.stroke();
+        cctx.fillStyle = '#94a3b8';
+        cctx.font = '12px sans-serif';
+        cctx.textAlign = 'center';
+        cctx.fillText(`${t}`, x, pad.top + ph + 20);
+      }
+
+      // Vertical current time guide line
+      if (state.time > 0) {
+        const tx = toX(state.time);
+        cctx.save();
+        cctx.strokeStyle = 'rgba(226, 232, 240, 0.22)';
+        cctx.setLineDash([4, 4]);
+        cctx.lineWidth = 1.5;
+        cctx.beginPath();
+        cctx.moveTo(tx, pad.top);
+        cctx.lineTo(tx, pad.top + ph);
+        cctx.stroke();
+        cctx.restore();
+      }
+
+      // Axes
+      cctx.strokeStyle = '#cbd5e1';
+      cctx.lineWidth = 2;
+      cctx.beginPath();
+      cctx.moveTo(pad.left, pad.top);
+      cctx.lineTo(pad.left, pad.top + ph);
+      cctx.lineTo(pad.left + pw, pad.top + ph);
+      cctx.stroke();
+
+      cctx.fillStyle = '#e2e8f0';
+      cctx.font = 'bold 13px Microsoft JhengHei';
+      cctx.textAlign = 'center';
+      cctx.fillText('加熱時間 t (分鐘)', pad.left + pw / 2, h - 10);
+      cctx.textAlign = 'left';
+      cctx.fillText('溫度 (°C)', 14, 22);
+
+      // Pinned Curve (always drawn if user pinned one)
+      if (state.pinnedConfig) {
+        const pc = state.pinnedConfig;
+        drawSingleOverlayCurve(toX, toY, pc.material, pc.mass, pc.power, pc.specificHeat, 'rgba(52, 211, 153, 0.72)', true, 2.6);
+        const pCur = evalCurve(state.time, pc.material, pc.mass, pc.power, pc.specificHeat);
+        cctx.beginPath();
+        cctx.arc(toX(state.time), toY(pCur.temp), 5.5, 0, Math.PI * 2);
+        cctx.fillStyle = '#34d399';
+        cctx.fill();
+      }
+
+      // Comparison Mode Overlays
+      const cmpSeries = getCompareSeries();
+      if (cmpSeries.length > 0) {
+        // Draw ghost + active traced curve for each series
+        cmpSeries.forEach(s => {
+          drawSingleOverlayCurve(toX, toY, s.mat, s.mass, s.power, s.sh, s.color + '33', false, 2.2);
+
+          cctx.save();
+          cctx.strokeStyle = s.color;
+          cctx.lineWidth = s.isPrimary ? 4.2 : 3.0;
+          cctx.lineCap = 'round';
+          cctx.beginPath();
+          for (let t = 0; t <= state.time; t += 0.18) {
+            const p = evalCurve(t, s.mat, s.mass, s.power, s.sh);
+            const x = toX(t), y = toY(p.temp);
+            if (t === 0) cctx.moveTo(x, y); else cctx.lineTo(x, y);
+          }
+          cctx.stroke();
+          cctx.restore();
+
+          const pt = evalCurve(state.time, s.mat, s.mass, s.power, s.sh);
+          const dx = toX(state.time), dy = toY(pt.temp);
+          cctx.beginPath();
+          cctx.arc(dx, dy, s.isPrimary ? 7.5 : 5.5, 0, Math.PI * 2);
+          cctx.fillStyle = s.color;
+          cctx.fill();
+          cctx.lineWidth = 2;
+          cctx.strokeStyle = '#fff';
+          cctx.stroke();
+
+          // Small label right next to dot
+          cctx.fillStyle = s.color;
+          cctx.font = 'bold 12px Microsoft JhengHei';
+          cctx.textAlign = 'left';
+          const lblX = Math.min(w - 110, dx + 10);
+          cctx.fillText(`${s.short}: ${pt.temp.toFixed(0)}°C`, lblX, dy + 4);
+        });
+
+        // Legend Box at bottom-right
+        const boxW = 248;
+        const boxH = 26 + cmpSeries.length * 22;
+        const lx = w - pad.right - boxW - 8;
+        const ly = pad.top + ph - boxH - 10;
+        cctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+        cctx.strokeStyle = 'rgba(148,163,184,0.35)';
+        cctx.lineWidth = 1.2;
+        cctx.beginPath();
+        cctx.roundRect(lx, ly, boxW, boxH, 10);
+        cctx.fill(); cctx.stroke();
+
+        cctx.fillStyle = '#e2e8f0';
+        cctx.font = 'bold 12px Microsoft JhengHei';
+        cctx.textAlign = 'left';
+        cctx.fillText(state.compareMode === 'sh' ? '📊 比熱大小對照 (同熱源同質量)' : '🔥 加熱爐火力對照 (同物質同質量)', lx + 10, ly + 18);
+
+        cmpSeries.forEach((s, idx) => {
+          const ry = ly + 38 + idx * 22;
+          cctx.fillStyle = s.color;
+          cctx.fillRect(lx + 10, ry - 9, 14, 4);
+          cctx.fillStyle = s.isPrimary ? '#ffffff' : '#cbd5e1';
+          cctx.font = s.isPrimary ? 'bold 12px Microsoft JhengHei' : '12px Microsoft JhengHei';
+          cctx.fillText(s.label, lx + 30, ry - 3);
+        });
+      }
+
+      // Standard Reference Curve (100g Ice, Power 2, s=1.0)
+      if (state.compareMode === 'ref') {
+        drawSingleOverlayCurve(toX, toY, 'ice', 100, 2, 1.0, 'rgba(148, 163, 184, 0.45)', true, 2.2);
+      }
+
+      // If not in multi-series mode (or primary isn't one of the presets), draw active primary curve prominently
+      const primaryDrawnInCmp = cmpSeries.some(s => s.isPrimary);
+      if (!primaryDrawnInCmp) {
+        drawSingleOverlayCurve(toX, toY, state.material, state.mass, state.power, state.specificHeat, 'rgba(56, 189, 248, 0.18)', false, 3);
+
+        cctx.save();
+        cctx.lineWidth = 4.5;
+        cctx.lineCap = 'round';
+        cctx.lineJoin = 'round';
+        let prevPt = null;
+        for (let t = 0; t <= state.time; t += 0.15) {
+          const p = evalCurve(t, state.material, state.mass, state.power, state.specificHeat);
+          const x = toX(t), y = toY(p.temp);
+          if (prevPt) {
+            cctx.strokeStyle = p.isLatent ? '#fbbf24' : '#fb7185';
+            cctx.beginPath();
+            cctx.moveTo(prevPt.x, prevPt.y);
+            cctx.lineTo(x, y);
+            cctx.stroke();
+          }
+          prevPt = { x, y };
+        }
+        cctx.restore();
+
+        // Current Dot
+        const cx = toX(state.time);
+        const cy = toY(cur.temp);
+        cctx.beginPath();
+        cctx.arc(cx, cy, 8, 0, Math.PI * 2);
+        cctx.fillStyle = cur.isLatent ? '#fbbf24' : '#38bdf8';
+        cctx.fill();
+        cctx.lineWidth = 3;
+        cctx.strokeStyle = '#fff';
+        cctx.stroke();
+
+        // Floating Label near dot
+        cctx.fillStyle = '#0f172a';
+        cctx.strokeStyle = cur.isLatent ? '#fbbf24' : '#38bdf8';
+        cctx.lineWidth = 1.5;
+        const boxX = Math.min(w - 175, cx + 14);
+        const boxY = Math.max(pad.top + 8, cy - 38);
+        cctx.beginPath();
+        cctx.roundRect(boxX, boxY, 156, 30, 8);
+        cctx.fill(); cctx.stroke();
+        cctx.fillStyle = '#f8fafc';
+        cctx.font = 'bold 13px Microsoft JhengHei';
+        cctx.textAlign = 'left';
+        cctx.fillText(`${cur.temp.toFixed(1)}°C｜${cur.isLatent ? '溫度不變!' : '升溫中'}`, boxX + 10, boxY + 20);
+      }
+    }
+
+    function stepAndDrawMicro(cur, dt) {
+      const w = microCanvas.width;
+      const h = microCanvas.height;
+      mctx.clearRect(0, 0, w, h);
+
+      const simDt = Math.min(0.035, dt);
+      const now = performance.now() * 0.006;
+
+      // Beaker frame inside micro view
+      mctx.fillStyle = 'rgba(15, 23, 42, 0.72)';
+      mctx.fillRect(75, 45, 570, 340);
+      mctx.strokeStyle = '#64748b';
+      mctx.lineWidth = 3;
+      mctx.strokeRect(75, 45, 570, 340);
+
+      // Liquid tint
+      if (cur.phase !== 'solid' && cur.phase !== 'wax_solid' && cur.phase !== 'gas') {
+        const tint = state.material === 'ice' ? 'rgba(56, 189, 248, 0.11)'
+          : (state.material === 'wax' ? 'rgba(251, 191, 36, 0.11)' : 'rgba(52, 211, 153, 0.11)');
+        mctx.fillStyle = tint;
+        mctx.fillRect(77, 145, 566, 238);
+      }
+
+      const speedScale = 0.25 + cur.keFrac * 2.8;
+      const brokenRatio = 1 - cur.bondIntegrity;
+
+      mols.forEach((m, idx) => {
+        const isFree = (idx / mols.length) < brokenRatio;
+        if (!isFree) {
+          const vibAmp = 2.5 + cur.keFrac * 14;
+          m.x = m.hx + Math.sin(now * (1.8 + cur.keFrac * 2) + m.phase) * vibAmp;
+          m.y = m.hy + Math.cos(now * (2.1 + cur.keFrac * 2) + m.phase * 1.3) * vibAmp;
+        } else {
+          const canFly = cur.phase === 'boiling' || cur.phase === 'gas';
+          const topBound = canFly ? 60 : 160;
+          m.x += m.vx * speedScale * simDt * 1.4;
+          m.y += m.vy * speedScale * simDt * 1.4;
+          if (m.x < 95) { m.x = 95; m.vx = Math.abs(m.vx); }
+          if (m.x > 625) { m.x = 625; m.vx = -Math.abs(m.vx); }
+          if (m.y < topBound) { m.y = topBound; m.vy = Math.abs(m.vy); }
+          if (m.y > 365) { m.y = 365; m.vy = -Math.abs(m.vy); }
+        }
+      });
+
+      // Draw bonds
+      bonds.forEach(b => {
+        if (b.threshold <= brokenRatio) return;
+        const ma = mols[b.a], mb = mols[b.b];
+        const dist = Math.hypot(ma.x - mb.x, ma.y - mb.y);
+        if (dist > 150) return;
+        mctx.save();
+        mctx.strokeStyle = cur.isLatent ? 'rgba(251, 191, 36, 0.78)' : 'rgba(125, 211, 252, 0.55)';
+        mctx.lineWidth = cur.isLatent ? 3 : 2;
+        mctx.setLineDash([5, 4]);
+        mctx.beginPath();
+        mctx.moveTo(ma.x, ma.y);
+        mctx.lineTo(mb.x, mb.y);
+        mctx.stroke();
+        mctx.restore();
+      });
+
+      // Draw molecules
+      mols.forEach(m => {
+        mctx.save();
+        mctx.translate(m.x, m.y);
+        if (state.material === 'ice') {
+          const hueColor = cur.keFrac < 0.3 ? '#38bdf8' : (cur.keFrac < 0.7 ? '#fbbf24' : '#fb7185');
+          mctx.fillStyle = hueColor;
+          mctx.beginPath(); mctx.arc(0, 0, 11, 0, Math.PI * 2); mctx.fill();
+          mctx.fillStyle = '#e2e8f0';
+          mctx.beginPath(); mctx.arc(-9, -8, 5.5, 0, Math.PI * 2); mctx.fill();
+          mctx.beginPath(); mctx.arc(9, -8, 5.5, 0, Math.PI * 2); mctx.fill();
+        } else if (state.material === 'wax') {
+          const hueColor = cur.keFrac < 0.45 ? '#fde047' : '#fb923c';
+          mctx.fillStyle = hueColor;
+          mctx.beginPath(); mctx.roundRect(-14, -7, 28, 14, 7); mctx.fill();
+          mctx.strokeStyle = '#fff';
+          mctx.lineWidth = 1.2;
+          mctx.stroke();
+        } else {
+          // Pure specific heat liquid spheres
+          const hueColor = cur.keFrac < 0.35 ? '#34d399' : (cur.keFrac < 0.7 ? '#fbbf24' : '#fb7185');
+          mctx.fillStyle = hueColor;
+          mctx.beginPath(); mctx.arc(0, 0, 11.5, 0, Math.PI * 2); mctx.fill();
+          mctx.strokeStyle = 'rgba(255,255,255,0.5)';
+          mctx.lineWidth = 1.5;
+          mctx.stroke();
+        }
+        mctx.restore();
+      });
+
+      // Burner Base & Flames (clearly distinguishes 小火爐 vs 中火爐 vs 大火爐)
+      mctx.fillStyle = '#334155';
+      mctx.beginPath();
+      mctx.roundRect(140, 424, 440, 16, 6);
+      mctx.fill();
+
+      const flameCount = state.power === 1 ? 3 : (state.power === 2 ? 5 : 8);
+      const flameSpread = state.power === 1 ? 52 : (state.power === 2 ? 46 : 40);
+      for (let i = 0; i < flameCount; i++) {
+        const fx = 360 + (i - (flameCount - 1) / 2) * flameSpread;
+        const fy = 424;
+        const fh = (state.power === 1 ? 18 : state.power === 2 ? 28 : 38) + Math.sin(now * 3.2 + i) * 6;
+        const fw = state.power === 1 ? 9 : (state.power === 2 ? 12 : 14);
+        mctx.fillStyle = state.power === 3 ? '#ef4444' : '#f97316';
+        mctx.beginPath();
+        mctx.moveTo(fx - fw, fy);
+        mctx.quadraticCurveTo(fx, fy - fh, fx + fw, fy);
+        mctx.fill();
+        mctx.fillStyle = state.power === 3 ? '#bae6fd' : '#fef08a';
+        mctx.beginPath();
+        mctx.moveTo(fx - fw * 0.5, fy);
+        mctx.quadraticCurveTo(fx, fy - fh * 0.58, fx + fw * 0.5, fy);
+        mctx.fill();
+      }
+
+      // Energy Visualization (Scissors vs Acceleration Arrows)
+      if (state.time > 0.1) {
+        if (cur.isLatent) {
+          const activeBonds = bonds.filter(b => b.threshold > brokenRatio);
+          scissors.forEach((sc, idx) => {
+            if (activeBonds.length === 0) return;
+            const target = activeBonds[idx % activeBonds.length];
+            const tx = (mols[target.a].x + mols[target.b].x) / 2;
+            const ty = (mols[target.a].y + mols[target.b].y) / 2;
+            sc.x += (tx - sc.x) * 0.08;
+            sc.y += (ty - sc.y) * 0.08;
+
+            mctx.save();
+            mctx.translate(sc.x, sc.y);
+            const openAngle = Math.abs(Math.sin(now * 3.5 + sc.snipPhase)) * 0.45;
+            mctx.strokeStyle = '#fde047';
+            mctx.lineWidth = 3.5;
+            mctx.lineCap = 'round';
+            mctx.beginPath(); mctx.rotate(openAngle); mctx.moveTo(-14, 0); mctx.lineTo(14, 0); mctx.stroke();
+            mctx.beginPath(); mctx.rotate(-2 * openAngle); mctx.moveTo(-14, 0); mctx.lineTo(14, 0); mctx.stroke();
+            mctx.fillStyle = '#fff';
+            mctx.beginPath(); mctx.arc(0, 0, 3, 0, Math.PI * 2); mctx.fill();
+            mctx.restore();
+          });
+
+          mctx.fillStyle = 'rgba(245, 158, 11, 0.22)';
+          mctx.strokeStyle = '#fbbf24';
+          mctx.lineWidth = 2;
+          mctx.beginPath(); mctx.roundRect(140, 56, 440, 38, 10); mctx.fill(); mctx.stroke();
+          mctx.fillStyle = '#fef08a';
+          mctx.font = 'bold 16px Microsoft JhengHei';
+          mctx.textAlign = 'center';
+          mctx.fillText('✂️ 熱量化身為剪刀：專心剪斷束縛（位能↑，溫度不動！）', 360, 81);
+        } else {
+          const arrowCount = state.power * 2 + 1;
+          for (let i = 0; i < arrowCount; i++) {
+            const ax = 360 + (i - (arrowCount - 1) / 2) * 58;
+            const ay = 378 - ((now * (18 + state.power * 10) + i * 25) % 58);
+            mctx.save();
+            mctx.strokeStyle = '#fb7185';
+            mctx.fillStyle = '#fb7185';
+            mctx.lineWidth = 3.5;
+            mctx.beginPath();
+            mctx.moveTo(ax, ay + 22);
+            mctx.lineTo(ax, ay);
+            mctx.stroke();
+            mctx.beginPath();
+            mctx.moveTo(ax, ay - 6);
+            mctx.lineTo(ax - 7, ay + 6);
+            mctx.lineTo(ax + 7, ay + 6);
+            mctx.closePath();
+            mctx.fill();
+            mctx.restore();
+          }
+
+          mctx.fillStyle = 'rgba(244, 63, 94, 0.18)';
+          mctx.strokeStyle = '#fb7185';
+          mctx.lineWidth = 1.5;
+          mctx.beginPath(); mctx.roundRect(120, 56, 480, 36, 10); mctx.fill(); mctx.stroke();
+          mctx.fillStyle = '#fecdd3';
+          mctx.font = 'bold 14px Microsoft JhengHei';
+          mctx.textAlign = 'center';
+          const shNote = state.specificHeat < 0.6
+            ? `⚡ 低比熱 (s=${state.specificHeat.toFixed(2)})：分子容易加速 → 溫度飆升快！`
+            : (state.specificHeat > 1.1
+              ? `🛡️ 高比熱 (s=${state.specificHeat.toFixed(2)})：需大量熱能才能加速 → 升溫慢！`
+              : `⚡ 熱量加速分子運動（動能↑ ＝ 溫度上升！）`);
+          mctx.fillText(shNote, 360, 79);
+        }
+      }
+
+      // Legend bottom
+      const powerText = state.power === 1 ? '小火爐 (0.85 kcal/min)' : (state.power === 2 ? '中火爐 (1.70 kcal/min)' : '大火爐 (2.55 kcal/min)');
+      mctx.fillStyle = '#cbd5e1';
+      mctx.font = 'bold 13px Microsoft JhengHei';
+      mctx.textAlign = 'center';
+      mctx.fillText(`${'🔥'.repeat(state.power)} ${powerText} ｜ 質量 ${state.mass} g ｜ 比熱 s = ${state.specificHeat.toFixed(2)}`, 360, 459);
+    }
+
+    function updateCompareStrip(cur) {
+      const cmpSeries = getCompareSeries();
+      if (cmpSeries.length > 0) {
+        compareStrip.style.display = 'grid';
+        compareStrip.innerHTML = cmpSeries.map(s => {
+          const p = evalCurve(state.time, s.mat, s.mass, s.power, s.sh);
+          return `
+            <div class="cmp-chip" style="border-left-color:${s.color};">
+              <div class="cmp-title">${s.short}${s.isPrimary ? ' ★' : ''}</div>
+              <div class="cmp-val" style="color:${s.color};">${p.temp.toFixed(1)} °C</div>
+              <div style="font-size:11px;color:#94a3b8;">Q = ${p.Q.toFixed(1)} kcal</div>
+            </div>
+          `;
+        }).join('');
+      } else if (state.pinnedConfig) {
+        compareStrip.style.display = 'grid';
+        const pc = state.pinnedConfig;
+        const pCur = evalCurve(state.time, pc.material, pc.mass, pc.power, pc.specificHeat);
+        compareStrip.innerHTML = `
+          <div class="cmp-chip" style="border-left-color:#38bdf8;">
+            <div class="cmp-title">目前主曲線 (s=${state.specificHeat.toFixed(2)}, ${state.power}x火)</div>
+            <div class="cmp-val" style="color:#38bdf8;">${cur.temp.toFixed(1)} °C</div>
+          </div>
+          <div class="cmp-chip" style="border-left-color:#34d399;">
+            <div class="cmp-title">📌 釘選對照 (${pc.label})</div>
+            <div class="cmp-val" style="color:#34d399;">${pCur.temp.toFixed(1)} °C</div>
+          </div>
+        `;
+      } else {
+        compareStrip.style.display = 'none';
+        compareStrip.innerHTML = '';
+      }
+    }
+
+    function updateUI(cur) {
+      timeSlider.value = (state.time / state.maxTime) * 100;
+      timeLabel.textContent = `${state.time.toFixed(1)} min｜Q = ${(cur.Q * 4.18).toFixed(1)} kJ`;
+      tempVal.textContent = `${cur.temp.toFixed(1)} °C`;
+      heatVal.textContent = `${cur.Q.toFixed(1)} kcal`;
+      stateVal.textContent = cur.modeLabel.split('（')[0];
+
+      phaseBanner.textContent = cur.modeLabel;
+      phaseBanner.classList.toggle('latent', cur.isLatent);
+      bondCountLabel.textContent = `分子束縛完整度：${Math.round(cur.bondIntegrity * 100)}%`;
+
+      keBar.style.width = `${Math.round(cur.keFrac * 100)}%`;
+      peBar.style.width = `${Math.round(cur.peFrac * 100)}%`;
+
+      keCard.classList.toggle('active-ke', state.time > 0 && !cur.isLatent);
+      peCard.classList.toggle('active-pe', state.time > 0 && cur.isLatent);
+
+      kePct.textContent = cur.isLatent ? '持平（溫度不變）' : `${Math.round(cur.keFrac * 100)}% (上升中)`;
+      pePct.textContent = cur.isLatent ? '🔥 急遽增加中！' : `${Math.round(cur.peFrac * 100)}%`;
+
+      updateCompareStrip(cur);
+    }
+
+    function setSpecificHeat(val) {
+      state.specificHeat = val;
+      shSlider.value = val;
+      shBadge.textContent = `s = ${val.toFixed(2)} cal/g·°C`;
+      document.querySelectorAll('[data-sh]').forEach(b => {
+        b.classList.toggle('active', Math.abs(parseFloat(b.dataset.sh) - val) < 0.02);
+      });
+    }
+
+    // Event bindings
+    playBtn.addEventListener('click', () => {
+      if (state.time >= state.maxTime) state.time = 0;
+      state.playing = !state.playing;
+      playBtn.textContent = state.playing ? '⏸ 暫停加熱' : '▶ 繼續加熱';
+    });
+
+    resetBtn.addEventListener('click', () => {
+      state.playing = false;
+      state.time = 0;
+      playBtn.textContent = '▶ 開始加熱';
+      initMolecules();
+    });
+
+    timeSlider.addEventListener('input', (e) => {
+      state.playing = false;
+      playBtn.textContent = '▶ 開始加熱';
+      state.time = (parseFloat(e.target.value) / 100) * state.maxTime;
+    });
+
+    function selectMaterial(mat, btnId) {
+      state.material = mat;
+      ['matIce', 'matWax', 'matPure'].forEach(id => {
+        document.getElementById(id).classList.toggle('active', id === btnId);
+      });
+      state.time = 0;
+      state.playing = false;
+      playBtn.textContent = '▶ 開始加熱';
+      initMolecules();
+    }
+
+    document.getElementById('matIce').addEventListener('click', () => selectMaterial('ice', 'matIce'));
+    document.getElementById('matWax').addEventListener('click', () => selectMaterial('wax', 'matWax'));
+    document.getElementById('matPure').addEventListener('click', () => selectMaterial('pure', 'matPure'));
+
+    document.getElementById('mass100').addEventListener('click', (e) => {
+      state.mass = 100;
+      e.target.classList.add('active');
+      document.getElementById('mass200').classList.remove('active');
+    });
+
+    document.getElementById('mass200').addEventListener('click', (e) => {
+      state.mass = 200;
+      e.target.classList.add('active');
+      document.getElementById('mass100').classList.remove('active');
+    });
+
+    document.querySelectorAll('[data-sh]').forEach(btn => {
+      btn.addEventListener('click', () => setSpecificHeat(parseFloat(btn.dataset.sh)));
+    });
+
+    shSlider.addEventListener('input', (e) => {
+      setSpecificHeat(parseFloat(e.target.value));
+    });
+
+    document.querySelectorAll('[data-power]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('[data-power]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        state.power = parseInt(btn.dataset.power, 10);
+      });
+    });
+
+    document.querySelectorAll('[data-cmp]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('[data-cmp]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        state.compareMode = btn.dataset.cmp;
+      });
+    });
+
+    pinCurveBtn.addEventListener('click', () => {
+      if (state.pinnedConfig) {
+        state.pinnedConfig = null;
+        pinCurveBtn.textContent = '📌 釘選目前曲線為對照';
+        pinCurveBtn.classList.remove('btn-amber');
+        pinCurveBtn.classList.add('btn-emerald');
+      } else {
+        const matName = state.material === 'ice' ? '冰' : (state.material === 'wax' ? '蠟' : '純液體');
+        state.pinnedConfig = {
+          material: state.material,
+          mass: state.mass,
+          specificHeat: state.specificHeat,
+          power: state.power,
+          label: `${matName} ${state.mass}g s=${state.specificHeat.toFixed(2)} ${state.power}x火`
+        };
+        pinCurveBtn.textContent = `✕ 清除釘選 (${state.pinnedConfig.label})`;
+        pinCurveBtn.classList.remove('btn-emerald');
+        pinCurveBtn.classList.add('btn-amber');
+      }
+    });
+
+    function loop(ts) {
+      if (!state.lastTs) state.lastTs = ts;
+      const dt = (ts - state.lastTs) / 1000;
+      state.lastTs = ts;
+
+      if (state.playing) {
+        state.time += dt * 1.45;
+        if (state.time >= state.maxTime) {
+          state.time = state.maxTime;
+          state.playing = false;
+          playBtn.textContent = '▶ 重新加熱';
+        }
+      }
+
+      const cur = evalCurve(state.time, state.material, state.mass, state.power, state.specificHeat);
+      updateUI(cur);
+      drawHeatingCurve(cur);
+      stepAndDrawMicro(cur, dt);
+      requestAnimationFrame(loop);
+    }
+
+    initMolecules();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

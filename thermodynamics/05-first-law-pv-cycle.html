@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>05｜熱力學第一定律與「P-V 圖循環做功」連動儀</title>
+  <meta name="description" content="支援卡諾循環、等溫與絕熱線比較、自由拖曳 P-V 循環做功面積積分，即時連動 Q = ΔU + W 動態能量條。" />
+  <meta name="portal-tags" content="熱學, 高中物理, 熱力學第一定律, PV圖" />
+  <meta name="portal-badge" content="高中物理" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .eq-banner {
+      background: rgba(251, 113, 133, 0.14);
+      border: 1px solid rgba(251, 113, 133, 0.45);
+      color: #fecdd3;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-weight: 800;
+      font-size: 14px;
+    }
+    .energy-bars-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      background: rgba(15, 23, 42, 0.72);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 12px 14px;
+    }
+    .bi-bar-row {
+      display: grid;
+      grid-template-columns: 118px 1fr 82px;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .bi-track {
+      position: relative;
+      height: 18px;
+      background: #1e293b;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .bi-center {
+      position: absolute;
+      left: 50%;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: rgba(248, 250, 252, 0.5);
+      z-index: 2;
+    }
+    .bi-fill {
+      position: absolute;
+      top: 2px;
+      bottom: 2px;
+      border-radius: 4px;
+      transition: all 0.05s linear;
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-left">
+      <a class="back-btn" href="../index.html#thermodynamics">← 返回主選單</a>
+      <span class="module-badge badge-senior">高中物理</span>
+      <h1 class="topbar-title">5. 熱力學第一定律與「P-V 圖循環做功」連動儀</h1>
+    </div>
+    <div class="topbar-right">
+      <div class="eq-banner">物理約定：Q = ΔU + W（W：氣體對外做功）</div>
+    </div>
+  </header>
+
+  <main class="sim-container">
+    <div class="callout" id="modeHint">
+      <strong>大屏互動提示：</strong>可選預設循環、切換<strong>「等溫 vs. 絕熱比較」</strong>，或直接選擇<strong>「✏️ 手繪自由路徑」</strong>在座標軸上畫出封閉循環！也支援直接拖曳矩形/三角循環的頂點！
+    </div>
+
+    <!-- Controls -->
+    <section class="control-bar">
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="btn btn-sm active" data-preset="rect">🟦 矩形循環</button>
+        <button class="btn btn-sm" data-preset="carnot">🔁 卡諾循環</button>
+        <button class="btn btn-sm" data-preset="tri">🔺 三角循環 (可拖曳頂點)</button>
+        <button class="btn btn-sm btn-amber" data-preset="compare">⚡ 等溫 vs 絕熱比較</button>
+        <button class="btn btn-sm" data-preset="draw">✏️ 手繪自由路徑</button>
+      </div>
+
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="btn btn-primary btn-sm" id="playBtn">▶ 播放掃描</button>
+        <button class="btn btn-sm" id="resetBtn">↺ 重置起點</button>
+      </div>
+
+      <div class="control-group" style="flex:1 1 240px;">
+        <div class="control-label">
+          <span>過程進度掃描（可拖曳單步講解）</span>
+          <span class="control-value" id="progText">0%</span>
+        </div>
+        <input type="range" id="progSlider" min="0" max="1" step="0.002" value="0" />
+      </div>
+    </section>
+
+    <section class="split-grid">
+      <!-- Left: P-V Diagram with Area Integral & Draggable Nodes / Freehand Draw -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">📈 P-V 狀態圖與做功積分面積 (W = ∫ P dV)</div>
+          <span class="control-value" id="segTypeBadge">等壓膨脹</span>
+        </div>
+        <div class="canvas-wrap">
+          <canvas id="pvCanvas" width="720" height="480" style="touch-action:none;"></canvas>
+        </div>
+        <div class="metrics-row">
+          <div class="metric-box">
+            <div class="metric-label">目前狀態 (P, V)</div>
+            <div class="metric-val" id="pvStateVal" style="font-size:17px; color:#38bdf8;">2.0 atm, 1.0 L</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">氣體溫度指標 (PV ∝ T)</div>
+            <div class="metric-val" id="pvTempVal" style="font-size:17px; color:#fbbf24;">244 K</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">循環淨功 W_net</div>
+            <div class="metric-val" id="netWorkVal" style="font-size:17px; color:#34d399;">0.00 L·atm</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Energy Balance + Micro Cylinder(s) -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">⚖️ 能量守恆天平 (Q = ΔU + W) 與微觀氣缸</div>
+          <span style="font-size:13px; color:var(--text-muted);" id="cylSubtitle">單原子氣體 γ = 5/3</span>
+        </div>
+
+        <!-- Bidirectional Energy Bars -->
+        <div class="energy-bars-wrap">
+          <div class="bi-bar-row">
+            <span style="color:#fb7185;">吸放熱 Q</span>
+            <div class="bi-track">
+              <div class="bi-center"></div>
+              <div class="bi-fill" id="barQ" style="background:#fb7185;"></div>
+            </div>
+            <span id="valQ" style="text-align:right; color:#fda4af;">0.00</span>
+          </div>
+          <div class="bi-bar-row">
+            <span style="color:#fbbf24;">內能變化 ΔU</span>
+            <div class="bi-track">
+              <div class="bi-center"></div>
+              <div class="bi-fill" id="barU" style="background:#fbbf24;"></div>
+            </div>
+            <span id="valU" style="text-align:right; color:#fde68a;">0.00</span>
+          </div>
+          <div class="bi-bar-row">
+            <span style="color:#34d399;">對外做功 W</span>
+            <div class="bi-track">
+              <div class="bi-center"></div>
+              <div class="bi-fill" id="barW" style="background:#34d399;"></div>
+            </div>
+            <span id="valW" style="text-align:right; color:#6ee7b7;">0.00</span>
+          </div>
+          <div style="font-size:12.5px; color:var(--text-muted); text-align:right;">
+            單位：L·atm（1 L·atm ≈ 101.3 J）｜ 左側為負值（放熱／降溫／壓縮），右側為正值
+          </div>
+        </div>
+
+        <div class="canvas-wrap">
+          <canvas id="cylCanvas" width="720" height="340"></canvas>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const pvCanvas = document.getElementById('pvCanvas');
+    const pctx = pvCanvas.getContext('2d');
+    const cylCanvas = document.getElementById('cylCanvas');
+    const cctx = cylCanvas.getContext('2d');
+
+    const progSlider = document.getElementById('progSlider');
+    const progText = document.getElementById('progText');
+    const playBtn = document.getElementById('playBtn');
+    const segTypeBadge = document.getElementById('segTypeBadge');
+    const pvStateVal = document.getElementById('pvStateVal');
+    const pvTempVal = document.getElementById('pvTempVal');
+    const netWorkVal = document.getElementById('netWorkVal');
+    const modeHint = document.getElementById('modeHint');
+    const cylSubtitle = document.getElementById('cylSubtitle');
+
+    const barQ = document.getElementById('barQ'), valQ = document.getElementById('valQ');
+    const barU = document.getElementById('barU'), valU = document.getElementById('valU');
+    const barW = document.getElementById('barW'), valW = document.getElementById('valW');
+
+    // P-V coordinate bounds: V in [0, 5] L, P in [0, 5] atm
+    const PAD = { left: 66, right: 30, top: 32, bottom: 54 };
+    const PW = pvCanvas.width - PAD.left - PAD.right;
+    const PH = pvCanvas.height - PAD.top - PAD.bottom;
+    const V_MAX = 5.0, P_MAX = 5.0;
+    const GAMMA = 5 / 3; // monatomic ideal gas: U = 1.5 * P * V
+
+    const toX = (V) => PAD.left + (V / V_MAX) * PW;
+    const toY = (P) => PAD.top + PH - (P / P_MAX) * PH;
+    const fromX = (x) => Math.max(0.4, Math.min(4.8, ((x - PAD.left) / PW) * V_MAX));
+    const fromY = (y) => Math.max(0.4, Math.min(4.8, ((PAD.top + PH - y) / PH) * P_MAX));
+
+    const state = {
+      preset: 'rect', // 'rect' | 'carnot' | 'tri' | 'compare' | 'draw'
+      progress: 0,    // 0..1
+      playing: false,
+      // Editable vertices for rect & tri
+      rectBounds: { v1: 1.0, v2: 3.8, p1: 1.2, p2: 3.6 },
+      triNodes: [
+        { V: 1.0, P: 3.8 },
+        { V: 3.8, P: 3.8 },
+        { V: 3.8, P: 1.2 }
+      ],
+      freehandPts: [],
+      isDrawing: false,
+      dragNodeIdx: -1,
+      pathSamples: [],      // array of { V, P, label, segType }
+      compareIsoSamples: [],
+      compareAdiaSamples: []
+    };
+
+    // Build path samples for current preset
+    function rebuildPath() {
+      const pts = [];
+      const N_SEG = 50;
+
+      if (state.preset === 'rect') {
+        const { v1, v2, p1, p2 } = state.rectBounds;
+        // 1: Top isobaric expansion (v1,p2) -> (v2,p2)
+        for (let i = 0; i < N_SEG; i++) {
+          const u = i / N_SEG;
+          pts.push({ V: v1 + (v2 - v1) * u, P: p2, label: '① 等壓膨脹 (Q>0, ΔU>0, W>0)' });
+        }
+        // 2: Right isochoric cooling (v2,p2) -> (v2,p1)
+        for (let i = 0; i < N_SEG; i++) {
+          const u = i / N_SEG;
+          pts.push({ V: v2, P: p2 + (p1 - p2) * u, label: '② 等容降壓放熱 (W=0, ΔU<0, Q<0)' });
+        }
+        // 3: Bottom isobaric compression (v2,p1) -> (v1,p1)
+        for (let i = 0; i < N_SEG; i++) {
+          const u = i / N_SEG;
+          pts.push({ V: v2 + (v1 - v2) * u, P: p1, label: '③ 等壓壓縮 (W<0, ΔU<0, Q<0)' });
+        }
+        // 4: Left isochoric heating (v1,p1) -> (v1,p2)
+        for (let i = 0; i <= N_SEG; i++) {
+          const u = i / N_SEG;
+          pts.push({ V: v1, P: p1 + (p2 - p1) * u, label: '④ 等容升壓吸熱 (W=0, ΔU>0, Q>0)' });
+        }
+      } else if (state.preset === 'carnot') {
+        // Carnot Cycle with monatomic gamma = 5/3:
+        // State A: V_A = 1.0, P_A = 4.2 -> T_H_const = 4.2
+        // State B (isothermal to V_B = 2.0): P_B = 2.1
+        // Adiabatic B -> C to V_C = 3.6: P_C = P_B * (V_B/V_C)^gamma = 2.1 * (2/3.6)^(5/3) = 0.785
+        // T_L_const = P_C * V_C = 2.826
+        // State D (adiabatic from D -> A): P_D * V_D^gamma = P_A * V_A^gamma and P_D * V_D = T_L_const
+        // => V_D^(gamma - 1) = (P_A * V_A^gamma) / T_L_const => V_D = (4.2 / 2.826)^(1 / 0.6667) = 1.812, P_D = 1.56
+        const Va = 1.0, Pa = 4.2;
+        const Th = Pa * Va;
+        const Vb = 2.0, Pb = Th / Vb;
+        const Vc = 3.6, Pc = Pb * Math.pow(Vb / Vc, GAMMA);
+        const Tl = Pc * Vc;
+        const Vd = Math.pow(Th / Tl, 1 / (GAMMA - 1)) * Va;
+        const Pd = Tl / Vd;
+
+        for (let i = 0; i < N_SEG; i++) {
+          const V = Va + (Vb - Va) * (i / N_SEG);
+          pts.push({ V, P: Th / V, label: '① 高溫等溫膨脹 (ΔU=0, Q=W>0)' });
+        }
+        for (let i = 0; i < N_SEG; i++) {
+          const V = Vb + (Vc - Vb) * (i / N_SEG);
+          pts.push({ V, P: Pb * Math.pow(Vb / V, GAMMA), label: '② 絕熱膨脹降溫 (Q=0, W=-ΔU>0)' });
+        }
+        for (let i = 0; i < N_SEG; i++) {
+          const V = Vc + (Vd - Vc) * (i / N_SEG);
+          pts.push({ V, P: Tl / V, label: '③ 低溫等溫壓縮 (ΔU=0, Q=W<0)' });
+        }
+        for (let i = 0; i <= N_SEG; i++) {
+          const V = Vd + (Va - Vd) * (i / N_SEG);
+          pts.push({ V, P: Pd * Math.pow(Vd / V, GAMMA), label: '④ 絕熱壓縮升溫 (Q=0, ΔU=-W>0)' });
+        }
+      } else if (state.preset === 'tri') {
+        const nodes = state.triNodes;
+        for (let seg = 0; seg < nodes.length; seg++) {
+          const a = nodes[seg];
+          const b = nodes[(seg + 1) % nodes.length];
+          const steps = seg === nodes.length - 1 ? N_SEG + 1 : N_SEG;
+          for (let i = 0; i < steps; i++) {
+            const u = i / N_SEG;
+            pts.push({
+              V: a.V + (b.V - a.V) * u,
+              P: a.P + (b.P - a.P) * u,
+              label: `三角循環邊 ${seg + 1}（可拖曳頂點）`
+            });
+          }
+        }
+      } else if (state.preset === 'compare') {
+        // Both start at (V0=1.0, P0=4.2) and expand to V1=3.8
+        const V0 = 1.0, P0 = 4.2, V1 = 3.8;
+        state.compareIsoSamples = [];
+        state.compareAdiaSamples = [];
+        for (let i = 0; i <= 120; i++) {
+          const V = V0 + (V1 - V0) * (i / 120);
+          const P_iso = (P0 * V0) / V;
+          const P_adia = P0 * Math.pow(V0 / V, GAMMA);
+          state.compareIsoSamples.push({ V, P: P_iso });
+          state.compareAdiaSamples.push({ V, P: P_adia });
+          pts.push({ V, P: P_adia, label: '等溫線 (上) vs 絕熱線 (下，更陡峭！)' });
+        }
+      } else if (state.preset === 'draw') {
+        if (state.freehandPts.length >= 2) {
+          state.freehandPts.forEach(p => {
+            pts.push({ V: p.V, P: p.P, label: '自訂手繪熱力學路徑' });
+          });
+        } else {
+          pts.push({ V: 1.5, P: 2.5, label: '請直接在左側 P-V 圖上按住滑鼠/手指畫出路徑！' });
+        }
+      }
+
+      state.pathSamples = pts;
+    }
+
+    // Compute cumulative W, dU, Q up to sample index k
+    function integrateTo(idx) {
+      const pts = state.pathSamples;
+      if (pts.length < 2) return { W: 0, dU: 0, Q: 0, totalW: 0 };
+
+      let W = 0;
+      for (let i = 1; i <= idx; i++) {
+        const dV = pts[i].V - pts[i - 1].V;
+        const avgP = 0.5 * (pts[i].P + pts[i - 1].P);
+        W += avgP * dV;
+      }
+      const dU = 1.5 * (pts[idx].P * pts[idx].V - pts[0].P * pts[0].V);
+      const Q = dU + W;
+
+      let totalW = 0;
+      for (let i = 1; i < pts.length; i++) {
+        totalW += 0.5 * (pts[i].P + pts[i - 1].P) * (pts[i].V - pts[i - 1].V);
+      }
+
+      return { W, dU, Q, totalW };
+    }
+
+    function drawPVDiagram() {
+      const w = pvCanvas.width;
+      const h = pvCanvas.height;
+      pctx.clearRect(0, 0, w, h);
+
+      // Background subtle isotherms (hyperbolas P*V = const)
+      pctx.save();
+      pctx.strokeStyle = 'rgba(148, 163, 184, 0.10)';
+      pctx.lineWidth = 1;
+      [2, 4, 6, 8, 10].forEach(c => {
+        pctx.beginPath();
+        let started = false;
+        for (let V = 0.3; V <= V_MAX; V += 0.08) {
+          const P = c / V;
+          if (P <= P_MAX) {
+            const x = toX(V), y = toY(P);
+            if (!started) { pctx.moveTo(x, y); started = true; } else pctx.lineTo(x, y);
+          }
+        }
+        pctx.stroke();
+      });
+      pctx.restore();
+
+      // Grid lines
+      pctx.strokeStyle = 'rgba(148,163,184,0.12)';
+      pctx.lineWidth = 1;
+      for (let v = 0; v <= V_MAX; v += 1) {
+        const x = toX(v);
+        pctx.beginPath(); pctx.moveTo(x, PAD.top); pctx.lineTo(x, PAD.top + PH); pctx.stroke();
+        pctx.fillStyle = '#94a3b8'; pctx.font = '12px sans-serif'; pctx.textAlign = 'center';
+        pctx.fillText(`${v} L`, x, PAD.top + PH + 20);
+      }
+      for (let p = 0; p <= P_MAX; p += 1) {
+        const y = toY(p);
+        pctx.beginPath(); pctx.moveTo(PAD.left, y); pctx.lineTo(PAD.left + PW, y); pctx.stroke();
+        pctx.fillStyle = '#94a3b8'; pctx.font = '12px sans-serif'; pctx.textAlign = 'right';
+        pctx.fillText(`${p}`, PAD.left - 10, y + 4);
+      }
+
+      // Axes
+      pctx.strokeStyle = '#cbd5e1';
+      pctx.lineWidth = 2.5;
+      pctx.beginPath();
+      pctx.moveTo(PAD.left, PAD.top);
+      pctx.lineTo(PAD.left, PAD.top + PH);
+      pctx.lineTo(PAD.left + PW, PAD.top + PH);
+      pctx.stroke();
+
+      pctx.fillStyle = '#e2e8f0';
+      pctx.font = 'bold 14px Microsoft JhengHei';
+      pctx.textAlign = 'center';
+      pctx.fillText('體積 V (L)', PAD.left + PW / 2, h - 10);
+      pctx.textAlign = 'left';
+      pctx.fillText('壓力 P (atm)', 12, 22);
+
+      const pts = state.pathSamples;
+      const maxIdx = Math.min(pts.length - 1, Math.floor(state.progress * (pts.length - 1)));
+
+      if (state.preset === 'compare') {
+        const iso = state.compareIsoSamples;
+        const adia = state.compareAdiaSamples;
+        const cIdx = Math.min(iso.length - 1, Math.floor(state.progress * (iso.length - 1)));
+
+        // Area under isotherm up to cIdx
+        pctx.fillStyle = 'rgba(251, 113, 133, 0.16)';
+        pctx.beginPath();
+        pctx.moveTo(toX(iso[0].V), toY(0));
+        for (let i = 0; i <= cIdx; i++) pctx.lineTo(toX(iso[i].V), toY(iso[i].P));
+        pctx.lineTo(toX(iso[cIdx].V), toY(0));
+        pctx.closePath();
+        pctx.fill();
+
+        // Area under adiabatic up to cIdx
+        pctx.fillStyle = 'rgba(56, 189, 248, 0.24)';
+        pctx.beginPath();
+        pctx.moveTo(toX(adia[0].V), toY(0));
+        for (let i = 0; i <= cIdx; i++) pctx.lineTo(toX(adia[i].V), toY(adia[i].P));
+        pctx.lineTo(toX(adia[cIdx].V), toY(0));
+        pctx.closePath();
+        pctx.fill();
+
+        // Full ghost curves
+        pctx.strokeStyle = 'rgba(251, 113, 133, 0.35)'; pctx.lineWidth = 2.5;
+        pctx.beginPath();
+        iso.forEach((pt, i) => i === 0 ? pctx.moveTo(toX(pt.V), toY(pt.P)) : pctx.lineTo(toX(pt.V), toY(pt.P)));
+        pctx.stroke();
+
+        pctx.strokeStyle = 'rgba(56, 189, 248, 0.35)';
+        pctx.beginPath();
+        adia.forEach((pt, i) => i === 0 ? pctx.moveTo(toX(pt.V), toY(pt.P)) : pctx.lineTo(toX(pt.V), toY(pt.P)));
+        pctx.stroke();
+
+        // Active traced curves
+        pctx.strokeStyle = '#fb7185'; pctx.lineWidth = 4;
+        pctx.beginPath();
+        for (let i = 0; i <= cIdx; i++) i === 0 ? pctx.moveTo(toX(iso[i].V), toY(iso[i].P)) : pctx.lineTo(toX(iso[i].V), toY(iso[i].P));
+        pctx.stroke();
+
+        pctx.strokeStyle = '#38bdf8'; pctx.lineWidth = 4;
+        pctx.beginPath();
+        for (let i = 0; i <= cIdx; i++) i === 0 ? pctx.moveTo(toX(adia[i].V), toY(adia[i].P)) : pctx.lineTo(toX(adia[i].V), toY(adia[i].P));
+        pctx.stroke();
+
+        // Moving dots & labels
+        const curIso = iso[cIdx], curAdia = adia[cIdx];
+        [[curIso, '#fb7185', '等溫線 (較平緩, T 固定)'], [curAdia, '#38bdf8', '絕熱線 (更陡峭, T 驟降!)']].forEach(([pt, col, txt], k) => {
+          pctx.beginPath(); pctx.arc(toX(pt.V), toY(pt.P), 7, 0, Math.PI * 2);
+          pctx.fillStyle = col; pctx.fill(); pctx.strokeStyle = '#fff'; pctx.lineWidth = 2; pctx.stroke();
+          pctx.fillStyle = col; pctx.font = 'bold 13px Microsoft JhengHei'; pctx.textAlign = 'left';
+          pctx.fillText(txt, toX(iso[iso.length - 1].V) - 180, toY(k === 0 ? iso[iso.length - 1].P : adia[adia.length - 1].P) + (k === 0 ? -12 : 22));
+        });
+        return;
+      }
+
+      // Standard / Cycle / Freehand area scan under traced path
+      if (pts.length >= 2) {
+        // Draw swept trapezoid strips up to maxIdx
+        for (let i = 1; i <= maxIdx; i++) {
+          const a = pts[i - 1], b = pts[i];
+          const dV = b.V - a.V;
+          if (Math.abs(dV) < 1e-6) continue;
+          pctx.beginPath();
+          pctx.moveTo(toX(a.V), toY(0));
+          pctx.lineTo(toX(a.V), toY(a.P));
+          pctx.lineTo(toX(b.V), toY(b.P));
+          pctx.lineTo(toX(b.V), toY(0));
+          pctx.closePath();
+          // Expansion W > 0 (amber/green), Compression W < 0 (blue subtraction)
+          pctx.fillStyle = dV > 0 ? 'rgba(52, 211, 153, 0.24)' : 'rgba(56, 189, 248, 0.22)';
+          pctx.fill();
+        }
+
+        // Ghost full path
+        pctx.save();
+        pctx.strokeStyle = 'rgba(203, 213, 225, 0.28)';
+        pctx.setLineDash([5, 5]);
+        pctx.lineWidth = 2.5;
+        pctx.beginPath();
+        pts.forEach((pt, i) => i === 0 ? pctx.moveTo(toX(pt.V), toY(pt.P)) : pctx.lineTo(toX(pt.V), toY(pt.P)));
+        pctx.stroke();
+        pctx.restore();
+
+        // Active traced curve
+        for (let i = 1; i <= maxIdx; i++) {
+          const a = pts[i - 1], b = pts[i];
+          const dV = b.V - a.V;
+          pctx.strokeStyle = dV > 0.001 ? '#34d399' : (dV < -0.001 ? '#38bdf8' : '#fbbf24');
+          pctx.lineWidth = 4.5;
+          pctx.beginPath();
+          pctx.moveTo(toX(a.V), toY(a.P));
+          pctx.lineTo(toX(b.V), toY(b.P));
+          pctx.stroke();
+        }
+
+        // Current state dot
+        const cur = pts[maxIdx];
+        pctx.beginPath();
+        pctx.arc(toX(cur.V), toY(cur.P), 8, 0, Math.PI * 2);
+        pctx.fillStyle = '#fb7185';
+        pctx.fill();
+        pctx.lineWidth = 3;
+        pctx.strokeStyle = '#fff';
+        pctx.stroke();
+      }
+
+      // Draw draggable vertices for rect and tri
+      if (state.preset === 'tri') {
+        state.triNodes.forEach((n, idx) => {
+          pctx.beginPath(); pctx.arc(toX(n.V), toY(n.P), 9, 0, Math.PI * 2);
+          pctx.fillStyle = '#fbbf24'; pctx.fill();
+          pctx.strokeStyle = '#fff'; pctx.lineWidth = 2; pctx.stroke();
+          pctx.fillStyle = '#0f172a'; pctx.font = 'bold 11px sans-serif'; pctx.textAlign = 'center';
+          pctx.fillText(idx + 1, toX(n.V), toY(n.P) + 4);
+        });
+      } else if (state.preset === 'rect') {
+        const { v1, v2, p1, p2 } = state.rectBounds;
+        [[v1, p2], [v2, p2], [v2, p1], [v1, p1]].forEach(([v, p], idx) => {
+          pctx.beginPath(); pctx.arc(toX(v), toY(p), 7.5, 0, Math.PI * 2);
+          pctx.fillStyle = '#fbbf24'; pctx.fill();
+          pctx.strokeStyle = '#fff'; pctx.lineWidth = 2; pctx.stroke();
+        });
+      }
+    }
+
+    // Micro gas particles inside cylinder
+    const cylMols = Array.from({ length: 28 }, () => ({
+      rx: Math.random(),
+      ry: Math.random(),
+      ang: Math.random() * Math.PI * 2
+    }));
+
+    function drawSingleCylinder(x, y, w, h, V, P, Qsign, label, tempK) {
+      // V in [0.5..5.0] -> piston position
+      const frac = Math.max(0.12, Math.min(0.95, V / 5.0));
+      const pistonX = x + 16 + frac * (w - 36);
+
+      // Cylinder body
+      cctx.fillStyle = '#0b1222';
+      cctx.fillRect(x, y, w, h);
+      cctx.strokeStyle = '#94a3b8';
+      cctx.lineWidth = 3;
+      cctx.strokeRect(x, y, w, h);
+
+      // Temp color for particles
+      const tNorm = Math.max(0, Math.min(1, (tempK - 120) / 600));
+      const pCol = tNorm < 0.4 ? '#38bdf8' : (tNorm < 0.72 ? '#fbbf24' : '#fb7185');
+      const speed = 0.008 + tNorm * 0.032;
+
+      // Particles move inside [x+6, pistonX-6]
+      cylMols.forEach(m => {
+        if (!state.paused) {
+          m.rx += Math.cos(m.ang) * speed;
+          m.ry += Math.sin(m.ang) * speed;
+          if (m.rx < 0.05) { m.rx = 0.05; m.ang = Math.PI - m.ang; }
+          if (m.rx > 0.95) { m.rx = 0.95; m.ang = Math.PI - m.ang; }
+          if (m.ry < 0.08) { m.ry = 0.08; m.ang = -m.ang; }
+          if (m.ry > 0.92) { m.ry = 0.92; m.ang = -m.ang; }
+        }
+        const px = x + 6 + m.rx * Math.max(20, pistonX - x - 12);
+        const py = y + 6 + m.ry * (h - 12);
+        cctx.beginPath(); cctx.arc(px, py, 4.5, 0, Math.PI * 2);
+        cctx.fillStyle = pCol; cctx.fill();
+      });
+
+      // Piston
+      cctx.fillStyle = '#cbd5e1';
+      cctx.fillRect(pistonX, y + 3, 12, h - 6);
+      cctx.fillStyle = '#64748b';
+      cctx.fillRect(pistonX + 12, y + h / 2 - 5, x + w - pistonX, 10);
+
+      // Title & Heat Flow indicator
+      cctx.fillStyle = '#f8fafc';
+      cctx.font = 'bold 14px Microsoft JhengHei';
+      cctx.textAlign = 'left';
+      cctx.fillText(`${label}｜T ≈ ${Math.round(tempK)} K`, x, y - 10);
+
+      if (Qsign !== 0) {
+        cctx.fillStyle = Qsign > 0 ? '#fb7185' : '#38bdf8';
+        cctx.font = 'bold 13px Microsoft JhengHei';
+        cctx.textAlign = 'right';
+        cctx.fillText(Qsign > 0 ? '🔥 外界吸熱 (Q > 0)' : '❄️ 向外放熱 (Q < 0)', x + w, y - 10);
+      } else {
+        cctx.fillStyle = '#94a3b8';
+        cctx.font = 'bold 13px Microsoft JhengHei';
+        cctx.textAlign = 'right';
+        cctx.fillText('🧱 絕熱壁 (Q = 0)', x + w, y - 10);
+      }
+    }
+
+    function drawCylindersAndBars() {
+      const w = cylCanvas.width;
+      const h = cylCanvas.height;
+      cctx.clearRect(0, 0, w, h);
+
+      const pts = state.pathSamples;
+      if (pts.length < 2) return;
+      const idx = Math.min(pts.length - 1, Math.floor(state.progress * (pts.length - 1)));
+      const cur = pts[idx];
+      const integ = integrateTo(idx);
+
+      // Update bidirectional energy bars (scale max = 14 L·atm)
+      const setBar = (el, valEl, val) => {
+        const maxVal = 12;
+        const pct = Math.min(50, (Math.abs(val) / maxVal) * 50);
+        if (val >= 0) {
+          el.style.left = '50%';
+          el.style.width = `${pct}%`;
+        } else {
+          el.style.left = `${50 - pct}%`;
+          el.style.width = `${pct}%`;
+        }
+        valEl.textContent = `${val >= 0 ? '+' : ''}${val.toFixed(2)}`;
+      };
+
+      if (state.preset === 'compare') {
+        const iso = state.compareIsoSamples;
+        const adia = state.compareAdiaSamples;
+        const cIdx = Math.min(iso.length - 1, Math.floor(state.progress * (iso.length - 1)));
+        const curIso = iso[cIdx], curAdia = adia[cIdx];
+
+        // Compute adiabatic W up to cIdx
+        let wAdia = 0;
+        for (let i = 1; i <= cIdx; i++) wAdia += 0.5 * (adia[i].P + adia[i - 1].P) * (adia[i].V - adia[i - 1].V);
+        const dUAdia = 1.5 * (curAdia.P * curAdia.V - adia[0].P * adia[0].V);
+        setBar(barQ, valQ, 0);
+        setBar(barU, valU, dUAdia);
+        setBar(barW, valW, wAdia);
+
+        const T_iso = curIso.P * curIso.V * 121.8;
+        const T_adia = curAdia.P * curAdia.V * 121.8;
+        drawSingleCylinder(40, 42, 640, 108, curIso.V, curIso.P, 1, '上氣缸：等溫膨脹（補熱維持動能）', T_iso);
+        drawSingleCylinder(40, 200, 640, 108, curAdia.V, curAdia.P, 0, '下氣缸：絕熱膨脹（分子撞活塞變慢降溫）', T_adia);
+
+        segTypeBadge.textContent = '等溫線 vs 絕熱線 雙氣缸同步對比';
+        pvStateVal.textContent = `等溫 ${curIso.P.toFixed(2)}｜絕熱 ${curAdia.P.toFixed(2)} atm`;
+        pvTempVal.textContent = `等溫 ${Math.round(T_iso)}K｜絕熱 ${Math.round(T_adia)}K`;
+        netWorkVal.textContent = `絕熱功 W = +${wAdia.toFixed(2)} L·atm`;
+      } else {
+        setBar(barQ, valQ, integ.Q);
+        setBar(barU, valU, integ.dU);
+        setBar(barW, valW, integ.W);
+
+        // Instantaneous dQ sign at step idx
+        let stepQ = 0;
+        if (idx > 0) {
+          const prev = pts[idx - 1];
+          const dW = 0.5 * (cur.P + prev.P) * (cur.V - prev.V);
+          const ddU = 1.5 * (cur.P * cur.V - prev.P * prev.V);
+          const dQ = ddU + dW;
+          stepQ = Math.abs(dQ) < 0.002 ? 0 : (dQ > 0 ? 1 : -1);
+        }
+
+        const T_cur = cur.P * cur.V * 121.8; // scaled Kelvin (for n=0.1 mol: PV/nR)
+        drawSingleCylinder(40, 56, 640, 210, cur.V, cur.P, stepQ, '微觀氣缸即時模擬', T_cur);
+
+        segTypeBadge.textContent = cur.label;
+        pvStateVal.textContent = `${cur.P.toFixed(2)} atm, ${cur.V.toFixed(2)} L`;
+        pvTempVal.textContent = `${Math.round(T_cur)} K`;
+        netWorkVal.textContent = `${integ.totalW >= 0 ? '+' : ''}${integ.totalW.toFixed(2)} L·atm`;
+      }
+
+      progText.textContent = `${Math.round(state.progress * 100)}%`;
+      progSlider.value = state.progress;
+    }
+
+    // Canvas interaction (dragging vertices or freehand drawing)
+    function getPVCoords(evt) {
+      const rect = pvCanvas.getBoundingClientRect();
+      const cx = (evt.touches ? evt.touches[0].clientX : evt.clientX) - rect.left;
+      const cy = (evt.touches ? evt.touches[0].clientY : evt.clientY) - rect.top;
+      const x = (cx / rect.width) * pvCanvas.width;
+      const y = (cy / rect.height) * pvCanvas.height;
+      return { x, y, V: fromX(x), P: fromY(y) };
+    }
+
+    pvCanvas.addEventListener('pointerdown', (e) => {
+      const { x, y, V, P } = getPVCoords(e);
+      if (state.preset === 'draw') {
+        state.isDrawing = true;
+        state.playing = false;
+        playBtn.textContent = '▶ 播放掃描';
+        state.freehandPts = [{ V, P }];
+        state.progress = 1;
+        rebuildPath();
+        pvCanvas.setPointerCapture(e.pointerId);
+      } else if (state.preset === 'tri') {
+        state.triNodes.forEach((n, idx) => {
+          if (Math.hypot(toX(n.V) - x, toY(n.P) - y) < 22) {
+            state.dragNodeIdx = idx;
+            pvCanvas.setPointerCapture(e.pointerId);
+          }
+        });
+      } else if (state.preset === 'rect') {
+        const { v1, v2, p1, p2 } = state.rectBounds;
+        const corners = [[v1, p2, 0], [v2, p2, 1], [v2, p1, 2], [v1, p1, 3]];
+        corners.forEach(([cv, cp, idx]) => {
+          if (Math.hypot(toX(cv) - x, toY(cp) - y) < 22) {
+            state.dragNodeIdx = idx;
+            pvCanvas.setPointerCapture(e.pointerId);
+          }
+        });
+      }
+    });
+
+    pvCanvas.addEventListener('pointermove', (e) => {
+      const { V, P } = getPVCoords(e);
+      if (state.preset === 'draw' && state.isDrawing) {
+        const last = state.freehandPts[state.freehandPts.length - 1];
+        if (Math.hypot(V - last.V, P - last.P) > 0.08) {
+          state.freehandPts.push({ V, P });
+          rebuildPath();
+        }
+      } else if (state.dragNodeIdx >= 0) {
+        if (state.preset === 'tri') {
+          state.triNodes[state.dragNodeIdx] = { V: +V.toFixed(2), P: +P.toFixed(2) };
+        } else if (state.preset === 'rect') {
+          const b = state.rectBounds;
+          if (state.dragNodeIdx === 0) { b.v1 = Math.min(V, b.v2 - 0.5); b.p2 = Math.max(P, b.p1 + 0.5); }
+          if (state.dragNodeIdx === 1) { b.v2 = Math.max(V, b.v1 + 0.5); b.p2 = Math.max(P, b.p1 + 0.5); }
+          if (state.dragNodeIdx === 2) { b.v2 = Math.max(V, b.v1 + 0.5); b.p1 = Math.min(P, b.p2 - 0.5); }
+          if (state.dragNodeIdx === 3) { b.v1 = Math.min(V, b.v2 - 0.5); b.p1 = Math.min(P, b.p2 - 0.5); }
+        }
+        rebuildPath();
+      }
+    });
+
+    pvCanvas.addEventListener('pointerup', () => {
+      state.isDrawing = false;
+      state.dragNodeIdx = -1;
+    });
+
+    // Buttons
+    document.querySelectorAll('[data-preset]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('[data-preset]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        state.preset = btn.dataset.preset;
+        state.progress = state.preset === 'draw' ? 1 : 0;
+        state.playing = false;
+        playBtn.textContent = '▶ 播放掃描';
+        if (state.preset === 'draw') {
+          state.freehandPts = [];
+          modeHint.innerHTML = '<strong>✏️ 手繪模式：</strong>請直接在左側座標圖上按住並畫出任意路徑或封閉循環（畫完可點「▶ 播放掃描」重看積分過程）！';
+        } else if (state.preset === 'compare') {
+          modeHint.innerHTML = '<strong>⚡ 等溫 vs 絕熱比較模式：</strong>按「▶ 播放掃描」觀察兩條膨脹曲線！絕熱線因無法從外界吸熱（Q=0），內能轉為做功使溫度驟降，曲線比等溫線更陡峭！';
+        } else {
+          modeHint.innerHTML = '<strong>大屏互動提示：</strong>可按「▶ 播放掃描」或拖曳進度桿；矩形/三角循環還可直接拖曳黃色頂點即時改變循環面積！';
+        }
+        rebuildPath();
+      });
+    });
+
+    playBtn.addEventListener('click', () => {
+      if (state.progress >= 0.995) state.progress = 0;
+      state.playing = !state.playing;
+      playBtn.textContent = state.playing ? '⏸ 暫停' : '▶ 播放掃描';
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      state.playing = false;
+      state.progress = 0;
+      playBtn.textContent = '▶ 播放掃描';
+    });
+
+    progSlider.addEventListener('input', (e) => {
+      state.playing = false;
+      playBtn.textContent = '▶ 播放掃描';
+      state.progress = parseFloat(e.target.value);
+    });
+
+    let lastTs = 0;
+    function loop(ts) {
+      if (!lastTs) lastTs = ts;
+      const dt = (ts - lastTs) / 1000;
+      lastTs = ts;
+
+      if (state.playing) {
+        state.progress += dt * 0.16;
+        if (state.progress >= 1) {
+          state.progress = 1;
+          state.playing = false;
+          playBtn.textContent = '▶ 重新播放';
+        }
+      }
+
+      drawPVDiagram();
+      drawCylindersAndBars();
+      requestAnimationFrame(loop);
+    }
+
+    rebuildPath();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

@@ -1,0 +1,1780 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>01｜溫度計溫標換算比例與「熱平衡、熱脹冷縮」雙模式實驗室</title>
+  <meta name="description" content="雙溫標對齊溫度計（攝氏、華氏、克氏、自製溫標）與四步驟比例換算，結合巨觀放大鏡＋微觀分子碰撞熱平衡雙視角模擬。" />
+  <meta name="portal-tags" content="熱學, 國中理化, 溫標換算, 熱平衡" />
+  <meta name="portal-badge" content="國中理化" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .mode-tabs {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .mode-tab {
+      padding: 8px 16px;
+      border-radius: 999px;
+      border: 1px solid var(--border-subtle);
+      background: rgba(15, 23, 42, 0.78);
+      color: var(--text-muted);
+      font-weight: 800;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.16s ease;
+    }
+    .mode-tab:hover {
+      color: #fff;
+      border-color: rgba(56, 189, 248, 0.45);
+    }
+    .mode-tab.active {
+      background: linear-gradient(135deg, #0284c7, #2563eb);
+      border-color: rgba(56, 189, 248, 0.8);
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
+    }
+    .view-section {
+      display: none;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .view-section.active {
+      display: flex;
+    }
+
+    /* Scale Converter Styles */
+    .scale-selectors-grid {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 14px;
+      align-items: stretch;
+      width: 100%;
+    }
+    @media (max-width: 960px) {
+      .scale-selectors-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .scale-box {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .scale-box.left-box { border-left: 4px solid #38bdf8; }
+    .scale-box.right-box { border-left: 4px solid #fbbf24; }
+    .scale-box-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 800;
+      font-size: 14px;
+    }
+    .scale-btn-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .custom-bounds {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      padding: 8px 10px;
+      background: rgba(30, 41, 59, 0.7);
+      border-radius: 8px;
+      border: 1px dashed rgba(251, 191, 36, 0.45);
+      font-size: 13px;
+    }
+    .custom-bounds label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 700;
+      color: #e2e8f0;
+    }
+    .num-input {
+      width: 82px;
+      padding: 5px 8px;
+      border-radius: 6px;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      background: #0f172a;
+      color: #fff;
+      font-weight: 800;
+      font-size: 14px;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+    }
+    .num-input:focus {
+      outline: 2px solid var(--accent-cyan);
+      border-color: transparent;
+    }
+
+    /* Guided Calculation Steps */
+    .guide-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .step-card {
+      background: rgba(15, 23, 42, 0.75);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 12px 14px;
+      transition: border-color 0.2s ease, background 0.2s ease;
+    }
+    .step-card.solved {
+      border-color: rgba(52, 211, 153, 0.65);
+      background: rgba(6, 78, 59, 0.22);
+    }
+    .step-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .step-title {
+      font-weight: 800;
+      font-size: 14.5px;
+      color: #f8fafc;
+    }
+    .step-formula {
+      font-size: 14px;
+      color: #cbd5e1;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+      line-height: 1.7;
+    }
+    .pill-val {
+      display: inline-block;
+      padding: 1px 8px;
+      border-radius: 6px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      background: rgba(56, 189, 248, 0.16);
+      color: #7dd3fc;
+    }
+    .pill-val.amber {
+      background: rgba(251, 191, 36, 0.16);
+      color: #fde68a;
+    }
+    .pill-val.emerald {
+      background: rgba(52, 211, 153, 0.18);
+      color: #6ee7b7;
+    }
+    .step-answer-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .step-feedback {
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .step-feedback.ok { color: #34d399; }
+    .step-feedback.err { color: #fb7185; }
+    .ratio-eq-box {
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      border-radius: 12px;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      font-weight: 800;
+    }
+    .frac {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      font-variant-numeric: tabular-nums;
+    }
+    .frac-num {
+      padding: 2px 10px 4px;
+      border-bottom: 2px solid #cbd5e1;
+      font-size: 15px;
+    }
+    .frac-den {
+      padding: 4px 10px 2px;
+      font-size: 15px;
+    }
+
+    /* Original Equilibrium Styles */
+    .stage-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-weight: 800;
+      font-size: 14px;
+      background: rgba(56, 189, 248, 0.14);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      color: var(--accent-cyan);
+    }
+    .stage-pill.eq {
+      background: rgba(52, 211, 153, 0.18);
+      border-color: rgba(52, 211, 153, 0.6);
+      color: var(--accent-emerald);
+      animation: pulseEq 1.6s infinite;
+    }
+    @keyframes pulseEq {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.35); }
+      50% { box-shadow: 0 0 0 8px rgba(52, 211, 153, 0); }
+    }
+    .scrubber-wrap {
+      flex: 1 1 360px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .bookmark-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .ke-bars {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .ke-bar-card {
+      background: rgba(15, 23, 42, 0.72);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+    .ke-track {
+      height: 12px;
+      background: #1e293b;
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 6px;
+    }
+    .ke-fill {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 0.08s linear, background-color 0.15s ease;
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-left">
+      <a class="back-btn" href="../index.html#thermodynamics">← 返回主選單</a>
+      <span class="module-badge badge-junior">國中理化</span>
+      <h1 class="topbar-title">1. 溫度計雙溫標換算比例 ＆ 熱平衡透視鏡</h1>
+    </div>
+    <div class="topbar-right">
+      <div class="mode-tabs">
+        <button class="mode-tab active" id="tabScale">📏 溫標換算比例練習</button>
+        <button class="mode-tab" id="tabEq">🔬 熱平衡與熱脹冷縮</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="sim-container">
+    <!-- ==================== VIEW 1: SCALE CONVERSION ==================== -->
+    <section class="view-section active" id="scaleSection">
+      <div class="callout">
+        <strong>溫標換算核心概念：</strong>同一支溫度計在不同溫標下，<strong>水的冰點（最低點）與沸點（最高點）液柱高度完全對齊</strong>！因此「<strong>指定點距離冰點的間距 ÷ 沸點與冰點總間距</strong>」的<strong>比例</strong>在兩側完全相等！拖曳溫度計指示條到任意位置，試著用比例推算右邊的 <strong>?</strong> 吧！
+      </div>
+
+      <!-- Scale Selection Bar -->
+      <section class="control-bar">
+        <div class="scale-selectors-grid">
+          <!-- Left Scale -->
+          <div class="scale-box left-box">
+            <div class="scale-box-header">
+              <span style="color:#38bdf8;">◀ 左側溫標（已知讀數）</span>
+              <span id="leftRangeInfo" style="color:#94a3b8; font-size:12.5px;">冰點 0 ～ 沸點 100</span>
+            </div>
+            <div class="scale-btn-group" id="leftScaleBtns">
+              <button class="btn btn-sm active" data-side="left" data-scale="C">攝氏 (°C)</button>
+              <button class="btn btn-sm" data-side="left" data-scale="F">華氏 (°F)</button>
+              <button class="btn btn-sm" data-side="left" data-scale="K">克氏 (K)</button>
+              <button class="btn btn-sm" data-side="left" data-scale="X">自製溫標 (°X)</button>
+            </div>
+            <div class="custom-bounds" id="leftCustomBox" style="display:none;">
+              <span style="color:#fbbf24; font-weight:800;">自製刻度（對齊水冰/沸點）：</span>
+              <label>最低點(冰點) <input class="num-input" type="number" id="leftCustomLow" value="20" step="1" /></label>
+              <label>最高點(沸點) <input class="num-input" type="number" id="leftCustomHigh" value="140" step="1" /></label>
+            </div>
+          </div>
+
+          <!-- Swap & Random Question -->
+          <div style="display:flex; flex-direction:column; justify-content:center; gap:8px;">
+            <button class="btn btn-sm" id="swapScalesBtn" title="左右溫標互換">⇄ 左右互換</button>
+            <button class="btn btn-sm btn-amber" id="randomPosBtn" title="隨機移動指示條出題">🎲 隨機出題</button>
+          </div>
+
+          <!-- Right Scale -->
+          <div class="scale-box right-box">
+            <div class="scale-box-header">
+              <span style="color:#fbbf24;">右側溫標（求 ? 數值） ▶</span>
+              <span id="rightRangeInfo" style="color:#94a3b8; font-size:12.5px;">冰點 32 ～ 沸點 212</span>
+            </div>
+            <div class="scale-btn-group" id="rightScaleBtns">
+              <button class="btn btn-sm" data-side="right" data-scale="C">攝氏 (°C)</button>
+              <button class="btn btn-sm active" data-side="right" data-scale="F">華氏 (°F)</button>
+              <button class="btn btn-sm" data-side="right" data-scale="K">克氏 (K)</button>
+              <button class="btn btn-sm" data-side="right" data-scale="Y">自製溫標 (°Y)</button>
+            </div>
+            <div class="custom-bounds" id="rightCustomBox" style="display:none;">
+              <span style="color:#fbbf24; font-weight:800;">自製刻度（對齊水冰/沸點）：</span>
+              <label>最低點(冰點) <input class="num-input" type="number" id="rightCustomLow" value="-10" step="1" /></label>
+              <label>最高點(沸點) <input class="num-input" type="number" id="rightCustomHigh" value="190" step="1" /></label>
+            </div>
+          </div>
+        </div>
+        <div id="customWarn" style="display:none; color:#fb7185; font-size:13px; font-weight:800;">
+          ⚠ 自製溫標的「最高點（沸點）」必須大於「最低點（冰點）」，請重新調整數值！
+        </div>
+      </section>
+
+      <!-- Dual Split: Left Thermometer + Right Guided Calculation -->
+      <section class="split-grid">
+        <!-- Left: Draggable Thermometer Canvas -->
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">🌡️ 雙溫標對齊溫度計（直接拖曳指示條）</div>
+            <span class="control-value" id="dragHintLabel" style="font-size:13px;">↕ 上下拖曳橘色指示條</span>
+          </div>
+          <div class="canvas-wrap">
+            <canvas id="scaleCanvas" width="720" height="540" style="cursor:ns-resize; touch-action:none;"></canvas>
+          </div>
+          <div class="control-group" style="padding: 4px 2px;">
+            <div class="control-label">
+              <span>微調指示條位置（對齊整數刻度方便心算）</span>
+              <span class="control-value" id="sliderReadout">目前位置：40%</span>
+            </div>
+            <input type="range" id="posSlider" min="0" max="100" step="1" value="40" />
+          </div>
+        </div>
+
+        <!-- Right: Guided Ratio Calculation Panel -->
+        <div class="panel">
+          <div class="panel-header" style="flex-wrap:wrap;">
+            <div class="panel-title">🧮 比例換算引導計算（一步步找出 ?）</div>
+            <div style="display:flex; gap:8px;">
+              <button class="btn btn-sm btn-emerald" id="revealAllBtn">👁️ 顯示完整步驟</button>
+              <button class="btn btn-sm" id="hideAllBtn">🙈 隱藏重新算</button>
+            </div>
+          </div>
+
+          <!-- Live Proportion Formula -->
+          <div class="ratio-eq-box" id="ratioEqBox"></div>
+
+          <!-- 4 Guided Steps -->
+          <div class="guide-steps">
+            <!-- Step 1 -->
+            <div class="step-card" id="step1Card">
+              <div class="step-head">
+                <span class="step-title">步驟 1｜計算「左邊溫標」最高溫與最低溫的總間距</span>
+                <button class="btn btn-sm" id="hint1Btn">💡 顯示這一步</button>
+              </div>
+              <div class="step-formula" id="step1Formula"></div>
+              <div class="step-answer-row">
+                <span>左邊總間距 =</span>
+                <input class="num-input" type="text" id="ans1Input" placeholder="輸入數值" />
+                <button class="btn btn-sm btn-primary" id="check1Btn">檢查</button>
+                <span class="step-feedback" id="fb1"></span>
+              </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="step-card" id="step2Card">
+              <div class="step-head">
+                <span class="step-title">步驟 2｜計算左邊「指定點到最低溫」的間距與佔總長比例</span>
+                <button class="btn btn-sm" id="hint2Btn">💡 顯示這一步</button>
+              </div>
+              <div class="step-formula" id="step2Formula"></div>
+              <div class="step-answer-row">
+                <span>距離最低溫 =</span>
+                <input class="num-input" type="text" id="ans2DistInput" placeholder="差值" style="width:74px;" />
+                <span>，比例 =</span>
+                <input class="num-input" type="text" id="ans2RatioInput" placeholder="如 2/5 或 0.4" style="width:118px;" />
+                <button class="btn btn-sm btn-primary" id="check2Btn">檢查</button>
+                <span class="step-feedback" id="fb2"></span>
+              </div>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="step-card" id="step3Card">
+              <div class="step-head">
+                <span class="step-title">步驟 3｜求「右邊溫標」總間距，並乘上相同比例算出上升格數</span>
+                <button class="btn btn-sm" id="hint3Btn">💡 顯示這一步</button>
+              </div>
+              <div class="step-formula" id="step3Formula"></div>
+              <div class="step-answer-row">
+                <span>右總間距 =</span>
+                <input class="num-input" type="text" id="ans3SpanInput" placeholder="總間距" style="width:78px;" />
+                <span>，右上升格數 =</span>
+                <input class="num-input" type="text" id="ans3DeltaInput" placeholder="格數" style="width:82px;" />
+                <button class="btn btn-sm btn-primary" id="check3Btn">檢查</button>
+                <span class="step-feedback" id="fb3"></span>
+              </div>
+            </div>
+
+            <!-- Step 4 -->
+            <div class="step-card" id="step4Card">
+              <div class="step-head">
+                <span class="step-title">步驟 4｜加上右邊最低溫（冰點基準），算出問號 ? 的數值！</span>
+                <button class="btn btn-sm btn-amber" id="hint4Btn">🔓 揭曉 ? 答案</button>
+              </div>
+              <div class="step-formula" id="step4Formula"></div>
+              <div class="step-answer-row">
+                <span>右側溫度 ? =</span>
+                <input class="num-input" type="text" id="ans4Input" placeholder="最終答案" style="width:96px;" />
+                <span id="ans4Unit" style="font-weight:800; color:#fbbf24;">°F</span>
+                <button class="btn btn-sm btn-emerald" id="check4Btn">驗證答案</button>
+                <span class="step-feedback" id="fb4"></span>
+              </div>
+              <div style="margin-top:6px; font-size:12.5px; color:#94a3b8;">
+                💡 <strong>小提醒：</strong>步驟 3 算出的只是「從冰點往上增加的格數」，因為右邊冰點不一定是 0（例如 32°F 或 273 K），最後一定要加上最低溫基準！
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <!-- ==================== VIEW 2: ORIGINAL EQUILIBRIUM ==================== -->
+    <section class="view-section" id="eqSection">
+      <div class="callout" id="pedagogyNote">
+        <strong>教學關鍵：</strong>剛放入熱水時，外側<strong>玻璃泡先接觸熱水而膨脹</strong>（容器變大），內部液體還沒來得及受熱，因此液面會<strong>「先微降」</strong>；隨後熱量傳入液體，液體膨脹係數遠大於玻璃，液面才迅速上升，直到內外平均動能一致達成<strong>熱平衡</strong>！
+      </div>
+
+      <section class="control-bar">
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn btn-primary" id="playBtn">▶ 播放</button>
+          <button class="btn" id="slowBtn" title="慢動作觀察先降後升">🐢 0.25x 慢動作</button>
+          <button class="btn" id="resetBtn">↺ 重置</button>
+        </div>
+
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn active" id="modeHot">🔥 放入熱水 (85°C)</button>
+          <button class="btn" id="modeCold">🧊 放入冰水 (5°C)</button>
+          <button class="btn active" id="liqAlcohol">🔴 酒精溫度計</button>
+          <button class="btn" id="liqMercury">⚪ 水銀溫度計</button>
+        </div>
+
+        <div class="scrubber-wrap">
+          <div class="control-label">
+            <span>時間軸慢動作拉桿（可拖曳定格講解）</span>
+            <span class="control-value" id="timeReadout">t = 0.00 s</span>
+          </div>
+          <input type="range" id="timeScrubber" min="0" max="12" step="0.02" value="0" />
+          <div class="bookmark-row">
+            <button class="btn btn-sm" data-jump="0.35">① 剛浸入前 (0.35s)</button>
+            <button class="btn btn-sm btn-amber" data-jump="1.65">② 玻璃泡先脹縮 (1.65s)</button>
+            <button class="btn btn-sm" data-jump="4.80">③ 熱傳導液體脹縮 (4.80s)</button>
+            <button class="btn btn-sm btn-emerald" data-jump="10.80">④ 達成熱平衡 (10.8s)</button>
+          </div>
+        </div>
+        <div class="stage-pill" id="stagePill">準備浸入液體中</div>
+      </section>
+
+      <section class="split-grid">
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">🔭 巨觀視窗：燒杯與溫度計（附液面微變放大鏡）</div>
+            <span class="control-value" id="macroDeltaLabel">Δh = 0.0 mm</span>
+          </div>
+          <div class="canvas-wrap">
+            <canvas id="macroCanvas" width="720" height="520"></canvas>
+          </div>
+          <div class="metrics-row">
+            <div class="metric-box">
+              <div class="metric-label">燒杯水溫（熱平衡會微變）</div>
+              <div class="metric-val" id="waterTempVal" style="color:#fb7185;">85.0 °C</div>
+            </div>
+            <div class="metric-box">
+              <div class="metric-label">玻璃泡溫度</div>
+              <div class="metric-val" id="glassTempVal" style="color:#fbbf24;">25.0 °C</div>
+            </div>
+            <div class="metric-box">
+              <div class="metric-label">溫度計讀數（內部液溫）</div>
+              <div class="metric-val" id="liqTempVal" style="color:#38bdf8;">25.0 °C</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">🔬 微觀放大鏡：玻璃泡壁與分子碰撞熱圖</div>
+            <span style="font-size:13px;color:var(--text-muted);">閃光＝碰撞傳遞動能</span>
+          </div>
+          <div class="canvas-wrap">
+            <canvas id="microCanvas" width="720" height="520"></canvas>
+          </div>
+          <div class="ke-bars">
+            <div class="ke-bar-card">
+              <div class="control-label">
+                <span>外側水分子 平均動能</span>
+                <span class="control-value" id="keOutText">100%</span>
+              </div>
+              <div class="ke-track"><div class="ke-fill" id="keOutFill" style="width:70%;background:#fb7185;"></div></div>
+            </div>
+            <div class="ke-bar-card">
+              <div class="control-label">
+                <span>溫度計液體分子 平均動能</span>
+                <span class="control-value" id="keInText">25%</span>
+              </div>
+              <div class="ke-track"><div class="ke-fill" id="keInFill" style="width:25%;background:#38bdf8;"></div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    // ==================== TAB SWITCHER ====================
+    let activeTab = 'scale';
+    const tabScale = document.getElementById('tabScale');
+    const tabEq = document.getElementById('tabEq');
+    const scaleSection = document.getElementById('scaleSection');
+    const eqSection = document.getElementById('eqSection');
+
+    tabScale.addEventListener('click', () => {
+      activeTab = 'scale';
+      tabScale.classList.add('active');
+      tabEq.classList.remove('active');
+      scaleSection.classList.add('active');
+      eqSection.classList.remove('active');
+    });
+
+    tabEq.addEventListener('click', () => {
+      activeTab = 'eq';
+      tabEq.classList.add('active');
+      tabScale.classList.remove('active');
+      eqSection.classList.add('active');
+      scaleSection.classList.remove('active');
+    });
+
+    // ==================== PART 1: SCALE CONVERSION LAB ====================
+    const PRESET_SCALES = {
+      C: { name: '攝氏', unit: '°C', low: 0, high: 100 },
+      F: { name: '華氏', unit: '°F', low: 32, high: 212 },
+      K: { name: '克氏', unit: 'K', low: 273, high: 373 },
+      X: { name: '自製溫標 X', unit: '°X', low: 20, high: 140 },
+      Y: { name: '自製溫標 Y', unit: '°Y', low: -10, high: 190 }
+    };
+
+    const convState = {
+      leftType: 'C',
+      rightType: 'F',
+      leftCustomLow: 20,
+      leftCustomHigh: 140,
+      rightCustomLow: -10,
+      rightCustomHigh: 190,
+      frac: 0.40,       // 0..1 position between freezing and boiling point
+      dragging: false,
+      revealed: [false, false, false, false] // steps 1..4 revealed
+    };
+
+    const scaleCanvas = document.getElementById('scaleCanvas');
+    const sctx = scaleCanvas.getContext('2d');
+    const posSlider = document.getElementById('posSlider');
+    const sliderReadout = document.getElementById('sliderReadout');
+
+    function getScaleMeta(side) {
+      const type = side === 'left' ? convState.leftType : convState.rightType;
+      if (type === 'X' || type === 'Y') {
+        const low = side === 'left' ? convState.leftCustomLow : convState.rightCustomLow;
+        const high = side === 'left' ? convState.leftCustomHigh : convState.rightCustomHigh;
+        return {
+          type,
+          name: side === 'left' ? '自製溫標' : '自製溫標',
+          unit: type === 'X' ? '°X' : '°Y',
+          low,
+          high: Math.max(low + 1, high),
+          valid: high > low
+        };
+      }
+      const p = PRESET_SCALES[type];
+      return { type, name: p.name, unit: p.unit, low: p.low, high: p.high, valid: true };
+    }
+
+    function fmt(num) {
+      if (Math.abs(num - Math.round(num)) < 1e-6) return String(Math.round(num));
+      const r2 = Math.round(num * 100) / 100;
+      return String(r2);
+    }
+
+    function fmtSub(num) {
+      const s = fmt(num);
+      return num < 0 ? `(${s})` : s;
+    }
+
+    function gcd(a, b) {
+      a = Math.abs(Math.round(a));
+      b = Math.abs(Math.round(b));
+      while (b) { const t = b; b = a % b; a = t; }
+      return a || 1;
+    }
+
+    function formatRatioStr(num, den) {
+      if (Math.abs(num - Math.round(num)) < 1e-6 && Math.abs(den - Math.round(den)) < 1e-6 && den > 0) {
+        const g = gcd(num, den);
+        const sn = Math.round(num) / g;
+        const sd = Math.round(den) / g;
+        if (sd === 1) return `${sn}`;
+        return `${sn}/${sd} (= ${fmt(num / den)})`;
+      }
+      return fmt(num / den);
+    }
+
+    function computeConv() {
+      const L = getScaleMeta('left');
+      const R = getScaleMeta('right');
+      const lSpan = L.high - L.low;
+      const rSpan = R.high - R.low;
+      const lDist = convState.frac * lSpan;
+      const lVal = L.low + lDist;
+      const rDelta = convState.frac * rSpan;
+      const rVal = R.low + rDelta;
+      return { L, R, lSpan, rSpan, lDist, lVal, rDelta, rVal };
+    }
+
+    // Geometry constants for scaleCanvas (720 x 540)
+    const THERM = {
+      cx: 360,
+      topY: 96,      // Boiling point alignment y
+      botY: 416,     // Freezing point alignment y
+      tubeTop: 52,
+      bulbY: 468,
+      bulbR: 28
+    };
+
+    function drawThermometerConverter() {
+      const w = scaleCanvas.width;
+      const h = scaleCanvas.height;
+      sctx.clearRect(0, 0, w, h);
+
+      const c = computeConv();
+      const { L, R, lVal, rVal } = c;
+      const indY = THERM.botY - convState.frac * (THERM.botY - THERM.topY);
+
+      // Background subtle grid
+      sctx.strokeStyle = 'rgba(148,163,184,0.06)';
+      sctx.lineWidth = 1;
+      for (let gx = 0; gx < w; gx += 40) {
+        sctx.beginPath(); sctx.moveTo(gx, 0); sctx.lineTo(gx, h); sctx.stroke();
+      }
+      for (let gy = 0; gy < h; gy += 40) {
+        sctx.beginPath(); sctx.moveTo(0, gy); sctx.lineTo(w, gy); sctx.stroke();
+      }
+
+      // Horizontal alignment guides for Boiling Point (topY) and Freezing Point (botY)
+      [
+        { y: THERM.topY, label: '水的沸點（最高點對齊線）', color: 'rgba(251, 113, 133, 0.45)', txt: '#fda4af' },
+        { y: THERM.botY, label: '水的冰點（最低點對齊線）', color: 'rgba(56, 189, 248, 0.45)', txt: '#7dd3fc' }
+      ].forEach(ref => {
+        sctx.save();
+        sctx.strokeStyle = ref.color;
+        sctx.setLineDash([6, 5]);
+        sctx.lineWidth = 1.6;
+        sctx.beginPath();
+        sctx.moveTo(110, ref.y);
+        sctx.lineTo(610, ref.y);
+        sctx.stroke();
+        sctx.fillStyle = ref.txt;
+        sctx.font = 'bold 12px Microsoft JhengHei';
+        sctx.textAlign = 'center';
+        sctx.fillText(ref.label, THERM.cx, ref.y + (ref.y === THERM.topY ? -10 : 18));
+        sctx.restore();
+      });
+
+      // Side Scale Headers
+      sctx.font = 'bold 16px Microsoft JhengHei';
+      sctx.textAlign = 'center';
+      sctx.fillStyle = '#38bdf8';
+      sctx.fillText(`左：${L.name} (${L.unit})`, 220, 34);
+      sctx.fillStyle = '#fbbf24';
+      sctx.fillText(`右：${R.name} (${R.unit})`, 500, 34);
+
+      // Draw Glass Outer Shell
+      sctx.save();
+      sctx.fillStyle = 'rgba(226, 232, 240, 0.12)';
+      sctx.strokeStyle = '#94a3b8';
+      sctx.lineWidth = 3;
+      sctx.beginPath();
+      sctx.roundRect(THERM.cx - 16, THERM.tubeTop, 32, THERM.bulbY - THERM.tubeTop, 16);
+      sctx.fill();
+      sctx.stroke();
+
+      sctx.beginPath();
+      sctx.arc(THERM.cx, THERM.bulbY, THERM.bulbR + 4, 0, Math.PI * 2);
+      sctx.fillStyle = 'rgba(244, 63, 94, 0.22)';
+      sctx.fill();
+      sctx.strokeStyle = '#94a3b8';
+      sctx.stroke();
+
+      // Capillary bore
+      sctx.fillStyle = '#0b1120';
+      sctx.fillRect(THERM.cx - 6, THERM.tubeTop + 12, 12, THERM.bulbY - THERM.tubeTop - 12);
+
+      // Liquid inside bulb & up to indY
+      const liqGrad = sctx.createLinearGradient(0, THERM.topY, 0, THERM.bulbY);
+      liqGrad.addColorStop(0, '#fb7185');
+      liqGrad.addColorStop(1, '#e11d48');
+      sctx.fillStyle = liqGrad;
+      sctx.shadowColor = 'rgba(244, 63, 94, 0.45)';
+      sctx.shadowBlur = 12;
+      sctx.beginPath();
+      sctx.arc(THERM.cx, THERM.bulbY, THERM.bulbR - 1, 0, Math.PI * 2);
+      sctx.fill();
+      sctx.fillRect(THERM.cx - 6, indY, 12, THERM.bulbY - indY);
+      sctx.restore();
+
+      // Tick marks on Left & Right of Thermometer
+      const steps = 10;
+      for (let i = 0; i <= steps; i++) {
+        const f = i / steps;
+        const y = THERM.botY - f * (THERM.botY - THERM.topY);
+        const isMajor = (i === 0 || i === steps || i === 5);
+
+        // Left ticks
+        sctx.strokeStyle = isMajor ? '#38bdf8' : 'rgba(56, 189, 248, 0.45)';
+        sctx.lineWidth = isMajor ? 2.5 : 1.4;
+        sctx.beginPath();
+        sctx.moveTo(THERM.cx - 18, y);
+        sctx.lineTo(THERM.cx - (isMajor ? 34 : 26), y);
+        sctx.stroke();
+
+        // Right ticks
+        sctx.strokeStyle = isMajor ? '#fbbf24' : 'rgba(251, 191, 36, 0.45)';
+        sctx.beginPath();
+        sctx.moveTo(THERM.cx + 18, y);
+        sctx.lineTo(THERM.cx + (isMajor ? 34 : 26), y);
+        sctx.stroke();
+      }
+
+      // Boiling & Freezing Point Labels (Left & Right)
+      sctx.font = 'bold 15px Microsoft JhengHei';
+      sctx.textAlign = 'right';
+      sctx.fillStyle = '#fda4af';
+      sctx.fillText(`${fmt(L.high)} ${L.unit}`, THERM.cx - 42, THERM.topY + 5);
+      sctx.fillStyle = '#7dd3fc';
+      sctx.fillText(`${fmt(L.low)} ${L.unit}`, THERM.cx - 42, THERM.botY + 5);
+
+      sctx.textAlign = 'left';
+      sctx.fillStyle = '#fda4af';
+      sctx.fillText(`${fmt(R.high)} ${R.unit}`, THERM.cx + 42, THERM.topY + 5);
+      sctx.fillStyle = '#7dd3fc';
+      sctx.fillText(`${fmt(R.low)} ${R.unit}`, THERM.cx + 42, THERM.botY + 5);
+
+      // Dimension Brackets: Total Span & Partial Span on Left & Right!
+      drawBracket(112, THERM.topY, THERM.botY, -1, '#38bdf8',
+        `總間距`, convState.revealed[0] ? `${fmt(c.lSpan)}` : `${fmt(L.high)}−${fmt(L.low)}`);
+      if (convState.frac > 0.03) {
+        drawBracket(198, indY, THERM.botY, -1, '#fb923c',
+          `距低點`, convState.revealed[1] ? `${fmt(c.lDist)}` : `${fmt(lVal)}−${fmt(L.low)}`);
+      }
+
+      drawBracket(608, THERM.topY, THERM.botY, 1, '#fbbf24',
+        `總間距`, convState.revealed[2] ? `${fmt(c.rSpan)}` : `${fmt(R.high)}−${fmt(R.low)}`);
+      if (convState.frac > 0.03) {
+        drawBracket(522, indY, THERM.botY, 1, '#34d399',
+          `上升格數`, convState.revealed[2] ? `${fmt(c.rDelta)}` : `? − ${fmt(R.low)}`);
+      }
+
+      // Draggable Indicator Bar across the thermometer!
+      sctx.save();
+      sctx.strokeStyle = '#fb923c';
+      sctx.lineWidth = 3;
+      sctx.beginPath();
+      sctx.moveTo(THERM.cx - 108, indY);
+      sctx.lineTo(THERM.cx + 108, indY);
+      sctx.stroke();
+
+      // Center drag handle on tube
+      sctx.fillStyle = '#fb923c';
+      sctx.strokeStyle = '#fff';
+      sctx.lineWidth = 2.5;
+      sctx.beginPath();
+      sctx.roundRect(THERM.cx - 26, indY - 10, 52, 20, 10);
+      sctx.fill();
+      sctx.stroke();
+
+      // Grip lines on handle
+      sctx.strokeStyle = '#0f172a';
+      sctx.lineWidth = 2;
+      [-8, 0, 8].forEach(dx => {
+        sctx.beginPath();
+        sctx.moveTo(THERM.cx + dx, indY - 4);
+        sctx.lineTo(THERM.cx + dx, indY + 4);
+        sctx.stroke();
+      });
+
+      // Left Reading Pill (Always shown)
+      sctx.fillStyle = '#0284c7';
+      sctx.strokeStyle = '#7dd3fc';
+      sctx.lineWidth = 2;
+      sctx.beginPath();
+      sctx.roundRect(THERM.cx - 142, indY - 18, 96, 36, 10);
+      sctx.fill();
+      sctx.stroke();
+      sctx.fillStyle = '#fff';
+      sctx.font = 'bold 16px Microsoft JhengHei';
+      sctx.textAlign = 'center';
+      sctx.fillText(`${fmt(lVal)} ${L.unit}`, THERM.cx - 94, indY + 6);
+
+      // Right Reading Pill (? until Step 4 is revealed!)
+      const isAnsRevealed = convState.revealed[3];
+      sctx.fillStyle = isAnsRevealed ? '#059669' : '#d97706';
+      sctx.strokeStyle = isAnsRevealed ? '#6ee7b7' : '#fde68a';
+      sctx.lineWidth = 2;
+      sctx.beginPath();
+      sctx.roundRect(THERM.cx + 46, indY - 18, 102, 36, 10);
+      sctx.fill();
+      sctx.stroke();
+      sctx.fillStyle = '#fff';
+      sctx.font = isAnsRevealed ? 'bold 16px Microsoft JhengHei' : 'bold 18px Microsoft JhengHei';
+      sctx.textAlign = 'center';
+      sctx.fillText(isAnsRevealed ? `${fmt(rVal)} ${R.unit}` : `?  ${R.unit}`, THERM.cx + 97, indY + 6);
+      sctx.restore();
+
+      // Bottom Ratio Summary Badge inside canvas
+      sctx.fillStyle = 'rgba(15, 23, 42, 0.86)';
+      sctx.strokeStyle = 'rgba(148,163,184,0.28)';
+      sctx.lineWidth = 1.2;
+      sctx.beginPath();
+      sctx.roundRect(14, 488, 250, 38, 10);
+      sctx.fill(); sctx.stroke();
+      sctx.fillStyle = '#e2e8f0';
+      sctx.font = 'bold 13px Microsoft JhengHei';
+      sctx.textAlign = 'left';
+      sctx.fillText(`目前高度比例：${Math.round(convState.frac * 100)}% (從冰點往上)`, 26, 512);
+    }
+
+    function drawBracket(x, yTop, yBot, dir, color, topLabel, valLabel) {
+      const tick = 10 * dir;
+      const midY = (yTop + yBot) / 2;
+      sctx.save();
+      sctx.strokeStyle = color;
+      sctx.lineWidth = 2.2;
+      sctx.beginPath();
+      sctx.moveTo(x - tick, yTop);
+      sctx.lineTo(x, yTop);
+      sctx.lineTo(x, yBot);
+      sctx.lineTo(x - tick, yBot);
+      sctx.stroke();
+
+      // Label badge at middle
+      sctx.textAlign = dir < 0 ? 'right' : 'left';
+      const tx = x + (dir < 0 ? -8 : 8);
+      sctx.fillStyle = color;
+      sctx.font = 'bold 12px Microsoft JhengHei';
+      sctx.fillText(topLabel, tx, midY - 4);
+      sctx.fillStyle = '#f8fafc';
+      sctx.font = 'bold 13px Microsoft JhengHei';
+      sctx.fillText(valLabel, tx, midY + 13);
+      sctx.restore();
+    }
+
+    function updateConverterUI() {
+      const c = computeConv();
+      const { L, R, lSpan, rSpan, lDist, lVal, rDelta, rVal } = c;
+
+      document.getElementById('leftRangeInfo').textContent = `冰點 ${fmt(L.low)} ～ 沸點 ${fmt(L.high)} ${L.unit}`;
+      document.getElementById('rightRangeInfo').textContent = `冰點 ${fmt(R.low)} ～ 沸點 ${fmt(R.high)} ${R.unit}`;
+      document.getElementById('leftCustomBox').style.display = (convState.leftType === 'X') ? 'flex' : 'none';
+      document.getElementById('rightCustomBox').style.display = (convState.rightType === 'Y') ? 'flex' : 'none';
+      document.getElementById('customWarn').style.display = (L.valid && R.valid) ? 'none' : 'block';
+
+      posSlider.value = Math.round(convState.frac * 100);
+      sliderReadout.textContent = `左讀數：${fmt(lVal)} ${L.unit}（佔全距 ${Math.round(convState.frac * 100)}%）`;
+      document.getElementById('ans4Unit').textContent = R.unit;
+
+      // Live Proportion Equation Box
+      const rightTopText = convState.revealed[3] ? fmt(rVal) : '?';
+      document.getElementById('ratioEqBox').innerHTML = `
+        <span style="color:#94a3b8; font-size:13.5px;">兩側比例相等：</span>
+        <div class="frac">
+          <div class="frac-num" style="color:#fb923c;">${fmt(lVal)} − (${fmt(L.low)})</div>
+          <div class="frac-den" style="color:#38bdf8;">${fmt(L.high)} − (${fmt(L.low)})</div>
+        </div>
+        <span style="font-size:20px; color:#fff;">=</span>
+        <div class="frac">
+          <div class="frac-num" style="color:#34d399;">${rightTopText} − (${fmt(R.low)})</div>
+          <div class="frac-den" style="color:#fbbf24;">${fmt(R.high)} − (${fmt(R.low)})</div>
+        </div>
+      `;
+
+      // Step 1
+      document.getElementById('step1Card').classList.toggle('solved', convState.revealed[0]);
+      document.getElementById('step1Formula').innerHTML =
+        `左邊沸點 − 左邊冰點 = <span class="pill-val">${fmt(L.high)}</span> − <span class="pill-val">${fmtSub(L.low)}</span>` +
+        (convState.revealed[0] ? ` = <span class="pill-val emerald">${fmt(lSpan)} 格</span>` : ` = <strong>?</strong>`);
+
+      // Step 2
+      document.getElementById('step2Card').classList.toggle('solved', convState.revealed[1]);
+      document.getElementById('step2Formula').innerHTML =
+        `距離最低溫 = <span class="pill-val">${fmt(lVal)}</span> − <span class="pill-val">${fmtSub(L.low)}</span>` +
+        (convState.revealed[1]
+          ? ` = <span class="pill-val emerald">${fmt(lDist)} 格</span>，比例 = <span class="pill-val emerald">${formatRatioStr(lDist, lSpan)}</span>（${Math.round(convState.frac * 100)}%）`
+          : `，再除以左邊總間距求出比例`);
+
+      // Step 3
+      document.getElementById('step3Card').classList.toggle('solved', convState.revealed[2]);
+      document.getElementById('step3Formula').innerHTML =
+        `右總間距 = <span class="pill-val amber">${fmt(R.high)}</span> − <span class="pill-val amber">${fmtSub(R.low)}</span>` +
+        (convState.revealed[2]
+          ? ` = <span class="pill-val emerald">${fmt(rSpan)} 格</span>；右上升格數 = ${fmt(rSpan)} × ${formatRatioStr(lDist, lSpan)} = <span class="pill-val emerald">${fmt(rDelta)} 格</span>`
+          : `，再乘上步驟 2 的比例`);
+
+      // Step 4
+      document.getElementById('step4Card').classList.toggle('solved', convState.revealed[3]);
+      document.getElementById('step4Formula').innerHTML =
+        `右邊冰點基準 + 右上升格數 = <span class="pill-val amber">${fmt(R.low)}</span> + <span class="pill-val">${convState.revealed[2] ? fmt(rDelta) : '上升格數'}</span>` +
+        (convState.revealed[3] ? ` = <span class="pill-val emerald" style="font-size:16px;">${fmt(rVal)} ${R.unit}</span>` : ` = <strong style="color:#fbbf24;">? ${R.unit}</strong>`);
+
+      drawThermometerConverter();
+    }
+
+    function resetInputsAndReveals() {
+      convState.revealed = [false, false, false, false];
+      ['ans1Input', 'ans2DistInput', 'ans2RatioInput', 'ans3SpanInput', 'ans3DeltaInput', 'ans4Input'].forEach(id => {
+        document.getElementById(id).value = '';
+      });
+      ['fb1', 'fb2', 'fb3', 'fb4'].forEach(id => {
+        const el = document.getElementById(id);
+        el.textContent = '';
+        el.className = 'step-feedback';
+      });
+    }
+
+    // Parse user number / fraction / percentage input
+    function parseMathVal(str) {
+      const s = str.trim().replace(/％/g, '%');
+      if (!s) return NaN;
+      if (s.endsWith('%')) {
+        const v = parseFloat(s.slice(0, -1));
+        return isNaN(v) ? NaN : v / 100;
+      }
+      if (s.includes('/')) {
+        const parts = s.split('/');
+        if (parts.length === 2) {
+          const a = parseFloat(parts[0]);
+          const b = parseFloat(parts[1]);
+          if (!isNaN(a) && !isNaN(b) && b !== 0) return a / b;
+        }
+      }
+      return parseFloat(s);
+    }
+
+    function snapFracToCleanLeft(rawFrac) {
+      const clamped = Math.max(0, Math.min(1, rawFrac));
+      const L = getScaleMeta('left');
+      const span = L.high - L.low;
+      // Snap to integer left reading so classroom mental math is clean
+      const rawLeft = L.low + clamped * span;
+      const snappedLeft = Math.round(rawLeft);
+      return Math.max(0, Math.min(1, (snappedLeft - L.low) / span));
+    }
+
+    // Pointer Dragging on scaleCanvas
+    function handleCanvasPointer(clientY) {
+      const rect = scaleCanvas.getBoundingClientRect();
+      const y = ((clientY - rect.top) / rect.height) * scaleCanvas.height;
+      const rawFrac = (THERM.botY - y) / (THERM.botY - THERM.topY);
+      const nextFrac = snapFracToCleanLeft(rawFrac);
+      if (Math.abs(nextFrac - convState.frac) > 1e-5) {
+        convState.frac = nextFrac;
+        resetInputsAndReveals();
+        updateConverterUI();
+      }
+    }
+
+    scaleCanvas.addEventListener('pointerdown', (e) => {
+      convState.dragging = true;
+      scaleCanvas.setPointerCapture(e.pointerId);
+      handleCanvasPointer(e.clientY);
+    });
+    scaleCanvas.addEventListener('pointermove', (e) => {
+      if (!convState.dragging) return;
+      handleCanvasPointer(e.clientY);
+    });
+    scaleCanvas.addEventListener('pointerup', (e) => {
+      convState.dragging = false;
+      scaleCanvas.releasePointerCapture?.(e.pointerId);
+    });
+
+    posSlider.addEventListener('input', (e) => {
+      convState.frac = snapFracToCleanLeft(parseFloat(e.target.value) / 100);
+      resetInputsAndReveals();
+      updateConverterUI();
+    });
+
+    // Scale selector buttons
+    document.querySelectorAll('[data-side]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const side = btn.dataset.side;
+        const sc = btn.dataset.scale;
+        document.querySelectorAll(`[data-side="${side}"]`).forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        if (side === 'left') convState.leftType = sc;
+        else convState.rightType = sc;
+        convState.frac = snapFracToCleanLeft(convState.frac);
+        resetInputsAndReveals();
+        updateConverterUI();
+      });
+    });
+
+    ['leftCustomLow', 'leftCustomHigh', 'rightCustomLow', 'rightCustomHigh'].forEach(id => {
+      document.getElementById(id).addEventListener('input', () => {
+        const lLow = parseFloat(document.getElementById('leftCustomLow').value);
+        const lHigh = parseFloat(document.getElementById('leftCustomHigh').value);
+        const rLow = parseFloat(document.getElementById('rightCustomLow').value);
+        const rHigh = parseFloat(document.getElementById('rightCustomHigh').value);
+        if (!isNaN(lLow)) convState.leftCustomLow = lLow;
+        if (!isNaN(lHigh)) convState.leftCustomHigh = lHigh;
+        if (!isNaN(rLow)) convState.rightCustomLow = rLow;
+        if (!isNaN(rHigh)) convState.rightCustomHigh = rHigh;
+        resetInputsAndReveals();
+        updateConverterUI();
+      });
+    });
+
+    document.getElementById('swapScalesBtn').addEventListener('click', () => {
+      const oldL = convState.leftType;
+      const oldR = convState.rightType;
+      convState.leftType = oldR === 'Y' ? 'X' : oldR;
+      convState.rightType = oldL === 'X' ? 'Y' : oldL;
+
+      const tlLow = convState.leftCustomLow, tlHigh = convState.leftCustomHigh;
+      convState.leftCustomLow = convState.rightCustomLow;
+      convState.leftCustomHigh = convState.rightCustomHigh;
+      convState.rightCustomLow = tlLow;
+      convState.rightCustomHigh = tlHigh;
+
+      document.getElementById('leftCustomLow').value = convState.leftCustomLow;
+      document.getElementById('leftCustomHigh').value = convState.leftCustomHigh;
+      document.getElementById('rightCustomLow').value = convState.rightCustomLow;
+      document.getElementById('rightCustomHigh').value = convState.rightCustomHigh;
+
+      document.querySelectorAll('[data-side="left"]').forEach(b => b.classList.toggle('active', b.dataset.scale === convState.leftType));
+      document.querySelectorAll('[data-side="right"]').forEach(b => b.classList.toggle('active', b.dataset.scale === convState.rightType));
+
+      convState.frac = snapFracToCleanLeft(convState.frac);
+      resetInputsAndReveals();
+      updateConverterUI();
+    });
+
+    document.getElementById('randomPosBtn').addEventListener('click', () => {
+      const niceFracs = [0.1, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7, 0.75, 0.8, 0.9];
+      const pick = niceFracs[Math.floor(Math.random() * niceFracs.length)];
+      convState.frac = snapFracToCleanLeft(pick);
+      resetInputsAndReveals();
+      updateConverterUI();
+    });
+
+    // Step Hint & Check Buttons
+    document.getElementById('hint1Btn').addEventListener('click', () => {
+      convState.revealed[0] = true;
+      updateConverterUI();
+    });
+    document.getElementById('hint2Btn').addEventListener('click', () => {
+      convState.revealed[0] = true;
+      convState.revealed[1] = true;
+      updateConverterUI();
+    });
+    document.getElementById('hint3Btn').addEventListener('click', () => {
+      convState.revealed[0] = true;
+      convState.revealed[1] = true;
+      convState.revealed[2] = true;
+      updateConverterUI();
+    });
+    document.getElementById('hint4Btn').addEventListener('click', () => {
+      convState.revealed = [true, true, true, true];
+      updateConverterUI();
+    });
+
+    document.getElementById('revealAllBtn').addEventListener('click', () => {
+      convState.revealed = [true, true, true, true];
+      updateConverterUI();
+    });
+    document.getElementById('hideAllBtn').addEventListener('click', () => {
+      resetInputsAndReveals();
+      updateConverterUI();
+    });
+
+    document.getElementById('check1Btn').addEventListener('click', () => {
+      const c = computeConv();
+      const v = parseMathVal(document.getElementById('ans1Input').value);
+      const fb = document.getElementById('fb1');
+      if (Math.abs(v - c.lSpan) < 0.05) {
+        fb.textContent = '✓ 正確！';
+        fb.className = 'step-feedback ok';
+        convState.revealed[0] = true;
+        updateConverterUI();
+      } else {
+        fb.textContent = '✗ 再算一次：最高點減去最低點';
+        fb.className = 'step-feedback err';
+      }
+    });
+
+    document.getElementById('check2Btn').addEventListener('click', () => {
+      const c = computeConv();
+      const d = parseMathVal(document.getElementById('ans2DistInput').value);
+      const r = parseMathVal(document.getElementById('ans2RatioInput').value);
+      const fb = document.getElementById('fb2');
+      const dOk = Math.abs(d - c.lDist) < 0.05;
+      const rOk = Math.abs(r - convState.frac) < 0.015;
+      if (dOk && rOk) {
+        fb.textContent = '✓ 比例完全正確！';
+        fb.className = 'step-feedback ok';
+        convState.revealed[0] = true;
+        convState.revealed[1] = true;
+        updateConverterUI();
+      } else if (!dOk) {
+        fb.textContent = '✗ 「距離最低溫」算錯囉（指定點 − 左冰點）';
+        fb.className = 'step-feedback err';
+      } else {
+        fb.textContent = '✗ 比例是「距離 ÷ 總間距」，可填分數如 2/5 或小數';
+        fb.className = 'step-feedback err';
+      }
+    });
+
+    document.getElementById('check3Btn').addEventListener('click', () => {
+      const c = computeConv();
+      const sp = parseMathVal(document.getElementById('ans3SpanInput').value);
+      const dl = parseMathVal(document.getElementById('ans3DeltaInput').value);
+      const fb = document.getElementById('fb3');
+      const spOk = Math.abs(sp - c.rSpan) < 0.05;
+      const dlOk = Math.abs(dl - c.rDelta) < 0.12;
+      if (spOk && dlOk) {
+        fb.textContent = '✓ 太棒了！右上升格數正確！';
+        fb.className = 'step-feedback ok';
+        convState.revealed[0] = true;
+        convState.revealed[1] = true;
+        convState.revealed[2] = true;
+        updateConverterUI();
+      } else if (!spOk) {
+        fb.textContent = '✗ 「右總間距」應為 右沸點 − 右冰點';
+        fb.className = 'step-feedback err';
+      } else {
+        fb.textContent = '✗ 上升格數 ＝ 右總間距 × 步驟 2 的比例';
+        fb.className = 'step-feedback err';
+      }
+    });
+
+    document.getElementById('check4Btn').addEventListener('click', () => {
+      const c = computeConv();
+      const v = parseMathVal(document.getElementById('ans4Input').value);
+      const fb = document.getElementById('fb4');
+      if (Math.abs(v - c.rVal) < 0.15) {
+        fb.textContent = `🎉 恭喜答對！就是 ${fmt(c.rVal)} ${c.R.unit}！`;
+        fb.className = 'step-feedback ok';
+        convState.revealed = [true, true, true, true];
+        updateConverterUI();
+      } else {
+        fb.textContent = '✗ 再檢查一下：記得加上「右邊最低溫（冰點）」喔！';
+        fb.className = 'step-feedback err';
+      }
+    });
+
+    // ==================== PART 2: ORIGINAL EQUILIBRIUM ====================
+    const state = {
+      t: 0,
+      maxT: 12,
+      playing: false,
+      slowMo: false,
+      mode: 'hot',
+      liquid: 'alcohol',
+      lastTs: 0
+    };
+
+    const macroCanvas = document.getElementById('macroCanvas');
+    const mctx = macroCanvas.getContext('2d');
+    const microCanvas = document.getElementById('microCanvas');
+    const uctx = microCanvas.getContext('2d');
+
+    const playBtn = document.getElementById('playBtn');
+    const slowBtn = document.getElementById('slowBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const timeScrubber = document.getElementById('timeScrubber');
+    const timeReadout = document.getElementById('timeReadout');
+    const stagePill = document.getElementById('stagePill');
+    const waterTempVal = document.getElementById('waterTempVal');
+    const glassTempVal = document.getElementById('glassTempVal');
+    const liqTempVal = document.getElementById('liqTempVal');
+    const macroDeltaLabel = document.getElementById('macroDeltaLabel');
+    const keOutFill = document.getElementById('keOutFill');
+    const keInFill = document.getElementById('keInFill');
+    const keOutText = document.getElementById('keOutText');
+    const keInText = document.getElementById('keInText');
+
+    function computePhysics(t) {
+      const T_init = 25.0;
+      const T_water0 = state.mode === 'hot' ? 85.0 : 5.0;
+      const T_eq = state.mode === 'hot' ? 84.5 : 5.4;
+      const immerse = Math.max(0, Math.min(1, (t - 0.3) / 0.6));
+      const tau = Math.max(0, t - 0.7);
+      const condFactor = state.liquid === 'mercury' ? 1.25 : 1.0;
+
+      const gFrac = 1 - Math.exp(-tau / 0.55);
+      const T_glass = T_init + (T_eq - T_init) * gFrac;
+
+      const k1 = 1.25 * condFactor;
+      const k2 = 0.28 * condFactor;
+      let lFrac = 0;
+      if (tau > 0) {
+        lFrac = 1 - (k1 * Math.exp(-k2 * tau) - k2 * Math.exp(-k1 * tau)) / (k1 - k2);
+        lFrac = Math.max(0, Math.min(1, lFrac));
+      }
+      const T_liq = T_init + (T_eq - T_init) * lFrac;
+      const T_water = T_water0 + (T_eq - T_water0) * Math.max(gFrac, lFrac);
+
+      const betaGlass = 0.42;
+      const betaLiq = state.liquid === 'alcohol' ? 1.45 : 1.15;
+      const dV_glass = betaGlass * (T_glass - T_init);
+      const dV_liq = betaLiq * (T_liq - T_init);
+      const netDelta = dV_liq - dV_glass;
+
+      let stage = '';
+      let isEq = false;
+      if (t < 0.7) {
+        stage = '階段 0：溫度計正準備浸入燒杯中';
+      } else if ((state.mode === 'hot' && netDelta < 0) || (state.mode === 'cold' && netDelta > 0)) {
+        stage = state.mode === 'hot'
+          ? '階段 1：玻璃泡先受熱膨脹 → 液面先微降！'
+          : '階段 1：玻璃泡先遇冷收縮 → 液面先微升！';
+      } else if (Math.abs(T_liq - T_eq) > 2.2) {
+        stage = state.mode === 'hot'
+          ? '階段 2：熱量傳入液體，分子動能劇增 → 液面迅速上升'
+          : '階段 2：液體放熱降溫，分子動能減少 → 液面迅速下降';
+      } else {
+        stage = '✓ 達成熱平衡！內外平均動能相等';
+        isEq = true;
+      }
+
+      return { T_init, T_water, T_glass, T_liq, T_eq, immerse, dV_glass, dV_liq, netDelta, stage, isEq };
+    }
+
+    function tempToColor(temp) {
+      const n = Math.max(0, Math.min(1, (temp - 0) / 95));
+      if (n < 0.35) return lerpRGB([56, 189, 248], [52, 211, 153], n / 0.35);
+      if (n < 0.7) return lerpRGB([52, 211, 153], [251, 191, 36], (n - 0.35) / 0.35);
+      return lerpRGB([251, 191, 36], [244, 63, 94], (n - 0.7) / 0.3);
+    }
+
+    function lerpRGB(a, b, u) {
+      const r = Math.round(a[0] + (b[0] - a[0]) * u);
+      const g = Math.round(a[1] + (b[1] - a[1]) * u);
+      const bl = Math.round(a[2] + (b[2] - a[2]) * u);
+      return `rgb(${r},${g},${bl})`;
+    }
+
+    const outParticles = [];
+    const inParticles = [];
+    const glassAtoms = [];
+    const flashes = [];
+
+    function initMicroParticles() {
+      outParticles.length = 0;
+      inParticles.length = 0;
+      glassAtoms.length = 0;
+      flashes.length = 0;
+
+      for (let i = 0; i < 42; i++) {
+        const ang = Math.random() * Math.PI * 2;
+        outParticles.push({
+          x: 45 + Math.random() * 255,
+          y: 55 + Math.random() * 410,
+          vx: Math.cos(ang),
+          vy: Math.sin(ang),
+          r: 8
+        });
+      }
+      for (let row = 0; row < 12; row++) {
+        for (let col = 0; col < 2; col++) {
+          glassAtoms.push({
+            bx: 344 + col * 30,
+            by: 55 + row * 37,
+            phase: Math.random() * Math.PI * 2
+          });
+        }
+      }
+      for (let i = 0; i < 36; i++) {
+        const ang = Math.random() * Math.PI * 2;
+        inParticles.push({
+          x: 420 + Math.random() * 250,
+          y: 55 + Math.random() * 410,
+          vx: Math.cos(ang),
+          vy: Math.sin(ang),
+          r: state.liquid === 'mercury' ? 10 : 8.5
+        });
+      }
+    }
+
+    function drawMacro(p) {
+      const w = macroCanvas.width;
+      const h = macroCanvas.height;
+      mctx.clearRect(0, 0, w, h);
+
+      mctx.strokeStyle = 'rgba(148,163,184,0.06)';
+      mctx.lineWidth = 1;
+      for (let gx = 0; gx < w; gx += 40) { mctx.beginPath(); mctx.moveTo(gx, 0); mctx.lineTo(gx, h); mctx.stroke(); }
+      for (let gy = 0; gy < h; gy += 40) { mctx.beginPath(); mctx.moveTo(0, gy); mctx.lineTo(w, gy); mctx.stroke(); }
+
+      const bx = 110, by = 245, bw = 240, bh = 230;
+      const waterLevel = by + 48;
+
+      const waterGrad = mctx.createLinearGradient(bx, waterLevel, bx, by + bh);
+      if (state.mode === 'hot') {
+        waterGrad.addColorStop(0, 'rgba(244, 63, 94, 0.38)');
+        waterGrad.addColorStop(1, 'rgba(225, 29, 72, 0.62)');
+      } else {
+        waterGrad.addColorStop(0, 'rgba(56, 189, 248, 0.35)');
+        waterGrad.addColorStop(1, 'rgba(2, 132, 199, 0.58)');
+      }
+      mctx.fillStyle = waterGrad;
+      mctx.fillRect(bx + 4, waterLevel, bw - 8, bh - (waterLevel - by) - 4);
+
+      if (state.mode === 'hot') {
+        mctx.strokeStyle = 'rgba(251, 113, 133, 0.32)';
+        mctx.lineWidth = 3;
+        for (let i = 0; i < 4; i++) {
+          const sx = bx + 45 + i * 50;
+          const sy = waterLevel - 10;
+          const wave = Math.sin(performance.now() * 0.004 + i) * 7;
+          mctx.beginPath();
+          mctx.moveTo(sx, sy);
+          mctx.quadraticCurveTo(sx + wave, sy - 22, sx - wave, sy - 44);
+          mctx.stroke();
+        }
+      } else {
+        mctx.fillStyle = 'rgba(224, 242, 254, 0.65)';
+        mctx.strokeStyle = '#bae6fd';
+        mctx.lineWidth = 2;
+        [[bx + 25, waterLevel - 6, 36, 26], [bx + 170, waterLevel - 4, 40, 28]].forEach(([ix, iy, iw, ih]) => {
+          mctx.fillRect(ix, iy, iw, ih);
+          mctx.strokeRect(ix, iy, iw, ih);
+        });
+      }
+
+      const thermYOffset = (1 - p.immerse) * (-135);
+      const tx = bx + bw / 2;
+      const bulbCy = 415 + thermYOffset;
+      const bulbR = 26 + (p.T_glass - 25) * 0.095;
+      const tubeTop = 65 + thermYOffset;
+      const tubeW = 14;
+
+      const liqColor = state.liquid === 'alcohol' ? '#ef4444' : '#cbd5e1';
+      const liqGlow = state.liquid === 'alcohol' ? 'rgba(239,68,68,0.45)' : 'rgba(203,213,225,0.45)';
+      const baseColY = 265 + thermYOffset;
+      const colTopY = Math.max(tubeTop + 14, Math.min(bulbCy - bulbR - 4, baseColY - p.netDelta * 1.95));
+
+      mctx.save();
+      mctx.fillStyle = 'rgba(226, 232, 240, 0.14)';
+      mctx.strokeStyle = '#94a3b8';
+      mctx.lineWidth = 3;
+      mctx.beginPath();
+      mctx.roundRect(tx - tubeW / 2 - 4, tubeTop, tubeW + 8, bulbCy - tubeTop, 10);
+      mctx.fill();
+      mctx.stroke();
+
+      mctx.beginPath();
+      mctx.arc(tx, bulbCy, bulbR + 4, 0, Math.PI * 2);
+      mctx.fillStyle = tempToColor(p.T_glass).replace('rgb', 'rgba').replace(')', ',0.25)');
+      mctx.fill();
+      mctx.strokeStyle = tempToColor(p.T_glass);
+      mctx.lineWidth = 3.5;
+      mctx.stroke();
+
+      mctx.fillStyle = '#0f172a';
+      mctx.fillRect(tx - 4, tubeTop + 10, 8, bulbCy - tubeTop - 10);
+
+      mctx.fillStyle = liqColor;
+      mctx.shadowColor = liqGlow;
+      mctx.shadowBlur = 10;
+      mctx.beginPath();
+      mctx.arc(tx, bulbCy, bulbR - 1, 0, Math.PI * 2);
+      mctx.fill();
+      mctx.fillRect(tx - 4, colTopY, 8, bulbCy - colTopY);
+      mctx.restore();
+
+      mctx.save();
+      mctx.strokeStyle = '#fbbf24';
+      mctx.setLineDash([4, 4]);
+      mctx.lineWidth = 1.8;
+      mctx.beginPath();
+      mctx.moveTo(tx - 24, baseColY);
+      mctx.lineTo(tx + 24, baseColY);
+      mctx.stroke();
+      mctx.fillStyle = '#fbbf24';
+      mctx.font = 'bold 12px Microsoft JhengHei';
+      mctx.fillText('初始 25°C 液面', tx + 28, baseColY + 4);
+      mctx.restore();
+
+      mctx.strokeStyle = '#cbd5e1';
+      mctx.lineWidth = 4;
+      mctx.beginPath();
+      mctx.moveTo(bx, by);
+      mctx.lineTo(bx, by + bh);
+      mctx.lineTo(bx + bw, by + bh);
+      mctx.lineTo(bx + bw, by);
+      mctx.stroke();
+      mctx.fillStyle = 'rgba(203,213,225,0.6)';
+      mctx.font = '11px sans-serif';
+      for (let i = 1; i <= 3; i++) {
+        const ty = by + bh - i * 50;
+        mctx.fillRect(bx + 10, ty, 14, 2);
+        mctx.fillText(`${i * 100}mL`, bx + 28, ty + 4);
+      }
+
+      const mx = 535, my = 185, mr = 128;
+      mctx.save();
+      mctx.beginPath();
+      mctx.arc(mx, my, mr, 0, Math.PI * 2);
+      mctx.fillStyle = '#0b1222';
+      mctx.fill();
+      mctx.lineWidth = 4;
+      mctx.strokeStyle = '#38bdf8';
+      mctx.stroke();
+      mctx.clip();
+
+      const zoomScale = 3.2;
+      const diffPx = (baseColY - colTopY) * zoomScale;
+      const centerLoupeY = my + 10;
+
+      mctx.fillStyle = '#1e293b';
+      mctx.fillRect(mx - 22, my - mr, 44, mr * 2);
+
+      mctx.fillStyle = liqColor;
+      mctx.fillRect(mx - 18, centerLoupeY - diffPx, 36, mr * 2);
+
+      mctx.strokeStyle = '#fff';
+      mctx.lineWidth = 2;
+      mctx.beginPath();
+      mctx.moveTo(mx - 18, centerLoupeY - diffPx);
+      mctx.quadraticCurveTo(mx, centerLoupeY - diffPx + 6, mx + 18, centerLoupeY - diffPx);
+      mctx.stroke();
+
+      mctx.strokeStyle = '#fbbf24';
+      mctx.setLineDash([6, 4]);
+      mctx.lineWidth = 2;
+      mctx.beginPath();
+      mctx.moveTo(mx - mr, centerLoupeY);
+      mctx.lineTo(mx + mr, centerLoupeY);
+      mctx.stroke();
+      mctx.setLineDash([]);
+
+      if (Math.abs(diffPx) > 4) {
+        const isUp = diffPx > 0;
+        mctx.strokeStyle = isUp ? '#34d399' : '#fb7185';
+        mctx.fillStyle = isUp ? '#34d399' : '#fb7185';
+        mctx.lineWidth = 3;
+        mctx.beginPath();
+        mctx.moveTo(mx - 48, centerLoupeY);
+        mctx.lineTo(mx - 48, centerLoupeY - diffPx);
+        mctx.stroke();
+        mctx.font = 'bold 14px Microsoft JhengHei';
+        mctx.fillText(isUp ? '▲ 上升' : '▼ 先微降！', mx - 112, centerLoupeY - diffPx / 2 + 5);
+      }
+
+      mctx.restore();
+
+      mctx.save();
+      mctx.strokeStyle = 'rgba(56, 189, 248, 0.5)';
+      mctx.setLineDash([5, 5]);
+      mctx.beginPath();
+      mctx.moveTo(tx + 12, colTopY);
+      mctx.lineTo(mx - mr, my - 30);
+      mctx.stroke();
+      mctx.restore();
+
+      mctx.fillStyle = '#38bdf8';
+      mctx.font = 'bold 15px Microsoft JhengHei';
+      mctx.textAlign = 'center';
+      mctx.fillText('🔍 液面變化放大鏡', mx, my - mr - 12);
+
+      mctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+      mctx.strokeStyle = 'rgba(148,163,184,0.25)';
+      mctx.lineWidth = 1.5;
+      mctx.beginPath();
+      mctx.roundRect(390, 345, 300, 140, 12);
+      mctx.fill();
+      mctx.stroke();
+
+      mctx.textAlign = 'left';
+      mctx.fillStyle = '#f8fafc';
+      mctx.font = 'bold 15px Microsoft JhengHei';
+      mctx.fillText('體積變化即時拆解：', 408, 374);
+
+      mctx.font = '14px Microsoft JhengHei';
+      const gSign = p.dV_glass >= 0 ? '+' : '';
+      const lSign = p.dV_liq >= 0 ? '+' : '';
+      mctx.fillStyle = '#fbbf24';
+      mctx.fillText(`1. 玻璃泡容積變化：${gSign}${p.dV_glass.toFixed(1)} 單位`, 408, 404);
+      mctx.fillStyle = '#38bdf8';
+      mctx.fillText(`2. 內部液體膨脹量：${lSign}${p.dV_liq.toFixed(1)} 單位`, 408, 432);
+      mctx.fillStyle = p.netDelta < 0 ? '#fb7185' : '#34d399';
+      mctx.font = 'bold 15px Microsoft JhengHei';
+      mctx.fillText(`⇒ 液柱淨變化：${p.netDelta >= 0 ? '+' : ''}${p.netDelta.toFixed(1)} mm`, 408, 464);
+    }
+
+    function stepAndDrawMicro(p, dt) {
+      const w = microCanvas.width;
+      const h = microCanvas.height;
+      uctx.clearRect(0, 0, w, h);
+
+      uctx.fillStyle = 'rgba(15, 23, 42, 0.7)';
+      uctx.fillRect(20, 35, 310, 455);
+      const wallShift = (p.T_glass - 25) * 0.08;
+      uctx.fillStyle = 'rgba(148, 163, 184, 0.14)';
+      uctx.fillRect(330, 35, 60, 455);
+      uctx.fillStyle = 'rgba(15, 23, 42, 0.7)';
+      uctx.fillRect(390, 35, 310, 455);
+
+      uctx.font = 'bold 15px Microsoft JhengHei';
+      uctx.textAlign = 'center';
+      uctx.fillStyle = state.mode === 'hot' ? '#fb7185' : '#38bdf8';
+      uctx.fillText(`燒杯水分子 (${p.T_water.toFixed(1)}°C)`, 175, 24);
+      uctx.fillStyle = '#fbbf24';
+      uctx.fillText('玻璃壁', 360 + wallShift * 0.5, 24);
+      uctx.fillStyle = '#38bdf8';
+      uctx.fillText(`溫度計內液體分子 (${p.T_liq.toFixed(1)}°C)`, 545, 24);
+
+      const speedOut = 65 + Math.sqrt(p.T_water + 273) * 8.5 - 130;
+      const speedIn = 65 + Math.sqrt(p.T_liq + 273) * 8.5 - 130;
+      const glassVib = 1.5 + Math.max(0, (p.T_glass + 20) * 0.055);
+      const simDt = Math.min(0.035, dt);
+
+      const colOut = tempToColor(p.T_water);
+      outParticles.forEach(pt => {
+        pt.x += pt.vx * speedOut * simDt;
+        pt.y += pt.vy * speedOut * simDt;
+        if (pt.x < 30) { pt.x = 30; pt.vx = Math.abs(pt.vx); }
+        if (pt.x > 320) {
+          pt.x = 320;
+          pt.vx = -Math.abs(pt.vx);
+          if (p.immerse > 0.5 && Math.abs(p.T_water - p.T_liq) > 1.5 && Math.random() < 0.45) {
+            flashes.push({ x: 332, y: pt.y, life: 1.0, dir: state.mode === 'hot' ? 1 : -1 });
+          }
+        }
+        if (pt.y < 45) { pt.y = 45; pt.vy = Math.abs(pt.vy); }
+        if (pt.y > 480) { pt.y = 480; pt.vy = -Math.abs(pt.vy); }
+
+        uctx.beginPath();
+        uctx.arc(pt.x, pt.y, pt.r, 0, Math.PI * 2);
+        uctx.fillStyle = colOut;
+        uctx.fill();
+        uctx.strokeStyle = 'rgba(255,255,255,0.35)';
+        uctx.lineWidth = 1.2;
+        uctx.stroke();
+      });
+
+      const now = performance.now() * 0.015;
+      const colGlass = tempToColor(p.T_glass);
+      glassAtoms.forEach((ga, idx) => {
+        const jx = Math.sin(now * (1 + idx % 3 * 0.3) + ga.phase) * glassVib;
+        const jy = Math.cos(now * (1.2 + idx % 2 * 0.3) + ga.phase) * glassVib;
+        const gx = ga.bx + wallShift + jx;
+        const gy = ga.by + jy;
+        uctx.beginPath();
+        uctx.arc(gx, gy, 9, 0, Math.PI * 2);
+        uctx.fillStyle = colGlass;
+        uctx.fill();
+        uctx.strokeStyle = '#e2e8f0';
+        uctx.lineWidth = 1.5;
+        uctx.stroke();
+      });
+
+      const colIn = tempToColor(p.T_liq);
+      inParticles.forEach(pt => {
+        pt.x += pt.vx * speedIn * simDt;
+        pt.y += pt.vy * speedIn * simDt;
+        if (pt.x < 400) {
+          pt.x = 400;
+          pt.vx = Math.abs(pt.vx);
+          if (p.immerse > 0.5 && Math.abs(p.T_water - p.T_liq) > 1.5 && Math.random() < 0.45) {
+            flashes.push({ x: 388, y: pt.y, life: 1.0, dir: state.mode === 'hot' ? 1 : -1 });
+          }
+        }
+        if (pt.x > 690) { pt.x = 690; pt.vx = -Math.abs(pt.vx); }
+        if (pt.y < 45) { pt.y = 45; pt.vy = Math.abs(pt.vy); }
+        if (pt.y > 480) { pt.y = 480; pt.vy = -Math.abs(pt.vy); }
+
+        uctx.beginPath();
+        uctx.arc(pt.x, pt.y, pt.r, 0, Math.PI * 2);
+        uctx.fillStyle = colIn;
+        uctx.fill();
+        uctx.strokeStyle = 'rgba(255,255,255,0.45)';
+        uctx.lineWidth = 1.4;
+        uctx.stroke();
+      });
+
+      for (let i = flashes.length - 1; i >= 0; i--) {
+        const f = flashes[i];
+        f.life -= simDt * 3.2;
+        if (f.life <= 0) { flashes.splice(i, 1); continue; }
+        uctx.save();
+        uctx.globalAlpha = f.life;
+        uctx.beginPath();
+        uctx.arc(f.x, f.y, (1 - f.life) * 24 + 6, 0, Math.PI * 2);
+        uctx.strokeStyle = '#fef08a';
+        uctx.lineWidth = 3;
+        uctx.stroke();
+        uctx.restore();
+      }
+
+      if (p.immerse > 0.5 && !p.isEq) {
+        const flowRight = p.T_water > p.T_liq;
+        uctx.save();
+        uctx.fillStyle = flowRight ? 'rgba(251, 113, 133, 0.92)' : 'rgba(56, 189, 248, 0.92)';
+        uctx.font = 'bold 16px Microsoft JhengHei';
+        uctx.textAlign = 'center';
+        uctx.fillText(flowRight ? '熱量傳遞方向 ━━▶' : '◀━━ 熱量流失方向', 360, 476);
+        uctx.restore();
+      } else if (p.isEq) {
+        uctx.save();
+        uctx.fillStyle = 'rgba(16, 185, 129, 0.22)';
+        uctx.strokeStyle = '#34d399';
+        uctx.lineWidth = 2;
+        uctx.beginPath();
+        uctx.roundRect(210, 225, 300, 62, 12);
+        uctx.fill();
+        uctx.stroke();
+        uctx.fillStyle = '#ecfdf5';
+        uctx.font = 'bold 20px Microsoft JhengHei';
+        uctx.textAlign = 'center';
+        uctx.fillText('✓ 兩側平均動能相等：熱平衡！', 360, 263);
+        uctx.restore();
+      }
+    }
+
+    function updateReadouts(p) {
+      timeReadout.textContent = `t = ${state.t.toFixed(2)} s`;
+      timeScrubber.value = state.t;
+
+      stagePill.textContent = p.stage;
+      stagePill.classList.toggle('eq', p.isEq);
+
+      waterTempVal.textContent = `${p.T_water.toFixed(1)} °C`;
+      waterTempVal.style.color = tempToColor(p.T_water);
+      glassTempVal.textContent = `${p.T_glass.toFixed(1)} °C`;
+      glassTempVal.style.color = tempToColor(p.T_glass);
+      liqTempVal.textContent = `${p.T_liq.toFixed(1)} °C`;
+      liqTempVal.style.color = tempToColor(p.T_liq);
+
+      const sign = p.netDelta >= 0 ? '+' : '';
+      macroDeltaLabel.textContent = `液面變化 Δh = ${sign}${p.netDelta.toFixed(1)} mm`;
+      macroDeltaLabel.style.color = p.netDelta < 0 ? '#fb7185' : '#34d399';
+
+      const keOutPct = Math.max(5, Math.min(100, (p.T_water + 15) / 1.05));
+      const keInPct = Math.max(5, Math.min(100, (p.T_liq + 15) / 1.05));
+      keOutFill.style.width = `${keOutPct}%`;
+      keOutFill.style.backgroundColor = tempToColor(p.T_water);
+      keInFill.style.width = `${keInPct}%`;
+      keInFill.style.backgroundColor = tempToColor(p.T_liq);
+
+      keOutText.textContent = `${Math.round(p.T_water + 273)} K`;
+      keInText.textContent = `${Math.round(p.T_liq + 273)} K`;
+    }
+
+    playBtn.addEventListener('click', () => {
+      if (state.t >= state.maxT) state.t = 0;
+      state.playing = !state.playing;
+      playBtn.textContent = state.playing ? '⏸ 暫停' : '▶ 播放';
+    });
+
+    slowBtn.addEventListener('click', () => {
+      state.slowMo = !state.slowMo;
+      slowBtn.classList.toggle('active', state.slowMo);
+    });
+
+    resetBtn.addEventListener('click', () => {
+      state.playing = false;
+      state.t = 0;
+      playBtn.textContent = '▶ 播放';
+    });
+
+    timeScrubber.addEventListener('input', (e) => {
+      state.playing = false;
+      playBtn.textContent = '▶ 播放';
+      state.t = parseFloat(e.target.value);
+    });
+
+    document.querySelectorAll('[data-jump]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state.playing = false;
+        playBtn.textContent = '▶ 播放';
+        state.t = parseFloat(btn.dataset.jump);
+      });
+    });
+
+    document.getElementById('modeHot').addEventListener('click', (e) => {
+      state.mode = 'hot';
+      e.target.classList.add('active');
+      document.getElementById('modeCold').classList.remove('active');
+      state.t = 0; state.playing = false; playBtn.textContent = '▶ 播放';
+    });
+
+    document.getElementById('modeCold').addEventListener('click', (e) => {
+      state.mode = 'cold';
+      e.target.classList.add('active');
+      document.getElementById('modeHot').classList.remove('active');
+      state.t = 0; state.playing = false; playBtn.textContent = '▶ 播放';
+    });
+
+    document.getElementById('liqAlcohol').addEventListener('click', (e) => {
+      state.liquid = 'alcohol';
+      e.target.classList.add('active');
+      document.getElementById('liqMercury').classList.remove('active');
+      initMicroParticles();
+    });
+
+    document.getElementById('liqMercury').addEventListener('click', (e) => {
+      state.liquid = 'mercury';
+      e.target.classList.add('active');
+      document.getElementById('liqAlcohol').classList.remove('active');
+      initMicroParticles();
+    });
+
+    function loop(ts) {
+      if (!state.lastTs) state.lastTs = ts;
+      const dt = (ts - state.lastTs) / 1000;
+      state.lastTs = ts;
+
+      if (activeTab === 'eq') {
+        if (state.playing) {
+          const rate = state.slowMo ? 0.25 : 1.0;
+          state.t += dt * rate;
+          if (state.t >= state.maxT) {
+            state.t = state.maxT;
+            state.playing = false;
+            playBtn.textContent = '▶ 播放';
+          }
+        }
+        const phys = computePhysics(state.t);
+        updateReadouts(phys);
+        drawMacro(phys);
+        stepAndDrawMicro(phys, dt);
+      }
+
+      requestAnimationFrame(loop);
+    }
+
+    initMicroParticles();
+    updateConverterUI();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

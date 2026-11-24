@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>03｜雙金屬片與熱傳導的「接力賽跑」</title>
+  <meta name="description" content="銅鐵鋁玻璃熱傳導接力賽與雙金屬片彎曲膨脹滑桿實驗，連動電熨斗及教室溫控開關電路模擬。" />
+  <meta name="portal-tags" content="熱學, 國中理化, 熱傳導, 雙金屬片" />
+  <meta name="portal-badge" content="國中理化" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .rank-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    .rank-table th, .rank-table td {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border-subtle);
+      text-align: left;
+    }
+    .rank-table th {
+      color: var(--text-muted);
+      font-weight: 700;
+      font-size: 12.5px;
+    }
+    .circuit-badge {
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-weight: 800;
+      font-size: 14px;
+    }
+    .circuit-on {
+      background: rgba(52, 211, 153, 0.2);
+      border: 1px solid #34d399;
+      color: #6ee7b7;
+    }
+    .circuit-off {
+      background: rgba(244, 63, 94, 0.16);
+      border: 1px solid #fb7185;
+      color: #fda4af;
+    }
+    .preset-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .layout-hidden {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-left">
+      <a class="back-btn" href="../index.html#thermodynamics">← 返回主選單</a>
+      <span class="module-badge badge-junior">國中理化</span>
+      <h1 class="topbar-title">3. 雙金屬片與熱傳導的「接力賽跑」</h1>
+    </div>
+    <div class="topbar-right">
+      <button class="btn btn-sm active" id="viewBoth">雙實驗同屏</button>
+      <button class="btn btn-sm" id="viewRace">只看① 熱傳導賽跑</button>
+      <button class="btn btn-sm" id="viewBimetal">只看② 雙金屬片溫控</button>
+    </div>
+  </header>
+
+  <main class="sim-container">
+    <div class="callout">
+      <strong>釐清三大易混淆概念：</strong>
+      ① <strong>熱傳導速率 <i>k</i></strong> 決定熱量「跑得多快」（銅 &gt; 鋁 &gt; 鐵 &gt; 玻璃）；
+      ② <strong>比熱 <i>s</i></strong> 決定「升溫 1°C 需要多少熱量」；
+      ③ <strong>熱膨脹係數 <i>α</i></strong> 決定溫度升高時「伸長多少」，雙金屬片永遠向膨脹係數<strong>較小</strong>的那一側彎曲！
+    </div>
+
+    <section class="split-grid" id="mainGrid">
+      <!-- Panel A: Heat Conduction Race -->
+      <div class="panel" id="racePanel">
+        <div class="panel-header">
+          <div class="panel-title">🔥 實驗 A：四材質熱傳導接力賽跑</div>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <span class="control-value" id="raceClock">0.00 s</span>
+            <button class="btn btn-sm btn-amber" id="raceStartBtn">🔥 點火開始計時</button>
+            <button class="btn btn-sm" id="raceResetBtn">↺ 重置</button>
+          </div>
+        </div>
+
+        <div class="canvas-wrap">
+          <canvas id="raceCanvas" width="720" height="400"></canvas>
+        </div>
+
+        <table class="rank-table">
+          <thead>
+            <tr>
+              <th>材質棒</th>
+              <th>熱傳導係數 k (W/m·K)</th>
+              <th>比熱 s (cal/g·°C)</th>
+              <th>第 1 / 2 / 3 支蠟燭掉落時間</th>
+            </tr>
+          </thead>
+          <tbody id="raceTableBody"></tbody>
+        </table>
+      </div>
+
+      <!-- Panel B: Bimetallic Strip Thermostat -->
+      <div class="panel" id="bimetalPanel">
+        <div class="panel-header">
+          <div class="panel-title">⚡ 實驗 B：複合雙金屬片（溫控開關模擬）</div>
+          <div class="circuit-badge circuit-on" id="circuitBadge">電路導通中</div>
+        </div>
+
+        <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between;">
+          <div style="display:flex; gap:8px;">
+            <button class="btn btn-sm active" id="appIron">🔥 電熨斗（過熱自動斷電）</button>
+            <button class="btn btn-sm" id="appAC">❄️ 教室冷氣（高溫自動啟動）</button>
+          </div>
+          <button class="btn btn-sm btn-primary" id="autoHeatBtn">🌡️ 自動升溫/降溫循環</button>
+        </div>
+
+        <div class="canvas-wrap">
+          <canvas id="bimetalCanvas" width="720" height="330"></canvas>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <div class="metric-box">
+            <div class="control-label">
+              <span>上層金屬膨脹係數 α<sub>上</sub></span>
+              <span class="control-value" id="alphaTopVal" style="color:#fbbf24;">17 ×10⁻⁶ /°C (銅)</span>
+            </div>
+            <input type="range" id="alphaTopSlider" min="1" max="28" step="0.5" value="17" />
+            <div class="preset-chips" style="margin-top:6px;">
+              <button class="btn btn-sm" data-target="top" data-a="1.2">殷鋼 1.2</button>
+              <button class="btn btn-sm" data-target="top" data-a="12">鐵 12</button>
+              <button class="btn btn-sm" data-target="top" data-a="17">銅 17</button>
+              <button class="btn btn-sm" data-target="top" data-a="23">鋁 23</button>
+            </div>
+          </div>
+
+          <div class="metric-box">
+            <div class="control-label">
+              <span>下層金屬膨脹係數 α<sub>下</sub></span>
+              <span class="control-value" id="alphaBotVal" style="color:#38bdf8;">12 ×10⁻⁶ /°C (鐵)</span>
+            </div>
+            <input type="range" id="alphaBotSlider" min="1" max="28" step="0.5" value="12" />
+            <div class="preset-chips" style="margin-top:6px;">
+              <button class="btn btn-sm" data-target="bot" data-a="1.2">殷鋼 1.2</button>
+              <button class="btn btn-sm" data-target="bot" data-a="12">鐵 12</button>
+              <button class="btn btn-sm" data-target="bot" data-a="17">銅 17</button>
+              <button class="btn btn-sm" data-target="bot" data-a="23">鋁 23</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="metric-box">
+          <div class="control-label">
+            <span>雙金屬片溫度（常溫 25°C）</span>
+            <span class="control-value" id="biTempVal" style="color:#fb7185;">25 °C</span>
+          </div>
+          <input type="range" id="biTempSlider" min="10" max="180" step="1" value="25" />
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // ========================
+    // View Switcher
+    // ========================
+    const mainGrid = document.getElementById('mainGrid');
+    const racePanel = document.getElementById('racePanel');
+    const bimetalPanel = document.getElementById('bimetalPanel');
+    const viewBtns = [document.getElementById('viewBoth'), document.getElementById('viewRace'), document.getElementById('viewBimetal')];
+
+    function setLayout(mode) {
+      viewBtns.forEach(b => b.classList.remove('active'));
+      if (mode === 'both') {
+        viewBtns[0].classList.add('active');
+        mainGrid.style.gridTemplateColumns = '';
+        racePanel.classList.remove('layout-hidden');
+        bimetalPanel.classList.remove('layout-hidden');
+      } else if (mode === 'race') {
+        viewBtns[1].classList.add('active');
+        mainGrid.style.gridTemplateColumns = '1fr';
+        racePanel.classList.remove('layout-hidden');
+        bimetalPanel.classList.add('layout-hidden');
+      } else {
+        viewBtns[2].classList.add('active');
+        mainGrid.style.gridTemplateColumns = '1fr';
+        racePanel.classList.add('layout-hidden');
+        bimetalPanel.classList.remove('layout-hidden');
+      }
+    }
+    viewBtns[0].addEventListener('click', () => setLayout('both'));
+    viewBtns[1].addEventListener('click', () => setLayout('race'));
+    viewBtns[2].addEventListener('click', () => setLayout('bimetal'));
+
+    // ========================
+    // PART A: Heat Conduction Race
+    // ========================
+    const raceCanvas = document.getElementById('raceCanvas');
+    const rctx = raceCanvas.getContext('2d');
+    const raceClock = document.getElementById('raceClock');
+    const raceStartBtn = document.getElementById('raceStartBtn');
+    const raceResetBtn = document.getElementById('raceResetBtn');
+    const raceTableBody = document.getElementById('raceTableBody');
+
+    const NODES = 40;
+    const CANDLE_NODES = [13, 24, 35]; // positions along the rod
+    const MELT_TEMP = 62;
+
+    const rods = [
+      { name: '銅 (Cu)', k: 401, s: 0.092, alphaSim: 2.35, color: '#f59e0b', temps: [], dropTimes: [null, null, null], candleDrops: [0, 0, 0] },
+      { name: '鋁 (Al)', k: 237, s: 0.215, alphaSim: 1.55, color: '#cbd5e1', temps: [], dropTimes: [null, null, null], candleDrops: [0, 0, 0] },
+      { name: '鐵 (Fe)', k: 80,  s: 0.107, alphaSim: 0.62, color: '#94a3b8', temps: [], dropTimes: [null, null, null], candleDrops: [0, 0, 0] },
+      { name: '玻璃',    k: 1.1, s: 0.200, alphaSim: 0.04, color: '#38bdf8', temps: [], dropTimes: [null, null, null], candleDrops: [0, 0, 0] }
+    ];
+
+    const raceState = {
+      running: false,
+      elapsed: 0
+    };
+
+    function resetRace() {
+      raceState.running = false;
+      raceState.elapsed = 0;
+      raceStartBtn.textContent = '🔥 點火開始計時';
+      rods.forEach(rod => {
+        rod.temps = new Array(NODES).fill(25);
+        rod.dropTimes = [null, null, null];
+        rod.candleDrops = [0, 0, 0];
+      });
+      renderRaceTable();
+    }
+
+    function tempHeatColor(T) {
+      const u = Math.max(0, Math.min(1, (T - 25) / 155));
+      if (u < 0.3) {
+        const t = u / 0.3;
+        return `rgb(${Math.round(56 + 100 * t)}, ${Math.round(140 + 70 * t)}, ${Math.round(230 - 90 * t)})`;
+      } else if (u < 0.65) {
+        const t = (u - 0.3) / 0.35;
+        return `rgb(${Math.round(156 + 95 * t)}, ${Math.round(210 - 30 * t)}, ${Math.round(140 - 110 * t)})`;
+      } else {
+        const t = (u - 0.65) / 0.35;
+        return `rgb(${Math.round(251)}, ${Math.round(180 - 125 * t)}, ${Math.round(30 + 30 * t)})`;
+      }
+    }
+
+    function stepRace(dt) {
+      const simDt = Math.min(0.03, dt);
+      if (raceState.running) {
+        raceState.elapsed += simDt;
+        // Multiple substeps for numerical stability of explicit heat equation
+        const substeps = 8;
+        const hdt = simDt / substeps;
+        rods.forEach(rod => {
+          rod.temps[0] = 220; // constant flame source at left end
+          for (let step = 0; step < substeps; step++) {
+            const next = rod.temps.slice();
+            for (let i = 1; i < NODES - 1; i++) {
+              const lap = rod.temps[i - 1] - 2 * rod.temps[i] + rod.temps[i + 1];
+              // slight ambient cooling
+              next[i] = rod.temps[i] + rod.alphaSim * 3.8 * hdt * lap - 0.008 * hdt * (rod.temps[i] - 25);
+            }
+            next[NODES - 1] = rod.temps[NODES - 1] + rod.alphaSim * 3.8 * hdt * (rod.temps[NODES - 2] - rod.temps[NODES - 1]);
+            rod.temps = next;
+          }
+          // Check candle melting
+          CANDLE_NODES.forEach((nodeIdx, cIdx) => {
+            if (rod.dropTimes[cIdx] === null && rod.temps[nodeIdx] >= MELT_TEMP) {
+              rod.dropTimes[cIdx] = raceState.elapsed;
+              renderRaceTable();
+            }
+            if (rod.dropTimes[cIdx] !== null && rod.candleDrops[cIdx] < 1) {
+              rod.candleDrops[cIdx] = Math.min(1, rod.candleDrops[cIdx] + simDt * 2.2);
+            }
+          });
+        });
+      }
+    }
+
+    function drawRace() {
+      const w = raceCanvas.width;
+      const h = raceCanvas.height;
+      rctx.clearRect(0, 0, w, h);
+
+      // Flame heater block on left
+      rctx.fillStyle = 'rgba(249, 115, 22, 0.14)';
+      rctx.fillRect(15, 25, 92, 350);
+      rctx.strokeStyle = 'rgba(251, 146, 60, 0.5)';
+      rctx.lineWidth = 2;
+      rctx.strokeRect(15, 25, 92, 350);
+
+      const now = performance.now() * 0.008;
+      if (raceState.running) {
+        for (let r = 0; r < 4; r++) {
+          const fy = 82 + r * 86;
+          const fh = 18 + Math.sin(now * 2 + r) * 5;
+          rctx.fillStyle = '#f97316';
+          rctx.beginPath();
+          rctx.moveTo(48, fy + 16);
+          rctx.quadraticCurveTo(80, fy, 48, fy - fh);
+          rctx.quadraticCurveTo(35, fy, 48, fy + 16);
+          rctx.fill();
+          rctx.fillStyle = '#fef08a';
+          rctx.beginPath();
+          rctx.arc(52, fy + 2, 7, 0, Math.PI * 2);
+          rctx.fill();
+        }
+      }
+      rctx.fillStyle = '#fdba74';
+      rctx.font = 'bold 13px Microsoft JhengHei';
+      rctx.textAlign = 'center';
+      rctx.fillText(raceState.running ? '🔥 共同火源 220°C' : '點擊開始點火', 61, 46);
+
+      // Draw 4 rods
+      const rodStartX = 112;
+      const rodLen = 560;
+      const rodH = 26;
+      const segW = rodLen / NODES;
+
+      rods.forEach((rod, rIdx) => {
+        const ry = 66 + rIdx * 86;
+
+        // Material label
+        rctx.fillStyle = '#f8fafc';
+        rctx.font = 'bold 15px Microsoft JhengHei';
+        rctx.textAlign = 'left';
+        rctx.fillText(rod.name, rodStartX, ry - 12);
+
+        // Draw segmented thermal gradient along rod
+        for (let i = 0; i < NODES; i++) {
+          rctx.fillStyle = tempHeatColor(rod.temps[i]);
+          rctx.fillRect(rodStartX + i * segW, ry, segW + 1, rodH);
+        }
+        rctx.strokeStyle = 'rgba(255,255,255,0.35)';
+        rctx.lineWidth = 1.5;
+        rctx.strokeRect(rodStartX, ry, rodLen, rodH);
+
+        // End temperature tag
+        rctx.fillStyle = '#cbd5e1';
+        rctx.font = '12px sans-serif';
+        rctx.fillText(`${Math.round(rod.temps[NODES - 1])}°C`, rodStartX + rodLen + 6, ry + 17);
+
+        // Draw 3 Virtual Candles stuck on top of rod
+        CANDLE_NODES.forEach((nodeIdx, cIdx) => {
+          const cx = rodStartX + nodeIdx * segW;
+          const drop = rod.candleDrops[cIdx];
+          const cy = ry + drop * 42;
+          const rot = drop * 1.35;
+
+          rctx.save();
+          rctx.translate(cx, cy);
+          rctx.rotate(rot);
+          // Wax glue blob
+          rctx.fillStyle = drop > 0 ? '#fde047' : '#fef9c3';
+          rctx.beginPath();
+          rctx.arc(0, -2, 5, 0, Math.PI * 2);
+          rctx.fill();
+          // Candle stick
+          rctx.fillStyle = drop > 0 ? 'rgba(251,113,133,0.65)' : '#fb7185';
+          rctx.fillRect(-4, -30, 8, 26);
+          // Wick
+          rctx.fillStyle = '#fff';
+          rctx.fillRect(-1, -35, 2, 5);
+          rctx.restore();
+
+          if (rod.dropTimes[cIdx] !== null) {
+            rctx.fillStyle = '#34d399';
+            rctx.font = 'bold 11px sans-serif';
+            rctx.textAlign = 'center';
+            rctx.fillText(`${rod.dropTimes[cIdx].toFixed(1)}s`, cx, ry - 12);
+          }
+        });
+      });
+
+      raceClock.textContent = `${raceState.elapsed.toFixed(2)} s`;
+    }
+
+    function renderRaceTable() {
+      raceTableBody.innerHTML = rods.map(rod => {
+        const times = rod.dropTimes.map(t => t === null ? '—' : `<strong style="color:#34d399;">${t.toFixed(2)}s</strong>`).join(' / ');
+        return `
+          <tr>
+            <td><strong>${rod.name}</strong></td>
+            <td>${rod.k}</td>
+            <td>${rod.s.toFixed(3)}</td>
+            <td>${times}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    raceStartBtn.addEventListener('click', () => {
+      raceState.running = !raceState.running;
+      raceStartBtn.textContent = raceState.running ? '⏸ 暫停計時' : '🔥 繼續加熱';
+    });
+    raceResetBtn.addEventListener('click', resetRace);
+
+    // ========================
+    // PART B: Bimetallic Strip Thermostat
+    // ========================
+    const biCanvas = document.getElementById('bimetalCanvas');
+    const bctx = biCanvas.getContext('2d');
+    const alphaTopSlider = document.getElementById('alphaTopSlider');
+    const alphaBotSlider = document.getElementById('alphaBotSlider');
+    const biTempSlider = document.getElementById('biTempSlider');
+    const alphaTopVal = document.getElementById('alphaTopVal');
+    const alphaBotVal = document.getElementById('alphaBotVal');
+    const biTempVal = document.getElementById('biTempVal');
+    const circuitBadge = document.getElementById('circuitBadge');
+    const autoHeatBtn = document.getElementById('autoHeatBtn');
+
+    const biState = {
+      alphaTop: 17,
+      alphaBot: 12,
+      temp: 25,
+      app: 'iron', // 'iron' | 'ac'
+      autoCycle: false,
+      autoDir: 1
+    };
+
+    function metalLabel(a) {
+      if (a <= 2.5) return '殷鋼';
+      if (a <= 13.5) return '鐵';
+      if (a <= 19) return '銅';
+      return '鋁';
+    }
+
+    function drawBimetal(dt) {
+      if (biState.autoCycle) {
+        biState.temp += biState.autoDir * dt * 38;
+        if (biState.temp >= 175) { biState.temp = 175; biState.autoDir = -1; }
+        if (biState.temp <= 20) { biState.temp = 20; biState.autoDir = 1; }
+        biTempSlider.value = biState.temp;
+      }
+
+      alphaTopVal.textContent = `${biState.alphaTop} ×10⁻⁶ /°C (${metalLabel(biState.alphaTop)})`;
+      alphaBotVal.textContent = `${biState.alphaBot} ×10⁻⁶ /°C (${metalLabel(biState.alphaBot)})`;
+      biTempVal.textContent = `${Math.round(biState.temp)} °C`;
+
+      const w = biCanvas.width;
+      const h = biCanvas.height;
+      bctx.clearRect(0, 0, w, h);
+
+      // Fixed anchor on left
+      const anchorX = 110;
+      const anchorY = 165;
+      const L = 270;
+      const dT = biState.temp - 25;
+      // Curvature kappa proportional to (alphaTop - alphaBot) * dT
+      // If alphaTop > alphaBot and dT > 0: top expands MORE -> bends DOWNWARD (tipY > anchorY)!
+      const dAlpha = biState.alphaTop - biState.alphaBot;
+      const totalAngle = dAlpha * dT * 0.00052; // radians of total bend at tip (positive = bends down)
+
+      // Compute points along bent strip
+      const SEG = 36;
+      const topPts = [];
+      const midPts = [];
+      const botPts = [];
+      const halfThick = 11;
+
+      for (let i = 0; i <= SEG; i++) {
+        const s = i / SEG;
+        let x, y, nx, ny;
+        if (Math.abs(totalAngle) < 0.002) {
+          x = anchorX + s * L;
+          y = anchorY;
+          nx = 0;
+          ny = -1;
+        } else {
+          const R = L / totalAngle;
+          const theta = totalAngle * s;
+          x = anchorX + R * Math.sin(theta);
+          y = anchorY + R * (1 - Math.cos(theta));
+          // Normal pointing upward (toward top strip)
+          nx = Math.sin(theta);
+          ny = -Math.cos(theta);
+        }
+        midPts.push({ x, y });
+        topPts.push({ x: x + nx * halfThick, y: y + ny * halfThick });
+        botPts.push({ x: x - nx * halfThick, y: y - ny * halfThick });
+      }
+
+      const tip = midPts[SEG];
+
+      // Determine contact position & circuit status
+      // For Electric Iron (高溫斷電): contact pin sits JUST ABOVE/ON the neutral line at (anchorX+L-12, anchorY-14),
+      // so when heated & bending DOWN (or bending away), wait: let's place contact pin intelligently OR fixed physical pin!
+      // In real thermostats:
+      // - Iron: contact is at y = anchorY - 12 (upper contact), or lower contact if strip bends up. Let's place contact at y = anchorY + 12 (resting closed at 25°C when flat), wait: if tip bends DOWN (y > anchorY + 4), it pushes? No, if contact is ABOVE at anchorY - 12 (tip top surface touches at y = anchorY - 11), when tip bends DOWN (tip.y > anchorY + 12), it BREAKS contact! And if tip bends UP, let's indicate both clearly!
+      // Even better for students: show a clear fixed contact terminal!
+      // - Iron mode: Contact is placed at the TOP side touching at 25°C (closed at room temp). Bending DOWN breaks the circuit! (If alphaTop < alphaBot so it bends UP, it stays pressed!).
+      // - AC mode: Contact is placed BELOW at (anchorX + L - 10, anchorY + 42). At 25°C it's open; when hot and bending DOWN enough (tip.y >= anchorY + 30), it touches and turns AC ON!
+      let contactX = anchorX + L - 14;
+      let contactY, isClosed;
+      if (biState.app === 'iron') {
+        contactY = anchorY - 14;
+        // Closed when tip hasn't bent downward away from top contact
+        isClosed = tip.y < anchorY + 14;
+      } else {
+        contactY = anchorY + 46;
+        // Closed when tip bends downward to touch bottom contact
+        isClosed = tip.y >= anchorY + 33;
+      }
+
+      circuitBadge.textContent = biState.app === 'iron'
+        ? (isClosed ? '🔥 加熱線圈通電中' : '🛡️ 過熱彎曲！已自動斷電')
+        : (isClosed ? '❄️ 高溫彎曲接通！冷氣啟動' : '💤 室溫尚可，冷氣待機中');
+      circuitBadge.className = 'circuit-badge ' + (isClosed ? 'circuit-on' : 'circuit-off');
+
+      // Draw Circuit Wiring on Right side
+      bctx.save();
+      bctx.lineWidth = 4;
+      bctx.strokeStyle = isClosed ? '#34d399' : '#475569';
+      // Wire from anchor left -> power box -> appliance -> contact pin
+      bctx.beginPath();
+      bctx.moveTo(anchorX - 24, anchorY);
+      bctx.lineTo(42, anchorY);
+      bctx.lineTo(42, 42);
+      bctx.lineTo(575, 42);
+      bctx.lineTo(575, contactY);
+      bctx.lineTo(contactX, contactY);
+      bctx.stroke();
+
+      // Current flow dots when closed
+      if (isClosed) {
+        const phase = (performance.now() * 0.08) % 40;
+        bctx.fillStyle = '#fef08a';
+        for (let px = 60 + phase; px < 560; px += 40) {
+          bctx.beginPath(); bctx.arc(px, 42, 3.5, 0, Math.PI * 2); bctx.fill();
+        }
+      }
+      bctx.restore();
+
+      // Draw Appliance Icon Box on Right (x=500..690, y=95..250)
+      bctx.save();
+      bctx.fillStyle = isClosed ? 'rgba(52, 211, 153, 0.14)' : 'rgba(15, 23, 42, 0.85)';
+      bctx.strokeStyle = isClosed ? '#34d399' : '#475569';
+      bctx.lineWidth = 2.5;
+      bctx.beginPath();
+      bctx.roundRect(500, 110, 195, 130, 14);
+      bctx.fill(); bctx.stroke();
+
+      bctx.textAlign = 'center';
+      bctx.font = '38px sans-serif';
+      bctx.fillText(biState.app === 'iron' ? '👕' : '❄️', 597, 166);
+      bctx.font = 'bold 16px Microsoft JhengHei';
+      bctx.fillStyle = isClosed ? '#6ee7b7' : '#94a3b8';
+      bctx.fillText(biState.app === 'iron'
+        ? (isClosed ? '電熨斗：加熱中' : '電熨斗：已斷電保護')
+        : (isClosed ? '教室冷氣：運轉吹風' : '教室冷氣：待機中'), 597, 205);
+      bctx.font = '12px Microsoft JhengHei';
+      bctx.fillStyle = '#cbd5e1';
+      bctx.fillText(biState.app === 'iron' ? '建議設定：α上 > α下 (高溫向下彎斷開)' : '建議設定：α上 > α下 (高溫向下彎接通)', 597, 228);
+      bctx.restore();
+
+      // Contact Pin
+      bctx.fillStyle = isClosed ? '#34d399' : '#fbbf24';
+      bctx.beginPath();
+      bctx.arc(contactX, contactY, 7, 0, Math.PI * 2);
+      bctx.fill();
+      bctx.strokeStyle = '#fff';
+      bctx.lineWidth = 2;
+      bctx.stroke();
+
+      // Draw Clamp Anchor Block
+      bctx.fillStyle = '#334155';
+      bctx.fillRect(anchorX - 28, anchorY - 30, 32, 60);
+      bctx.strokeStyle = '#94a3b8';
+      bctx.lineWidth = 2;
+      bctx.strokeRect(anchorX - 28, anchorY - 30, 32, 60);
+
+      // Draw Top Metal Strip (from topPts to midPts)
+      bctx.beginPath();
+      bctx.moveTo(topPts[0].x, topPts[0].y);
+      for (let i = 1; i <= SEG; i++) bctx.lineTo(topPts[i].x, topPts[i].y);
+      for (let i = SEG; i >= 0; i--) bctx.lineTo(midPts[i].x, midPts[i].y);
+      bctx.closePath();
+      bctx.fillStyle = '#f59e0b';
+      bctx.fill();
+      bctx.strokeStyle = '#fef3c7';
+      bctx.lineWidth = 1.2;
+      bctx.stroke();
+
+      // Draw Bottom Metal Strip (from midPts to botPts)
+      bctx.beginPath();
+      bctx.moveTo(midPts[0].x, midPts[0].y);
+      for (let i = 1; i <= SEG; i++) bctx.lineTo(midPts[i].x, midPts[i].y);
+      for (let i = SEG; i >= 0; i--) bctx.lineTo(botPts[i].x, botPts[i].y);
+      bctx.closePath();
+      bctx.fillStyle = '#38bdf8';
+      bctx.fill();
+      bctx.strokeStyle = '#e0f2fe';
+      bctx.lineWidth = 1.2;
+      bctx.stroke();
+
+      // Labels for bend physics
+      bctx.fillStyle = '#f8fafc';
+      bctx.font = 'bold 14px Microsoft JhengHei';
+      bctx.textAlign = 'left';
+      let dirDesc = '溫度＝25°C 或上下膨脹係數相等 → 維持平直';
+      if (Math.abs(totalAngle) > 0.02) {
+        if (totalAngle > 0) {
+          dirDesc = dT > 0
+            ? '上層膨脹較多（弧長較長）→ 向膨脹較小的【下側】彎曲！'
+            : '上層收縮較多（弧長較短）→ 向收縮較小的【上側】彎曲！';
+        } else {
+          dirDesc = dT > 0
+            ? '下層膨脹較多（弧長較長）→ 向膨脹較小的【上側】彎曲！'
+            : '下層收縮較多（弧長較短）→ 向收縮較小的【下側】彎曲！';
+        }
+      }
+      bctx.fillText(dirDesc, 40, 304);
+    }
+
+    // Bindings for Bimetal
+    alphaTopSlider.addEventListener('input', e => { biState.alphaTop = parseFloat(e.target.value); });
+    alphaBotSlider.addEventListener('input', e => { biState.alphaBot = parseFloat(e.target.value); });
+    biTempSlider.addEventListener('input', e => {
+      biState.autoCycle = false;
+      autoHeatBtn.classList.remove('active');
+      biState.temp = parseFloat(e.target.value);
+    });
+
+    document.querySelectorAll('[data-target]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const val = parseFloat(btn.dataset.a);
+        if (btn.dataset.target === 'top') {
+          biState.alphaTop = val;
+          alphaTopSlider.value = val;
+        } else {
+          biState.alphaBot = val;
+          alphaBotSlider.value = val;
+        }
+      });
+    });
+
+    document.getElementById('appIron').addEventListener('click', (e) => {
+      biState.app = 'iron';
+      e.target.classList.add('active');
+      document.getElementById('appAC').classList.remove('active');
+    });
+    document.getElementById('appAC').addEventListener('click', (e) => {
+      biState.app = 'ac';
+      e.target.classList.add('active');
+      document.getElementById('appIron').classList.remove('active');
+    });
+    autoHeatBtn.addEventListener('click', () => {
+      biState.autoCycle = !biState.autoCycle;
+      autoHeatBtn.classList.toggle('active', biState.autoCycle);
+    });
+
+    let lastTs = 0;
+    function loop(ts) {
+      if (!lastTs) lastTs = ts;
+      const dt = (ts - lastTs) / 1000;
+      lastTs = ts;
+
+      stepRace(dt);
+      drawRace();
+      drawBimetal(dt);
+      requestAnimationFrame(loop);
+    }
+
+    resetRace();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>06｜熱傳播三兄弟的「建築節能改造實驗室」</title>
+  <meta name="description" content="烈日建築剖面結合紅外線熱成像濾鏡，自由開關熱傳導、熱對流與熱輻射並挑戰雙層真空玻璃節能改造 PK。" />
+  <meta name="portal-tags" content="熱學, 跨國高中探究, 熱傳播, 節能建築" />
+  <meta name="portal-badge" content="國高中探究" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .upgrade-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+    .upgrade-card {
+      background: rgba(15, 23, 42, 0.78);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .upgrade-title {
+      font-size: 14px;
+      font-weight: 800;
+      color: #e2e8f0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .opt-btn {
+      text-align: left;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      background: #17223b;
+      color: #cbd5e1;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .opt-btn:hover { background: #1e2d4d; }
+    .opt-btn.selected {
+      background: rgba(52, 211, 153, 0.16);
+      border-color: #34d399;
+      color: #ecfdf5;
+    }
+    .opt-sub {
+      display: block;
+      font-size: 11.5px;
+      color: #94a3b8;
+      font-weight: 400;
+      margin-top: 2px;
+    }
+    .opt-btn.selected .opt-sub { color: #a7f3d0; }
+    .grade-badge {
+      font-size: 26px;
+      font-weight: 900;
+      padding: 4px 14px;
+      border-radius: 10px;
+      background: rgba(52, 211, 153, 0.18);
+      border: 2px solid #34d399;
+      color: #6ee7b7;
+    }
+    .layer-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-left">
+      <a class="back-btn" href="../index.html#thermodynamics">← 返回主選單</a>
+      <span class="module-badge badge-cross">跨國高中探究</span>
+      <h1 class="topbar-title">6. 熱傳播三兄弟的「建築節能改造實驗室」</h1>
+    </div>
+    <div class="topbar-right">
+      <button class="btn btn-sm btn-amber" id="thermalBtn">🌡️ 開啟熱成像濾鏡</button>
+      <button class="btn btn-sm btn-primary" id="runChallengeBtn">▶ 烈日曝曬 60 分鐘測試</button>
+      <button class="btn btn-sm" id="resetBtn">↺ 恢復原始屋</button>
+    </div>
+  </header>
+
+  <main class="sim-container">
+    <div class="callout">
+      <strong>複合熱傳播拆解：</strong>點擊下方開關可單獨觀察<strong>「傳導」</strong>、<strong>「對流」</strong>與<strong>「輻射」</strong>！試著幫烈日下的房子換裝不同建材，比賽誰能讓室內溫度維持最低（對照組紅線 vs 你的改造綠線）！
+    </div>
+
+    <!-- Mechanism Layer Switches & Environment -->
+    <section class="control-bar">
+      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+        <span style="font-size:13px; color:var(--text-muted); font-weight:700;">顯示物理機制圖層：</span>
+        <button class="btn btn-sm active" id="togCond">🧱 牆壁熱傳導</button>
+        <button class="btn btn-sm active" id="togConv">🌀 空氣對流</button>
+        <button class="btn btn-sm active" id="togRad">☀️ 太陽熱輻射</button>
+      </div>
+
+      <div class="control-group" style="min-width:210px;">
+        <div class="control-label">
+          <span>室外烈日氣溫</span>
+          <span class="control-value" id="outTempVal" style="color:#fb7185;">38 °C</span>
+        </div>
+        <input type="range" id="outTempSlider" min="28" max="45" step="1" value="38" />
+      </div>
+
+      <div class="control-group" style="min-width:210px;">
+        <div class="control-label">
+          <span>太陽輻射強度</span>
+          <span class="control-value" id="sunVal" style="color:#fbbf24;">1000 W/m²</span>
+        </div>
+        <input type="range" id="sunSlider" min="200" max="1200" step="50" value="1000" />
+      </div>
+    </section>
+
+    <section class="split-grid">
+      <!-- Left: Interactive House Cross-Section + Thermal View -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">🏠 互動式房屋剖面圖（點擊濾鏡切換熱成像）</div>
+          <span class="control-value" id="simClock">曝曬時間：0 min</span>
+        </div>
+        <div class="canvas-wrap">
+          <canvas id="houseCanvas" width="740" height="470"></canvas>
+        </div>
+        <div class="metrics-row">
+          <div class="metric-box">
+            <div class="metric-label">目前室內均溫</div>
+            <div class="metric-val" id="inTempVal" style="color:#38bdf8;">26.0 °C</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">原始未改造屋對照</div>
+            <div class="metric-val" id="baseTempVal" style="color:#fb7185;">26.0 °C</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">成功降溫 ΔT</div>
+            <div class="metric-val" id="deltaTVal" style="color:#34d399;">0.0 °C</div>
+          </div>
+          <div class="metric-box" style="display:flex; align-items:center; justify-content:space-between;">
+            <div>
+              <div class="metric-label">節能評級</div>
+              <div style="font-size:12px; color:var(--text-muted);" id="scoreSub">改造中</div>
+            </div>
+            <div class="grade-badge" id="gradeBadge">B</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Temperature Comparison Chart + Power Breakdown -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">📊 室內升溫曲線 PK 與三兄弟熱流拆解</div>
+          <span style="font-size:13px; color:var(--text-muted);" id="netWattLabel">淨進熱：+0 W</span>
+        </div>
+        <div class="canvas-wrap">
+          <canvas id="chartCanvas" width="720" height="310"></canvas>
+        </div>
+
+        <div class="metrics-row">
+          <div class="metric-box">
+            <div class="metric-label">🧱 牆窗熱傳導進熱</div>
+            <div class="metric-val" id="wattCond" style="font-size:18px; color:#fb7185;">+0 W</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">☀️ 輻射吸收進熱</div>
+            <div class="metric-val" id="wattRad" style="font-size:18px; color:#fbbf24;">+0 W</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">🌀 對流淨熱流</div>
+            <div class="metric-val" id="wattConv" style="font-size:18px; color:#38bdf8;">+0 W</div>
+          </div>
+        </div>
+
+        <!-- Classroom Upgrade Lab -->
+        <div class="upgrade-grid">
+          <div class="upgrade-card">
+            <div class="upgrade-title">🪟 窗戶材質改造</div>
+            <button class="opt-btn selected" data-cat="window" data-val="single">
+              普通單層玻璃
+              <span class="opt-sub">傳導快、太陽輻射直接穿透</span>
+            </button>
+            <button class="opt-btn" data-cat="window" data-val="vacuum">
+              雙層真空玻璃
+              <span class="opt-sub">真空夾層阻斷傳導與內部對流！</span>
+            </button>
+            <button class="opt-btn" data-cat="window" data-val="lowe">
+              雙層真空 + Low-E 膜
+              <span class="opt-sub">同時反射紅外線輻射＋阻斷傳導</span>
+            </button>
+          </div>
+
+          <div class="upgrade-card">
+            <div class="upgrade-title">🏚️ 屋頂外層塗裝</div>
+            <button class="opt-btn selected" data-cat="roof" data-val="dark">
+              深色水泥瓦（預設）
+              <span class="opt-sub">吸收率 85%，屋頂燙如烤盤</span>
+            </button>
+            <button class="opt-btn" data-cat="roof" data-val="silver">
+              銀色高反射隔熱塗層
+              <span class="opt-sub">反射 80% 太陽熱輻射！</span>
+            </button>
+            <button class="opt-btn" data-cat="roof" data-val="foam">
+              銀色塗層 + 隔熱棉夾層
+              <span class="opt-sub">反射輻射同時大幅降低屋頂傳導</span>
+            </button>
+          </div>
+
+          <div class="upgrade-card">
+            <div class="upgrade-title">🌬️ 空氣對流設計</div>
+            <button class="opt-btn selected" data-cat="vent" data-val="closed">
+              密閉無氣窗
+              <span class="opt-sub">熱空氣滯留天花板形成悶燒</span>
+            </button>
+            <button class="opt-btn" data-cat="vent" data-val="stack">
+              高低對流氣窗（煙囪效應）
+              <span class="opt-sub">底部進較涼空氣、高窗排出熱氣！</span>
+            </button>
+          </div>
+
+          <div class="upgrade-card">
+            <div class="upgrade-title">🧱 牆體結構</div>
+            <button class="opt-btn selected" data-cat="wall" data-val="brick">
+              一般實心磚牆
+              <span class="opt-sub">較容易把外牆高溫傳導進室內</span>
+            </button>
+            <button class="opt-btn" data-cat="wall" data-val="insulated">
+              斷熱中空保溫牆
+              <span class="opt-sub">空氣隔層大幅減緩熱傳導</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const houseCanvas = document.getElementById('houseCanvas');
+    const hctx = houseCanvas.getContext('2d');
+    const chartCanvas = document.getElementById('chartCanvas');
+    const cctx = chartCanvas.getContext('2d');
+
+    const thermalBtn = document.getElementById('thermalBtn');
+    const runChallengeBtn = document.getElementById('runChallengeBtn');
+    const outTempSlider = document.getElementById('outTempSlider');
+    const sunSlider = document.getElementById('sunSlider');
+    const outTempVal = document.getElementById('outTempVal');
+    const sunVal = document.getElementById('sunVal');
+    const simClock = document.getElementById('simClock');
+    const inTempVal = document.getElementById('inTempVal');
+    const baseTempVal = document.getElementById('baseTempVal');
+    const deltaTVal = document.getElementById('deltaTVal');
+    const gradeBadge = document.getElementById('gradeBadge');
+    const scoreSub = document.getElementById('scoreSub');
+    const wattCond = document.getElementById('wattCond');
+    const wattRad = document.getElementById('wattRad');
+    const wattConv = document.getElementById('wattConv');
+    const netWattLabel = document.getElementById('netWattLabel');
+
+    const state = {
+      thermalMode: false,
+      showCond: true,
+      showConv: true,
+      showRad: true,
+      outTemp: 38,
+      sunPower: 1000,
+      upgrades: {
+        window: 'single', // 'single' | 'vacuum' | 'lowe'
+        roof: 'dark',     // 'dark' | 'silver' | 'foam'
+        vent: 'closed',   // 'closed' | 'stack'
+        wall: 'brick'     // 'brick' | 'insulated'
+      },
+      simMin: 0,          // 0..60 min
+      maxMin: 60,
+      running: true,
+      inTemp: 26.0,
+      baseTemp: 26.0,
+      historyIn: [{ t: 0, T: 26.0 }],
+      historyBase: [{ t: 0, T: 26.0 }],
+      lastSampleMin: 0
+    };
+
+    // Physics heat transfer model (Watts into a 40m^2 classroom/house)
+    function computeHeatFlows(cfg, T_in, T_out, sun) {
+      // 1. Solar Radiation entering & absorbed on roof/window
+      const roofAbsorb = cfg.roof === 'dark' ? 0.85 : (cfg.roof === 'silver' ? 0.20 : 0.18);
+      const roofCondFactor = cfg.roof === 'foam' ? 0.25 : 1.0;
+      const winTransmit = cfg.window === 'single' ? 0.78 : (cfg.window === 'vacuum' ? 0.62 : 0.22);
+
+      const Q_rad_win = sun * 0.72 * winTransmit;
+      // Roof heats up due to sun and conducts inward
+      const T_roof_surf = T_out + (sun / 1000) * 26 * roofAbsorb;
+      const Q_cond_roof = (T_roof_surf - T_in) * 34 * roofCondFactor;
+
+      // 2. Wall & Window Conduction
+      const wallU = cfg.wall === 'brick' ? 32 : 9;
+      const winU = cfg.window === 'single' ? 36 : 8; // vacuum cuts conduction & internal convection!
+      const Q_cond_wall = (T_out - T_in) * (wallU + winU);
+
+      // Total Conduction vs Radiation display breakdown
+      const P_cond = Q_cond_roof + Q_cond_wall;
+      const P_rad = Q_rad_win + (sun * 0.55 * roofAbsorb * roofCondFactor);
+
+      // 3. Convection (stack effect high-low vents purge hot ceiling air!)
+      let P_conv = 0;
+      if (cfg.vent === 'stack') {
+        // High-low vents remove accumulated hot top layer when T_in > 26.5
+        const coolSupplyTemp = T_out - 5.5;
+        P_conv = (coolSupplyTemp - T_in) * 48 - 340 * Math.max(0, (T_in - 26) / 6);
+      } else {
+        // Closed room: slight air leakage
+        P_conv = (T_out - T_in) * 8;
+      }
+
+      // Natural ambient heat dissipation when indoor exceeds outdoor slightly
+      const P_net = P_cond + P_rad + P_conv;
+      return { P_cond, P_rad, P_conv, P_net, T_roof_surf, roofAbsorb, winTransmit };
+    }
+
+    function resetSimulation() {
+      state.simMin = 0;
+      state.inTemp = 26.0;
+      state.baseTemp = 26.0;
+      state.historyIn = [{ t: 0, T: 26.0 }];
+      state.historyBase = [{ t: 0, T: 26.0 }];
+      state.lastSampleMin = 0;
+      state.running = true;
+    }
+
+    function stepPhysics(dt) {
+      if (!state.running) return;
+      const dMin = dt * 4.5; // 60 sim minutes in ~13 real seconds
+      if (state.simMin >= state.maxMin) {
+        state.simMin = state.maxMin;
+        state.running = false;
+        return;
+      }
+
+      const sub = 4;
+      const hMin = dMin / sub;
+      const C_room = 5800; // thermal capacity scaled so unmodified reaches ~42°C in 60 min
+
+      for (let i = 0; i < sub; i++) {
+        const fUser = computeHeatFlows(state.upgrades, state.inTemp, state.outTemp, state.sunPower);
+        const fBase = computeHeatFlows({ window: 'single', roof: 'dark', vent: 'closed', wall: 'brick' }, state.baseTemp, state.outTemp, state.sunPower);
+
+        state.inTemp += (fUser.P_net * hMin * 1.15) / C_room;
+        state.baseTemp += (fBase.P_net * hMin * 1.15) / C_room;
+        state.simMin += hMin;
+      }
+
+      if (state.simMin - state.lastSampleMin >= 0.8 || state.simMin >= state.maxMin) {
+        state.lastSampleMin = state.simMin;
+        state.historyIn.push({ t: state.simMin, T: state.inTemp });
+        state.historyBase.push({ t: state.simMin, T: state.baseTemp });
+      }
+    }
+
+    // Thermal camera colormap (22°C purple/blue -> 30°C green/yellow -> 42°C orange/red -> 58°C white-hot)
+    function thermalColor(T, alpha = 1) {
+      const n = Math.max(0, Math.min(1, (T - 23) / 36));
+      let r, g, b;
+      if (n < 0.28) {
+        const u = n / 0.28;
+        r = 30 + 25 * u; g = 60 + 130 * u; b = 180 + 60 * u;
+      } else if (n < 0.55) {
+        const u = (n - 0.28) / 0.27;
+        r = 55 + 195 * u; g = 190 + 30 * u; b = 240 - 200 * u;
+      } else if (n < 0.82) {
+        const u = (n - 0.55) / 0.27;
+        r = 250; g = 220 - 150 * u; b = 40 - 20 * u;
+      } else {
+        const u = (n - 0.82) / 0.18;
+        r = 255; g = 70 + 185 * u; b = 20 + 225 * u;
+      }
+      return `rgba(${Math.round(r)},${Math.round(g)},${Math.round(b)},${alpha})`;
+    }
+
+    // Particles for Conduction & Convection animation
+    const convDots = Array.from({ length: 24 }, (_, i) => ({
+      phase: i / 24,
+      lane: i % 2
+    }));
+
+    function drawHouse(flows) {
+      const w = houseCanvas.width;
+      const h = houseCanvas.height;
+      hctx.clearRect(0, 0, w, h);
+
+      const now = performance.now() * 0.001;
+      const th = state.thermalMode;
+
+      // Sky & Ground
+      const skyGrad = hctx.createLinearGradient(0, 0, 0, 390);
+      if (th) {
+        skyGrad.addColorStop(0, '#120826');
+        skyGrad.addColorStop(1, '#2d124a');
+      } else {
+        skyGrad.addColorStop(0, '#0c2748');
+        skyGrad.addColorStop(1, '#1e3a5f');
+      }
+      hctx.fillStyle = skyGrad;
+      hctx.fillRect(0, 0, w, 390);
+
+      hctx.fillStyle = th ? '#1e1b4b' : '#1e293b';
+      hctx.fillRect(0, 390, w, 80);
+
+      // Sun in top-right
+      const sunX = 635, sunY = 72;
+      const sunR = 26 + (state.sunPower / 1200) * 14;
+      const sunGlow = hctx.createRadialGradient(sunX, sunY, 8, sunX, sunY, sunR * 2.4);
+      sunGlow.addColorStop(0, '#fef08a');
+      sunGlow.addColorStop(0.45, 'rgba(251, 191, 36, 0.55)');
+      sunGlow.addColorStop(1, 'rgba(251, 191, 36, 0)');
+      hctx.fillStyle = sunGlow;
+      hctx.beginPath(); hctx.arc(sunX, sunY, sunR * 2.4, 0, Math.PI * 2); hctx.fill();
+      hctx.fillStyle = '#fde047';
+      hctx.beginPath(); hctx.arc(sunX, sunY, sunR, 0, Math.PI * 2); hctx.fill();
+
+      // House Geometry
+      const hx = 140, hy = 185, hw = 400, hh = 205;
+      const roofPeakX = hx + hw / 2, roofPeakY = 95;
+
+      // Indoor Air Gradient (top is hotter due to convection unless stack-vented!)
+      const topAirTemp = state.inTemp + (state.upgrades.vent === 'stack' ? 1.0 : 4.2);
+      const botAirTemp = state.inTemp - 1.2;
+      const roomGrad = hctx.createLinearGradient(0, hy, 0, hy + hh);
+      if (th) {
+        roomGrad.addColorStop(0, thermalColor(topAirTemp, 0.88));
+        roomGrad.addColorStop(1, thermalColor(botAirTemp, 0.88));
+      } else {
+        roomGrad.addColorStop(0, 'rgba(251, 146, 60, 0.22)');
+        roomGrad.addColorStop(1, 'rgba(56, 189, 248, 0.14)');
+      }
+      hctx.fillStyle = roomGrad;
+      hctx.fillRect(hx + 16, hy, hw - 32, hh);
+
+      // Attic triangle
+      hctx.beginPath();
+      hctx.moveTo(hx + 16, hy);
+      hctx.lineTo(roofPeakX, roofPeakY + 14);
+      hctx.lineTo(hx + hw - 16, hy);
+      hctx.closePath();
+      hctx.fillStyle = th ? thermalColor(flows.T_roof_surf - 6, 0.8) : 'rgba(15, 23, 42, 0.75)';
+      hctx.fill();
+
+      // Side Walls (Brick vs Insulated)
+      const wallW = state.upgrades.wall === 'insulated' ? 22 : 16;
+      const wallCol = th ? thermalColor(state.outTemp + 2) : (state.upgrades.wall === 'insulated' ? '#64748b' : '#b45309');
+      hctx.fillStyle = wallCol;
+      hctx.fillRect(hx, hy, wallW, hh);
+      hctx.fillRect(hx + hw - wallW, hy, wallW, hh);
+      if (state.upgrades.wall === 'insulated' && !th) {
+        // Middle air/foam insulation strip
+        hctx.fillStyle = '#fde68a';
+        hctx.fillRect(hx + 7, hy + 4, 8, hh - 8);
+        hctx.fillRect(hx + hw - 15, hy + 4, 8, hh - 8);
+      }
+
+      // Roof Slopes (Dark vs Silver vs Foam)
+      hctx.lineWidth = state.upgrades.roof === 'foam' ? 18 : 12;
+      hctx.lineCap = 'round';
+      if (th) {
+        hctx.strokeStyle = thermalColor(flows.T_roof_surf);
+      } else {
+        hctx.strokeStyle = state.upgrades.roof === 'dark' ? '#334155' : '#e2e8f0';
+      }
+      hctx.beginPath();
+      hctx.moveTo(hx - 18, hy + 6);
+      hctx.lineTo(roofPeakX, roofPeakY);
+      hctx.lineTo(hx + hw + 18, hy + 6);
+      hctx.stroke();
+
+      if (state.upgrades.roof === 'foam' && !th) {
+        hctx.strokeStyle = '#fbbf24';
+        hctx.lineWidth = 6;
+        hctx.beginPath();
+        hctx.moveTo(hx - 6, hy + 10);
+        hctx.lineTo(roofPeakX, roofPeakY + 9);
+        hctx.lineTo(hx + hw + 6, hy + 10);
+        hctx.stroke();
+      }
+
+      // Right Wall Window (exposed to Sun!)
+      const winY = 235, winH = 95, winX = hx + hw - wallW;
+      if (state.upgrades.window === 'single') {
+        hctx.fillStyle = th ? thermalColor(state.outTemp + 3) : 'rgba(56, 189, 248, 0.45)';
+        hctx.fillRect(winX, winY, wallW, winH);
+      } else {
+        // Double pane vacuum glass
+        hctx.fillStyle = '#0f172a';
+        hctx.fillRect(winX - 2, winY, wallW + 4, winH);
+        hctx.fillStyle = state.upgrades.window === 'lowe' ? '#a78bfa' : '#7dd3fc';
+        hctx.fillRect(winX, winY, 5, winH);
+        hctx.fillRect(winX + wallW - 5, winY, 5, winH);
+      }
+
+      // High-Low Vents if enabled
+      if (state.upgrades.vent === 'stack') {
+        // Low intake vent on left wall
+        hctx.fillStyle = '#38bdf8';
+        hctx.fillRect(hx - 2, hy + hh - 46, wallW + 4, 28);
+        // High exhaust vent near roof peak
+        hctx.fillStyle = '#fb7185';
+        hctx.fillRect(roofPeakX - 18, roofPeakY + 12, 36, 14);
+      }
+
+      // 1. RADIATION LAYER (Sun electromagnetic waves + Reflection!)
+      if (state.showRad) {
+        hctx.save();
+        const raySpeed = (now * 90) % 45;
+        // Rays hitting roof
+        for (let i = 0; i < 3; i++) {
+          const sx = sunX - 30, sy = sunY + 15;
+          const tx = roofPeakX + 45 + i * 38, ty = roofPeakY + 25 + i * 22;
+          hctx.strokeStyle = 'rgba(253, 224, 71, 0.72)';
+          hctx.lineWidth = 2.5;
+          hctx.setLineDash([12, 10]);
+          hctx.lineDashOffset = -raySpeed;
+          hctx.beginPath(); hctx.moveTo(sx, sy); hctx.lineTo(tx, ty); hctx.stroke();
+
+          // Reflected wave if silver/foam roof!
+          if (state.upgrades.roof !== 'dark') {
+            hctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+            hctx.beginPath(); hctx.moveTo(tx, ty); hctx.lineTo(tx - 25, ty - 75); hctx.stroke();
+          }
+        }
+        // Ray hitting Window
+        const wx = winX + 8, wy = winY + 45;
+        hctx.strokeStyle = 'rgba(251, 191, 36, 0.85)';
+        hctx.lineWidth = 3;
+        hctx.setLineDash([12, 8]);
+        hctx.lineDashOffset = -raySpeed;
+        hctx.beginPath(); hctx.moveTo(sunX - 10, sunY + 35); hctx.lineTo(wx, wy); hctx.stroke();
+
+        if (state.upgrades.window === 'lowe') {
+          // Reflected IR from Low-E
+          hctx.strokeStyle = '#c4b5fd';
+          hctx.beginPath(); hctx.moveTo(wx, wy); hctx.lineTo(wx + 80, wy - 65); hctx.stroke();
+        } else {
+          // Penetrating IR rays into room!
+          hctx.strokeStyle = 'rgba(251, 113, 133, 0.75)';
+          hctx.beginPath(); hctx.moveTo(wx, wy); hctx.lineTo(wx - 170, wy + 75); hctx.stroke();
+        }
+        hctx.restore();
+      }
+
+      // 2. CONDUCTION LAYER (Particles/Heat seeping through Wall, Roof, Window)
+      if (state.showCond) {
+        hctx.save();
+        const condDensityWall = state.upgrades.wall === 'brick' ? 5 : 2;
+        for (let i = 0; i < condDensityWall; i++) {
+          const p = ((now * (state.upgrades.wall === 'brick' ? 0.55 : 0.18) + i / condDensityWall) % 1);
+          const px = hx + hw - wallW + (1 - p) * wallW;
+          const py = hy + 30 + i * 32;
+          hctx.fillStyle = '#fb7185';
+          hctx.beginPath(); hctx.arc(px, py, 4.5, 0, Math.PI * 2); hctx.fill();
+        }
+        // Roof conduction dots
+        const roofCount = state.upgrades.roof === 'foam' ? 2 : 6;
+        for (let i = 0; i < roofCount; i++) {
+          const p = ((now * (state.upgrades.roof === 'foam' ? 0.15 : 0.5) + i / roofCount) % 1);
+          const px = roofPeakX + 30 + i * 24;
+          const py = roofPeakY + 25 + i * 11 + p * 26;
+          hctx.fillStyle = '#f97316';
+          hctx.beginPath(); hctx.arc(px, py, 4.5, 0, Math.PI * 2); hctx.fill();
+        }
+        hctx.restore();
+      }
+
+      // 3. CONVECTION LAYER (Air Circulation Arrows)
+      if (state.showConv) {
+        hctx.save();
+        if (state.upgrades.vent === 'stack') {
+          // Stack effect: cool air enters low left -> rises as warmed -> exits high roof peak!
+          convDots.forEach((d, idx) => {
+            const p = (d.phase + now * 0.25) % 1;
+            let x, y;
+            if (p < 0.35) {
+              const u = p / 0.35;
+              x = (hx - 40) + u * 160;
+              y = hy + hh - 32;
+            } else if (p < 0.75) {
+              const u = (p - 0.35) / 0.4;
+              x = hx + 120 + u * (roofPeakX - hx - 120);
+              y = (hy + hh - 32) - u * (hy + hh - 32 - roofPeakY - 25);
+            } else {
+              const u = (p - 0.75) / 0.25;
+              x = roofPeakX + (idx % 2 === 0 ? -10 : 10) * u;
+              y = roofPeakY + 15 - u * 65;
+            }
+            hctx.fillStyle = p < 0.35 ? '#38bdf8' : (p < 0.7 ? '#fbbf24' : '#fb7185');
+            hctx.beginPath(); hctx.arc(x, y, 4.5, 0, Math.PI * 2); hctx.fill();
+          });
+          hctx.fillStyle = '#7dd3fc';
+          hctx.font = 'bold 13px Microsoft JhengHei';
+          hctx.fillText('進氣（較涼）→', 30, hy + hh - 26);
+          hctx.fillStyle = '#fda4af';
+          hctx.fillText('↑ 煙囪效應排出熱空氣', roofPeakX - 75, roofPeakY - 12);
+        } else {
+          // Closed circulation loop inside room
+          const cx = hx + hw / 2, cy = hy + hh / 2 + 10;
+          convDots.forEach(d => {
+            const ang = (d.phase + now * 0.22) * Math.PI * 2;
+            const rx = 125, ry = 70;
+            const x = cx + Math.cos(ang) * rx;
+            const y = cy + Math.sin(ang) * ry;
+            hctx.fillStyle = Math.sin(ang) < 0 ? '#fb7185' : '#38bdf8';
+            hctx.beginPath(); hctx.arc(x, y, 4.5, 0, Math.PI * 2); hctx.fill();
+          });
+          hctx.fillStyle = '#fde68a';
+          hctx.font = 'bold 13px Microsoft JhengHei';
+          hctx.textAlign = 'center';
+          hctx.fillText('熱空氣聚集天花板（無排氣口）', cx, hy + 24);
+        }
+        hctx.restore();
+      }
+
+      // Indoor Thermometer Display
+      hctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+      hctx.strokeStyle = '#38bdf8';
+      hctx.lineWidth = 2;
+      hctx.beginPath(); hctx.roundRect(hx + 34, hy + 48, 130, 56, 10); hctx.fill(); hctx.stroke();
+      hctx.fillStyle = '#94a3b8';
+      hctx.font = '12px Microsoft JhengHei';
+      hctx.textAlign = 'left';
+      hctx.fillText('室內中央溫度', hx + 46, hy + 68);
+      hctx.fillStyle = state.inTemp > 33 ? '#fb7185' : (state.inTemp > 29 ? '#fbbf24' : '#34d399');
+      hctx.font = 'bold 22px sans-serif';
+      hctx.fillText(`${state.inTemp.toFixed(1)} °C`, hx + 46, hy + 94);
+
+      // Thermal legend bar if thermalMode
+      if (th) {
+        const lx = 24, ly = 420, lw = 260, lh = 16;
+        for (let i = 0; i < lw; i++) {
+          hctx.fillStyle = thermalColor(23 + (i / lw) * 36);
+          hctx.fillRect(lx + i, ly, 2, lh);
+        }
+        hctx.strokeStyle = '#fff';
+        hctx.strokeRect(lx, ly, lw, lh);
+        hctx.fillStyle = '#f8fafc';
+        hctx.font = '12px sans-serif';
+        hctx.textAlign = 'left';
+        hctx.fillText('23°C (涼)', lx, ly + 32);
+        hctx.textAlign = 'right';
+        hctx.fillText('59°C+ (極熱)', lx + lw, ly + 32);
+      }
+
+      // Outdoor Temp badge
+      hctx.fillStyle = '#f8fafc';
+      hctx.font = 'bold 14px Microsoft JhengHei';
+      hctx.textAlign = 'left';
+      hctx.fillText(`室外氣溫：${state.outTemp}°C ｜ 日照：${state.sunPower} W/m²`, 24, 32);
+    }
+
+    function drawChart() {
+      const w = chartCanvas.width;
+      const h = chartCanvas.height;
+      cctx.clearRect(0, 0, w, h);
+
+      const pad = { left: 56, right: 26, top: 28, bottom: 44 };
+      const pw = w - pad.left - pad.right;
+      const ph = h - pad.top - pad.bottom;
+
+      const minT = 24, maxT = 44;
+      const toX = (t) => pad.left + (t / state.maxMin) * pw;
+      const toY = (T) => pad.top + ph - ((T - minT) / (maxT - minT)) * ph;
+
+      // Grid
+      cctx.strokeStyle = 'rgba(148,163,184,0.12)';
+      cctx.lineWidth = 1;
+      for (let T = 26; T <= 42; T += 4) {
+        const y = toY(T);
+        cctx.beginPath(); cctx.moveTo(pad.left, y); cctx.lineTo(pad.left + pw, y); cctx.stroke();
+        cctx.fillStyle = '#94a3b8'; cctx.font = '12px sans-serif'; cctx.textAlign = 'right';
+        cctx.fillText(`${T}°C`, pad.left - 8, y + 4);
+      }
+      for (let m = 0; m <= 60; m += 10) {
+        const x = toX(m);
+        cctx.beginPath(); cctx.moveTo(x, pad.top); cctx.lineTo(x, pad.top + ph); cctx.stroke();
+        cctx.fillStyle = '#94a3b8'; cctx.font = '12px sans-serif'; cctx.textAlign = 'center';
+        cctx.fillText(`${m}m`, x, pad.top + ph + 18);
+      }
+
+      // Axes
+      cctx.strokeStyle = '#cbd5e1';
+      cctx.lineWidth = 2;
+      cctx.beginPath();
+      cctx.moveTo(pad.left, pad.top); cctx.lineTo(pad.left, pad.top + ph); cctx.lineTo(pad.left + pw, pad.top + ph);
+      cctx.stroke();
+
+      // Baseline Curve (Red dashed)
+      cctx.save();
+      cctx.strokeStyle = '#fb7185';
+      cctx.setLineDash([6, 4]);
+      cctx.lineWidth = 3;
+      cctx.beginPath();
+      state.historyBase.forEach((pt, i) => i === 0 ? cctx.moveTo(toX(pt.t), toY(pt.T)) : cctx.lineTo(toX(pt.t), toY(pt.T)));
+      cctx.stroke();
+      cctx.restore();
+
+      // Upgraded House Curve (Emerald solid)
+      cctx.strokeStyle = '#34d399';
+      cctx.lineWidth = 4;
+      cctx.beginPath();
+      state.historyIn.forEach((pt, i) => i === 0 ? cctx.moveTo(toX(pt.t), toY(pt.T)) : cctx.lineTo(toX(pt.t), toY(pt.T)));
+      cctx.stroke();
+
+      // Legend
+      cctx.fillStyle = '#fda4af'; cctx.font = 'bold 13px Microsoft JhengHei'; cctx.textAlign = 'left';
+      cctx.fillText('--- 未改造普通屋（對照組）', pad.left + 14, pad.top + 18);
+      cctx.fillStyle = '#6ee7b7';
+      cctx.fillText('━━ 你的節能改造方案', pad.left + 215, pad.top + 18);
+    }
+
+    function updateMetrics(flows) {
+      simClock.textContent = `曝曬時間：${Math.round(state.simMin)} / 60 min`;
+      inTempVal.textContent = `${state.inTemp.toFixed(1)} °C`;
+      baseTempVal.textContent = `${state.baseTemp.toFixed(1)} °C`;
+      const delta = Math.max(0, state.baseTemp - state.inTemp);
+      deltaTVal.textContent = `-${delta.toFixed(1)} °C`;
+
+      const fmtW = (v) => `${v >= 0 ? '+' : ''}${Math.round(v)} W`;
+      wattCond.textContent = fmtW(flows.P_cond);
+      wattRad.textContent = fmtW(flows.P_rad);
+      wattConv.textContent = fmtW(flows.P_conv);
+      netWattLabel.textContent = `總淨進熱功率：${fmtW(flows.P_net)}`;
+
+      // Grade based on temperature reduction vs max possible upgrades
+      let score = 0;
+      if (state.upgrades.window === 'vacuum') score += 20;
+      if (state.upgrades.window === 'lowe') score += 30;
+      if (state.upgrades.roof === 'silver') score += 22;
+      if (state.upgrades.roof === 'foam') score += 30;
+      if (state.upgrades.vent === 'stack') score += 25;
+      if (state.upgrades.wall === 'insulated') score += 15;
+
+      let grade = 'C', sub = '仍偏悶熱，可再改裝';
+      if (score >= 85) { grade = 'S'; sub = '完美綠建築！三機制全阻斷'; }
+      else if (score >= 60) { grade = 'A'; sub = '節能成效優良'; }
+      else if (score >= 30) { grade = 'B'; sub = '已有初步隔熱效果'; }
+      gradeBadge.textContent = grade;
+      scoreSub.textContent = sub;
+    }
+
+    // Event Bindings
+    thermalBtn.addEventListener('click', () => {
+      state.thermalMode = !state.thermalMode;
+      thermalBtn.classList.toggle('active', state.thermalMode);
+      thermalBtn.textContent = state.thermalMode ? '👁️ 切回真實光影圖' : '🌡️ 開啟熱成像濾鏡';
+    });
+
+    runChallengeBtn.addEventListener('click', resetSimulation);
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      state.upgrades = { window: 'single', roof: 'dark', vent: 'closed', wall: 'brick' };
+      document.querySelectorAll('.opt-btn').forEach(b => {
+        const cat = b.dataset.cat, val = b.dataset.val;
+        const isDef = (cat === 'window' && val === 'single') || (cat === 'roof' && val === 'dark') || (cat === 'vent' && val === 'closed') || (cat === 'wall' && val === 'brick');
+        b.classList.toggle('selected', isDef);
+      });
+      resetSimulation();
+    });
+
+    document.getElementById('togCond').addEventListener('click', e => { state.showCond = !state.showCond; e.target.classList.toggle('active', state.showCond); });
+    document.getElementById('togConv').addEventListener('click', e => { state.showConv = !state.showConv; e.target.classList.toggle('active', state.showConv); });
+    document.getElementById('togRad').addEventListener('click', e => { state.showRad = !state.showRad; e.target.classList.toggle('active', state.showRad); });
+
+    outTempSlider.addEventListener('input', e => {
+      state.outTemp = parseInt(e.target.value, 10);
+      outTempVal.textContent = `${state.outTemp} °C`;
+    });
+    sunSlider.addEventListener('input', e => {
+      state.sunPower = parseInt(e.target.value, 10);
+      sunVal.textContent = `${state.sunPower} W/m²`;
+    });
+
+    document.querySelectorAll('.opt-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const cat = btn.dataset.cat;
+        const val = btn.dataset.val;
+        document.querySelectorAll(`.opt-btn[data-cat="${cat}"]`).forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        state.upgrades[cat] = val;
+        resetSimulation();
+      });
+    });
+
+    let lastTs = 0;
+    function loop(ts) {
+      if (!lastTs) lastTs = ts;
+      const dt = (ts - lastTs) / 1000;
+      lastTs = ts;
+
+      stepPhysics(dt);
+      const flows = computeHeatFlows(state.upgrades, state.inTemp, state.outTemp, state.sunPower);
+      updateMetrics(flows);
+      drawHouse(flows);
+      drawChart();
+      requestAnimationFrame(loop);
+    }
+
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

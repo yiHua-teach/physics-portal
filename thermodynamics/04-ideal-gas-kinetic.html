@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>04｜理想氣體微觀模擬器（PV = nRT 與方均根速率）</title>
+  <meta name="description" content="可拖曳活塞氣缸即時觀察理想氣體分子撞壁壓力表、H2/O2 混合動能比較與馬克士威－波茲曼速率分布曲線。" />
+  <meta name="portal-tags" content="熱學, 高中物理, 理想氣體, 方均根速率" />
+  <meta name="portal-badge" content="高中物理" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .gas-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 800;
+    }
+    .badge-h2 { background: rgba(244, 63, 94, 0.18); color: #fda4af; border: 1px solid rgba(244, 63, 94, 0.45); }
+    .badge-o2 { background: rgba(56, 189, 248, 0.18); color: #7dd3fc; border: 1px solid rgba(56, 189, 248, 0.45); }
+    .ke-compare {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .formula-pill {
+      background: rgba(167, 139, 250, 0.14);
+      border: 1px solid rgba(167, 139, 250, 0.4);
+      color: #ddd6fe;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-weight: 800;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-left">
+      <a class="back-btn" href="../index.html#thermodynamics">← 返回主選單</a>
+      <span class="module-badge badge-senior">高中物理</span>
+      <h1 class="topbar-title">4. 理想氣體微觀模擬器（PV = nRT 與方均根速率）</h1>
+    </div>
+    <div class="topbar-right">
+      <span class="formula-pill">E<sub>k,avg</sub> = (3/2) kT ｜ v<sub>rms</sub> = √(3RT/M)</span>
+    </div>
+  </header>
+
+  <main class="sim-container">
+    <div class="callout">
+      <strong>大屏互動操作：</strong>請直接在左側氣缸上方<strong>按住並上下拖曳活塞</strong>（縮小體積 V），觀察器壁閃光碰撞頻率與壓力表指針如何同步飆升！同時觀察同溫下 <strong>H₂（紅球，M=2）</strong> 與 <strong>O₂（藍球，M=32）</strong> 平均動能相同，但速率差 4 倍！
+    </div>
+
+    <section class="control-bar">
+      <div class="control-group" style="flex:1 1 200px;">
+        <div class="control-label">
+          <span>絕對溫度 T</span>
+          <span class="control-value" id="tempVal">300 K (27°C)</span>
+        </div>
+        <input type="range" id="tempSlider" min="100" max="900" step="10" value="300" />
+      </div>
+
+      <div class="control-group" style="flex:1 1 200px;">
+        <div class="control-label">
+          <span>氣缸體積 V (可拖曳活塞)</span>
+          <span class="control-value" id="volVal">24.6 L</span>
+        </div>
+        <input type="range" id="volSlider" min="10" max="42" step="0.5" value="24.6" />
+      </div>
+
+      <div class="control-group" style="min-width:160px;">
+        <div class="control-label">
+          <span>🔴 輕分子 H₂ 數</span>
+          <span class="control-value" id="h2CountVal" style="color:#fb7185;">35 顆</span>
+        </div>
+        <input type="range" id="h2Slider" min="0" max="70" step="5" value="35" />
+      </div>
+
+      <div class="control-group" style="min-width:160px;">
+        <div class="control-label">
+          <span>🔵 重分子 O₂ 數</span>
+          <span class="control-value" id="o2CountVal" style="color:#38bdf8;">35 顆</span>
+        </div>
+        <input type="range" id="o2Slider" min="0" max="70" step="5" value="35" />
+      </div>
+
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="btn btn-sm active" id="isoTempBtn">🔒 恆溫浴鎖定 T</button>
+        <button class="btn btn-sm" id="pauseBtn">⏸ 暫停</button>
+        <button class="btn btn-sm" id="resetBtn">↺ 重置</button>
+      </div>
+    </section>
+
+    <section class="split-grid">
+      <!-- Left: Draggable Piston Cylinder + Pressure Gauge -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">🧪 可拖曳活塞氣缸與壓力統計儀</div>
+          <span class="control-value" id="collisionFreqLabel">碰撞頻率：0 次/s</span>
+        </div>
+        <div class="canvas-wrap">
+          <canvas id="gasCanvas" width="720" height="470" style="cursor:ns-resize; touch-action:none;"></canvas>
+        </div>
+        <div class="metrics-row">
+          <div class="metric-box">
+            <div class="metric-label">即時氣體壓力 P (微觀衝量統計)</div>
+            <div class="metric-val" id="pressVal" style="color:#fbbf24;">1.00 atm</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">理論 P = nRT / V</div>
+            <div class="metric-val" id="idealPVal" style="color:#34d399;">1.00 atm</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">PV / nRT 比值</div>
+            <div class="metric-val" id="ratioVal" style="color:#38bdf8;">1.00</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Maxwell-Boltzmann Distribution -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">📊 馬克士威－波茲曼速率分布曲線</div>
+          <div style="display:flex; gap:6px;">
+            <span class="gas-badge badge-h2">● H₂ (M=2)</span>
+            <span class="gas-badge badge-o2">● O₂ (M=32)</span>
+          </div>
+        </div>
+        <div class="canvas-wrap">
+          <canvas id="mbCanvas" width="720" height="470"></canvas>
+        </div>
+        <div class="ke-compare">
+          <div class="metric-box">
+            <div class="metric-label">🔴 H₂ 方均根速率 &amp; 平均動能</div>
+            <div class="metric-val" id="h2Stats" style="font-size:16px; color:#fda4af;">v_rms = 1934 m/s</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">🔵 O₂ 方均根速率 &amp; 平均動能</div>
+            <div class="metric-val" id="o2Stats" style="font-size:16px; color:#7dd3fc;">v_rms = 484 m/s</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const gasCanvas = document.getElementById('gasCanvas');
+    const gctx = gasCanvas.getContext('2d');
+    const mbCanvas = document.getElementById('mbCanvas');
+    const mctx = mbCanvas.getContext('2d');
+
+    const tempSlider = document.getElementById('tempSlider');
+    const volSlider = document.getElementById('volSlider');
+    const h2Slider = document.getElementById('h2Slider');
+    const o2Slider = document.getElementById('o2Slider');
+    const tempVal = document.getElementById('tempVal');
+    const volVal = document.getElementById('volVal');
+    const h2CountVal = document.getElementById('h2CountVal');
+    const o2CountVal = document.getElementById('o2CountVal');
+    const pressVal = document.getElementById('pressVal');
+    const idealPVal = document.getElementById('idealPVal');
+    const ratioVal = document.getElementById('ratioVal');
+    const collisionFreqLabel = document.getElementById('collisionFreqLabel');
+    const h2Stats = document.getElementById('h2Stats');
+    const o2Stats = document.getElementById('o2Stats');
+    const isoTempBtn = document.getElementById('isoTempBtn');
+    const pauseBtn = document.getElementById('pauseBtn');
+
+    // Cylinder geometry inside gasCanvas
+    const CYL_X = 75;
+    const CYL_W = 350;
+    const CYL_BOTTOM = 435;
+    const CYL_TOP_LIMIT = 65;   // max volume = 42 L
+    const CYL_MIN_HEIGHT = 88;  // min volume = 10 L
+    const CYL_MAX_HEIGHT = CYL_BOTTOM - CYL_TOP_LIMIT; // 370 px
+
+    const state = {
+      T: 300,       // Kelvin
+      V: 24.6,      // Liters (10..42)
+      nH2: 35,      // particle count (each 70 particles = 1.0 mol visual scale)
+      nO2: 35,
+      isoTemp: true,
+      paused: false,
+      draggingPiston: false,
+      pistonVy: 0,
+      particles: [],
+      wallImpulses: [], // { t, dp }
+      wallFlashes: [],  // { x, y, life, color }
+      smoothedP: 1.0,
+      smoothedHits: 0
+    };
+
+    function volToPistonY(V) {
+      const frac = (V - 10) / (42 - 10);
+      const h = CYL_MIN_HEIGHT + frac * (CYL_MAX_HEIGHT - CYL_MIN_HEIGHT);
+      return CYL_BOTTOM - h;
+    }
+
+    function pistonYToVol(py) {
+      const h = Math.max(CYL_MIN_HEIGHT, Math.min(CYL_MAX_HEIGHT, CYL_BOTTOM - py));
+      const frac = (h - CYL_MIN_HEIGHT) / (CYL_MAX_HEIGHT - CYL_MIN_HEIGHT);
+      return 10 + frac * (42 - 10);
+    }
+
+    // Box-Muller normal sample for 3D Maxwell-Boltzmann speed components
+    function randn() {
+      let u = 0, v = 0;
+      while (u === 0) u = Math.random();
+      while (v === 0) v = Math.random();
+      return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+    }
+
+    // Physical v_rms = sqrt(3 R T / M) in m/s (M in kg/mol: H2 = 0.002, O2 = 0.032)
+    function getVrms(type, T) {
+      const R = 8.314;
+      const M = type === 'H2' ? 0.002 : 0.032;
+      return Math.sqrt((3 * R * T) / M);
+    }
+
+    // Sample a 2D particle velocity whose speed follows 3D-like MB distribution scaled to canvas px/s
+    // Visual speed scale: 1 m/s -> 0.22 px/s (so H2 at 300K ~ 425 px/s, O2 ~ 106 px/s)
+    const SPEED_SCALE = 0.22;
+
+    function createParticle(type) {
+      const py = volToPistonY(state.V);
+      const r = type === 'H2' ? 5.5 : 10.5;
+      const m = type === 'H2' ? 2 : 32;
+      const sigma = Math.sqrt((8.314 * state.T) / (m * 0.001)); // 1D thermal speed m/s
+      // 3D speed magnitude sampled from 3 Gaussian components, projected into 2D direction
+      const vx3 = randn() * sigma;
+      const vy3 = randn() * sigma;
+      const vz3 = randn() * sigma;
+      const speedMs = Math.hypot(vx3, vy3, vz3);
+      const ang = Math.random() * Math.PI * 2;
+      const speedPx = speedMs * SPEED_SCALE;
+
+      return {
+        type,
+        m,
+        r,
+        x: CYL_X + r + 4 + Math.random() * (CYL_W - 2 * r - 8),
+        y: py + r + 14 + Math.random() * Math.max(20, CYL_BOTTOM - py - 2 * r - 18),
+        vx: Math.cos(ang) * speedPx,
+        vy: Math.sin(ang) * speedPx
+      };
+    }
+
+    function syncParticles() {
+      const curH2 = state.particles.filter(p => p.type === 'H2');
+      const curO2 = state.particles.filter(p => p.type === 'O2');
+
+      while (curH2.length < state.nH2) {
+        const p = createParticle('H2');
+        state.particles.push(p);
+        curH2.push(p);
+      }
+      while (curH2.length > state.nH2) {
+        const rem = curH2.pop();
+        const idx = state.particles.indexOf(rem);
+        if (idx >= 0) state.particles.splice(idx, 1);
+      }
+
+      while (curO2.length < state.nO2) {
+        const p = createParticle('O2');
+        state.particles.push(p);
+        curO2.push(p);
+      }
+      while (curO2.length > state.nO2) {
+        const rem = curO2.pop();
+        const idx = state.particles.indexOf(rem);
+        if (idx >= 0) state.particles.splice(idx, 1);
+      }
+    }
+
+    function rescaleVelocitiesToTemp(oldT, newT) {
+      if (oldT <= 0) return;
+      const ratio = Math.sqrt(newT / oldT);
+      state.particles.forEach(p => {
+        p.vx *= ratio;
+        p.vy *= ratio;
+      });
+    }
+
+    // Ideal Pressure calculation (at n = (nH2+nO2)/70 mol -> 70 particles at 300K & 24.6L = 1.00 atm!)
+    function getIdealP() {
+      const nMol = (state.nH2 + state.nO2) / 70;
+      const R = 0.082057; // L·atm / (mol·K)
+      return (nMol * R * state.T) / state.V;
+    }
+
+    function stepGas(dt) {
+      if (state.paused) return;
+      const simDt = Math.min(0.025, dt);
+      const substeps = 3;
+      const hdt = simDt / substeps;
+      const py = volToPistonY(state.V);
+      const now = performance.now() / 1000;
+
+      for (let s = 0; s < substeps; s++) {
+        // Move & collide with walls
+        for (let i = 0; i < state.particles.length; i++) {
+          const p = state.particles[i];
+          p.x += p.vx * hdt;
+          p.y += p.vy * hdt;
+
+          // Left wall
+          if (p.x - p.r < CYL_X) {
+            p.x = CYL_X + p.r;
+            p.vx = Math.abs(p.vx);
+            recordWallHit(p, Math.abs(p.vx), CYL_X, p.y, now);
+          }
+          // Right wall
+          if (p.x + p.r > CYL_X + CYL_W) {
+            p.x = CYL_X + CYL_W - p.r;
+            p.vx = -Math.abs(p.vx);
+            recordWallHit(p, Math.abs(p.vx), CYL_X + CYL_W, p.y, now);
+          }
+          // Bottom wall
+          if (p.y + p.r > CYL_BOTTOM) {
+            p.y = CYL_BOTTOM - p.r;
+            p.vy = -Math.abs(p.vy);
+            recordWallHit(p, Math.abs(p.vy), p.x, CYL_BOTTOM, now);
+          }
+          // Top Piston (y = py + 12 bottom face of piston)
+          const pistonFace = py + 12;
+          if (p.y - p.r < pistonFace) {
+            p.y = pistonFace + p.r;
+            // If piston is moving downward (pistonVy > 0) and isoTemp is off, particle gains energy!
+            const vRel = p.vy - state.pistonVy;
+            if (vRel < 0) {
+              p.vy = state.pistonVy - vRel;
+            } else {
+              p.vy = Math.abs(p.vy) + Math.max(0, state.pistonVy);
+            }
+            recordWallHit(p, Math.abs(p.vy), p.x, pistonFace, now);
+          }
+        }
+
+        // Pairwise elastic collisions (lightweight O(N^2) for N<=140 is super fast!)
+        for (let i = 0; i < state.particles.length; i++) {
+          const a = state.particles[i];
+          for (let j = i + 1; j < state.particles.length; j++) {
+            const b = state.particles[j];
+            const dx = b.x - a.x;
+            const dy = b.y - a.y;
+            const minD = a.r + b.r;
+            const d2 = dx * dx + dy * dy;
+            if (d2 > 0 && d2 < minD * minD) {
+              const d = Math.sqrt(d2);
+              const nx = dx / d;
+              const ny = dy / d;
+              // Separate overlap
+              const overlap = 0.5 * (minD - d);
+              a.x -= nx * overlap; a.y -= ny * overlap;
+              b.x += nx * overlap; b.y += ny * overlap;
+
+              const rvx = b.vx - a.vx;
+              const rvy = b.vy - a.vy;
+              const vn = rvx * nx + rvy * ny;
+              if (vn < 0) {
+                const invMassSum = 1 / a.m + 1 / b.m;
+                const jImp = -(2 * vn) / invMassSum;
+                a.vx -= (jImp / a.m) * nx;
+                a.vy -= (jImp / a.m) * ny;
+                b.vx += (jImp / b.m) * nx;
+                b.vy += (jImp / b.m) * ny;
+              }
+            }
+          }
+        }
+      }
+
+      // Compute effective temperature from kinetic energy if isoTemp is OFF, or thermostat gently if isoTemp is ON
+      if (state.particles.length > 0) {
+        let totalKE = 0;
+        state.particles.forEach(p => {
+          const vMs = Math.hypot(p.vx, p.vy) / SPEED_SCALE;
+          totalKE += 0.5 * (p.m * 0.001) * vMs * vMs;
+        });
+        const avgKE = totalKE / state.particles.length;
+        // Since 3D avg KE = (3/2) R T, T_eff = (2 * avgKE) / (3 * R)
+        const T_eff = Math.max(60, Math.min(1200, (2 * avgKE) / (3 * 8.314)));
+        if (state.isoTemp) {
+          // Gentle Berendsen thermostat so distribution keeps exact target T
+          const factor = Math.sqrt(1 + 0.15 * (state.T / T_eff - 1));
+          state.particles.forEach(p => { p.vx *= factor; p.vy *= factor; });
+        } else {
+          state.T = Math.round(T_eff);
+          tempSlider.value = Math.min(900, Math.max(100, state.T));
+        }
+      }
+
+      // Decay piston velocity
+      state.pistonVy *= 0.85;
+
+      // Clean old wall impulses (rolling 1.0s window)
+      const windowSec = 1.0;
+      while (state.wallImpulses.length > 0 && now - state.wallImpulses[0].t > windowSec) {
+        state.wallImpulses.shift();
+      }
+      // Clean flashes
+      for (let i = state.wallFlashes.length - 1; i >= 0; i--) {
+        state.wallFlashes[i].life -= simDt * 3.8;
+        if (state.wallFlashes[i].life <= 0) state.wallFlashes.splice(i, 1);
+      }
+
+      // Calculate microscopic pressure from wall impulses: P = sum(2*m*v_perp) / (perimeter * windowSec)
+      const cylH = CYL_BOTTOM - (py + 12);
+      const perimeter = 2 * (CYL_W + cylH);
+      let impulseSum = 0;
+      state.wallImpulses.forEach(imp => { impulseSum += imp.dp; });
+      // Calibrate proportionality constant so micro P matches ideal P (~1.00 atm at default)
+      // Theoretical expectation for 2D gas: P_2d = (N * m * <v_x^2>) / Area, or wall impulse/perimeter
+      // Let's calibrate using theoretical impulse rate for exact physical alignment + natural statistical jitter!
+      const rawMicroHits = state.wallImpulses.length / windowSec;
+      state.smoothedHits = state.smoothedHits * 0.9 + rawMicroHits * 0.1;
+
+      const areaPx = CYL_W * cylH;
+      // Calibration constant matched to 2D kinetic wall-impulse rate so P_micro aligns with P = nRT/V
+      const CAL = 0.001288;
+      const instP = (impulseSum * CAL) / (perimeter * windowSec);
+      state.smoothedP = state.smoothedP * 0.88 + instP * 0.12;
+    }
+
+    function recordWallHit(p, vPerpPx, hx, hy, now) {
+      const dp = 2 * p.m * (vPerpPx / SPEED_SCALE);
+      state.wallImpulses.push({ t: now, dp });
+      if (state.wallFlashes.length < 45) {
+        state.wallFlashes.push({
+          x: hx, y: hy, life: 1.0,
+          color: p.type === 'H2' ? '#fda4af' : '#7dd3fc'
+        });
+      }
+    }
+
+    function drawGasScene() {
+      const w = gasCanvas.width;
+      const h = gasCanvas.height;
+      gctx.clearRect(0, 0, w, h);
+
+      const py = volToPistonY(state.V);
+
+      // Cylinder background
+      gctx.fillStyle = '#0b1222';
+      gctx.fillRect(CYL_X, CYL_TOP_LIMIT, CYL_W, CYL_BOTTOM - CYL_TOP_LIMIT);
+
+      // Gas chamber interior tint
+      gctx.fillStyle = 'rgba(30, 41, 59, 0.45)';
+      gctx.fillRect(CYL_X, py + 12, CYL_W, CYL_BOTTOM - (py + 12));
+
+      // Draw Wall Collision Flashes
+      state.wallFlashes.forEach(f => {
+        gctx.save();
+        gctx.globalAlpha = f.life * 0.85;
+        gctx.strokeStyle = f.color;
+        gctx.lineWidth = 2.5;
+        gctx.beginPath();
+        gctx.arc(f.x, f.y, (1 - f.life) * 14 + 4, 0, Math.PI * 2);
+        gctx.stroke();
+        gctx.restore();
+      });
+
+      // Draw Particles
+      state.particles.forEach(p => {
+        gctx.beginPath();
+        gctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        if (p.type === 'H2') {
+          gctx.fillStyle = '#f43f5e';
+          gctx.fill();
+          gctx.strokeStyle = '#fecdd3';
+          gctx.lineWidth = 1.2;
+          gctx.stroke();
+        } else {
+          gctx.fillStyle = '#0ea5e9';
+          gctx.fill();
+          gctx.strokeStyle = '#bae6fd';
+          gctx.lineWidth = 1.8;
+          gctx.stroke();
+        }
+      });
+
+      // Cylinder Walls (U-shape)
+      gctx.strokeStyle = '#94a3b8';
+      gctx.lineWidth = 5;
+      gctx.beginPath();
+      gctx.moveTo(CYL_X, CYL_TOP_LIMIT - 10);
+      gctx.lineTo(CYL_X, CYL_BOTTOM);
+      gctx.lineTo(CYL_X + CYL_W, CYL_BOTTOM);
+      gctx.lineTo(CYL_X + CYL_W, CYL_TOP_LIMIT - 10);
+      gctx.stroke();
+
+      // Volume scale ticks on left of cylinder
+      gctx.fillStyle = '#64748b';
+      gctx.font = '11px sans-serif';
+      gctx.textAlign = 'right';
+      for (let V = 10; V <= 40; V += 10) {
+        const ty = volToPistonY(V) + 12;
+        gctx.fillRect(CYL_X - 10, ty, 10, 2);
+        gctx.fillText(`${V}L`, CYL_X - 14, ty + 4);
+      }
+
+      // Draggable Piston Head & Handle
+      gctx.fillStyle = state.draggingPiston ? '#38bdf8' : '#cbd5e1';
+      gctx.fillRect(CYL_X + 3, py, CYL_W - 6, 12);
+      // Piston rod
+      gctx.fillStyle = '#64748b';
+      gctx.fillRect(CYL_X + CYL_W / 2 - 8, 12, 16, py - 12);
+      // Grab handle pill on piston
+      gctx.fillStyle = state.draggingPiston ? '#0284c7' : '#334155';
+      gctx.strokeStyle = '#38bdf8';
+      gctx.lineWidth = 2;
+      gctx.beginPath();
+      gctx.roundRect(CYL_X + CYL_W / 2 - 72, py - 24, 144, 24, 8);
+      gctx.fill(); gctx.stroke();
+      gctx.fillStyle = '#f8fafc';
+      gctx.font = 'bold 12px Microsoft JhengHei';
+      gctx.textAlign = 'center';
+      gctx.fillText('⬍ 上下拖曳活塞', CYL_X + CYL_W / 2, py - 8);
+
+      // Right Side: Dial Pressure Gauge + Collision Frequency Meter
+      const gx = 575, gy = 165, gr = 92;
+      // Connecting pipe from cylinder wall to gauge
+      gctx.strokeStyle = '#64748b';
+      gctx.lineWidth = 10;
+      gctx.beginPath();
+      gctx.moveTo(CYL_X + CYL_W, 300);
+      gctx.lineTo(gx, 300);
+      gctx.lineTo(gx, gy + gr);
+      gctx.stroke();
+
+      // Gauge Face
+      gctx.fillStyle = '#0f172a';
+      gctx.strokeStyle = '#475569';
+      gctx.lineWidth = 6;
+      gctx.beginPath(); gctx.arc(gx, gy, gr, 0, Math.PI * 2); gctx.fill(); gctx.stroke();
+
+      // Gauge Ticks (0 to 5 atm)
+      const maxAtm = 5;
+      for (let a = 0; a <= maxAtm; a += 0.5) {
+        const ang = Math.PI * 0.75 + (a / maxAtm) * Math.PI * 1.5;
+        const r1 = a % 1 === 0 ? gr - 18 : gr - 12;
+        const r2 = gr - 6;
+        gctx.strokeStyle = a >= 4 ? '#fb7185' : '#94a3b8';
+        gctx.lineWidth = a % 1 === 0 ? 2.5 : 1.2;
+        gctx.beginPath();
+        gctx.moveTo(gx + Math.cos(ang) * r1, gy + Math.sin(ang) * r1);
+        gctx.lineTo(gx + Math.cos(ang) * r2, gy + Math.sin(ang) * r2);
+        gctx.stroke();
+
+        if (a % 1 === 0) {
+          gctx.fillStyle = '#cbd5e1';
+          gctx.font = 'bold 12px sans-serif';
+          gctx.textAlign = 'center';
+          gctx.fillText(a, gx + Math.cos(ang) * (gr - 30), gy + Math.sin(ang) * (gr - 30) + 4);
+        }
+      }
+
+      // Gauge Needle (uses smoothed micro pressure!)
+      const pShow = Math.min(maxAtm, Math.max(0, state.smoothedP));
+      const needleAng = Math.PI * 0.75 + (pShow / maxAtm) * Math.PI * 1.5;
+      gctx.strokeStyle = '#fbbf24';
+      gctx.lineWidth = 4;
+      gctx.lineCap = 'round';
+      gctx.beginPath();
+      gctx.moveTo(gx, gy);
+      gctx.lineTo(gx + Math.cos(needleAng) * (gr - 24), gy + Math.sin(needleAng) * (gr - 24));
+      gctx.stroke();
+      gctx.fillStyle = '#f8fafc';
+      gctx.beginPath(); gctx.arc(gx, gy, 8, 0, Math.PI * 2); gctx.fill();
+
+      gctx.fillStyle = '#fbbf24';
+      gctx.font = 'bold 16px sans-serif';
+      gctx.textAlign = 'center';
+      gctx.fillText(`${state.smoothedP.toFixed(2)} atm`, gx, gy + 45);
+      gctx.fillStyle = '#94a3b8';
+      gctx.font = '12px Microsoft JhengHei';
+      gctx.fillText('壓力表 (atm)', gx, gy - 32);
+
+      // Collision Frequency Card below Gauge
+      gctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+      gctx.strokeStyle = 'rgba(56, 189, 248, 0.35)';
+      gctx.lineWidth = 1.5;
+      gctx.beginPath(); gctx.roundRect(475, 330, 215, 105, 12); gctx.fill(); gctx.stroke();
+      gctx.textAlign = 'left';
+      gctx.fillStyle = '#7dd3fc';
+      gctx.font = 'bold 14px Microsoft JhengHei';
+      gctx.fillText('⚡ 單位面積撞壁頻率', 492, 358);
+      const areaM2 = (CYL_W * (CYL_BOTTOM - (py + 12))) / 10000;
+      const freqPerArea = Math.round(state.smoothedHits / Math.max(1, areaM2 / 4));
+      gctx.fillStyle = '#f8fafc';
+      gctx.font = 'bold 24px sans-serif';
+      gctx.fillText(`${freqPerArea} 次/s`, 492, 394);
+      gctx.fillStyle = '#94a3b8';
+      gctx.font = '12px Microsoft JhengHei';
+      gctx.fillText('撞擊愈密＋動量愈大 ＝ 壓力愈高', 492, 420);
+    }
+
+    function drawMBChart() {
+      const w = mbCanvas.width;
+      const h = mbCanvas.height;
+      mctx.clearRect(0, 0, w, h);
+
+      const pad = { left: 58, right: 28, top: 34, bottom: 52 };
+      const pw = w - pad.left - pad.right;
+      const ph = h - pad.top - pad.bottom;
+
+      const maxSpeed = 4200; // m/s
+      const bins = 28;
+      const binW = maxSpeed / bins;
+
+      const toX = (v) => pad.left + (v / maxSpeed) * pw;
+
+      // Grid
+      mctx.strokeStyle = 'rgba(148,163,184,0.12)';
+      mctx.lineWidth = 1;
+      for (let v = 0; v <= maxSpeed; v += 1000) {
+        const x = toX(v);
+        mctx.beginPath(); mctx.moveTo(x, pad.top); mctx.lineTo(x, pad.top + ph); mctx.stroke();
+        mctx.fillStyle = '#94a3b8';
+        mctx.font = '12px sans-serif';
+        mctx.textAlign = 'center';
+        mctx.fillText(`${v}`, x, pad.top + ph + 20);
+      }
+
+      // Compute Histograms from live particles
+      const histH2 = new Array(bins).fill(0);
+      const histO2 = new Array(bins).fill(0);
+      let cH2 = 0, cO2 = 0;
+      state.particles.forEach(p => {
+        const vMs = Math.hypot(p.vx, p.vy) / SPEED_SCALE;
+        const b = Math.min(bins - 1, Math.floor(vMs / binW));
+        if (p.type === 'H2') { histH2[b]++; cH2++; }
+        else { histO2[b]++; cO2++; }
+      });
+
+      // Theoretical MB PDF: f(v) = 4 pi (M / (2 pi R T))^(3/2) v^2 exp(-M v^2 / (2 R T))
+      function mbPDF(v, Mkg) {
+        const a = Mkg / (2 * 8.314 * state.T);
+        return 4 * Math.PI * Math.pow(a / Math.PI, 1.5) * v * v * Math.exp(-a * v * v);
+      }
+
+      // Peak scaling so O2 curve and H2 curve both fit cleanly on chart
+      const peakO2 = mbPDF(Math.sqrt(2 * 8.314 * state.T / 0.032), 0.032);
+      const maxPdfY = Math.max(0.0022, peakO2 * 1.15);
+      const toY = (pdf) => pad.top + ph - Math.min(1.05, pdf / maxPdfY) * ph;
+
+      // Draw Live Histogram Bars (normalized to probability density)
+      const pxBinW = pw / bins;
+      if (cO2 > 0) {
+        mctx.fillStyle = 'rgba(14, 165, 233, 0.25)';
+        for (let b = 0; b < bins; b++) {
+          const density = histO2[b] / (cO2 * binW);
+          const barY = toY(density);
+          mctx.fillRect(pad.left + b * pxBinW + 1, barY, pxBinW - 2, pad.top + ph - barY);
+        }
+      }
+      if (cH2 > 0) {
+        mctx.fillStyle = 'rgba(244, 63, 94, 0.25)';
+        for (let b = 0; b < bins; b++) {
+          const density = histH2[b] / (cH2 * binW);
+          const barY = toY(density);
+          mctx.fillRect(pad.left + b * pxBinW + 2, barY, pxBinW - 4, pad.top + ph - barY);
+        }
+      }
+
+      // Draw Theoretical MB Curves
+      const drawCurve = (Mkg, color, enabled) => {
+        if (!enabled) return;
+        mctx.save();
+        mctx.strokeStyle = color;
+        mctx.lineWidth = 3.5;
+        mctx.beginPath();
+        for (let v = 0; v <= maxSpeed; v += 30) {
+          const x = toX(v);
+          const y = toY(mbPDF(v, Mkg));
+          if (v === 0) mctx.moveTo(x, y); else mctx.lineTo(x, y);
+        }
+        mctx.stroke();
+        mctx.restore();
+      };
+
+      drawCurve(0.032, '#38bdf8', state.nO2 > 0);
+      drawCurve(0.002, '#fb7185', state.nH2 > 0);
+
+      // Draw v_rms vertical markers
+      const drawVrmsMarker = (vrms, label, color, yOff) => {
+        if (vrms > maxSpeed) return;
+        const x = toX(vrms);
+        mctx.save();
+        mctx.strokeStyle = color;
+        mctx.setLineDash([6, 4]);
+        mctx.lineWidth = 2;
+        mctx.beginPath(); mctx.moveTo(x, pad.top + 10); mctx.lineTo(x, pad.top + ph); mctx.stroke();
+        mctx.fillStyle = color;
+        mctx.font = 'bold 12px Microsoft JhengHei';
+        mctx.textAlign = 'center';
+        mctx.fillText(`${label} ${Math.round(vrms)}`, x, pad.top + yOff);
+        mctx.restore();
+      };
+
+      if (state.nO2 > 0) drawVrmsMarker(getVrms('O2', state.T), 'O₂ v_rms', '#7dd3fc', 22);
+      if (state.nH2 > 0) drawVrmsMarker(getVrms('H2', state.T), 'H₂ v_rms', '#fda4af', 42);
+
+      // Axes
+      mctx.strokeStyle = '#cbd5e1';
+      mctx.lineWidth = 2;
+      mctx.beginPath();
+      mctx.moveTo(pad.left, pad.top);
+      mctx.lineTo(pad.left, pad.top + ph);
+      mctx.lineTo(pad.left + pw, pad.top + ph);
+      mctx.stroke();
+
+      mctx.fillStyle = '#e2e8f0';
+      mctx.font = 'bold 13px Microsoft JhengHei';
+      mctx.textAlign = 'center';
+      mctx.fillText('分子速率 v (m/s)', pad.left + pw / 2, h - 10);
+      mctx.textAlign = 'left';
+      mctx.fillText('分子比例分布 f(v)', 12, 22);
+    }
+
+    function updateReadouts() {
+      tempVal.textContent = `${state.T} K (${state.T - 273}°C)`;
+      volVal.textContent = `${state.V.toFixed(1)} L`;
+      h2CountVal.textContent = `${state.nH2} 顆`;
+      o2CountVal.textContent = `${state.nO2} 顆`;
+
+      const pIdeal = getIdealP();
+      pressVal.textContent = `${state.smoothedP.toFixed(2)} atm`;
+      idealPVal.textContent = `${pIdeal.toFixed(2)} atm`;
+      const ratio = pIdeal > 0.01 ? (state.smoothedP / pIdeal) : 1;
+      ratioVal.textContent = `${ratio.toFixed(2)}`;
+
+      collisionFreqLabel.textContent = `撞壁次數：${Math.round(state.smoothedHits)} 次/s`;
+
+      const ek = 1.5 * 1.38e-23 * state.T * 1e21; // in zJ (10^-21 J)
+      h2Stats.textContent = `v_rms = ${Math.round(getVrms('H2', state.T))} m/s ｜ E_k = ${ek.toFixed(2)} zJ`;
+      o2Stats.textContent = `v_rms = ${Math.round(getVrms('O2', state.T))} m/s ｜ E_k = ${ek.toFixed(2)} zJ`;
+    }
+
+    // Draggable Piston Pointer Events (Mouse + Touch!)
+    function getCanvasY(evt) {
+      const rect = gasCanvas.getBoundingClientRect();
+      const clientY = evt.touches ? evt.touches[0].clientY : evt.clientY;
+      return ((clientY - rect.top) / rect.height) * gasCanvas.height;
+    }
+
+    gasCanvas.addEventListener('pointerdown', (e) => {
+      const y = getCanvasY(e);
+      const py = volToPistonY(state.V);
+      if (Math.abs(y - py) < 55) {
+        state.draggingPiston = true;
+        gasCanvas.setPointerCapture(e.pointerId);
+      }
+    });
+
+    gasCanvas.addEventListener('pointermove', (e) => {
+      if (!state.draggingPiston) return;
+      const y = getCanvasY(e);
+      const oldPy = volToPistonY(state.V);
+      const newV = pistonYToVol(y);
+      const newPy = volToPistonY(newV);
+      state.pistonVy = (newPy - oldPy) * 18;
+      state.V = newV;
+      volSlider.value = newV;
+
+      // Push any particles trapped above the lowered piston face down
+      const face = newPy + 12;
+      state.particles.forEach(p => {
+        if (p.y - p.r < face) {
+          p.y = face + p.r;
+          p.vy = Math.abs(p.vy) + Math.max(0, state.pistonVy * 0.4);
+        }
+      });
+    });
+
+    gasCanvas.addEventListener('pointerup', () => { state.draggingPiston = false; });
+    gasCanvas.addEventListener('pointercancel', () => { state.draggingPiston = false; });
+
+    // Slider Events
+    tempSlider.addEventListener('input', (e) => {
+      const newT = parseInt(e.target.value, 10);
+      rescaleVelocitiesToTemp(state.T, newT);
+      state.T = newT;
+    });
+    volSlider.addEventListener('input', (e) => {
+      state.V = parseFloat(e.target.value);
+      const face = volToPistonY(state.V) + 12;
+      state.particles.forEach(p => {
+        if (p.y - p.r < face) p.y = face + p.r;
+      });
+    });
+    h2Slider.addEventListener('input', (e) => { state.nH2 = parseInt(e.target.value, 10); syncParticles(); });
+    o2Slider.addEventListener('input', (e) => { state.nO2 = parseInt(e.target.value, 10); syncParticles(); });
+
+    isoTempBtn.addEventListener('click', () => {
+      state.isoTemp = !state.isoTemp;
+      isoTempBtn.classList.toggle('active', state.isoTemp);
+      isoTempBtn.textContent = state.isoTemp ? '🔒 恆溫浴鎖定 T' : '🔓 自由絕熱壓縮膨脹';
+    });
+
+    pauseBtn.addEventListener('click', () => {
+      state.paused = !state.paused;
+      pauseBtn.textContent = state.paused ? '▶ 繼續' : '⏸ 暫停';
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      state.T = 300; state.V = 24.6; state.nH2 = 35; state.nO2 = 35;
+      state.isoTemp = true; state.paused = false;
+      tempSlider.value = 300; volSlider.value = 24.6; h2Slider.value = 35; o2Slider.value = 35;
+      isoTempBtn.classList.add('active');
+      isoTempBtn.textContent = '🔒 恆溫浴鎖定 T';
+      pauseBtn.textContent = '⏸ 暫停';
+      state.particles = [];
+      state.wallImpulses = [];
+      syncParticles();
+      state.smoothedP = getIdealP();
+    });
+
+    let lastTs = 0;
+    function loop(ts) {
+      if (!lastTs) lastTs = ts;
+      const dt = (ts - lastTs) / 1000;
+      lastTs = ts;
+
+      stepGas(dt);
+      updateReadouts();
+      drawGasScene();
+      drawMBChart();
+      requestAnimationFrame(loop);
+    }
+
+    syncParticles();
+    state.smoothedP = getIdealP();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

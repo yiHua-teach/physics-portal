@@ -177,7 +177,7 @@
                     </span>
                 </div>
                 <p class="text-xs text-slate-300 hidden sm:block">
-                    力學 × 波動 × 光學 × 電磁學 × 化學 × 近代物理 × 理化遊戲
+                    力學 × 波動 × 光學 × 熱學 × 電磁學 × 化學 × 近代物理 × 理化遊戲
                 </p>
             </div>
         </div>
@@ -251,6 +251,10 @@
             <button onclick="focusDeskItem('optics')" id="dock-optics" class="dock-btn shrink-0 px-3 py-2 rounded-xl flex items-center justify-center gap-1.5 text-xs font-bold text-slate-300 hover:text-white hover:bg-white/10 transition-all">
                 <i class="fa-solid fa-lightbulb text-yellow-300 text-sm"></i>
                 <span class="whitespace-nowrap">光學</span>
+            </button>
+            <button onclick="focusDeskItem('thermodynamics')" id="dock-thermodynamics" class="dock-btn shrink-0 px-3 py-2 rounded-xl flex items-center justify-center gap-1.5 text-xs font-bold text-slate-300 hover:text-white hover:bg-white/10 transition-all">
+                <i class="fa-solid fa-fire text-orange-400 text-sm"></i>
+                <span class="whitespace-nowrap">熱學</span>
             </button>
             <button onclick="focusDeskItem('electromagnetism')" id="dock-electromagnetism" class="dock-btn shrink-0 px-3 py-2 rounded-xl flex items-center justify-center gap-1.5 text-xs font-bold text-slate-300 hover:text-white hover:bg-white/10 transition-all">
                 <i class="fa-solid fa-bolt text-purple-400 text-sm"></i>
@@ -424,6 +428,7 @@
                         <div class="px-2 py-1.5 rounded-lg bg-slate-950 border border-white/10 text-sky-300">mechanics/ <span class="text-slate-400">力學</span></div>
                         <div class="px-2 py-1.5 rounded-lg bg-slate-950 border border-white/10 text-cyan-300">waves/ <span class="text-slate-400">波動</span></div>
                         <div class="px-2 py-1.5 rounded-lg bg-slate-950 border border-white/10 text-yellow-300">optics/ <span class="text-slate-400">光學</span></div>
+                        <div class="px-2 py-1.5 rounded-lg bg-slate-950 border border-white/10 text-orange-300">thermodynamics/ <span class="text-slate-400">熱學</span></div>
                         <div class="px-2 py-1.5 rounded-lg bg-slate-950 border border-white/10 text-rose-300">electromagnetism/ <span class="text-slate-400">電磁</span></div>
                         <div class="px-2 py-1.5 rounded-lg bg-slate-950 border border-white/10 text-emerald-300">chemistry/ <span class="text-slate-400">化學</span></div>
                         <div class="px-2 py-1.5 rounded-lg bg-slate-950 border border-white/10 text-indigo-300">modern-physics/ <span class="text-slate-400">近代</span></div>
@@ -771,6 +776,114 @@
         "featured": false
     },
     {
+        "id": "thermodynamics/01-thermometer-equilibrium",
+        "title": "01｜溫度計溫標換算比例與「熱平衡、熱脹冷縮」雙模式實驗室",
+        "category": "thermodynamics",
+        "sourceFolder": "thermodynamics",
+        "badge": "國中理化",
+        "description": "雙溫標對齊溫度計（攝氏、華氏、克氏、自製溫標）與四步驟比例換算，結合巨觀放大鏡＋微觀分子碰撞熱平衡雙視角模擬。",
+        "tags": [
+            "熱學",
+            "國中理化",
+            "溫標換算",
+            "熱平衡"
+        ],
+        "demoUrl": "thermodynamics/01-thermometer-equilibrium.html",
+        "imgUrl": "thermodynamics/01-thermometer-equilibrium.gif",
+        "repoUrl": "https://github.com/yiHua-teach/physics-portal/blob/main/thermodynamics/01-thermometer-equilibrium.html",
+        "featured": false
+    },
+    {
+        "id": "thermodynamics/02-heating-curve-latent-heat",
+        "title": "02｜加熱曲線、比熱比較與「潛熱（相變）」微觀拔河賽",
+        "category": "thermodynamics",
+        "sourceFolder": "thermodynamics",
+        "badge": "國中理化",
+        "description": "比較比熱大小與加熱爐火力對加熱曲線的影響，搭配冰塊／蠟相變曲線與分子鍵結微觀模擬器看懂潛熱與汽化。",
+        "tags": [
+            "熱學",
+            "國中理化",
+            "比熱",
+            "潛熱相變"
+        ],
+        "demoUrl": "thermodynamics/02-heating-curve-latent-heat.html",
+        "imgUrl": "thermodynamics/02-heating-curve-latent-heat.gif",
+        "repoUrl": "https://github.com/yiHua-teach/physics-portal/blob/main/thermodynamics/02-heating-curve-latent-heat.html",
+        "featured": false
+    },
+    {
+        "id": "thermodynamics/03-conduction-bimetal",
+        "title": "03｜雙金屬片與熱傳導的「接力賽跑」",
+        "category": "thermodynamics",
+        "sourceFolder": "thermodynamics",
+        "badge": "國中理化",
+        "description": "銅鐵鋁玻璃熱傳導接力賽與雙金屬片彎曲膨脹滑桿實驗，連動電熨斗及教室溫控開關電路模擬。",
+        "tags": [
+            "熱學",
+            "國中理化",
+            "熱傳導",
+            "雙金屬片"
+        ],
+        "demoUrl": "thermodynamics/03-conduction-bimetal.html",
+        "imgUrl": "thermodynamics/03-conduction-bimetal.gif",
+        "repoUrl": "https://github.com/yiHua-teach/physics-portal/blob/main/thermodynamics/03-conduction-bimetal.html",
+        "featured": false
+    },
+    {
+        "id": "thermodynamics/04-ideal-gas-kinetic",
+        "title": "04｜理想氣體微觀模擬器（PV = nRT 與方均根速率）",
+        "category": "thermodynamics",
+        "sourceFolder": "thermodynamics",
+        "badge": "高中物理",
+        "description": "可拖曳活塞氣缸即時觀察理想氣體分子撞壁壓力表、H2/O2 混合動能比較與馬克士威－波茲曼速率分布曲線。",
+        "tags": [
+            "熱學",
+            "高中物理",
+            "理想氣體",
+            "方均根速率"
+        ],
+        "demoUrl": "thermodynamics/04-ideal-gas-kinetic.html",
+        "imgUrl": "thermodynamics/04-ideal-gas-kinetic.gif",
+        "repoUrl": "https://github.com/yiHua-teach/physics-portal/blob/main/thermodynamics/04-ideal-gas-kinetic.html",
+        "featured": false
+    },
+    {
+        "id": "thermodynamics/05-first-law-pv-cycle",
+        "title": "05｜熱力學第一定律與「P-V 圖循環做功」連動儀",
+        "category": "thermodynamics",
+        "sourceFolder": "thermodynamics",
+        "badge": "高中物理",
+        "description": "支援卡諾循環、等溫與絕熱線比較、自由拖曳 P-V 循環做功面積積分，即時連動 Q = ΔU + W 動態能量條。",
+        "tags": [
+            "熱學",
+            "高中物理",
+            "熱力學第一定律",
+            "PV圖"
+        ],
+        "demoUrl": "thermodynamics/05-first-law-pv-cycle.html",
+        "imgUrl": "thermodynamics/05-first-law-pv-cycle.gif",
+        "repoUrl": "https://github.com/yiHua-teach/physics-portal/blob/main/thermodynamics/05-first-law-pv-cycle.html",
+        "featured": false
+    },
+    {
+        "id": "thermodynamics/06-heat-transfer-house",
+        "title": "06｜熱傳播三兄弟的「建築節能改造實驗室」",
+        "category": "thermodynamics",
+        "sourceFolder": "thermodynamics",
+        "badge": "國高中探究",
+        "description": "烈日建築剖面結合紅外線熱成像濾鏡，自由開關熱傳導、熱對流與熱輻射並挑戰雙層真空玻璃節能改造 PK。",
+        "tags": [
+            "熱學",
+            "跨國高中探究",
+            "熱傳播",
+            "節能建築"
+        ],
+        "demoUrl": "thermodynamics/06-heat-transfer-house.html",
+        "imgUrl": "thermodynamics/06-heat-transfer-house.gif",
+        "repoUrl": "https://github.com/yiHua-teach/physics-portal/blob/main/thermodynamics/06-heat-transfer-house.html",
+        "featured": false
+    },
+    {
         "id": "games/週期表排排看",
         "title": "週期表賓果排排看 (Periodic Table Bingo)",
         "category": "games",
@@ -823,6 +936,7 @@
     "mechanics": 2,
     "waves": 7,
     "optics": 10,
+    "thermodynamics": 6,
     "electromagnetism": 0,
     "chemistry": 0,
     "modern-physics": 0,
@@ -834,6 +948,7 @@
             'mechanics',
             'waves',
             'optics',
+            'thermodynamics',
             'electromagnetism',
             'chemistry',
             'modern-physics',
@@ -844,7 +959,7 @@
             all: {
                 shortName: "全部",
                 title: "華爸的物理園地・全部工具",
-                subtitle: "彙整力學、波動、光學、電磁學、化學、近代物理與理化遊戲",
+                subtitle: "彙整力學、波動、光學、熱學、電磁學、化學、近代物理與理化遊戲",
                 icon: "fa-book-journal-whills",
                 emoji: "📓",
                 badgeClass: "bg-amber-500/20 text-amber-300 border-amber-400/40",
@@ -884,6 +999,17 @@
                 pillColor: "bg-yellow-400 text-slate-950",
                 camPos: { x: -4.5, y: 3.6, z: 6.4 },
                 lookAt: { x: -3.7, y: 0.7, z: 1.7 }
+            },
+            thermodynamics: {
+                shortName: "熱學",
+                title: "熱學與分子動力實驗室",
+                subtitle: "溫標熱平衡、比熱潛熱、熱傳導雙金屬片、理想氣體分子動力與 PV 循環",
+                icon: "fa-fire",
+                emoji: "🔥",
+                badgeClass: "bg-orange-500/20 text-orange-300 border-orange-400/40",
+                pillColor: "bg-orange-500 text-white",
+                camPos: { x: -2.4, y: 4.3, z: 5.5 },
+                lookAt: { x: -2.0, y: 1.0, z: 0.1 }
             },
             electromagnetism: {
                 shortName: "電磁學",
@@ -982,6 +1108,14 @@
 
         let opticsPrismAngle = 0, cardSpinBoost = 0;
 
+        let thermoHeaterMesh, thermoMercuryMesh, thermoMolecules = [];
+        let thermoHeatLevel = 1.0, thermoStageIdx = 1;
+        const THERMO_STAGES = [
+            { level: 0.35, color: 0x38bdf8, label: '低溫狀態（分子慢速運動 ❄️）' },
+            { level: 1.0,  color: 0xf59e0b, label: '常溫平衡（熱傳導均勻 🌡️）' },
+            { level: 1.95, color: 0xef4444, label: '高溫沸騰（分子動能劇烈狂飆 🔥）' }
+        ];
+
         // Web Audio 輕量合成音效（無外部音檔）
         let isSoundEnabled = localStorage.getItem('hwaba_sound_enabled') !== 'false';
         let audioCtx = null;
@@ -1044,8 +1178,9 @@
             buildModernPhysicsProp();      // 4. 中央：量子原子軌域模型（近代物理）
             buildChemistryProp();          // 5. 右中：發光錐形瓶與分子（化學）
             buildOpticsProp();             // 6. 左前：三稜鏡色散與凸透鏡（光學）
-            buildGamesProp();              // 7. 中前：漂浮卡牌與遊戲光環（理化遊戲）
-            buildNotebookProp();           // 8. 右前：實驗筆記本（全部工具）
+            buildThermodynamicsProp();     // 7. 左中：熱學氣體動力室與溫度計（熱學）
+            buildGamesProp();              // 8. 中前：漂浮卡牌與遊戲光環（理化遊戲）
+            buildNotebookProp();           // 9. 右前：實驗筆記本（全部工具）
             buildFloatingParticles();
 
             createHTMLHotspotLabels();
@@ -1570,6 +1705,107 @@
             group.add(lens);
 
             registerInteractiveGroup(group, 'optics', '💡 光學', '三稜鏡色散與透鏡成像', new THREE.Vector3(-4.1, 1.55, 1.85));
+            scene.add(group);
+        }
+
+        // 7. 【熱學】加熱氣體分子動力室 ＋ 溫度計
+        function buildThermodynamicsProp() {
+            const group = new THREE.Group();
+            group.position.set(-2.0, 0, 0.1);
+
+            // 陶瓷隔熱加熱座
+            const base = new THREE.Mesh(
+                new THREE.BoxGeometry(1.45, 0.2, 1.3),
+                new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.45, metalness: 0.5 })
+            );
+            base.position.y = 0.1;
+            base.castShadow = true;
+            group.add(base);
+
+            // 發光加熱電熱線圈
+            thermoHeaterMesh = new THREE.Mesh(
+                new THREE.TorusGeometry(0.42, 0.05, 10, 28),
+                new THREE.MeshStandardMaterial({
+                    color: 0xf97316,
+                    emissive: 0xea580c,
+                    emissiveIntensity: 1.1,
+                    roughness: 0.3
+                })
+            );
+            thermoHeaterMesh.rotation.x = Math.PI / 2;
+            thermoHeaterMesh.position.y = 0.23;
+            group.add(thermoHeaterMesh);
+
+            // 透明玻璃氣室箱
+            const chamberGeo = new THREE.BoxGeometry(1.0, 1.0, 1.0);
+            const chamber = new THREE.Mesh(
+                chamberGeo,
+                new THREE.MeshPhysicalMaterial({
+                    color: 0xfed7aa,
+                    transparent: true,
+                    opacity: 0.22,
+                    roughness: 0.08,
+                    depthWrite: false
+                })
+            );
+            chamber.position.y = 0.80;
+            group.add(chamber);
+
+            const wireFrame = new THREE.LineSegments(
+                new THREE.EdgesGeometry(chamberGeo),
+                new THREE.LineBasicMaterial({ color: 0xfb923c, transparent: true, opacity: 0.65 })
+            );
+            wireFrame.position.y = 0.80;
+            group.add(wireFrame);
+
+            // 氣室內 8 顆彈跳的氣體分子球
+            const molColors = [0xf43f5e, 0xfb923c, 0x38bdf8, 0xfbbf24];
+            for (let i = 0; i < 8; i++) {
+                const molMat = new THREE.MeshStandardMaterial({
+                    color: molColors[i % molColors.length],
+                    emissive: molColors[i % molColors.length],
+                    emissiveIntensity: 0.5
+                });
+                const mol = new THREE.Mesh(new THREE.SphereGeometry(0.068, 12, 12), molMat);
+                mol.userData = {
+                    px: (Math.random() - 0.5) * 0.7,
+                    py: 0.45 + Math.random() * 0.7,
+                    pz: (Math.random() - 0.5) * 0.7,
+                    vx: (Math.random() > 0.5 ? 1 : -1) * (0.45 + Math.random() * 0.45),
+                    vy: (Math.random() > 0.5 ? 1 : -1) * (0.45 + Math.random() * 0.45),
+                    vz: (Math.random() > 0.5 ? 1 : -1) * (0.45 + Math.random() * 0.45)
+                };
+                mol.position.set(mol.userData.px, mol.userData.py, mol.userData.pz);
+                group.add(mol);
+                thermoMolecules.push(mol);
+            }
+
+            // 旁邊立式玻璃溫度計管與動態水銀/酒精液柱
+            const thermoTube = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.08, 0.08, 1.35, 14),
+                new THREE.MeshPhysicalMaterial({ color: 0xe2e8f0, transparent: true, opacity: 0.35, depthWrite: false })
+            );
+            thermoTube.position.set(0.68, 0.88, 0.15);
+            group.add(thermoTube);
+
+            const bulb = new THREE.Mesh(
+                new THREE.SphereGeometry(0.14, 14, 14),
+                new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0xdc2626, emissiveIntensity: 0.9 })
+            );
+            bulb.position.set(0.68, 0.25, 0.15);
+            group.add(bulb);
+
+            const mercuryGeo = new THREE.CylinderGeometry(0.048, 0.048, 1.0, 12);
+            mercuryGeo.translate(0, 0.5, 0);
+            thermoMercuryMesh = new THREE.Mesh(
+                mercuryGeo,
+                new THREE.MeshStandardMaterial({ color: 0xf59e0b, emissive: 0xd97706, emissiveIntensity: 0.9 })
+            );
+            thermoMercuryMesh.position.set(0.68, 0.28, 0.15);
+            thermoMercuryMesh.scale.y = 0.65;
+            group.add(thermoMercuryMesh);
+
+            registerInteractiveGroup(group, 'thermodynamics', '🔥 熱學', '理想氣體與溫度加熱台', new THREE.Vector3(-2.0, 2.0, 0.1));
             scene.add(group);
         }
 
@@ -2158,6 +2394,28 @@
                 magicRingMesh.rotation.z = t * (0.8 + cardSpinBoost * 5.0);
             }
 
+            // 7. 熱學氣體分子動力與溫度計動態液柱
+            if (thermoMolecules.length > 0) {
+                const speedScale = 0.4 + thermoHeatLevel * 1.1;
+                thermoMolecules.forEach(mol => {
+                    const d = mol.userData;
+                    d.px += d.vx * dt * speedScale;
+                    d.py += d.vy * dt * speedScale;
+                    d.pz += d.vz * dt * speedScale;
+                    if (d.px > 0.40 || d.px < -0.40) { d.vx *= -1; d.px = Math.max(-0.40, Math.min(0.40, d.px)); }
+                    if (d.py > 1.22 || d.py < 0.38) { d.vy *= -1; d.py = Math.max(0.38, Math.min(1.22, d.py)); }
+                    if (d.pz > 0.40 || d.pz < -0.40) { d.vz *= -1; d.pz = Math.max(-0.40, Math.min(0.40, d.pz)); }
+                    mol.position.set(d.px, d.py, d.pz);
+                });
+                if (thermoHeaterMesh) {
+                    thermoHeaterMesh.material.emissiveIntensity = 0.2 + thermoHeatLevel * 1.15;
+                }
+                if (thermoMercuryMesh) {
+                    const targetH = Math.max(0.18, Math.min(1.12, 0.22 + thermoHeatLevel * 0.44));
+                    thermoMercuryMesh.scale.y += (targetH - thermoMercuryMesh.scale.y) * Math.min(1, dt * 8);
+                }
+            }
+
             // 鏡頭平滑阻尼（結合陀螺儀視差偏移與運鏡）
             gyroOffsetAz += (gyroTargetAz - gyroOffsetAz) * 0.08;
             gyroOffsetEl += (gyroTargetEl - gyroOffsetEl) * 0.08;
@@ -2239,6 +2497,17 @@
                 if (opticsPrismGroup) opticsPrismGroup.rotation.y = opticsPrismAngle;
                 if (opticsRainbowGroup) opticsRainbowGroup.rotation.y = opticsPrismAngle * 0.85;
                 showLabToast('💡 三稜鏡色散：左右拖曳稜鏡可即時偏折彩虹角度！');
+            } else if (category === 'thermodynamics') {
+                thermoStageIdx = (thermoStageIdx + 1) % THERMO_STAGES.length;
+                const st = THERMO_STAGES[thermoStageIdx];
+                thermoHeatLevel = st.level;
+                if (thermoMercuryMesh) {
+                    thermoMercuryMesh.material.color.setHex(st.color);
+                    thermoMercuryMesh.material.emissive.setHex(st.color);
+                }
+                if (thermoHeaterMesh) thermoHeaterMesh.material.emissive.setHex(st.color);
+                playQuantumChime();
+                showLabToast(`🔥 熱學氣室：${st.label}（上下滑動可無段加減火力！）`);
             } else if (category === 'games') {
                 cardSpinBoost = 1.0;
                 playQuantumChime();
@@ -2348,7 +2617,8 @@
                         moved: false,
                         startWaveAmp: waveAmp,
                         startWaveFreq: waveFreq,
-                        startPrismAngle: opticsPrismAngle
+                        startPrismAngle: opticsPrismAngle,
+                        startThermoHeat: thermoHeatLevel
                     };
                     if (hit.category === 'electromagnetism') {
                         updatePlasmaTouchFromPointer(e.clientX, e.clientY);
@@ -2408,6 +2678,14 @@
                             opticsPrismAngle = Math.max(-0.95, Math.min(0.95, activePropDrag.startPrismAngle + totalDx * 0.012));
                             if (opticsPrismGroup) opticsPrismGroup.rotation.y = opticsPrismAngle;
                             if (opticsRainbowGroup) opticsRainbowGroup.rotation.y = opticsPrismAngle * 0.85;
+                        } else if (cat === 'thermodynamics') {
+                            thermoHeatLevel = Math.max(0.2, Math.min(2.15, activePropDrag.startThermoHeat - totalDy * 0.01));
+                            const hCol = thermoHeatLevel < 0.65 ? 0x38bdf8 : (thermoHeatLevel < 1.4 ? 0xf59e0b : 0xef4444);
+                            if (thermoMercuryMesh) {
+                                thermoMercuryMesh.material.color.setHex(hCol);
+                                thermoMercuryMesh.material.emissive.setHex(hCol);
+                            }
+                            if (thermoHeaterMesh) thermoHeaterMesh.material.emissive.setHex(hCol);
                         }
                     }
                     return;
@@ -2453,6 +2731,8 @@
                         showLabToast(`🌊 已即時調整振幅與頻率（點擊「🌊 波動」標籤進入模擬）`);
                     } else if (dragInfo.category === 'optics' && dragInfo.moved) {
                         showLabToast('💡 三稜鏡角度已偏折彩虹光束（點「💡 光學」開光學教材）');
+                    } else if (dragInfo.category === 'thermodynamics' && dragInfo.moved) {
+                        showLabToast('🔥 溫度越高、氣體分子平均動能越大（點上方「🔥 熱學」開教材）');
                     } else if (!dragInfo.moved && e.target === dom) {
                         triggerPropTapEasterEgg(dragInfo.category);
                     }
