@@ -1,0 +1,1917 @@
+<!DOCTYPE html>
+<html lang="zh-TW" style="background-color: #0b0f19;">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>滑車與運動分析實驗室（Physics Tracker）</title>
+  <meta name="description" content="免安裝 App！支援滑車／拋體慢動作影片質心追蹤、Savitzky-Golay 速度加速度圖表擬合、Excel 匯出，以及三軸加速度、斜面量角器、聲波頻譜與光電閘 5 大感測器。">
+  <meta name="portal-tags" content="滑車實驗, 運動分析, 影像追蹤, 光電閘與感測器, 探究實作">
+  <meta name="portal-badge" content="實驗與感測">
+  <meta name="portal-featured" content="true">
+  <!-- 關鍵防白屏預防樣式 (Critical Inline CSS) -->
+  <style>
+    html, body {
+      background-color: #0b0f19 !important;
+      color: #f8fafc;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+  </style>
+  <link rel="stylesheet" href="./css/screen.css">
+  <!-- 引入 QR Code 輕量生成庫 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body style="background-color: #0b0f19;">
+  <!-- 頂部極簡狀態列 -->
+  <header class="top-bar">
+    <div class="brand-badge">
+      <span class="brand-dot"></span>
+      <span>Physics Tracker 大屏接收端</span>
+    </div>
+
+    <div class="room-badge">
+      <span>配對 PIN 碼：</span>
+      <span class="room-pin" id="roomPinText">------</span>
+      <span id="connStatusBadge" style="font-size: 0.8rem; color: #94a3b8; margin-left: 6px;">(本機同步中)</span>
+    </div>
+
+    <div class="top-actions">
+      <a class="btn-icon" href="../index.html#physics-tracker" style="text-decoration:none; color:#38bdf8;" title="返回華爸的物理園地 3D 入口">↩️ 回園地</a>
+      <button class="btn-icon" id="btnHomeHub" title="回到 0 分頁：掃碼配對與實驗入口">
+        🏠 0. 入口
+      </button>
+      <button class="btn-icon" id="btnToggleExpDrawer" style="background: rgba(56, 189, 248, 0.16); border-color: #38bdf8;" title="切換物理實驗模組 (影像追蹤 / 5大感測器)">
+        🧪 實驗切換
+      </button>
+      <button class="btn-icon" id="btnToggleAnalysisView" title="切換數據分析頁面 (左1/3表格 + 右2/3圖表 + 擬合)">
+        📑 數據分析
+      </button>
+      <button class="btn-icon" id="btnTopExportExcel" title="匯出物理數據成 Excel (.xlsx)">
+        📥 匯出Excel
+      </button>
+      <button class="btn-icon" id="btnProjectModal" title="儲存專案 (.json) / 載入專案 / 匯出分析影片">
+        💾 專案/影片
+      </button>
+      <button class="btn-icon" id="btnToggleChart" title="顯示/隱藏浮動物理圖表">
+        📈 圖表窗
+      </button>
+      <button class="btn-icon" id="btnToggleDraw" title="切換大屏繪圖工具列">
+        ✏️ 白板
+      </button>
+      <button class="btn-icon" id="btnToggleHud" title="顯示/隱藏物理數據儀表板">
+        📊 儀表
+      </button>
+      <button class="btn-icon" id="btnSettings" title="雲端 Firebase 設定">
+        ⚙️ 設定
+      </button>
+      <button class="btn-icon" id="btnFullscreen" title="切換全螢幕">
+        ⛶ 全螢幕
+      </button>
+    </div>
+  </header>
+
+  <!-- 主視覺舞台 -->
+  <main class="stage-container">
+    <div class="video-wrapper" id="videoWrapper">
+      <!-- 原生影片播放器 (承載高畫質底圖，靜音確保遠端遙控自動播放不被瀏覽器阻擋) -->
+      <video id="mainVideo" playsinline muted preload="auto"></video>
+      <!-- 向量與殘影繪製疊加層 -->
+      <canvas id="vectorCanvas"></canvas>
+      <!-- 課堂即時手寫標註白板層 -->
+      <canvas id="annotationCanvas"></canvas>
+    </div>
+
+    <!-- 0 分頁：待機掃碼配對與實驗入口 (Page 0 Hub) -->
+    <div class="standby-overlay" id="standbyOverlay">
+      <div class="standby-card">
+        <div style="font-size: 0.78rem; font-weight: 700; color: #38bdf8; letter-spacing: 1px; background: rgba(56,189,248,0.12); padding: 4px 12px; border-radius: 999px; border: 1px solid rgba(56,189,248,0.3);">
+          🏠 第 0 頁：手機掃碼配對與實驗選擇入口
+        </div>
+        <h1 class="standby-title">⚡ Physics Tracker 物理探究互動實驗室</h1>
+        <p class="standby-desc">步驟 1：手機掃描下方 QR Code（或輸入 PIN 碼）完成配對；步驟 2：點選下方要進行的實驗即可開始！</p>
+
+        <div class="qrcode-box" id="qrcodeBox"></div>
+
+        <div class="pin-display">
+          <span class="pin-label">ROOM PIN</span>
+          <span class="pin-digits" id="pinDisplayDigits">------</span>
+        </div>
+
+        <div class="standby-status">
+          <span class="pulse-dot" id="standbyPulseDot"></span>
+          <span id="standbyStatusText">等待手機端控制器連線中...</span>
+        </div>
+
+        <div id="screenReceiveProgressBox" style="display: none; width: 100%; max-width: 360px;">
+          <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.12); border-radius: 4px; overflow: hidden;">
+            <div id="screenReceiveProgressBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #38bdf8, #10b981); transition: width 0.15s ease;"></div>
+          </div>
+        </div>
+
+        <div id="screenWifiHint" style="font-size: 0.78rem; color: #fcd34d; background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.3); padding: 6px 12px; border-radius: 10px; line-height: 1.4;">
+          📶 若網路直連不穩或配對逾時，建議將手機與電腦連到<b>同一個 Wi-Fi</b>（或使用手機熱點）
+        </div>
+
+        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 8px;">
+          <button class="btn-icon" id="btnOpenMobileTab" style="background: rgba(56, 189, 248, 0.2); border-color: #38bdf8;">
+            📱 本機開啟手機控制器
+          </button>
+          <button class="btn-icon" id="btnLoadDemoDirectly">
+            🧪 載入拋體示範影片
+          </button>
+          <button class="btn-icon" id="btnStandbyLoadProject">
+            📂 載入專案檔
+          </button>
+        </div>
+
+        <div style="width: 100%; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px; margin-top: 4px;">
+          <div style="font-size: 0.82rem; color: #cbd5e1; font-weight: 700; text-align: left; margin-bottom: 4px;">
+            🧭 步驟 2：選擇要進行的實驗（手機配對後一鍵同步切換，免重掃 QR Code）：
+          </div>
+          <div class="standby-hub-grid" id="standbyHubGrid"></div>
+        </div>
+
+        <div class="hub-credit-footer">
+          Design by <a href="../index.html#physics-tracker">華爸的數位魔法</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- 影像模式尚未收到影片時的輕量提示條 (離開 0 分頁後使用) -->
+    <div class="video-wait-banner hidden" id="videoWaitBanner">
+      <span>📹 影像追蹤待機中 — 請在手機「1. 影像」上傳並分析影片</span>
+      <button class="btn-icon" id="btnBannerDemo" style="padding: 3px 10px; font-size: 0.78rem;">🧪 載入示範</button>
+      <button class="btn-icon" id="btnBannerHome" style="padding: 3px 10px; font-size: 0.78rem;">🏠 回 0 分頁掃碼</button>
+    </div>
+
+    <!-- 左側實驗模式切換抽屜 -->
+    <aside class="exp-mode-drawer hidden" id="expModeDrawer">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px;">
+        <span style="font-weight: 800; font-size: 0.96rem; color: #38bdf8;">🧪 實驗模式切換</span>
+        <button class="btn-icon" id="btnCloseExpDrawer" style="padding: 3px 8px;">✕</button>
+      </div>
+      <button class="drawer-exp-item" id="btnDrawerGoHome" style="--hub-accent: #10b981;">
+        <div style="font-weight:700;font-size:0.86rem;">🏠 0. 掃碼配對與入口</div>
+        <div style="font-size:0.72rem;color:#94a3b8;">顯示 QR Code、PIN 與全部實驗</div>
+      </button>
+      <div id="drawerNodesRow" style="display: flex; flex-wrap: wrap; gap: 6px; font-size: 0.75rem; color: #94a3b8;"></div>
+      <div id="drawerExpList" style="display: flex; flex-direction: column; gap: 8px;"></div>
+    </aside>
+
+    <!-- 5 大感測器實驗工作區 (ACCEL_3D / INCLINE_GYRO / AUDIO_FFT / ACOUSTIC_TIMER / CAM_PHOTOGATE) -->
+    <section class="sensor-lab-workspace hidden" id="sensorLabWorkspace"></section>
+
+    <!-- 大屏端即時繪圖與選點工具列 -->
+    <div class="screen-draw-toolbar" id="screenDrawToolbar">
+      <button class="draw-tool-btn active" id="sdtSelectMode" title="選取影像點模式 (點擊影片點對應圖表)">
+        🎯
+      </button>
+      <button class="draw-tool-btn" id="sdtTogglePen" title="切換手寫塗鴉模式">
+        ✏️
+      </button>
+      <div class="sdt-divider"></div>
+
+      <div class="sdt-colors">
+        <div class="sdt-color-dot active" style="background: #ef4444;" data-color="#ef4444" title="紅色"></div>
+        <div class="sdt-color-dot" style="background: #f59e0b;" data-color="#f59e0b" title="黃色"></div>
+        <div class="sdt-color-dot" style="background: #10b981;" data-color="#10b981" title="綠色"></div>
+        <div class="sdt-color-dot" style="background: #38bdf8;" data-color="#38bdf8" title="青藍色"></div>
+        <div class="sdt-color-dot" style="background: #ffffff;" data-color="#ffffff" title="白色"></div>
+      </div>
+      <div class="sdt-divider"></div>
+
+      <button class="draw-tool-btn sdt-size-btn" data-size="3" title="細筆觸 (3px)">3</button>
+      <button class="draw-tool-btn sdt-size-btn active" data-size="6" title="中筆觸 (6px)">6</button>
+      <button class="draw-tool-btn sdt-size-btn" data-size="12" title="粗筆觸 (12px)">12</button>
+      <div class="sdt-divider"></div>
+
+      <button class="draw-tool-btn" id="sdtEraser" title="橡皮擦">🧽</button>
+      <button class="draw-tool-btn" id="sdtUndo" title="復原上一筆 (Undo)">↩️</button>
+      <button class="draw-tool-btn" id="sdtClear" title="清除全部筆跡">🧹</button>
+    </div>
+
+    <!-- 大屏端即時物理圖表面板 (x-t / y-t, v-t, a-t 與 X/Y 分量切換，隨播放動態繪製) -->
+    <div class="physics-chart-panel" id="physicsChartPanel">
+      <div class="chart-header">
+        <div class="chart-tabs">
+          <button class="chart-tab-btn active" data-chart="xt">位移 x-t / y-t</button>
+          <button class="chart-tab-btn" data-chart="vt">速度 v-t</button>
+          <button class="chart-tab-btn" data-chart="at">加速度 a-t</button>
+        </div>
+
+        <div class="chart-controls">
+          <select class="chart-select-filter" id="chartAxisFilter" title="分量顯示篩選">
+            <option value="all">全部分量</option>
+            <option value="x">僅 X 軸 (水平)</option>
+            <option value="y">僅 Y 軸 (垂直)</option>
+          </select>
+          <button class="chart-btn-icon" id="btnToggleChartMode" title="切換動態繪製 / 全曲線模式">⚡</button>
+          <button class="chart-btn-icon" id="btnMinimizeChart" title="最小化 / 展開圖表">_</button>
+          <button class="chart-btn-icon" id="btnCloseChart" title="隱藏圖表">✕</button>
+        </div>
+      </div>
+      <div class="chart-body">
+        <canvas id="physicsChartCanvas"></canvas>
+        <!-- 圖表縮放控制列 (支援 Y 軸縮放與數據區間聚焦) -->
+        <div class="chart-zoom-bar" title="滾輪縮放 Y 軸 | Shift+滾輪縮放時間軸 | 拖曳平移">
+          <button class="chart-zoom-btn active" id="btnChartFocus" title="聚焦波動區間 / 包含零點切換">🎯 聚焦</button>
+          <button class="chart-zoom-btn" id="btnChartZoomIn" title="放大 Y 軸尺度 (觀察微小起伏)">＋</button>
+          <button class="chart-zoom-btn" id="btnChartZoomOut" title="縮小 Y 軸尺度">－</button>
+          <button class="chart-zoom-btn" id="btnChartTimeIn" title="放大時間軸 (X 軸)">⏱＋</button>
+          <button class="chart-zoom-btn" id="btnChartZoomReset" title="重置縮放">↺</button>
+          <span class="chart-zoom-badge" id="chartZoomBadge">1.0x</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 大屏端影片播放控制列 (獨立播放、拖曳進度、倍速切換) -->
+    <div class="screen-playback-bar" id="screenPlaybackBar">
+      <button class="spb-btn spb-play-main" id="spbPlayPause" title="播放 / 暫停">
+        <span id="spbPlayIcon">▶</span>
+      </button>
+      <button class="spb-btn" id="spbStepBack" title="上一影格 (-1 幀)">⏮️</button>
+      <button class="spb-btn" id="spbStepForward" title="下一影格 (+1 幀)">⏭️</button>
+
+      <span class="spb-time spb-current" id="spbCurrentTime">0.00 s</span>
+      <div class="spb-scrubber-box">
+        <input type="range" class="spb-scrubber" id="spbScrubber" min="0" max="1" step="0.001" value="0">
+      </div>
+      <span class="spb-time" id="spbTotalDuration">0.00 s</span>
+
+      <div class="spb-speed-group">
+        <button class="spb-chip" data-speed="0.1">0.1x</button>
+        <button class="spb-chip" data-speed="0.25">0.25x</button>
+        <button class="spb-chip active" data-speed="0.5">0.5x</button>
+        <button class="spb-chip" data-speed="1.0">1.0x</button>
+      </div>
+
+      <button class="spb-btn active" id="spbToggleLoop" title="循環播放切換">🔁</button>
+    </div>
+
+    <!-- 浮動圖例說明 (Legend) -->
+    <div class="legend-panel" id="legendPanel">
+      <div class="legend-item">
+        <span class="legend-color" style="background: #38bdf8;"></span>
+        <span>運動殘影頻閃 (Cyan Strobe)</span>
+      </div>
+    </div>
+
+    <!-- 浮動物理儀表板 (HUD Dashboard) -->
+    <div class="physics-hud" id="physicsHud">
+      <div class="hud-item">
+        <span class="hud-label"><span class="hud-dot time"></span>時間 t</span>
+        <span class="hud-value" id="hudTime">0.000 s</span>
+        <span class="hud-sub" id="hudFrame">Frame: 0</span>
+      </div>
+
+      <div class="hud-item">
+        <span class="hud-label">位置 (x, y)</span>
+        <span class="hud-value" id="hudPos">0.00, 0.00 m</span>
+        <span class="hud-sub" id="hudPixelPos">距起點: 0.00 m</span>
+      </div>
+
+      <div class="hud-item">
+        <span class="hud-label"><span class="hud-dot vel"></span>速度 |v|</span>
+        <span class="hud-value" id="hudVelMag" style="color: #10b981;">0.00 m/s</span>
+        <span class="hud-sub" id="hudVelComponents">vx: 0.00 | vy: 0.00</span>
+      </div>
+
+      <div class="hud-item">
+        <span class="hud-label"><span class="hud-dot acc"></span>加速度 |a|</span>
+        <span class="hud-value" id="hudAccMag" style="color: #ef4444;">0.00 m/s²</span>
+        <span class="hud-sub" id="hudAccComponents">ax: 0.00 | ay: 0.00</span>
+      </div>
+    </div>
+  </main>
+
+  <!-- 數據分析雙欄頁面 (左 1/3 數據表格 + 右 2/3 圖表與 Fitting 擬合) -->
+  <section class="analysis-workspace hidden" id="analysisWorkspace">
+    <!-- 左側 1/3：物理數據表格 -->
+    <div class="analysis-pane">
+      <div class="analysis-pane-header">
+        <div class="analysis-pane-title">
+          <span>📋 運動數據表</span>
+          <select class="chart-select-filter" id="analysisTargetSelect" style="display: none;" title="切換表格與擬合目標">
+            <option value="A">🔵 目標 A</option>
+            <option value="B">🔴 目標 B</option>
+          </select>
+          <span class="analysis-count-badge" id="analysisPointCount">0 點</span>
+        </div>
+        <button class="btn-export" id="btnExportExcel">
+          📥 匯出 Excel (.xlsx)
+        </button>
+      </div>
+      <div class="analysis-table-scroll">
+        <table class="analysis-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>t (s)</th>
+              <th>x (m)</th>
+              <th>y (m)</th>
+              <th>vx</th>
+              <th>vy</th>
+              <th>ax</th>
+              <th>ay</th>
+            </tr>
+          </thead>
+          <tbody id="analysisTableBody">
+            <tr>
+              <td colspan="8" style="text-align: center; padding: 36px; color: #64748b;">
+                尚無分析數據，請先載入示範影片或從手機端同步資料
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 右側 2/3：大圖表 + 曲線擬合 (Fitting) -->
+    <div class="analysis-pane">
+      <div class="analysis-pane-header">
+        <div class="chart-tabs" id="analysisChartTabs">
+          <button class="chart-tab-btn active" data-achart="xt">位移 x-t / y-t</button>
+          <button class="chart-tab-btn" data-achart="vt">速度 v-t</button>
+          <button class="chart-tab-btn" data-achart="at">加速度 a-t</button>
+        </div>
+
+        <div class="chart-controls">
+          <select class="chart-select-filter" id="analysisAxisFilter">
+            <option value="all">全部分量</option>
+            <option value="x">僅 X 軸</option>
+            <option value="y">僅 Y 軸</option>
+          </select>
+          <button class="chart-zoom-btn active" id="btnAnaFocus">🎯 聚焦</button>
+          <button class="chart-zoom-btn" id="btnAnaZoomIn">＋</button>
+          <button class="chart-zoom-btn" id="btnAnaZoomOut">－</button>
+          <button class="chart-zoom-btn" id="btnAnaTimeIn">⏱＋</button>
+          <button class="chart-zoom-btn" id="btnAnaZoomReset">↺</button>
+          <span class="chart-zoom-badge" id="anaZoomBadge">1.0x</span>
+          <button class="btn-icon" id="btnCloseAnalysisView" style="padding: 4px 10px; font-size: 0.78rem;">🎬 返回影像</button>
+        </div>
+      </div>
+
+      <!-- Curve Fitting 工具列 -->
+      <div class="fitting-bar">
+        <span class="fitting-label">📐 曲線擬合 (Fitting)：</span>
+        <select class="fitting-select" id="fitTargetSelect">
+          <option value="meterY" selected>Y 軸位移 y(t)</option>
+          <option value="meterX">X 軸位移 x(t)</option>
+          <option value="vy">Y 軸速度 vy(t)</option>
+          <option value="vx">X 軸速度 vx(t)</option>
+          <option value="ay">Y 軸加速度 ay(t)</option>
+          <option value="ax">X 軸加速度 ax(t)</option>
+        </select>
+        <select class="fitting-select" id="fitModelSelect">
+          <option value="quadratic" selected>二次拋物線 (At² + Bt + C)</option>
+          <option value="linear">一次線性 (At + B)</option>
+          <option value="constant">常數平均 (C)</option>
+        </select>
+        <button class="btn-fit" id="btnRunFit">✨ 執行擬合</button>
+        <button class="chart-zoom-btn" id="btnClearFit">清除擬合</button>
+      </div>
+
+      <!-- 擬合方程式與 R² 結果橫幅 -->
+      <div class="fitting-result-banner" id="fittingResultBanner">
+        <span class="fitting-eq" id="fitEquationText">y(t) = ...</span>
+        <span class="fitting-meta" id="fitMetaText">R² = 0.000 | ...</span>
+      </div>
+
+      <div class="analysis-chart-body">
+        <canvas id="analysisChartCanvas" style="width: 100%; height: 100%; display: block;"></canvas>
+      </div>
+
+      <div class="selected-point-footer">
+        <span id="selectedPointBanner">💡 提示：點擊左側表格列、圖表上的點或影像中的軌跡點，即可雙向同步定位！</span>
+        <button class="chart-zoom-btn" id="btnJumpToSelectedVideo" style="display: none;">🎞️ 跳至影片檢視此點</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 專案管理與影片匯出彈窗 -->
+  <div class="modal-backdrop" id="projectModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <span>💾 專案儲存與分析影片匯出</span>
+        <button class="btn-icon" id="btnCloseProjectModal" style="padding: 4px 8px;">✕</button>
+      </div>
+      <p style="font-size: 0.84rem; color: #94a3b8; line-height: 1.5; margin-bottom: 12px;">
+        可將目前軌跡、回歸擬合、白板標記與影片（15 MB 以下自動內嵌）打包為可重複開啟的專案檔，或直接渲染匯出帶有頻閃殘影與數值疊加的分析影片。
+      </p>
+
+      <input type="file" id="projectFileInput" accept=".json,.ptproj.json,application/json" style="display: none;">
+      <input type="file" id="attachVideoInput" accept="video/*" style="display: none;">
+
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <button class="btn-icon" id="btnExportAnalyzedVideo" style="justify-content: center; padding: 10px; background: rgba(16, 185, 129, 0.2); border-color: #10b981; color: #6ee7b7; font-weight: bold;">
+          🎬 匯出標記分析影片 (.webm)
+        </button>
+        <div id="exportVideoStatusText" style="display: none; font-size: 0.8rem; color: #38bdf8; text-align: center; padding: 4px 8px; background: rgba(56,189,248,0.1); border-radius: 6px;"></div>
+
+        <div style="display: flex; gap: 8px;">
+          <button class="btn-icon" id="btnSaveProject" style="flex: 1; justify-content: center; padding: 10px; background: rgba(56, 189, 248, 0.2); border-color: #38bdf8; font-weight: bold;">
+            💾 儲存專案 (.json)
+          </button>
+          <button class="btn-icon" id="btnModalLoadProject" style="flex: 1; justify-content: center; padding: 10px; font-weight: bold;">
+            📂 載入專案 (.json)
+          </button>
+        </div>
+
+        <button class="btn-icon" id="btnAttachVideoToProject" style="justify-content: center; padding: 8px; font-size: 0.82rem; color: #cbd5e1;">
+          🎞️ 關聯本地影片檔（大於 15 MB 的未內嵌專案用）
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase 設定彈窗 -->
+  <div class="modal-backdrop" id="settingsModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <span>⚙️ Firebase 雲端同步設定</span>
+        <button class="btn-icon" id="btnCloseSettings" style="padding: 4px 8px;">✕</button>
+      </div>
+      <p style="font-size: 0.85rem; color: #94a3b8; line-height: 1.4;">
+        若於同台電腦進行測試，系統已自動透過 BroadcastChannel 實現零延遲雙向同步，無需配置。<br>
+        若需讓遠端手機透過 4G/5G 跨網域遙控教室大屏，請填寫 Firebase Realtime Database 憑證：
+      </p>
+
+      <div class="form-group">
+        <label>Firebase API Key</label>
+        <input type="text" class="form-input" id="cfgApiKey" placeholder="AIzaSy...">
+      </div>
+      <div class="form-group">
+        <label>Database URL</label>
+        <input type="text" class="form-input" id="cfgDbUrl" placeholder="https://your-app-default-rtdb.firebaseio.com">
+      </div>
+      <div class="form-group">
+        <label>Project ID</label>
+        <input type="text" class="form-input" id="cfgProjectId" placeholder="your-app-id">
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-icon" id="btnSaveConfig" style="background: #38bdf8; color: #0f172a; font-weight: bold;">
+          儲存並連線
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { SyncManager } from "./js/firebase-config.js";
+    import { PhysicsEngine } from "./js/physics-engine.js";
+    import { VectorDrawer } from "./js/vector-drawer.js";
+    import { AnnotationLayer } from "./js/annotation.js";
+    import { VideoTracker } from "./js/video-tracker.js";
+    import { PhysicsChart } from "./js/physics-chart.js";
+    import { computeCurveFit, exportTrajectoryToExcel } from "./js/data-analysis.js";
+    import { LAB_MODES, LAB_MODE_ORDER } from "./js/experiments/protocol.js";
+    import { ScreenSensorLab } from "./js/experiments/screen-lab.js";
+
+    // 1. 初始化房間 PIN 碼 (取 URL 參數或隨機 6 碼)
+    const urlParams = new URLSearchParams(window.location.search);
+    let screenId = urlParams.get("room");
+    if (!screenId) {
+      screenId = String(Math.floor(100000 + Math.random() * 900000));
+    }
+
+    document.getElementById("roomPinText").textContent = screenId;
+    document.getElementById("pinDisplayDigits").textContent = screenId;
+
+    // 2. 繪製配對 QR Code (支援 Vercel 與本機絕對根路徑)
+    const mobileUrl = new URL(`./mobile.html?room=${encodeURIComponent(screenId)}`, window.location.href).href;
+    const qrcodeBox = document.getElementById("qrcodeBox");
+    try {
+      if (typeof QRCode !== "undefined" && qrcodeBox) {
+        qrcodeBox.innerHTML = "";
+        new QRCode(qrcodeBox, {
+          text: mobileUrl,
+          width: 180,
+          height: 180,
+          colorDark: "#0f172a",
+          colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel.M
+        });
+      } else if (qrcodeBox) {
+        qrcodeBox.innerHTML = `<div style="color: #0f172a; font-size: 0.82rem; padding: 18px 10px; font-weight: bold; line-height: 1.4;">📱 手機掃碼/開啟：<br><a href="${mobileUrl}" target="_blank" style="color: #0284c7; word-break: break-all;">${mobileUrl}</a></div>`;
+      }
+    } catch (err) {
+      console.warn("QR Code 初始化未完成:", err);
+      if (qrcodeBox) {
+        qrcodeBox.innerHTML = `<div style="color: #0f172a; font-size: 0.85rem; padding: 20px;">PIN: <b>${screenId}</b></div>`;
+      }
+    }
+
+    // 3. 初始化 DOM 元素
+    const video = document.getElementById("mainVideo");
+    const vectorCanvas = document.getElementById("vectorCanvas");
+    const annotationCanvas = document.getElementById("annotationCanvas");
+    const standbyOverlay = document.getElementById("standbyOverlay");
+    const physicsHud = document.getElementById("physicsHud");
+    const physicsChartPanel = document.getElementById("physicsChartPanel");
+    const screenDrawToolbar = document.getElementById("screenDrawToolbar");
+    const screenPlaybackBar = document.getElementById("screenPlaybackBar");
+
+    // 4. 初始化核心子系統
+    const physicsEngine = new PhysicsEngine();
+    const vectorDrawer = new VectorDrawer(vectorCanvas);
+    const annotationLayer = new AnnotationLayer(annotationCanvas, {
+      enabled: false, // 預設開啟「🎯 選取影像點」模式，點擊 ✏️ 可切換手寫白板
+      color: "#ef4444",
+      lineWidth: 6,
+      onDrawEvent: (e) => syncManager.sendDrawEvent(e)
+    });
+    const syncManager = new SyncManager(screenId, "screen");
+    const physicsChart = new PhysicsChart(document.getElementById("physicsChartCanvas"), {
+      type: "xt",
+      axisFilter: "all",
+      drawMode: "dynamic"
+    });
+    const analysisWorkspace = document.getElementById("analysisWorkspace");
+    const analysisChart = new PhysicsChart(document.getElementById("analysisChartCanvas"), {
+      type: "xt",
+      axisFilter: "all",
+      drawMode: "full"
+    });
+
+    let currentTrajectory = [];
+    let secondaryTrajectory = [];
+    let currentFitResult = null;
+    let selectedPointIndex = null;
+    let selectedTarget = "A";
+    let hasLoadedVideo = false;
+    let currentVideoBlob = null;
+    let currentVideoName = "physics-video.mp4";
+    let isGeneratingDemo = false;
+    let isReceivingVideo = false;
+    let clipStart = 0;
+    let clipEnd = null;
+    let activeFps = 60;
+
+    function getActiveAnalysisTrajectory() {
+      return (selectedTarget === "B" && secondaryTrajectory.length > 0)
+        ? secondaryTrajectory
+        : currentTrajectory;
+    }
+
+    function updateLegendPanel() {
+      const legend = document.getElementById("legendPanel");
+      if (!legend) return;
+      if (secondaryTrajectory && secondaryTrajectory.length > 0) {
+        legend.innerHTML = `
+          <div class="legend-item">
+            <span class="legend-color" style="background: #38bdf8;"></span>
+            <span>點 A 運動殘影 (實線)</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-color" style="background: #fb7185;"></span>
+            <span>點 B 運動殘影 (虛線)</span>
+          </div>
+        `;
+      } else {
+        legend.innerHTML = `
+          <div class="legend-item">
+            <span class="legend-color" style="background: #38bdf8;"></span>
+            <span>運動殘影頻閃 (Cyan Strobe)</span>
+          </div>
+        `;
+      }
+    }
+
+    function setTrajectoryData(trajectory, secondary = []) {
+      currentTrajectory = Array.isArray(trajectory) ? trajectory : [];
+      secondaryTrajectory = Array.isArray(secondary) ? secondary : [];
+      currentFitResult = null;
+      selectedPointIndex = null;
+      selectedTarget = "A";
+
+      const targetSel = document.getElementById("analysisTargetSelect");
+      if (targetSel) {
+        targetSel.value = "A";
+        targetSel.style.display = secondaryTrajectory.length > 0 ? "inline-block" : "none";
+      }
+
+      vectorDrawer.setSelectedIndex(null, "A");
+      physicsChart.setFitResult(null);
+      physicsChart.setSelectedIndex(null, "A");
+      analysisChart.setFitResult(null);
+      analysisChart.setSelectedIndex(null, "A");
+      document.getElementById("fittingResultBanner").classList.remove("active");
+      document.getElementById("btnJumpToSelectedVideo").style.display = "none";
+      document.getElementById("selectedPointBanner").textContent = "💡 提示：點擊左側表格列、圖表上的點或影像中的軌跡點，即可雙向同步定位！";
+
+      const fallbackDur = currentTrajectory.length > 0 ? currentTrajectory[currentTrajectory.length - 1].t : 1;
+      const chartDur = (video.duration && isFinite(video.duration)) ? video.duration : fallbackDur;
+      if (currentTrajectory.length > 0) {
+        currentLabMode = "VIDEO_TRACKER";
+        document.body.classList.remove("mode-non-video");
+        document.getElementById("videoWaitBanner")?.classList.add("hidden");
+      }
+      physicsChart.setData(currentTrajectory, chartDur, secondaryTrajectory);
+      analysisChart.setData(currentTrajectory, chartDur, secondaryTrajectory);
+      updateLegendPanel();
+      renderAnalysisTable();
+      if (!analysisWorkspace.classList.contains("hidden")) {
+        analysisChart.render(video.currentTime);
+      }
+    }
+
+    function getClipBounds() {
+      const dur = (video.duration && isFinite(video.duration)) ? video.duration : 10;
+      const start = Math.max(0, Math.min(dur, clipStart || 0));
+      const end = clipEnd !== null ? Math.max(start + 0.05, Math.min(dur, clipEnd)) : dur;
+      return { start, end };
+    }
+
+    function syncPlaybackBarBounds() {
+      const { start, end } = getClipBounds();
+      spbScrubber.min = start;
+      spbScrubber.max = end;
+      spbTotalDuration.textContent = clipEnd !== null ? `${end.toFixed(2)} s ✂️` : `${end.toFixed(2)} s`;
+      if (hasLoadedVideo && (video.currentTime < start || video.currentTime > end)) {
+        video.currentTime = start;
+      }
+      spbScrubber.value = Math.min(end, Math.max(start, video.currentTime));
+      spbCurrentTime.textContent = `${video.currentTime.toFixed(2)} s`;
+    }
+
+    const connStatusBadge = document.getElementById("connStatusBadge");
+    const standbyStatusText = document.getElementById("standbyStatusText");
+    const standbyPulseDot = document.getElementById("standbyPulseDot");
+    const receiveProgressBox = document.getElementById("screenReceiveProgressBox");
+    const receiveProgressBar = document.getElementById("screenReceiveProgressBar");
+    const screenWifiHint = document.getElementById("screenWifiHint");
+
+    video.addEventListener("error", () => {
+      if (video.error) {
+        console.error("大屏影片解碼異常:", video.error);
+        standbyStatusText.textContent = "⚠️ 影片格式無法於此瀏覽器解碼，建議改用 H.264 MP4 錄製或重新傳送";
+      }
+    });
+
+    // 5. 監聽手機端連線、影片串流與同步命令
+    syncManager.onConnectionChange((state) => {
+      if (state.p2pConnected) {
+        connStatusBadge.textContent = "(🟢 手機 P2P 已連線)";
+        connStatusBadge.style.color = "#10b981";
+        standbyPulseDot.style.background = "#10b981";
+        if (screenWifiHint) screenWifiHint.style.display = "none";
+        if (!hasLoadedVideo && !isReceivingVideo) {
+          standbyStatusText.textContent = "📱 手機已配對連線！請在手機端選擇影片並分析...";
+        }
+      } else if (state.firebaseReady) {
+        connStatusBadge.textContent = "(☁️ Firebase 雲端已連線)";
+        connStatusBadge.style.color = "#38bdf8";
+        if (screenWifiHint) screenWifiHint.style.display = "none";
+      } else if (state.p2pStatus === "ready") {
+        connStatusBadge.textContent = "(🟡 P2P 就緒 / 等待手機掃碼)";
+        connStatusBadge.style.color = "#f59e0b";
+        if (screenWifiHint) screenWifiHint.style.display = "block";
+      } else {
+        connStatusBadge.textContent = "(本機同步中)";
+        connStatusBadge.style.color = "#94a3b8";
+      }
+    });
+
+    syncManager.onVideoReceive((evt) => {
+      if (evt.state === "start" || evt.state === "progress") {
+        isReceivingVideo = true;
+        receiveProgressBox.style.display = "block";
+        receiveProgressBar.style.background = "";
+        receiveProgressBar.style.width = `${evt.percent}%`;
+        standbyStatusText.textContent = `📥 正在接收手機影片 (${evt.percent}%)...`;
+      } else if (evt.state === "aborted" || evt.state === "error") {
+        isReceivingVideo = false;
+        receiveProgressBox.style.display = "block";
+        receiveProgressBar.style.background = "#ef4444";
+        standbyStatusText.textContent = evt.state === "error"
+          ? `⚠️ 影片分片不完整 (${evt.received || 0}/${evt.totalChunks || "?"})，請在手機端點擊「同步」重傳`
+          : `⚠️ 影片傳輸於 ${evt.percent || 0}% 中斷（P2P 斷線），請保持同 Wi-Fi 並於手機重試`;
+      } else if (evt.state === "complete") {
+        isReceivingVideo = false;
+        receiveProgressBar.style.width = "100%";
+        setTimeout(() => { receiveProgressBox.style.display = "none"; }, 400);
+
+        console.log(`✅ 已完整接收手機影片 (${evt.name})，準備播放！`);
+        currentLabMode = "VIDEO_TRACKER";
+        document.body.classList.remove("mode-non-video");
+        currentVideoBlob = evt.blob || null;
+        currentVideoName = evt.name || "mobile_video.mp4";
+        video.src = evt.url;
+        video.load();
+        hasLoadedVideo = true;
+        if (currentTrajectory.length > 0) {
+          standbyOverlay.classList.add("hidden");
+        } else {
+          standbyStatusText.textContent = "✅ 影片已接收！等待手機端同步物理軌跡...";
+        }
+      }
+    });
+
+    syncManager.onStatusChange(async (status) => {
+      console.log("收到狀態同步:", status);
+
+      if (status.videoType === "demo" && !hasLoadedVideo && !isGeneratingDemo) {
+        isGeneratingDemo = true;
+        standbyStatusText.textContent = "⏳ 正在同步生成示範影片...";
+        try {
+          const blob = await VideoTracker.generateDemoVideo(2.5, 60);
+          currentLabMode = "VIDEO_TRACKER";
+          document.body.classList.remove("mode-non-video");
+          currentVideoBlob = blob;
+          currentVideoName = "demo_projectile.webm";
+          video.src = URL.createObjectURL(blob);
+          video.load();
+          hasLoadedVideo = true;
+          standbyOverlay.classList.add("hidden");
+        } finally {
+          isGeneratingDemo = false;
+        }
+      } else if (status.videoUrl && !status.videoUrl.startsWith("blob:") && video.src !== status.videoUrl) {
+        video.src = status.videoUrl;
+        video.load();
+        hasLoadedVideo = true;
+        standbyOverlay.classList.add("hidden");
+      } else if (status.videoType === "custom" && !hasLoadedVideo && !isReceivingVideo) {
+        standbyStatusText.textContent = "📱 手機已載入影片，等待分析與影片傳送中...";
+      }
+
+      if (status.clipStart !== undefined) {
+        clipStart = Math.max(0, Number(status.clipStart) || 0);
+      }
+      if (status.clipEnd !== undefined && status.clipEnd !== null) {
+        clipEnd = Number(status.clipEnd);
+      }
+      if (status.fps !== undefined && Number(status.fps) > 0) {
+        activeFps = Number(status.fps);
+      }
+      if (status.clipStart !== undefined || status.clipEnd !== undefined) {
+        syncPlaybackBarBounds();
+      }
+
+      if (hasLoadedVideo && (status.state === "analyzed" || status.state === "playing")) {
+        standbyOverlay.classList.add("hidden");
+      }
+
+      if (status.currentTime !== undefined && Math.abs(video.currentTime - status.currentTime) > 0.08) {
+        const { start, end } = getClipBounds();
+        video.currentTime = Math.min(end, Math.max(start, status.currentTime));
+      }
+
+      if (status.playbackRate !== undefined) {
+        video.playbackRate = status.playbackRate;
+        updateSpeedChips(status.playbackRate);
+      }
+
+      if (status.isPlaying !== undefined && hasLoadedVideo) {
+        const { start, end } = getClipBounds();
+        if (status.isPlaying && video.paused) {
+          if (video.currentTime >= end - 0.02 || video.currentTime < start) {
+            video.currentTime = start;
+          }
+          video.play().catch(e => console.warn("自動播放限制:", e));
+        } else if (!status.isPlaying && !video.paused) {
+          video.pause();
+        }
+      }
+    });
+
+    syncManager.onDisplayOptsChange((opts) => {
+      console.log("收到顯示選項變更:", opts);
+      if (opts.showGhost !== undefined) vectorDrawer.showGhost = opts.showGhost;
+      vectorDrawer.showVelocity = false;
+      vectorDrawer.showAcceleration = false;
+    });
+
+    syncManager.onPhysicsDataChange((payload) => {
+      const isDual = payload && !Array.isArray(payload) && Array.isArray(payload.primary);
+      const primary = isDual ? payload.primary : (Array.isArray(payload) ? payload : []);
+      const secondary = isDual ? (payload.secondary || []) : [];
+      console.log(`收到軌跡物理數據，點A=${primary.length}，點B=${secondary.length}`);
+      setTrajectoryData(primary, secondary);
+
+      if (hasLoadedVideo) {
+        standbyOverlay.classList.add("hidden");
+      } else if (!isReceivingVideo) {
+        const msg = secondary.length > 0
+          ? `📊 已收到雙點物理數據 (A:${primary.length}, B:${secondary.length})，等待影片傳輸就緒...`
+          : `📊 已收到 ${primary.length} 點物理數據，等待影片傳輸就緒...`;
+        standbyStatusText.textContent = msg;
+      }
+    });
+
+    syncManager.onDrawEvent((drawEvent) => {
+      annotationLayer.receiveDrawEvent(drawEvent);
+    });
+
+    window.addEventListener("beforeunload", () => {
+      syncManager.destroy();
+    });
+
+    // 6. 核心渲染循環 (Render Loop)
+    function renderLoop() {
+      // 嚴格限制播放不可超出手機端設定的 [開頭, 結尾] 區間
+      if (hasLoadedVideo && !video.paused) {
+        const { start, end } = getClipBounds();
+        if (video.currentTime < start - 0.02) {
+          video.currentTime = start;
+        } else if (video.currentTime >= end - 0.01) {
+          if (video.loop) {
+            video.currentTime = start;
+          } else {
+            video.pause();
+            video.currentTime = end;
+          }
+        }
+      }
+
+      if (currentTrajectory && currentTrajectory.length > 0) {
+        const curTime = video.currentTime;
+        const ptA = physicsEngine.interpolateAtTime(currentTrajectory, curTime);
+        const ptB = (secondaryTrajectory && secondaryTrajectory.length > 0)
+          ? physicsEngine.interpolateAtTime(secondaryTrajectory, curTime)
+          : null;
+
+        if (ptA) {
+          vectorDrawer.render(video, currentTrajectory, ptA, secondaryTrajectory, ptB);
+          updateHud(ptA, ptB);
+        }
+
+        // 即時繪製物理圖表 (隨著影片播放動態掃描更新)
+        if (!physicsChartPanel.classList.contains("hidden") && !physicsChartPanel.classList.contains("minimized")) {
+          physicsChart.render(curTime);
+        }
+      }
+
+      requestAnimationFrame(renderLoop);
+    }
+    requestAnimationFrame(renderLoop);
+
+    function updateHud(pt, ptB = null) {
+      document.getElementById("hudTime").textContent = `${pt.t.toFixed(3)} s`;
+      document.getElementById("hudFrame").textContent = `Frame: ${pt.index !== undefined ? pt.index : '-'}`;
+      if (ptB) {
+        const sepM = Math.hypot(ptB.meterX - pt.meterX, ptB.meterY - pt.meterY);
+        document.getElementById("hudPos").textContent = `A(${pt.meterX.toFixed(2)},${pt.meterY.toFixed(2)})`;
+        document.getElementById("hudPixelPos").textContent = `B(${ptB.meterX.toFixed(2)},${ptB.meterY.toFixed(2)}) | 距${sepM.toFixed(2)}m`;
+        document.getElementById("hudVelMag").textContent = `A:${pt.v.toFixed(2)} | B:${ptB.v.toFixed(2)}`;
+        document.getElementById("hudVelComponents").textContent = `Δvy: ${(ptB.vy - pt.vy).toFixed(2)} m/s`;
+        document.getElementById("hudAccMag").textContent = `A:${pt.a.toFixed(1)} | B:${ptB.a.toFixed(1)}`;
+        document.getElementById("hudAccComponents").textContent = `ay: ${pt.ay.toFixed(1)} vs ${ptB.ay.toFixed(1)}`;
+      } else {
+        document.getElementById("hudPos").textContent = `${pt.meterX.toFixed(2)}, ${pt.meterY.toFixed(2)} m`;
+        const distM = Math.hypot(pt.meterX, pt.meterY);
+        document.getElementById("hudPixelPos").textContent = `距起點: ${distM.toFixed(2)} m`;
+        document.getElementById("hudVelMag").textContent = `${pt.v.toFixed(2)} m/s`;
+        document.getElementById("hudVelComponents").textContent = `vx: ${pt.vx.toFixed(2)} | vy: ${pt.vy.toFixed(2)}`;
+        document.getElementById("hudAccMag").textContent = `${pt.a.toFixed(1)} m/s²`;
+        document.getElementById("hudAccComponents").textContent = `ax: ${pt.ax.toFixed(1)} | ay: ${pt.ay.toFixed(1)}`;
+      }
+    }
+
+    // 7. 影片播放控制列 (Playback Bar) 邏輯
+    const spbPlayPause = document.getElementById("spbPlayPause");
+    const spbPlayIcon = document.getElementById("spbPlayIcon");
+    const spbStepBack = document.getElementById("spbStepBack");
+    const spbStepForward = document.getElementById("spbStepForward");
+    const spbCurrentTime = document.getElementById("spbCurrentTime");
+    const spbTotalDuration = document.getElementById("spbTotalDuration");
+    const spbScrubber = document.getElementById("spbScrubber");
+    const spbToggleLoop = document.getElementById("spbToggleLoop");
+
+    video.loop = true; // 預設循環播放
+
+    spbPlayPause.onclick = () => {
+      if (video.paused) {
+        const { start, end } = getClipBounds();
+        if (video.currentTime >= end - 0.02 || video.currentTime < start) {
+          video.currentTime = start;
+        }
+        video.play().catch(e => console.warn(e));
+      } else {
+        video.pause();
+      }
+    };
+
+    video.addEventListener("play", () => {
+      spbPlayIcon.textContent = "⏸";
+      syncManager.updateStatus({ isPlaying: true, currentTime: video.currentTime });
+    });
+
+    video.addEventListener("pause", () => {
+      spbPlayIcon.textContent = "▶";
+      syncManager.updateStatus({ isPlaying: false, currentTime: video.currentTime });
+    });
+
+    video.addEventListener("timeupdate", () => {
+      const { start, end } = getClipBounds();
+      if (video.currentTime >= end && !video.paused) {
+        if (video.loop) {
+          video.currentTime = start;
+        } else {
+          video.pause();
+          video.currentTime = end;
+        }
+      }
+      spbScrubber.value = Math.min(end, Math.max(start, video.currentTime));
+      spbCurrentTime.textContent = `${video.currentTime.toFixed(2)} s`;
+    });
+
+    video.addEventListener("loadeddata", () => {
+      document.getElementById("videoWaitBanner")?.classList.add("hidden");
+      syncPlaybackBarBounds();
+      physicsChart.setData(currentTrajectory, video.duration || 1, secondaryTrajectory);
+      analysisChart.setData(currentTrajectory, video.duration || 1, secondaryTrajectory);
+    });
+
+    spbScrubber.addEventListener("input", (e) => {
+      const { start, end } = getClipBounds();
+      const t = Math.min(end, Math.max(start, Number(e.target.value)));
+      video.currentTime = t;
+      spbCurrentTime.textContent = `${t.toFixed(2)} s`;
+      physicsChart.render(t);
+      syncManager.updateStatus({ currentTime: t });
+    });
+
+    spbStepBack.onclick = () => {
+      video.pause();
+      const { start } = getClipBounds();
+      const dt = 1 / activeFps;
+      video.currentTime = Math.max(start, video.currentTime - dt);
+      syncManager.updateStatus({ currentTime: video.currentTime, isPlaying: false });
+    };
+
+    spbStepForward.onclick = () => {
+      video.pause();
+      const { end } = getClipBounds();
+      const dt = 1 / activeFps;
+      video.currentTime = Math.min(end, video.currentTime + dt);
+      syncManager.updateStatus({ currentTime: video.currentTime, isPlaying: false });
+    };
+
+    function updateSpeedChips(speed) {
+      document.querySelectorAll(".spb-chip").forEach(chip => {
+        if (Math.abs(Number(chip.dataset.speed) - speed) < 0.01) {
+          chip.classList.add("active");
+        } else {
+          chip.classList.remove("active");
+        }
+      });
+    }
+
+    document.querySelectorAll(".spb-chip").forEach(chip => {
+      chip.onclick = () => {
+        const speed = Number(chip.dataset.speed);
+        video.playbackRate = speed;
+        updateSpeedChips(speed);
+        syncManager.updateStatus({ playbackRate: speed });
+      };
+    });
+
+    spbToggleLoop.onclick = () => {
+      video.loop = !video.loop;
+      spbToggleLoop.classList.toggle("active", video.loop);
+    };
+
+    // 8. 大屏端繪圖與「點選影像點」雙模式工具列邏輯
+    const sdtSelectMode = document.getElementById("sdtSelectMode");
+    const sdtTogglePen = document.getElementById("sdtTogglePen");
+    const sdtEraser = document.getElementById("sdtEraser");
+    const sdtUndo = document.getElementById("sdtUndo");
+    const sdtClear = document.getElementById("sdtClear");
+    const videoWrapper = document.getElementById("videoWrapper");
+
+    function updateDrawOrSelectUI() {
+      const drawing = annotationLayer.enabled;
+      sdtTogglePen.classList.toggle("active", drawing);
+      sdtSelectMode.classList.toggle("active", !drawing);
+      videoWrapper.style.cursor = drawing ? "crosshair" : "pointer";
+    }
+    updateDrawOrSelectUI();
+
+    sdtSelectMode.onclick = () => {
+      annotationLayer.setEnabled(false);
+      sdtEraser.classList.remove("active");
+      updateDrawOrSelectUI();
+    };
+
+    sdtTogglePen.onclick = () => {
+      const willEnable = !annotationLayer.enabled;
+      annotationLayer.setEnabled(willEnable);
+      if (willEnable) {
+        annotationLayer.setMode("pen");
+        sdtEraser.classList.remove("active");
+      }
+      updateDrawOrSelectUI();
+    };
+
+    // 影像點選與表格/圖表雙向連動核心函式
+    function selectTrajectoryPoint(index, { seekVideo = true, scrollTable = true, target = selectedTarget } = {}) {
+      const targetKey = (target === "B" && secondaryTrajectory.length > 0) ? "B" : "A";
+      const traj = targetKey === "B" ? secondaryTrajectory : currentTrajectory;
+      if (!traj || !traj[index]) return;
+
+      const targetChanged = targetKey !== selectedTarget;
+      selectedTarget = targetKey;
+      selectedPointIndex = index;
+      const pt = traj[index];
+
+      const targetSel = document.getElementById("analysisTargetSelect");
+      if (targetSel && targetSel.value !== targetKey) {
+        targetSel.value = targetKey;
+      }
+      if (targetChanged) renderAnalysisTable();
+
+      vectorDrawer.setSelectedIndex(index, targetKey);
+      physicsChart.setSelectedIndex(index, targetKey);
+      analysisChart.setSelectedIndex(index, targetKey);
+
+      if (seekVideo && hasLoadedVideo) {
+        video.pause();
+        const { start, end } = getClipBounds();
+        video.currentTime = Math.min(end, Math.max(start, pt.t));
+      }
+
+      // 更新表格選取列高亮
+      const rows = document.querySelectorAll("#analysisTableBody tr[data-idx]");
+      rows.forEach(r => {
+        const isSel = Number(r.dataset.idx) === index;
+        r.classList.toggle("selected-row", isSel);
+        if (isSel && scrollTable) {
+          r.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        }
+      });
+
+      const prefix = secondaryTrajectory.length > 0 ? `點${targetKey} #` : "#";
+      document.getElementById("selectedPointBanner").textContent =
+        `🎯 已選取影像點 ${prefix}${index} | t = ${pt.t.toFixed(3)}s | x = ${pt.meterX.toFixed(3)}m, y = ${pt.meterY.toFixed(3)}m | vy = ${pt.vy.toFixed(2)} m/s | ay = ${pt.ay.toFixed(2)} m/s²`;
+      document.getElementById("btnJumpToSelectedVideo").style.display = hasLoadedVideo ? "inline-flex" : "none";
+
+      physicsChart.render(pt.t);
+      if (!analysisWorkspace.classList.contains("hidden")) {
+        analysisChart.render(pt.t);
+      }
+    }
+
+    // 點擊影片上的追蹤點 -> 高亮對應影像點與圖表上的該點
+    videoWrapper.addEventListener("click", (e) => {
+      if (annotationLayer.enabled || !currentTrajectory || currentTrajectory.length === 0) return;
+      const hit = vectorDrawer.findNearestPoint(video, currentTrajectory, e.clientX, e.clientY, 40, secondaryTrajectory);
+      if (hit) {
+        selectTrajectoryPoint(hit.index, { seekVideo: true, scrollTable: true, target: hit.target });
+      }
+    });
+
+    physicsChart.onPointSelect = (idx) => {
+      selectTrajectoryPoint(idx, { seekVideo: true, scrollTable: true });
+    };
+    analysisChart.onPointSelect = (idx) => {
+      selectTrajectoryPoint(idx, { seekVideo: true, scrollTable: true });
+    };
+
+    document.querySelectorAll(".sdt-color-dot").forEach(dot => {
+      dot.onclick = () => {
+        document.querySelectorAll(".sdt-color-dot").forEach(d => d.classList.remove("active"));
+        dot.classList.add("active");
+        annotationLayer.setColor(dot.dataset.color);
+        annotationLayer.setMode("pen");
+        sdtEraser.classList.remove("active");
+      };
+    });
+
+    document.querySelectorAll(".sdt-size-btn").forEach(btn => {
+      btn.onclick = () => {
+        document.querySelectorAll(".sdt-size-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        annotationLayer.setSize(Number(btn.dataset.size));
+      };
+    });
+
+    sdtEraser.onclick = () => {
+      if (annotationLayer.mode === "eraser") {
+        annotationLayer.setMode("pen");
+        sdtEraser.classList.remove("active");
+      } else {
+        annotationLayer.setMode("eraser");
+        sdtEraser.classList.add("active");
+      }
+    };
+
+    sdtUndo.onclick = () => {
+      annotationLayer.undo(true);
+    };
+
+    sdtClear.onclick = () => {
+      annotationLayer.clear(true);
+    };
+
+    // 9. 物理圖表面板 (Physics Chart) 控制邏輯
+    document.querySelectorAll(".chart-tab-btn").forEach(btn => {
+      btn.onclick = () => {
+        document.querySelectorAll(".chart-tab-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        physicsChart.setType(btn.dataset.chart);
+        physicsChart.render(video.currentTime);
+      };
+    });
+
+    const chartAxisFilter = document.getElementById("chartAxisFilter");
+    chartAxisFilter.onchange = () => {
+      physicsChart.setAxisFilter(chartAxisFilter.value);
+      physicsChart.render(video.currentTime);
+    };
+
+    const btnToggleChartMode = document.getElementById("btnToggleChartMode");
+    btnToggleChartMode.onclick = () => {
+      const newMode = physicsChart.drawMode === "dynamic" ? "full" : "dynamic";
+      physicsChart.setDrawMode(newMode);
+      btnToggleChartMode.title = newMode === "dynamic" ? "目前：動態繪製模式 (點擊切換為全曲線)" : "目前：全曲線模式 (點擊切換為動態繪製)";
+      btnToggleChartMode.style.color = newMode === "dynamic" ? "#38bdf8" : "#f59e0b";
+      physicsChart.render(video.currentTime);
+    };
+
+    // 圖表縮放控制列綁定
+    const btnChartFocus = document.getElementById("btnChartFocus");
+    const chartZoomBadge = document.getElementById("chartZoomBadge");
+    physicsChart.onZoomChange = ({ yZoom, xZoom, focusDataRange }) => {
+      btnChartFocus.classList.toggle("active", focusDataRange);
+      btnChartFocus.textContent = focusDataRange ? "🎯 聚焦" : "0️⃣ 含零點";
+      chartZoomBadge.textContent = xZoom > 1.05
+        ? `Y:${yZoom.toFixed(1)}x T:${xZoom.toFixed(1)}x`
+        : `${yZoom.toFixed(1)}x`;
+    };
+
+    btnChartFocus.onclick = () => {
+      physicsChart.toggleFocusMode();
+      physicsChart.render(video.currentTime);
+    };
+    document.getElementById("btnChartZoomIn").onclick = () => {
+      physicsChart.zoomY(1.4);
+      physicsChart.render(video.currentTime);
+    };
+    document.getElementById("btnChartZoomOut").onclick = () => {
+      physicsChart.zoomY(1 / 1.4);
+      physicsChart.render(video.currentTime);
+    };
+    document.getElementById("btnChartTimeIn").onclick = () => {
+      physicsChart.zoomX(1.4);
+      physicsChart.render(video.currentTime);
+    };
+    document.getElementById("btnChartZoomReset").onclick = () => {
+      physicsChart.resetZoom();
+      physicsChart.render(video.currentTime);
+    };
+
+    const btnMinimizeChart = document.getElementById("btnMinimizeChart");
+    btnMinimizeChart.onclick = () => {
+      physicsChartPanel.classList.toggle("minimized");
+      btnMinimizeChart.textContent = physicsChartPanel.classList.contains("minimized") ? "□" : "_";
+      if (!physicsChartPanel.classList.contains("minimized")) {
+        setTimeout(() => physicsChart.render(video.currentTime), 200);
+      }
+    };
+
+    const btnCloseChart = document.getElementById("btnCloseChart");
+    btnCloseChart.onclick = () => {
+      physicsChartPanel.classList.add("hidden");
+    };
+
+    document.getElementById("btnToggleChart").onclick = () => {
+      physicsChartPanel.classList.toggle("hidden");
+      if (!physicsChartPanel.classList.contains("hidden")) {
+        physicsChartPanel.classList.remove("minimized");
+        setTimeout(() => physicsChart.render(video.currentTime), 150);
+      }
+    };
+
+    document.getElementById("btnToggleDraw").onclick = () => {
+      screenDrawToolbar.classList.toggle("hidden");
+    };
+
+    // 10. 數據分析雙欄頁面 (左 1/3 表格 + 右 2/3 圖表 + Fitting + Excel 匯出)
+    const analysisTargetSelect = document.getElementById("analysisTargetSelect");
+    analysisTargetSelect.onchange = () => {
+      selectedTarget = analysisTargetSelect.value === "B" && secondaryTrajectory.length > 0 ? "B" : "A";
+      selectedPointIndex = null;
+      vectorDrawer.setSelectedIndex(null, selectedTarget);
+      physicsChart.setSelectedIndex(null, selectedTarget);
+      analysisChart.setSelectedIndex(null, selectedTarget);
+      renderAnalysisTable();
+    };
+
+    function renderAnalysisTable() {
+      const tbody = document.getElementById("analysisTableBody");
+      const countBadge = document.getElementById("analysisPointCount");
+      const activeTraj = getActiveAnalysisTrajectory();
+      countBadge.textContent = secondaryTrajectory.length > 0
+        ? `A:${currentTrajectory.length} / B:${secondaryTrajectory.length}`
+        : `${activeTraj.length} 點`;
+
+      if (!activeTraj || activeTraj.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 36px; color: #64748b;">尚無分析數據，請先載入示範影片或從手機端同步資料</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = activeTraj.map((pt, idx) => `
+        <tr data-idx="${idx}" class="${selectedPointIndex === idx ? "selected-row" : ""}">
+          <td>${idx}</td>
+          <td>${pt.t.toFixed(3)}</td>
+          <td>${pt.meterX.toFixed(3)}</td>
+          <td>${pt.meterY.toFixed(3)}</td>
+          <td>${pt.vx.toFixed(2)}</td>
+          <td>${pt.vy.toFixed(2)}</td>
+          <td>${pt.ax.toFixed(2)}</td>
+          <td>${pt.ay.toFixed(2)}</td>
+        </tr>
+      `).join("");
+
+      tbody.querySelectorAll("tr[data-idx]").forEach(row => {
+        row.onclick = () => {
+          selectTrajectoryPoint(Number(row.dataset.idx), { seekVideo: true, scrollTable: false, target: selectedTarget });
+        };
+      });
+    }
+
+    function toggleAnalysisView(forceOpen = null) {
+      const willOpen = forceOpen !== null ? forceOpen : analysisWorkspace.classList.contains("hidden");
+      analysisWorkspace.classList.toggle("hidden", !willOpen);
+      document.getElementById("btnToggleAnalysisView").classList.toggle("active", willOpen);
+      if (willOpen) {
+        setTimeout(() => {
+          analysisChart.syncSize();
+          analysisChart.render(video.currentTime);
+        }, 60);
+      }
+    }
+
+    document.getElementById("btnToggleAnalysisView").onclick = () => toggleAnalysisView();
+    document.getElementById("btnCloseAnalysisView").onclick = () => toggleAnalysisView(false);
+    document.getElementById("btnJumpToSelectedVideo").onclick = () => toggleAnalysisView(false);
+
+    // 數據分析頁圖表切換與縮放控制
+    document.querySelectorAll("[data-achart]").forEach(btn => {
+      btn.onclick = () => {
+        document.querySelectorAll("[data-achart]").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        analysisChart.setType(btn.dataset.achart);
+        analysisChart.render(video.currentTime);
+      };
+    });
+
+    const analysisAxisFilter = document.getElementById("analysisAxisFilter");
+    analysisAxisFilter.onchange = () => {
+      analysisChart.setAxisFilter(analysisAxisFilter.value);
+      analysisChart.render(video.currentTime);
+    };
+
+    const btnAnaFocus = document.getElementById("btnAnaFocus");
+    const anaZoomBadge = document.getElementById("anaZoomBadge");
+    analysisChart.onZoomChange = ({ yZoom, xZoom, focusDataRange }) => {
+      btnAnaFocus.classList.toggle("active", focusDataRange);
+      btnAnaFocus.textContent = focusDataRange ? "🎯 聚焦" : "0️⃣ 含零點";
+      anaZoomBadge.textContent = xZoom > 1.05
+        ? `Y:${yZoom.toFixed(1)}x T:${xZoom.toFixed(1)}x`
+        : `${yZoom.toFixed(1)}x`;
+    };
+
+    btnAnaFocus.onclick = () => {
+      analysisChart.toggleFocusMode();
+      analysisChart.render(video.currentTime);
+    };
+    document.getElementById("btnAnaZoomIn").onclick = () => {
+      analysisChart.zoomY(1.4);
+      analysisChart.render(video.currentTime);
+    };
+    document.getElementById("btnAnaZoomOut").onclick = () => {
+      analysisChart.zoomY(1 / 1.4);
+      analysisChart.render(video.currentTime);
+    };
+    document.getElementById("btnAnaTimeIn").onclick = () => {
+      analysisChart.zoomX(1.4);
+      analysisChart.render(video.currentTime);
+    };
+    document.getElementById("btnAnaZoomReset").onclick = () => {
+      analysisChart.resetZoom();
+      analysisChart.render(video.currentTime);
+    };
+
+    // Curve Fitting 回歸擬合控制
+    document.getElementById("btnRunFit").onclick = () => {
+      const activeTraj = getActiveAnalysisTrajectory();
+      if (!activeTraj || activeTraj.length < 3) {
+        alert("尚無足夠的數據點可供擬合，請先載入或分析影片！");
+        return;
+      }
+      const targetKey = document.getElementById("fitTargetSelect").value;
+      const modelType = document.getElementById("fitModelSelect").value;
+
+      try {
+        const fit = computeCurveFit(activeTraj, targetKey, modelType);
+        fit.targetLabel = selectedTarget;
+        currentFitResult = fit;
+
+        // 自動切換圖表頁籤對應所選的擬合物理量
+        const chartType = (targetKey === "meterX" || targetKey === "meterY")
+          ? "xt"
+          : ((targetKey === "vx" || targetKey === "vy") ? "vt" : "at");
+        document.querySelectorAll("[data-achart]").forEach(b => {
+          b.classList.toggle("active", b.dataset.achart === chartType);
+        });
+        analysisChart.setType(chartType);
+        analysisChart.setFitResult(fit);
+        analysisChart.render(video.currentTime);
+
+        physicsChart.setFitResult(fit);
+        physicsChart.render(video.currentTime);
+
+        const who = secondaryTrajectory.length > 0 ? `[點${selectedTarget}] ` : "";
+        document.getElementById("fitEquationText").textContent = `${who}${fit.equationText}`;
+        document.getElementById("fitMetaText").textContent = `R² = ${fit.r2.toFixed(4)}  |  ${fit.physicsHint}`;
+        document.getElementById("fittingResultBanner").classList.add("active");
+      } catch (err) {
+        alert("曲線擬合失敗: " + (err.message || err));
+      }
+    };
+
+    document.getElementById("btnClearFit").onclick = () => {
+      currentFitResult = null;
+      analysisChart.setFitResult(null);
+      physicsChart.setFitResult(null);
+      document.getElementById("fittingResultBanner").classList.remove("active");
+      analysisChart.render(video.currentTime);
+      physicsChart.render(video.currentTime);
+    };
+
+    // Excel (.xlsx) 匯出按鈕綁定
+    async function handleExportExcel() {
+      if (!currentTrajectory || currentTrajectory.length === 0) {
+        alert("目前尚無物理數據可匯出，請先載入影片或從手機端同步資料！");
+        return;
+      }
+      try {
+        const res = await exportTrajectoryToExcel(currentTrajectory, currentFitResult, "physics-tracker", secondaryTrajectory);
+        console.log(`成功匯出 ${res.count} 筆數據 (${res.format})`);
+      } catch (err) {
+        alert("匯出 Excel 失敗: " + (err.message || err));
+      }
+    }
+    document.getElementById("btnExportExcel").onclick = handleExportExcel;
+    document.getElementById("btnTopExportExcel").onclick = handleExportExcel;
+
+    // 11. 頂部列其他事件綁定
+    document.getElementById("btnToggleHud").onclick = () => {
+      physicsHud.classList.toggle("hidden");
+    };
+
+    document.getElementById("btnFullscreen").onclick = () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+      } else {
+        document.exitFullscreen();
+      }
+    };
+
+    document.getElementById("btnOpenMobileTab").onclick = () => {
+      window.open(mobileUrl, "_blank");
+    };
+
+    // 示範模式：直接生成示範物理運動影片並分析
+    document.getElementById("btnLoadDemoDirectly").onclick = async () => {
+      const btn = document.getElementById("btnLoadDemoDirectly");
+      btn.textContent = "⏳ 正在生成示範影片...";
+      btn.disabled = true;
+
+      try {
+        const blob = await VideoTracker.generateDemoVideo(2.5, 60);
+        currentVideoBlob = blob;
+        currentVideoName = "demo_projectile.webm";
+        const url = URL.createObjectURL(blob);
+        video.src = url;
+        video.load();
+        hasLoadedVideo = true;
+        await new Promise(r => {
+          if (video.readyState >= 2) return r();
+          video.onloadeddata = r;
+          setTimeout(r, 1000);
+        });
+
+        // 自動執行快速分析
+        const tracker = new VideoTracker({ fps: 60 });
+        tracker.setTargetColor(255, 60, 40, 70); // 紅色球體
+        tracker.setScale(250, 1.0); // 250px = 1m
+        physicsEngine.setScale(250, 1.0);
+
+        const raw = await tracker.analyzeVideo(video);
+        const processed = physicsEngine.processTrajectory(raw);
+        setTrajectoryData(processed);
+
+        standbyOverlay.classList.add("hidden");
+        video.loop = true;
+        video.playbackRate = 0.5;
+        updateSpeedChips(0.5);
+        video.play().catch(e => console.warn(e));
+      } catch (err) {
+        console.error("生成示範影片失敗:", err);
+        alert("載入示範影片失敗: " + (err.message || err));
+      } finally {
+        btn.textContent = "🧪 載入拋體示範影片";
+        btn.disabled = false;
+      }
+    };
+
+    // 專案儲存 / 載入 與 標記分析影片匯出邏輯
+    const projectModal = document.getElementById("projectModal");
+    const projectFileInput = document.getElementById("projectFileInput");
+    const attachVideoInput = document.getElementById("attachVideoInput");
+    const exportVideoStatusText = document.getElementById("exportVideoStatusText");
+
+    document.getElementById("btnProjectModal").onclick = () => {
+      projectModal.classList.add("active");
+    };
+    document.getElementById("btnCloseProjectModal").onclick = () => {
+      projectModal.classList.remove("active");
+    };
+    document.getElementById("btnStandbyLoadProject").onclick = () => {
+      projectFileInput.click();
+    };
+    document.getElementById("btnModalLoadProject").onclick = () => {
+      projectFileInput.click();
+    };
+    document.getElementById("btnAttachVideoToProject").onclick = () => {
+      attachVideoInput.click();
+    };
+
+    attachVideoInput.onchange = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      currentVideoBlob = file;
+      currentVideoName = file.name;
+      video.src = URL.createObjectURL(file);
+      video.load();
+      hasLoadedVideo = true;
+      standbyOverlay.classList.add("hidden");
+      projectModal.classList.remove("active");
+    };
+
+    function blobToDataUrl(blob) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    }
+
+    function downloadBlobFile(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    document.getElementById("btnSaveProject").onclick = async () => {
+      if (!currentTrajectory || currentTrajectory.length === 0) {
+        alert("目前尚無分析完成的物理數據可儲存，請先分析影片或載入示範！");
+        return;
+      }
+
+      const btn = document.getElementById("btnSaveProject");
+      const origText = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = "⏳ 打包專案中...";
+
+      try {
+        let videoDataUrl = null;
+        let videoOmitted = false;
+        const maxEmbedBytes = 15 * 1024 * 1024; // 15 MB 以下自動內嵌影片成單一獨立檔
+
+        if (currentVideoBlob) {
+          if (currentVideoBlob.size <= maxEmbedBytes) {
+            videoDataUrl = await blobToDataUrl(currentVideoBlob);
+          } else {
+            videoOmitted = true;
+          }
+        }
+
+        const projectData = {
+          app: "physics-tracker",
+          version: 2,
+          savedAt: new Date().toISOString(),
+          fps: activeFps,
+          clipStart,
+          clipEnd,
+          trajectory: currentTrajectory,
+          secondaryTrajectory,
+          fitMeta: currentFitResult ? {
+            targetKey: currentFitResult.targetKey,
+            modelType: currentFitResult.modelType,
+            targetLabel: currentFitResult.targetLabel || "A"
+          } : null,
+          annotations: annotationLayer.strokes || [],
+          videoName: currentVideoName,
+          videoDataUrl
+        };
+
+        const jsonBlob = new Blob([JSON.stringify(projectData)], { type: "application/json" });
+        const ts = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+        downloadBlobFile(jsonBlob, `physics-project_${ts}.ptproj.json`);
+
+        if (videoOmitted) {
+          alert("⚠️ 專案數據、擬合與白板已儲存！\n因原影片大於 15 MB 未內嵌進 JSON，下次載入專案後可用「🎞️ 關聯本地影片檔」重新掛回原影片。");
+        }
+      } catch (err) {
+        alert("儲存專案失敗: " + (err.message || err));
+      } finally {
+        btn.disabled = false;
+        btn.textContent = origText;
+      }
+    };
+
+    projectFileInput.onchange = async (e) => {
+      const file = e.target.files[0];
+      projectFileInput.value = "";
+      if (!file) return;
+
+      try {
+        const text = await file.text();
+        const proj = JSON.parse(text);
+        if (!proj || proj.app !== "physics-tracker" || !Array.isArray(proj.trajectory)) {
+          throw new Error("非有效的 Physics Tracker 專案檔");
+        }
+
+        activeFps = Number(proj.fps) || 60;
+        clipStart = Number(proj.clipStart) || 0;
+        clipEnd = proj.clipEnd !== undefined && proj.clipEnd !== null ? Number(proj.clipEnd) : null;
+
+        if (proj.videoDataUrl) {
+          const resp = await fetch(proj.videoDataUrl);
+          currentVideoBlob = await resp.blob();
+          currentVideoName = proj.videoName || "project_video.mp4";
+          video.src = URL.createObjectURL(currentVideoBlob);
+          video.load();
+          hasLoadedVideo = true;
+        } else {
+          currentVideoBlob = null;
+          hasLoadedVideo = false;
+          video.removeAttribute("src");
+          video.load();
+        }
+
+        setTrajectoryData(proj.trajectory, proj.secondaryTrajectory || []);
+
+        annotationLayer.clear(false);
+        if (Array.isArray(proj.annotations)) {
+          for (const st of proj.annotations) {
+            annotationLayer.receiveDrawEvent(st);
+          }
+        }
+
+        if (proj.fitMeta) {
+          selectedTarget = proj.fitMeta.targetLabel === "B" && secondaryTrajectory.length > 0 ? "B" : "A";
+          if (analysisTargetSelect) analysisTargetSelect.value = selectedTarget;
+          const fit = computeCurveFit(getActiveAnalysisTrajectory(), proj.fitMeta.targetKey, proj.fitMeta.modelType);
+          fit.targetLabel = selectedTarget;
+          currentFitResult = fit;
+          analysisChart.setFitResult(fit);
+          physicsChart.setFitResult(fit);
+          const who = secondaryTrajectory.length > 0 ? `[點${selectedTarget}] ` : "";
+          document.getElementById("fitEquationText").textContent = `${who}${fit.equationText}`;
+          document.getElementById("fitMetaText").textContent = `R² = ${fit.r2.toFixed(4)}  |  ${fit.physicsHint}`;
+          document.getElementById("fittingResultBanner").classList.add("active");
+        }
+
+        syncPlaybackBarBounds();
+        standbyOverlay.classList.add("hidden");
+        projectModal.classList.remove("active");
+
+        if (!hasLoadedVideo) {
+          alert("📊 已載入專案物理數據、白板與擬合結果！\n（此專案未內嵌影片，可直接檢視圖表/表格/匯出 Excel，或點「🎞️ 關聯本地影片檔」載入原影片）");
+        }
+      } catch (err) {
+        alert("載入專案失敗: " + (err.message || err));
+      }
+    };
+
+    document.getElementById("btnExportAnalyzedVideo").onclick = async () => {
+      if (!hasLoadedVideo || !video.videoWidth) {
+        alert("⚠️ 請先載入或從手機傳送影片，才能匯出標記分析影片！");
+        return;
+      }
+      if (!currentTrajectory || currentTrajectory.length === 0) {
+        alert("⚠️ 尚無物理軌跡數據，請先完成分析！");
+        return;
+      }
+      if (typeof MediaRecorder === "undefined") {
+        alert("⚠️ 目前瀏覽器不支援 MediaRecorder 影片錄製匯出！");
+        return;
+      }
+
+      const btn = document.getElementById("btnExportAnalyzedVideo");
+      btn.disabled = true;
+      exportVideoStatusText.style.display = "block";
+      exportVideoStatusText.textContent = "⏳ 正在準備離屏渲染畫布...";
+
+      const prevLoop = video.loop;
+      const prevRate = video.playbackRate;
+      const prevTime = video.currentTime;
+      const wasPaused = video.paused;
+      video.pause();
+
+      try {
+        const { start, end } = getClipBounds();
+        const span = Math.max(0.1, end - start);
+        const srcW = video.videoWidth || 1280;
+        const srcH = video.videoHeight || 720;
+        const scaleDown = srcW > 1280 ? (1280 / srcW) : 1;
+        const outCanvas = document.createElement("canvas");
+        outCanvas.width = Math.round(srcW * scaleDown);
+        outCanvas.height = Math.round(srcH * scaleDown);
+        const outCtx = outCanvas.getContext("2d");
+
+        const renderParams = {
+          scale: outCanvas.width / srcW,
+          offsetX: 0,
+          offsetY: 0,
+          videoWidth: srcW,
+          videoHeight: srcH
+        };
+
+        let mimeType = "";
+        for (const cand of ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm", "video/mp4"]) {
+          if (MediaRecorder.isTypeSupported(cand)) {
+            mimeType = cand;
+            break;
+          }
+        }
+
+        const stream = outCanvas.captureStream(30);
+        const recorder = mimeType ? new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 5000000 }) : new MediaRecorder(stream);
+        const chunks = [];
+        recorder.ondataavailable = (ev) => {
+          if (ev.data && ev.data.size > 0) chunks.push(ev.data);
+        };
+
+        const stoppedPromise = new Promise((resolve) => {
+          recorder.onstop = resolve;
+        });
+
+        video.loop = false;
+        video.playbackRate = 1.0;
+        video.currentTime = start;
+        await new Promise((res) => {
+          video.addEventListener("seeked", res, { once: true });
+          setTimeout(res, 600);
+        });
+
+        recorder.start(100);
+        await video.play();
+
+        await new Promise((resolve) => {
+          let finished = false;
+          const finish = () => {
+            if (finished) return;
+            finished = true;
+            resolve();
+          };
+
+          const drawExportFrame = () => {
+            if (finished) return;
+            const curT = video.currentTime;
+            outCtx.drawImage(video, 0, 0, outCanvas.width, outCanvas.height);
+
+            const ptA = physicsEngine.interpolateAtTime(currentTrajectory, curT);
+            const ptB = (secondaryTrajectory && secondaryTrajectory.length > 0)
+              ? physicsEngine.interpolateAtTime(secondaryTrajectory, curT)
+              : null;
+            if (ptA) {
+              vectorDrawer.render(video, currentTrajectory, ptA, secondaryTrajectory, ptB, outCtx, renderParams);
+            }
+            if (annotationCanvas.width > 0 && annotationCanvas.height > 0) {
+              outCtx.drawImage(annotationCanvas, 0, 0, outCanvas.width, outCanvas.height);
+            }
+
+            // 角落即時數據印記
+            outCtx.save();
+            const barText = (ptA && ptB)
+              ? `t=${curT.toFixed(3)}s | A: y=${ptA.meterY.toFixed(2)}m v=${ptA.v.toFixed(2)}m/s | B: y=${ptB.meterY.toFixed(2)}m v=${ptB.v.toFixed(2)}m/s`
+              : (ptA ? `t=${curT.toFixed(3)}s | x=${ptA.meterX.toFixed(2)}m y=${ptA.meterY.toFixed(2)}m | |v|=${ptA.v.toFixed(2)}m/s | |a|=${ptA.a.toFixed(1)}m/s²` : `t=${curT.toFixed(3)}s`);
+            outCtx.font = "bold 15px monospace";
+            const tw = outCtx.measureText(barText).width;
+            outCtx.fillStyle = "rgba(15, 23, 42, 0.78)";
+            outCtx.fillRect(14, 14, tw + 20, 30);
+            outCtx.fillStyle = "#f8fafc";
+            outCtx.fillText(barText, 24, 34);
+            outCtx.restore();
+
+            const pct = Math.min(99, Math.max(0, Math.round(((curT - start) / span) * 100)));
+            exportVideoStatusText.textContent = `🎬 正在錄製匯出分析影片... ${pct}% (${curT.toFixed(2)}/${end.toFixed(2)}s)`;
+
+            if (curT >= end - 0.02 || video.ended || video.paused) {
+              finish();
+              return;
+            }
+            requestAnimationFrame(drawExportFrame);
+          };
+
+          video.addEventListener("ended", finish, { once: true });
+          requestAnimationFrame(drawExportFrame);
+        });
+
+        video.pause();
+        recorder.stop();
+        await stoppedPromise;
+
+        const outType = mimeType || "video/webm";
+        const ext = outType.includes("mp4") ? "mp4" : "webm";
+        const outBlob = new Blob(chunks, { type: outType });
+        const ts = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+        downloadBlobFile(outBlob, `physics-analyzed_${ts}.${ext}`);
+        exportVideoStatusText.textContent = `✅ 匯出完成！(physics-analyzed_${ts}.${ext})`;
+      } catch (err) {
+        console.error("匯出影片失敗:", err);
+        exportVideoStatusText.textContent = "❌ 匯出失敗：" + (err.message || err);
+      } finally {
+        video.loop = prevLoop;
+        video.playbackRate = prevRate;
+        video.currentTime = prevTime;
+        if (!wasPaused) video.play().catch(() => {});
+        btn.disabled = false;
+      }
+    };
+
+    // Firebase 設定彈窗邏輯
+    const settingsModal = document.getElementById("settingsModal");
+    document.getElementById("btnSettings").onclick = () => {
+      settingsModal.classList.add("active");
+    };
+    document.getElementById("btnCloseSettings").onclick = () => {
+      settingsModal.classList.remove("active");
+    };
+    document.getElementById("btnSaveConfig").onclick = () => {
+      const cfg = {
+        apiKey: document.getElementById("cfgApiKey").value.trim(),
+        databaseURL: document.getElementById("cfgDbUrl").value.trim(),
+        projectId: document.getElementById("cfgProjectId").value.trim()
+      };
+      localStorage.setItem("physics_tracker_firebase_config", JSON.stringify(cfg));
+      syncManager.initFirebase(cfg).then(success => {
+        if (success) {
+          document.getElementById("connStatusBadge").textContent = "(Firebase 雲端已連線)";
+          document.getElementById("connStatusBadge").style.color = "#10b981";
+        }
+      });
+      settingsModal.classList.remove("active");
+    };
+
+    // 視窗尺寸變更時自動同步畫布
+    window.addEventListener("resize", () => {
+      vectorDrawer.syncSizeWithVideo(video);
+      annotationLayer.syncSize(video);
+      physicsChart.syncSize();
+      analysisChart.syncSize();
+      if (currentTrajectory.length > 0) {
+        physicsChart.render(video.currentTime);
+        if (!analysisWorkspace.classList.contains("hidden")) {
+          analysisChart.render(video.currentTime);
+        }
+      }
+    });
+
+    // 12. 實驗 Hub 入口、左側模式切換抽屜與 5 大即時感測器模組整合
+    const sensorLabWorkspace = document.getElementById("sensorLabWorkspace");
+    const sensorLab = new ScreenSensorLab(sensorLabWorkspace, syncManager);
+    const expModeDrawer = document.getElementById("expModeDrawer");
+    const standbyHubGrid = document.getElementById("standbyHubGrid");
+    const drawerExpList = document.getElementById("drawerExpList");
+    const drawerNodesRow = document.getElementById("drawerNodesRow");
+    const videoWaitBanner = document.getElementById("videoWaitBanner");
+
+    let currentLabMode = urlParams.get("mode") && LAB_MODES[urlParams.get("mode")]
+      ? urlParams.get("mode")
+      : "HOME";
+
+    function updateVideoChromeVisibility(modeId) {
+      document.body.classList.toggle("mode-non-video", modeId !== "VIDEO_TRACKER");
+    }
+
+    function openPageZeroHome({ broadcast = true } = {}) {
+      currentLabMode = "HOME";
+      updateVideoChromeVisibility("HOME");
+      sensorLab.setMode("VIDEO_TRACKER");
+      analysisWorkspace.classList.add("hidden");
+      document.getElementById("btnToggleAnalysisView").classList.remove("active");
+      videoWaitBanner.classList.add("hidden");
+      standbyOverlay.classList.remove("hidden");
+      expModeDrawer.classList.add("hidden");
+      document.querySelectorAll("[data-lab-mode]").forEach(btn => btn.classList.remove("active"));
+      if (broadcast) {
+        syncManager.broadcastCommand({ cmd: "SET_MODE", mode: "HOME" });
+      }
+    }
+
+    function switchLabMode(modeId, { broadcast = true } = {}) {
+      if (modeId === "HOME") {
+        openPageZeroHome({ broadcast });
+        return;
+      }
+      if (!LAB_MODES[modeId]) return;
+      currentLabMode = modeId;
+      updateVideoChromeVisibility(modeId);
+
+      document.querySelectorAll("[data-lab-mode]").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.labMode === modeId);
+      });
+
+      if (modeId === "VIDEO_TRACKER") {
+        sensorLab.setMode("VIDEO_TRACKER");
+        standbyOverlay.classList.add("hidden");
+        if (!hasLoadedVideo && currentTrajectory.length === 0) {
+          videoWaitBanner.classList.remove("hidden");
+        } else {
+          videoWaitBanner.classList.add("hidden");
+        }
+      } else {
+        analysisWorkspace.classList.add("hidden");
+        document.getElementById("btnToggleAnalysisView").classList.remove("active");
+        standbyOverlay.classList.add("hidden");
+        videoWaitBanner.classList.add("hidden");
+        sensorLab.setMode(modeId);
+      }
+
+      expModeDrawer.classList.add("hidden");
+      if (broadcast) {
+        syncManager.broadcastCommand({ cmd: "SET_MODE", mode: modeId });
+      }
+    }
+
+    updateVideoChromeVisibility(currentLabMode);
+
+    function renderLabHubCards() {
+      standbyHubGrid.innerHTML = LAB_MODE_ORDER.map(id => {
+        const m = LAB_MODES[id];
+        return `
+          <button class="hub-card-btn ${currentLabMode === id ? "active" : ""}" data-lab-mode="${id}" style="--hub-accent: ${m.color};">
+            <div class="hub-card-title"><span>${m.icon}</span><span>${m.title}</span></div>
+            <div class="hub-card-sub">${m.unit}</div>
+          </button>
+        `;
+      }).join("");
+
+      drawerExpList.innerHTML = LAB_MODE_ORDER.map(id => {
+        const m = LAB_MODES[id];
+        return `
+          <button class="drawer-exp-item ${currentLabMode === id ? "active" : ""}" data-lab-mode="${id}" style="--hub-accent: ${m.color};">
+            <div style="font-weight:700;font-size:0.86rem;">${m.icon} ${m.title}</div>
+            <div style="font-size:0.72rem;color:#94a3b8;">${m.unit}</div>
+          </button>
+        `;
+      }).join("");
+
+      document.querySelectorAll("[data-lab-mode]").forEach(btn => {
+        btn.onclick = () => switchLabMode(btn.dataset.labMode, { broadcast: true });
+      });
+    }
+    renderLabHubCards();
+
+    document.getElementById("btnHomeHub").onclick = () => openPageZeroHome({ broadcast: true });
+    document.getElementById("btnDrawerGoHome").onclick = () => openPageZeroHome({ broadcast: true });
+    document.getElementById("btnBannerHome").onclick = () => openPageZeroHome({ broadcast: true });
+    document.getElementById("btnBannerDemo").onclick = () => document.getElementById("btnLoadDemoDirectly").click();
+
+    document.getElementById("btnToggleExpDrawer").onclick = () => {
+      expModeDrawer.classList.toggle("hidden");
+    };
+    document.getElementById("btnCloseExpDrawer").onclick = () => {
+      expModeDrawer.classList.add("hidden");
+    };
+
+    syncManager.onSensorData((pkt) => {
+      sensorLab.handleSensorPacket(pkt);
+      if (pkt.mode && pkt.mode !== currentLabMode && LAB_MODES[pkt.mode]) {
+        switchLabMode(pkt.mode, { broadcast: false });
+      }
+    });
+
+    syncManager.onLabCommand((cmdObj) => {
+      if (cmdObj?.cmd === "SET_MODE" && (cmdObj.mode === "HOME" || LAB_MODES[cmdObj.mode])) {
+        switchLabMode(cmdObj.mode, { broadcast: false });
+      }
+    });
+
+    syncManager.onNodesChange((nodes) => {
+      if (!drawerNodesRow) return;
+      drawerNodesRow.innerHTML = nodes.length === 0
+        ? "<span>尚無手機節點連線</span>"
+        : nodes.map(n => `<span class="lab-node-pill" style="border-color:${n.color};color:${n.color};">● ${n.nodeId}</span>`).join("");
+      sensorLab.refreshNodeBadges();
+    });
+
+    if (currentLabMode !== "HOME") {
+      switchLabMode(currentLabMode, { broadcast: false });
+    }
+  </script>
+</body>
+</html>

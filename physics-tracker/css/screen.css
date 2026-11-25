@@ -1,0 +1,1372 @@
+/* css/screen.css - 大屏端接收器樣式 (專為高解析度大屏投影與電子白板設計) */
+
+:root {
+  --bg-color: #0b0f19;
+  --surface-color: rgba(18, 24, 38, 0.85);
+  --border-color: rgba(255, 255, 255, 0.12);
+  --primary-color: #38bdf8;
+  --velocity-color: #10b981;
+  --acceleration-color: #ef4444;
+  --text-main: #f8fafc;
+  --text-sub: #94a3b8;
+  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  font-family: var(--font-family);
+  overflow: hidden;
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  user-select: none;
+}
+
+/* 頂部極簡狀態列 */
+.top-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  padding: 0 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 50;
+  background: linear-gradient(180deg, rgba(11, 15, 25, 0.8) 0%, transparent 100%);
+  pointer-events: none;
+}
+
+.top-bar > * {
+  pointer-events: auto;
+}
+
+.brand-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 1.1rem;
+  letter-spacing: 0.5px;
+}
+
+.brand-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: #22c55e;
+  box-shadow: 0 0 10px #22c55e;
+}
+
+.room-badge {
+  background: var(--surface-color);
+  backdrop-filter: blur(8px);
+  padding: 6px 16px;
+  border-radius: 20px;
+  border: 1px solid var(--border-color);
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.room-pin {
+  font-family: monospace;
+  font-weight: bold;
+  color: var(--primary-color);
+  font-size: 1.2rem;
+  letter-spacing: 2px;
+}
+
+.top-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.btn-icon {
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(8px);
+}
+
+.btn-icon:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* 主播放展示區域 (滿版投影容器) */
+.stage-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #000;
+}
+
+.video-wrapper {
+  position: relative;
+  max-width: 100vw;
+  max-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#mainVideo {
+  max-width: 100vw;
+  max-height: 100vh;
+  object-fit: contain;
+  display: block;
+}
+
+/* 疊加畫布 (向量層與註解層) */
+#vectorCanvas,
+#annotationCanvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+#annotationCanvas {
+  pointer-events: auto; /* 允許大屏觸控螢幕直接手寫 */
+}
+
+/* 待機配對畫面 (Pairing View / 0 分頁) */
+.standby-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: radial-gradient(circle at center, #1e293b 0%, #0b0f19 75%);
+  z-index: 68;
+  transition: opacity 0.35s ease, visibility 0.35s;
+}
+
+/* 非「影像追蹤」實驗模式（包含 0 分頁與 5 大感測器）時，隱藏所有影像分析專屬 UI */
+body.mode-non-video #btnToggleAnalysisView,
+body.mode-non-video #btnTopExportExcel,
+body.mode-non-video #btnProjectModal,
+body.mode-non-video #btnToggleChart,
+body.mode-non-video #btnToggleDraw,
+body.mode-non-video #btnToggleHud,
+body.mode-non-video #physicsHud,
+body.mode-non-video #physicsChartPanel,
+body.mode-non-video #screenPlaybackBar,
+body.mode-non-video #screenDrawToolbar,
+body.mode-non-video #legendPanel {
+  display: none !important;
+}
+
+.standby-overlay.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.standby-card {
+  background: rgba(30, 41, 59, 0.7);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 40px 48px;
+  border-radius: 24px;
+  text-align: center;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  max-width: 540px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.standby-title {
+  font-size: 1.8rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.standby-desc {
+  color: var(--text-sub);
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.qrcode-box {
+  background: #ffffff;
+  padding: 16px;
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-width: 180px;
+  min-height: 180px;
+}
+
+.pin-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.pin-label {
+  font-size: 0.85rem;
+  color: var(--text-sub);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.pin-digits {
+  font-size: 2.8rem;
+  font-family: monospace;
+  font-weight: 800;
+  color: #38bdf8;
+  letter-spacing: 8px;
+}
+
+.standby-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-sub);
+  font-size: 0.95rem;
+}
+
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #38bdf8;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.7); }
+  70% { transform: scale(1.2); box-shadow: 0 0 0 8px rgba(56, 189, 248, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(56, 189, 248, 0); }
+}
+
+/* 浮動物理儀表板 (HUD Dashboard) */
+.physics-hud {
+  position: absolute;
+  bottom: 84px;
+  left: 24px;
+  background: var(--surface-color);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 14px 20px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  z-index: 50;
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.physics-hud.hidden {
+  opacity: 0;
+  transform: translateY(20px);
+  pointer-events: none;
+}
+
+.hud-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hud-label {
+  font-size: 0.75rem;
+  color: var(--text-sub);
+  text-transform: uppercase;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hud-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.hud-dot.vel { background: var(--velocity-color); box-shadow: 0 0 6px var(--velocity-color); }
+.hud-dot.acc { background: var(--acceleration-color); box-shadow: 0 0 6px var(--acceleration-color); }
+.hud-dot.time { background: var(--primary-color); }
+
+.hud-value {
+  font-family: monospace;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.hud-sub {
+  font-size: 0.8rem;
+  color: var(--text-sub);
+  font-family: monospace;
+}
+
+/* 浮動圖例說明 (Legend) */
+.legend-panel {
+  position: absolute;
+  top: 72px;
+  right: 24px;
+  background: var(--surface-color);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 10px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 0.85rem;
+  z-index: 50;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.legend-color {
+  width: 14px;
+  height: 4px;
+  border-radius: 2px;
+}
+
+/* 設定彈窗 (Modal) */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(6px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.25s ease;
+}
+
+.modal-backdrop.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.modal-card {
+  background: #1e293b;
+  border: 1px solid var(--border-color);
+  border-radius: 18px;
+  padding: 28px;
+  width: 90%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-group label {
+  font-size: 0.85rem;
+  color: var(--text-sub);
+}
+
+.form-input {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border-color);
+  color: #fff;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+/* =========================================================
+   1. 大屏端播放控制列 (Screen Playback Bar)
+   ========================================================= */
+.screen-playback-bar {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 36px;
+  padding: 8px 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 60;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6);
+  user-select: none;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.screen-playback-bar.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 20px);
+}
+
+.spb-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--text-main);
+  border-radius: 50%;
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.spb-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: scale(1.05);
+}
+
+.spb-btn.active {
+  background: rgba(56, 189, 248, 0.25);
+  border-color: #38bdf8;
+  color: #38bdf8;
+}
+
+.spb-play-main {
+  width: 44px;
+  height: 44px;
+  background: #38bdf8;
+  color: #0b0f19;
+  font-size: 1.15rem;
+  border: none;
+  box-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
+}
+
+.spb-play-main:hover {
+  background: #7dd3fc;
+  color: #000;
+  transform: scale(1.08);
+}
+
+.spb-time {
+  font-family: monospace;
+  font-size: 0.85rem;
+  color: var(--text-sub);
+  min-width: 55px;
+}
+
+.spb-time.spb-current {
+  color: #38bdf8;
+  font-weight: 700;
+  text-align: right;
+}
+
+.spb-scrubber-box {
+  width: 220px;
+  display: flex;
+  align-items: center;
+}
+
+.spb-scrubber {
+  width: 100%;
+  height: 6px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.spb-scrubber::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #38bdf8;
+  box-shadow: 0 0 8px #38bdf8;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.spb-scrubber::-webkit-slider-thumb:hover {
+  transform: scale(1.3);
+}
+
+.spb-speed-group {
+  display: flex;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 16px;
+  padding: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.spb-chip {
+  background: transparent;
+  border: none;
+  color: var(--text-sub);
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.spb-chip:hover {
+  color: #fff;
+}
+
+.spb-chip.active {
+  background: #38bdf8;
+  color: #0b0f19;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.3);
+}
+
+/* =========================================================
+   2. 大屏端繪圖工具列 (Screen Draw Toolbar)
+   ========================================================= */
+.screen-draw-toolbar {
+  position: absolute;
+  top: 72px;
+  left: 24px;
+  z-index: 60;
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 20px;
+  padding: 10px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.screen-draw-toolbar.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-20px);
+}
+
+.draw-tool-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--text-main);
+  border-radius: 12px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.draw-tool-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: scale(1.08);
+}
+
+.draw-tool-btn.active {
+  background: rgba(56, 189, 248, 0.25);
+  border-color: #38bdf8;
+  color: #38bdf8;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.35);
+}
+
+.sdt-divider {
+  width: 24px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.12);
+  margin: 2px 0;
+}
+
+.sdt-colors {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sdt-color-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.sdt-color-dot:hover {
+  transform: scale(1.2);
+}
+
+.sdt-color-dot.active {
+  border-color: #ffffff;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+  transform: scale(1.15);
+}
+
+.sdt-size-btn {
+  font-size: 0.65rem;
+  font-weight: bold;
+}
+
+/* =========================================================
+   3. 大屏端物理圖表控制面板 (Physics Chart Panel)
+   ========================================================= */
+.physics-chart-panel {
+  position: absolute;
+  bottom: 84px;
+  right: 24px;
+  width: 480px;
+  height: 280px;
+  background: rgba(15, 23, 42, 0.92);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 20px;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.6);
+  z-index: 55;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.physics-chart-panel.minimized {
+  height: 44px;
+  width: 320px;
+}
+
+.physics-chart-panel.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(20px);
+}
+
+.chart-header {
+  height: 44px;
+  padding: 0 14px;
+  background: rgba(0, 0, 0, 0.25);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  user-select: none;
+}
+
+.chart-tabs {
+  display: flex;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.chart-tab-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-sub);
+  padding: 4px 10px;
+  border-radius: 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.chart-tab-btn:hover {
+  color: #fff;
+}
+
+.chart-tab-btn.active {
+  background: #38bdf8;
+  color: #0b0f19;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.35);
+}
+
+.chart-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chart-select-filter {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--text-main);
+  font-size: 0.75rem;
+  padding: 3px 6px;
+  border-radius: 8px;
+  outline: none;
+}
+
+.chart-btn-icon {
+  background: transparent;
+  border: none;
+  color: var(--text-sub);
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease;
+}
+
+.chart-btn-icon:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.chart-body {
+  flex: 1;
+  position: relative;
+  width: 100%;
+  height: calc(100% - 44px);
+}
+
+.chart-zoom-bar {
+  position: absolute;
+  bottom: 36px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  padding: 3px 6px;
+  backdrop-filter: blur(8px);
+  z-index: 5;
+}
+
+.chart-zoom-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #e2e8f0;
+  border-radius: 6px;
+  padding: 2px 7px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.chart-zoom-btn:hover {
+  background: rgba(56, 189, 248, 0.25);
+  border-color: #38bdf8;
+  color: #fff;
+}
+
+.chart-zoom-btn.active {
+  background: rgba(56, 189, 248, 0.25);
+  border-color: #38bdf8;
+  color: #38bdf8;
+}
+
+.chart-zoom-badge {
+  font-family: monospace;
+  font-size: 0.7rem;
+  color: #94a3b8;
+  padding: 0 4px;
+}
+
+#physicsChartCanvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* =========================================================
+   4. 數據分析雙欄工作區 (左 1/3 表格 + 右 2/3 圖表與擬合)
+   ========================================================= */
+.analysis-workspace {
+  position: fixed;
+  top: 56px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #0b0f19;
+  z-index: 65;
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 16px;
+  padding: 16px 24px;
+  transition: opacity 0.25s ease, visibility 0.25s ease, transform 0.25s ease;
+}
+
+.analysis-workspace.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(14px);
+}
+
+.analysis-pane {
+  background: rgba(15, 23, 42, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 18px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.55);
+}
+
+.analysis-pane-header {
+  padding: 12px 16px;
+  background: rgba(0, 0, 0, 0.28);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.analysis-pane-title {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: #f8fafc;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.analysis-count-badge {
+  font-size: 0.75rem;
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-family: monospace;
+}
+
+.btn-export {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  border: none;
+  padding: 7px 14px;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn-export:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(16, 185, 129, 0.35);
+}
+
+.analysis-table-scroll {
+  flex: 1;
+  overflow: auto;
+}
+
+.analysis-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: monospace;
+  font-size: 0.78rem;
+}
+
+.analysis-table thead th {
+  position: sticky;
+  top: 0;
+  background: #162033;
+  color: #94a3b8;
+  font-weight: 700;
+  padding: 9px 6px;
+  text-align: right;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  z-index: 2;
+}
+
+.analysis-table thead th:first-child {
+  text-align: center;
+}
+
+.analysis-table tbody tr {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.analysis-table tbody tr:hover {
+  background: rgba(56, 189, 248, 0.12);
+}
+
+.analysis-table tbody tr.selected-row {
+  background: rgba(250, 204, 21, 0.2) !important;
+  color: #fef08a;
+  font-weight: 700;
+}
+
+.analysis-table tbody td {
+  padding: 7px 6px;
+  text-align: right;
+  color: #e2e8f0;
+}
+
+.analysis-table tbody td:first-child {
+  text-align: center;
+  color: #94a3b8;
+}
+
+/* Fitting 控制工具列 */
+.fitting-bar {
+  padding: 10px 16px;
+  background: rgba(30, 41, 59, 0.65);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.fitting-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #e879f9;
+}
+
+.fitting-select {
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #f8fafc;
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  outline: none;
+}
+
+.btn-fit {
+  background: linear-gradient(135deg, #c026d3 0%, #9333ea 100%);
+  color: #fff;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.btn-fit:hover {
+  opacity: 0.9;
+}
+
+.fitting-result-banner {
+  padding: 8px 16px;
+  background: rgba(192, 38, 211, 0.12);
+  border-bottom: 1px solid rgba(232, 121, 249, 0.28);
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.84rem;
+  flex-wrap: wrap;
+}
+
+.fitting-result-banner.active {
+  display: flex;
+}
+
+.fitting-eq {
+  font-family: monospace;
+  font-weight: 700;
+  color: #f5d0fe;
+}
+
+.fitting-meta {
+  color: #38bdf8;
+  font-family: monospace;
+  font-size: 0.8rem;
+}
+
+.analysis-chart-body {
+  flex: 1;
+  position: relative;
+  min-height: 0;
+}
+
+.selected-point-footer {
+  padding: 8px 16px;
+  background: rgba(0, 0, 0, 0.35);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: #cbd5e1;
+  gap: 10px;
+}
+
+@media (max-width: 960px) {
+  .analysis-workspace {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr 1.5fr;
+  }
+}
+
+/* =========================================================
+   5. 實驗 Hub 入口、左側切換抽屜與 5 大感測器實驗工作區
+   ========================================================= */
+.standby-card {
+  max-width: 780px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 28px 32px;
+  gap: 14px;
+}
+
+.standby-hub-grid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.hub-card-btn {
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 14px;
+  padding: 12px 10px;
+  color: #f8fafc;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.hub-card-btn:hover {
+  transform: translateY(-2px);
+  border-color: var(--hub-accent, #38bdf8);
+  background: rgba(30, 41, 59, 0.9);
+}
+
+.hub-card-btn.active {
+  border-color: var(--hub-accent, #38bdf8);
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.25);
+}
+
+.hub-card-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hub-card-sub {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  line-height: 1.35;
+}
+
+@media (max-width: 760px) {
+  .standby-hub-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* 左側實驗模式切換抽屜 */
+.exp-mode-drawer {
+  position: fixed;
+  top: 56px;
+  left: 0;
+  bottom: 0;
+  width: 280px;
+  background: rgba(15, 23, 42, 0.96);
+  backdrop-filter: blur(18px);
+  border-right: 1px solid rgba(255, 255, 255, 0.14);
+  z-index: 80;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+.exp-mode-drawer.hidden {
+  transform: translateX(-100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.drawer-exp-item {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 10px 12px;
+  color: #f8fafc;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  transition: all 0.15s ease;
+}
+
+.drawer-exp-item:hover {
+  border-color: var(--hub-accent, #38bdf8);
+  background: rgba(56, 189, 248, 0.1);
+}
+
+.drawer-exp-item.active {
+  border-color: var(--hub-accent, #38bdf8);
+  background: rgba(56, 189, 248, 0.18);
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
+}
+
+/* 5 大感測器實驗工作區 */
+.sensor-lab-workspace {
+  position: fixed;
+  top: 56px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #0b0f19;
+  z-index: 62;
+  padding: 18px 24px;
+  overflow-y: auto;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.sensor-lab-workspace.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.lab-shell {
+  max-width: 1360px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.lab-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  padding: 14px 18px;
+}
+
+.lab-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: #f8fafc;
+}
+
+.lab-sub {
+  font-size: 0.82rem;
+  color: #94a3b8;
+}
+
+.lab-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.lab-node-badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.lab-node-pill {
+  font-size: 0.76rem;
+  font-family: monospace;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.lab-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+@media (max-width: 960px) {
+  .lab-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.lab-card {
+  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.lab-card-title {
+  font-size: 0.96rem;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.lab-scale-box {
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.lab-big-readout {
+  font-size: 1.7rem;
+  font-weight: 800;
+  font-family: monospace;
+  color: #38bdf8;
+  margin: 6px 0 4px;
+}
+
+.lab-status-tag {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.lab-input-sm {
+  width: 68px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-family: monospace;
+  text-align: right;
+}
+
+.hub-credit-footer {
+  width: 100%;
+  text-align: center;
+  padding-top: 10px;
+  margin-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.84rem;
+  color: #94a3b8;
+}
+
+.hub-credit-footer a {
+  color: #38bdf8;
+  font-weight: 700;
+  text-decoration: none;
+  border-bottom: 1px dashed rgba(56, 189, 248, 0.6);
+}
+
+.hub-credit-footer a:hover {
+  color: #7dd3fc;
+  border-bottom-style: solid;
+}
+
+.video-wait-banner {
+  position: absolute;
+  top: 76px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  backdrop-filter: blur(12px);
+  border-radius: 999px;
+  padding: 8px 18px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 45;
+  font-size: 0.84rem;
+  color: #e2e8f0;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.video-wait-banner.hidden {
+  display: none;
+}
+
+

@@ -1,8 +1,49 @@
 const fs = require('fs');
+const http = require('http');
 const path = require('path');
 const puppeteer = require('puppeteer');
 const GIFEncoder = require('gif-encoder-2');
 const { PNG } = require('pngjs');
+
+const MIME_TYPES = {
+    '.html': 'text/html; charset=utf-8',
+    '.js': 'application/javascript; charset=utf-8',
+    '.mjs': 'application/javascript; charset=utf-8',
+    '.css': 'text/css; charset=utf-8',
+    '.json': 'application/json; charset=utf-8',
+    '.png': 'image/png',
+    '.gif': 'image/gif',
+    '.jpg': 'image/jpeg',
+    '.svg': 'image/svg+xml'
+};
+
+function startStaticServer(baseDir) {
+    return new Promise((resolve) => {
+        const server = http.createServer((req, res) => {
+            const urlPath = decodeURIComponent((req.url || '/').split('?')[0]);
+            let filePath = path.join(baseDir, urlPath);
+            if (!filePath.startsWith(baseDir)) {
+                res.statusCode = 403;
+                res.end('Forbidden');
+                return;
+            }
+            if (fs.existsSync(filePath) && fs.statSync(filePath).isDirectory()) {
+                filePath = path.join(filePath, 'index.html');
+            }
+            if (!fs.existsSync(filePath)) {
+                res.statusCode = 404;
+                res.end('Not Found');
+                return;
+            }
+            const ext = path.extname(filePath).toLowerCase();
+            res.setHeader('Content-Type', MIME_TYPES[ext] || 'application/octet-stream');
+            fs.createReadStream(filePath).pipe(res);
+        });
+        server.listen(0, '127.0.0.1', () => {
+            resolve({ server, port: server.address().port });
+        });
+    });
+}
 
 const rootDir = __dirname;
 const ignoreDirs = ['.git', '.vercel', 'node_modules', 'gas', 'shared'];
@@ -156,6 +197,31 @@ async function findPrimaryVisualRegion(page) {
             return true;
         }
 
+        // 若覆蓋層入口（如 Physics Tracker 的待機掃碼頁 #standbyOverlay）正處於顯示狀態，直接聚焦待機入口卡片或全螢幕
+        const standbyOverlay = document.getElementById('standbyOverlay');
+        if (standbyOverlay && isVisible(standbyOverlay)) {
+            return {
+                kind: 'viewport',
+                id: 'standbyOverlay',
+                clip: { x: 0, y: 0, width: window.innerWidth, height: window.innerHeight },
+                mouseBox: { x: 0, y: 0, width: window.innerWidth, height: window.innerHeight }
+            };
+        }
+
+        // 若是完整物理實驗台（如 Physics Tracker 主舞台），優先錄製完整主舞台包含影像、軌跡與圖表
+        const stage = document.querySelector('.stage-container');
+        if (stage && isVisible(stage)) {
+            const sr = stage.getBoundingClientRect();
+            if (sr.width >= 600 && sr.height >= 400) {
+                return {
+                    kind: 'dom',
+                    id: 'stage-container',
+                    clip: { x: 0, y: 0, width: window.innerWidth, height: window.innerHeight },
+                    mouseBox: { x: 0, y: 0, width: window.innerWidth, height: window.innerHeight }
+                };
+            }
+        }
+
         const canvases = Array.from(document.querySelectorAll('canvas'));
         let bestCanvas = null;
         let bestScore = 0;
@@ -262,7 +328,7 @@ async function findPrimaryVisualRegion(page) {
     });
 }
 
-async function createGifForHtml(browser, htmlPath, gifPath) {
+async function createGifForHtml(browser, pageUrl, htmlPath, gifPath) {
     const baseName = path.basename(htmlPath);
     const startTs = Date.now();
     console.log(`🎬 正在錄製對焦 GIF: ${baseName}...`);
@@ -272,17 +338,29 @@ async function createGifForHtml(browser, htmlPath, gifPath) {
     try {
         await page.setViewport({ width: VIEWPORT_W, height: VIEWPORT_H, deviceScaleFactor: 1 });
 
-        const fileUrl = `file:///${htmlPath.replace(/\\/g, '/')}`;
-        await page.goto(fileUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.goto(pageUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
         await new Promise(r => setTimeout(r, 1200));
 
-        // 若是起始設定彈窗蓋住主遊戲（如週期表排排看），先點開始以展現遊戲主體
-        await page.evaluate(() => {
+        // 若是起始設定彈窗蓋住主遊戲（如週期表排排看）或待機入口頁（Physics Tracker），自動點擊示範進入主場景
+        const clickedAction = await page.evaluate(() => {
             const activeModal = document.querySelector('#settings-modal.active');
             const startBtn = activeModal && activeModal.querySelector('#start-game-btn');
-            if (startBtn) startBtn.click();
+            if (startBtn) { startBtn.click(); return 'modal'; }
+
+            const demoBtn = document.getElementById('btnLoadDemoDirectly');
+            if (demoBtn) { demoBtn.click(); return 'demo'; }
+            return '';
         });
-        await new Promise(r => setTimeout(r, 350));
+
+        if (clickedAction === 'demo') {
+            await page.waitForFunction(
+                () => document.getElementById('standbyOverlay')?.classList.contains('hidden'),
+                { timeout: 25000 }
+            ).catch(() => {});
+            await new Promise(r => setTimeout(r, 800));
+        } else {
+            await new Promise(r => setTimeout(r, 350));
+        }
 
         const target = await findPrimaryVisualRegion(page);
         const { clip, mouseBox } = target;
@@ -348,6 +426,10 @@ async function processAllFiles() {
                 continue;
             }
             const htmlPath = path.join(itemPath, file);
+            const htmlContent = fs.readFileSync(htmlPath, 'utf8');
+            if (/<meta[^>]*name=["']portal-type["'][^>]*content=["']tool["']/i.test(htmlContent)) {
+                continue;
+            }
             const gifPath = path.join(itemPath, file.replace(/\.html$/i, '.gif'));
             if (forceRegenerate || !fs.existsSync(gifPath)) {
                 jobs.push({ relPath, htmlPath, gifPath });
@@ -362,7 +444,8 @@ async function processAllFiles() {
         return;
     }
 
-    console.log(`🚀 準備錄製 ${jobs.length} 個動畫 GIF（共重用單一瀏覽器並具斷線自動重啟保護）...`);
+    console.log(`🚀 準備錄製 ${jobs.length} 個動畫 GIF（共重用單一瀏覽器並透過本機 HTTP 支援 ES 模組）...`);
+    const { server, port } = await startStaticServer(rootDir);
     let browser = await launchBrowser();
 
     try {
@@ -371,14 +454,16 @@ async function processAllFiles() {
                 console.log('🔄 偵測到瀏覽器實體中斷，正在重新啟動 Chrome...');
                 browser = await launchBrowser();
             }
+            const pageUrl = `http://127.0.0.1:${port}/${encodeURI(job.relPath)}`;
             try {
-                await createGifForHtml(browser, job.htmlPath, job.gifPath);
+                await createGifForHtml(browser, pageUrl, job.htmlPath, job.gifPath);
             } catch (err) {
                 console.error(`❌ 錄製 ${job.relPath} 失敗:`, err.message || err);
             }
         }
     } finally {
         if (browser) await browser.close().catch(() => {});
+        server.close();
     }
 
     console.log('🎉 所有 GIF 處理完畢！');

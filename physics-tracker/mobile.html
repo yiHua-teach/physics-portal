@@ -1,0 +1,1700 @@
+<!DOCTYPE html>
+<html lang="zh-TW" style="background-color: #0f172a;">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Physics Tracker - 手機端控制器</title>
+  <meta name="portal-type" content="tool">
+  <!-- 關鍵防白屏預防樣式 (Critical Inline CSS) -->
+  <style>
+    html, body {
+      background-color: #0f172a !important;
+      color: #f8fafc;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+  </style>
+  <link rel="stylesheet" href="./css/mobile.css">
+</head>
+<body style="background-color: #0f172a;">
+  <!-- 頂部導航 -->
+  <header class="nav-header">
+    <div class="nav-title">
+      <span>📱</span>
+      <span>Physics Controller</span>
+    </div>
+    <div class="conn-pill" id="connPill">
+      <span class="conn-dot"></span>
+      <span id="connRoomText">PIN: ------</span>
+    </div>
+  </header>
+
+  <!-- 功能頁籤 (Tabs) -->
+  <nav class="tab-bar">
+    <button class="tab-btn active" data-tab="tab-home">0. 入口</button>
+    <button class="tab-btn" data-tab="tab-track">1. 影像</button>
+    <button class="tab-btn" data-tab="tab-sensors">2. 感測</button>
+    <button class="tab-btn" data-tab="tab-remote">3. 遙控</button>
+    <button class="tab-btn" data-tab="tab-draw">4. 白板</button>
+    <button class="tab-btn" data-tab="tab-settings">5. 設定</button>
+  </nav>
+
+  <!-- 網路直連不穩提醒橫幅 -->
+  <div class="wifi-warning-banner" id="wifiWarningBanner">
+    <span>📶</span>
+    <span>P2P 網路直連配對中或連線不穩，建議將<b>手機與電腦連到同一個 Wi-Fi</b>（或使用手機熱點），傳送影片更快速穩定！</span>
+  </div>
+
+  <main class="main-content">
+    <!-- TAB 0: 入口掃碼配對與實驗選擇 -->
+    <section class="tab-pane active" id="tab-home">
+      <div class="card">
+        <div class="card-title">
+          <span>🔗 0. 大屏掃碼配對狀態</span>
+          <span style="font-size: 0.74rem; color: #38bdf8;" id="homeNodeLabel">node_01</span>
+        </div>
+        <p class="card-desc">請確認手機已與電腦大屏使用相同 6 碼 PIN 連線（用系統相機掃描電腦 QR Code 會自動帶入 PIN 碼）。</p>
+        <div style="display: flex; gap: 8px;">
+          <input type="text" id="homeQuickPin" class="form-input-number" style="flex: 1; text-align: center; font-weight: bold; letter-spacing: 3px;" placeholder="輸入 6 碼 PIN">
+          <button class="btn btn-primary" id="btnHomeQuickConnect" style="padding: 8px 14px;">連線</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <span>🧪 選擇要進行的實驗</span>
+        </div>
+        <p class="card-desc">點擊下方任一實驗卡片，系統會自動切換至對應功能頁面並同步通知電腦端。</p>
+        <div class="sensor-mode-grid" id="mobileHomeHubGrid"></div>
+      </div>
+
+      <div class="mobile-credit-footer">
+        Design by <a href="../index.html#physics-tracker">華爸的數位魔法</a>
+      </div>
+    </section>
+
+    <!-- TAB 1: 影像追蹤與物理分析 -->
+    <section class="tab-pane" id="tab-track">
+      <!-- 影片選取卡片 -->
+      <div class="card">
+        <div class="card-title">
+          <span>📹 1. 載入慢動作影片</span>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <input type="file" id="videoFileInput" accept="video/*" style="display: none;">
+          <button class="btn btn-secondary" style="flex: 1;" id="btnChooseVideo">
+            📁 選取手機影片
+          </button>
+          <button class="btn btn-secondary" style="flex: 1;" id="btnGenerateDemo">
+            🧪 示範拋體影片
+          </button>
+        </div>
+      </div>
+
+      <!-- 預覽與校準畫布 -->
+      <div class="card">
+        <div class="card-title">
+          <span>🎯 2. 標定目標與尺標</span>
+          <span style="font-size: 0.75rem; color: #38bdf8;" id="previewHint">長按拖曳上方小點對準球體，放開取色</span>
+        </div>
+
+        <!-- 追蹤模式切換 (單點 vs 雙點比較) -->
+        <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+          <button class="btn btn-primary" id="btnTrackSingle" style="flex: 1; padding: 6px 8px; font-size: 0.8rem;">
+            🔵 單點追蹤
+          </button>
+          <button class="btn btn-secondary" id="btnTrackDual" style="flex: 1; padding: 6px 8px; font-size: 0.8rem;">
+            🔴🔵 雙點比較 (A+B)
+          </button>
+        </div>
+
+        <!-- 雙點模式取色對象切換 -->
+        <div id="dualTargetPickerRow" style="display: none; gap: 8px; margin-bottom: 8px;">
+          <button class="btn btn-primary" id="btnPickTargetA" style="flex: 1; padding: 5px 8px; font-size: 0.78rem; border: 1.5px solid #38bdf8;">
+            🎯 選取點 A 色
+          </button>
+          <button class="btn btn-secondary" id="btnPickTargetB" style="flex: 1; padding: 5px 8px; font-size: 0.78rem; border: 1.5px solid rgba(251, 113, 133, 0.5);">
+            🎯 選取點 B 色
+          </button>
+        </div>
+
+        <!-- 模式切換鈕 -->
+        <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+          <button class="btn btn-primary" id="btnModePickColor" style="flex: 1; padding: 6px 8px; font-size: 0.8rem;">
+            🎯 拖曳取色模式
+          </button>
+          <button class="btn btn-secondary" id="btnModeSetRuler" style="flex: 1; padding: 6px 8px; font-size: 0.8rem;">
+            📏 兩點標定尺標
+          </button>
+        </div>
+
+        <div class="preview-container">
+          <video id="mobileVideo" playsinline muted preload="auto"></video>
+          <canvas id="previewCanvas"></canvas>
+        </div>
+
+        <!-- 預覽畫面時間軸與分析開頭/結尾區間裁切 -->
+        <div style="background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; color: #94a3b8;">
+            <span>🎞️ 預覽時間軸 (拖曳定位開頭/結尾)</span>
+            <span id="previewTimeText" style="font-family: monospace; color: #38bdf8;">0.00 / 0.00 s</span>
+          </div>
+          <input type="range" id="previewScrubber" min="0" max="2.5" step="0.01" value="0" style="width: 100%; accent-color: #38bdf8;">
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 2px;">
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+              <label style="font-size: 0.75rem; color: #94a3b8;">分析開頭 (s)</label>
+              <div style="display: flex; gap: 4px;">
+                <input type="number" class="form-input-number" id="inputStartTime" value="0.00" step="0.05" min="0" style="flex: 1; width: 60px; padding: 4px 6px; font-size: 0.85rem;">
+                <button class="btn btn-secondary" id="btnSetStartTime" style="padding: 4px 8px; font-size: 0.75rem;">設為目前</button>
+              </div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+              <label style="font-size: 0.75rem; color: #94a3b8;">分析結尾 (s)</label>
+              <div style="display: flex; gap: 4px;">
+                <input type="number" class="form-input-number" id="inputEndTime" value="2.50" step="0.05" min="0.05" style="flex: 1; width: 60px; padding: 4px 6px; font-size: 0.85rem;">
+                <button class="btn btn-secondary" id="btnSetEndTime" style="padding: 4px 8px; font-size: 0.75rem;">設為目前</button>
+              </div>
+            </div>
+          </div>
+          <div id="trimSummaryText" style="font-size: 0.75rem; color: #10b981; text-align: right;">
+            分析區間：0.00 s ~ 2.50 s (共 2.50 s)
+          </div>
+        </div>
+
+        <!-- 取色與尺標設定列 -->
+        <div class="form-row">
+          <div class="form-label" id="colorLabelA">目標色彩 (RGB)：</div>
+          <div class="color-swatch-box">
+            <div class="color-swatch" id="colorSwatch"></div>
+            <span id="colorRgbText" style="font-family: monospace; font-size: 0.8rem;">(255, 60, 40)</span>
+          </div>
+        </div>
+
+        <div class="form-row" id="colorRowB" style="display: none;">
+          <div class="form-label">點 B 色彩 (RGB)：</div>
+          <div class="color-swatch-box">
+            <div class="color-swatch" id="colorSwatchB" style="background: rgb(56, 189, 248);"></div>
+            <span id="colorRgbTextB" style="font-family: monospace; font-size: 0.8rem;">(56, 189, 248)</span>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-label">尺標兩點實際距離 (m)：</div>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <input type="number" class="form-input-number" id="inputRealLength" value="1.0" step="0.1" min="0.01" style="width: 85px;">
+            <span style="font-size: 0.85rem; color: #94a3b8;">m</span>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-label">水平基準方向：</div>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span style="font-size: 0.78rem; color: #38bdf8; font-family: monospace;" id="rulerStatusText">預設水平 1.00 m (0.0°)</span>
+            <button class="btn btn-secondary" id="btnResetHorizontal" style="padding: 4px 8px; font-size: 0.75rem;" title="將兩點校正為水平">↺ 設為水平</button>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-label">影片幀率 (FPS)：</div>
+          <select id="selectFps" class="form-input-number" style="width: 100px;">
+            <option value="30">30 FPS</option>
+            <option value="60" selected>60 FPS</option>
+            <option value="120">120 FPS</option>
+            <option value="240">240 FPS</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 離線逐幀分析卡片 -->
+      <div class="card">
+        <div class="card-title">
+          <span>⚡ 3. 離線非即時逐幀解析</span>
+        </div>
+        <p class="card-desc">採用 Non-realtime Step Frame 演算法，不佔用即時串流頻寬，精確萃取每一幀座標並以 Savitzky-Golay 濾波平滑化。</p>
+
+        <button class="btn btn-primary" id="btnStartAnalysis">
+          🚀 開始逐幀分析軌跡
+        </button>
+
+        <div id="analysisProgressBox" style="display: none;">
+          <div style="display: flex; justify-content: space-between; font-size: 0.8rem;">
+            <span id="progressText">分析進度: 0%</span>
+            <span id="progressFrames">0 / 0 幀</span>
+          </div>
+          <div class="progress-container">
+            <div class="progress-bar" id="progressBar"></div>
+          </div>
+        </div>
+
+        <div id="analysisResultBox" style="display: none; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 12px;">
+          <div style="color: #10b981; font-weight: bold; font-size: 0.9rem;">✅ 軌跡運算完成！</div>
+          <div style="font-size: 0.8rem; color: #cbd5e1; margin-top: 4px;" id="resultSummaryText">
+            已平滑提取 150 點，速度與加速度向量已就緒。
+          </div>
+          <div id="syncTransferBox" style="display: none; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.12);">
+            <div style="display: flex; justify-content: space-between; font-size: 0.78rem; color: #38bdf8;">
+              <span id="syncTransferText">📤 正在傳送影片至大屏...</span>
+              <span id="syncTransferPercent">0%</span>
+            </div>
+            <div class="progress-container" style="margin-top: 4px;">
+              <div class="progress-bar" id="syncTransferBar" style="background: #38bdf8; width: 0%;"></div>
+            </div>
+          </div>
+          <button class="btn btn-success" id="btnPushToScreen" style="margin-top: 10px; width: 100%;">
+            📡 同步並前往播放遙控
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: 感測器物理實驗採集面板 (5 大模組) -->
+    <section class="tab-pane" id="tab-sensors">
+      <div class="card">
+        <div class="card-title">
+          <span>🧪 選擇即時感測實驗模式</span>
+          <span style="font-size: 0.72rem; color: #38bdf8;" id="mobileNodeBadge">node_01</span>
+        </div>
+        <div class="sensor-mode-grid" id="mobileSensorGrid"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <span id="mobileSensorTitle">⚡ 三軸加速度與視重</span>
+        </div>
+        <p class="card-desc" id="mobileSensorDesc">啟動後以 30Hz 傳送輕量感測數據至大屏，並自動鎖定螢幕常亮防休眠。</p>
+
+        <button class="sensor-gate-btn" id="btnToggleSensorRun">
+          ⚡ 啟動感測器並開始實驗
+        </button>
+
+        <div style="display: flex; gap: 8px; margin-top: 4px;" id="mobileSensorToolsRow">
+          <button class="btn btn-secondary" id="btnSensorZeroTare" style="flex: 1; padding: 8px; font-size: 0.82rem;">
+            🧭 歸零校準 (Zero/Tare)
+          </button>
+        </div>
+
+        <div id="mobileThresholdBox" style="display: none; background: rgba(0,0,0,0.25); padding: 10px; border-radius: 8px;">
+          <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: #cbd5e1; margin-bottom: 4px;">
+            <span id="mobileThresholdLabel">觸發閾值</span>
+            <span id="mobileThresholdVal" style="font-family: monospace; color: #38bdf8;">--</span>
+          </div>
+          <input type="range" id="mobileThresholdSlider" style="width: 100%; accent-color: #38bdf8;">
+        </div>
+
+        <div class="sensor-live-box" id="mobileSensorStatusBox">
+          狀態：待命中（點擊上方按鈕授權並啟動）
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: 播放遙控面板 -->
+    <section class="tab-pane" id="tab-remote">
+      <div class="card">
+        <div class="card-title">
+          <span>🎮 播放與進度遙控</span>
+        </div>
+
+        <!-- 播放控制按鈕組 -->
+        <div class="remote-grid">
+          <button class="remote-btn" id="btnStepBack">
+            <span>⏮️</span>
+            <span class="label">退 1 幀</span>
+          </button>
+          <button class="remote-btn" id="btnPlayPause" style="background: #38bdf8; color: #0f172a;">
+            <span id="playIcon">▶️</span>
+            <span class="label" id="playLabel">播放</span>
+          </button>
+          <button class="remote-btn" id="btnStepForward">
+            <span>⏭️</span>
+            <span class="label">進 1 幀</span>
+          </button>
+        </div>
+
+        <!-- 播放進度拉桿 -->
+        <div style="margin-top: 8px;">
+          <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: #94a3b8;">
+            <span id="remoteCurrentTime">0.00 s</span>
+            <span id="remoteTotalDuration">0.00 s</span>
+          </div>
+          <input type="range" id="remoteScrubber" min="0" max="1" step="0.001" value="0" style="width: 100%; accent-color: #38bdf8;">
+        </div>
+
+        <!-- 播放速度選擇 -->
+        <div class="form-label" style="margin-top: 8px;">慢動作播放倍率：</div>
+        <div class="speed-selector">
+          <div class="speed-chip" data-speed="0.1">0.1x</div>
+          <div class="speed-chip active" data-speed="0.25">0.25x</div>
+          <div class="speed-chip" data-speed="0.5">0.5x</div>
+          <div class="speed-chip" data-speed="1.0">1.0x</div>
+        </div>
+      </div>
+
+      <!-- 圖層開關控制 -->
+      <div class="card">
+        <div class="card-title">
+          <span>👁️ 大屏圖層顯示開關</span>
+        </div>
+
+        <div class="switch-row">
+          <span style="font-size: 0.9rem;">運動殘影頻閃 (Ghost Strobe)</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="toggleGhost" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: 電子白板即時手寫 -->
+    <section class="tab-pane" id="tab-draw">
+      <div class="card">
+        <div class="card-title">
+          <span>✍️ 手機同步畫筆 (大屏即時投影)</span>
+          <button class="btn btn-secondary" id="btnClearMobileDraw" style="padding: 4px 10px; font-size: 0.8rem;">
+            🧹 清除
+          </button>
+        </div>
+        <p class="card-desc">在下方黑色觸控板上手寫或繪製箭頭標註，將即時以標準化百分比座標同步於大螢幕底圖之上。</p>
+
+        <canvas id="mobileDrawCanvas"></canvas>
+
+        <div class="draw-tools">
+          <div class="color-palette">
+            <div class="color-dot active" style="background: #ef4444;" data-color="#ef4444"></div>
+            <div class="color-dot" style="background: #f59e0b;" data-color="#f59e0b"></div>
+            <div class="color-dot" style="background: #10b981;" data-color="#10b981"></div>
+            <div class="color-dot" style="background: #38bdf8;" data-color="#38bdf8"></div>
+            <div class="color-dot" style="background: #ffffff;" data-color="#ffffff"></div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 0.8rem; color: #94a3b8;">筆觸:</span>
+            <input type="range" id="penSizeSlider" min="2" max="10" value="4" style="width: 80px; accent-color: #38bdf8;">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: 設定與配對 -->
+    <section class="tab-pane" id="tab-settings">
+      <div class="card">
+        <div class="card-title">
+          <span>🔗 大屏配對 PIN 碼</span>
+        </div>
+        <div class="form-row">
+          <input type="text" id="inputRoomPin" class="form-input-number" style="width: 100%; text-align: center; font-size: 1.2rem; font-weight: bold; letter-spacing: 4px;" placeholder="輸入 6 碼 PIN">
+        </div>
+        <button class="btn btn-primary" id="btnConnectPin">
+          連接此大屏
+        </button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <span>⚙️ Firebase Realtime Database 憑證</span>
+        </div>
+        <p class="card-desc">預設已支援同裝置 BroadcastChannel 測試。若欲讓手機於 4G/5G 遠端遙控大屏，請貼上 Firebase 金鑰：</p>
+        <div class="form-group" style="display: flex; flex-direction: column; gap: 8px;">
+          <input type="text" id="mCfgApiKey" placeholder="API Key (AIzaSy...)" style="background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); color: #fff; padding: 8px 12px; border-radius: 8px;">
+          <input type="text" id="mCfgDbUrl" placeholder="Database URL (https://...firebaseio.com)" style="background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); color: #fff; padding: 8px 12px; border-radius: 8px;">
+          <input type="text" id="mCfgProjectId" placeholder="Project ID" style="background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); color: #fff; padding: 8px 12px; border-radius: 8px;">
+          <button class="btn btn-secondary" id="btnSaveMobileConfig">儲存雲端設定</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script type="module">
+    import { SyncManager } from "./js/firebase-config.js";
+    import { PhysicsEngine } from "./js/physics-engine.js";
+    import { VideoTracker } from "./js/video-tracker.js";
+    import { AnnotationLayer } from "./js/annotation.js";
+    import { LAB_MODES, LAB_MODE_ORDER } from "./js/experiments/protocol.js";
+    import { MobileSensorLab } from "./js/experiments/mobile-sensors.js";
+
+    // 1. 初始化房間配對 PIN
+    const urlParams = new URLSearchParams(window.location.search);
+    let screenId = urlParams.get("room") || localStorage.getItem("last_room_pin") || "839201";
+    const connPill = document.getElementById("connPill");
+    const connDot = connPill.querySelector(".conn-dot");
+    const connRoomText = document.getElementById("connRoomText");
+    connRoomText.textContent = `連線中 | PIN: ${screenId}`;
+    document.getElementById("inputRoomPin").value = screenId;
+    document.getElementById("homeQuickPin").value = screenId;
+
+    let syncManager = new SyncManager(screenId, "mobile");
+    const physicsEngine = new PhysicsEngine();
+    const videoTracker = new VideoTracker();
+
+    // DOM 元素
+    const mobileVideo = document.getElementById("mobileVideo");
+    const previewCanvas = document.getElementById("previewCanvas");
+    const previewCtx = previewCanvas.getContext("2d");
+    const mobileDrawCanvas = document.getElementById("mobileDrawCanvas");
+
+    let processedTrajectory = [];
+    let processedTrajectoryB = [];
+    let trackingMode = "single"; // "single" | "dual"
+    let activePickTarget = "A"; // "A" | "B"
+    let targetColorA = { r: 255, g: 60, b: 40 };
+    let targetColorB = { r: 56, g: 189, b: 248 };
+    let scalePoints = [];
+    let isPlaying = false;
+    let currentSpeed = 0.25;
+
+    // 影片傳輸狀態追蹤
+    let currentVideoFile = null;
+    let currentVideoType = "custom"; // "custom" | "demo"
+    let videoTransferDone = false;
+    let activeVideoTransferPromise = null;
+    let wasP2PConnected = false;
+
+    const syncTransferBox = document.getElementById("syncTransferBox");
+    const syncTransferText = document.getElementById("syncTransferText");
+    const syncTransferPercent = document.getElementById("syncTransferPercent");
+    const syncTransferBar = document.getElementById("syncTransferBar");
+
+    function updateTransferUI(text, percent, color = "#38bdf8") {
+      syncTransferBox.style.display = "block";
+      syncTransferText.textContent = text;
+      syncTransferText.style.color = color;
+      syncTransferPercent.textContent = `${percent}%`;
+      syncTransferPercent.style.color = color;
+      syncTransferBar.style.width = `${percent}%`;
+      syncTransferBar.style.background = color;
+    }
+
+    function startVideoTransfer() {
+      if (currentVideoType !== "custom" || !currentVideoFile) {
+        videoTransferDone = true;
+        return Promise.resolve({ sentViaP2P: true, sentViaLocal: true });
+      }
+      if (activeVideoTransferPromise) return activeVideoTransferPromise;
+
+      const fileToSend = currentVideoFile;
+      const sizeMB = (fileToSend.size / (1024 * 1024)).toFixed(1);
+      updateTransferUI(`📤 正在傳送原檔影片 (${sizeMB} MB)...`, 0);
+
+      activeVideoTransferPromise = syncManager.sendVideoFile(fileToSend, ({ percent }) => {
+        if (currentVideoFile === fileToSend) {
+          updateTransferUI(`📤 正在傳送原檔影片 (${sizeMB} MB)...`, percent);
+        }
+      }).then((res) => {
+        activeVideoTransferPromise = null;
+        if (res.aborted) {
+          if (!res.superseded) {
+            videoTransferDone = false;
+            const stoppedAt = res.lastPercent || 0;
+            updateTransferUI(
+              `⚠️ P2P 連線中斷，影片僅傳送 ${stoppedAt}% (${sizeMB} MB)。請保持同 Wi-Fi 與螢幕開啟，點擊下方按鈕重試`,
+              stoppedAt,
+              "#f59e0b"
+            );
+          }
+          return res;
+        }
+        if (res.sentViaP2P) {
+          videoTransferDone = true;
+          updateTransferUI(`✅ 影片 (${sizeMB} MB) 與物理數據已完整送達大屏！`, 100, "#10b981");
+        } else if (res.sentViaLocal) {
+          updateTransferUI("ℹ️ 已透過本機通道送出 (若大屏在另一裝置，請確認 P2P 已連線)", 100, "#f59e0b");
+        } else {
+          updateTransferUI("⚠️ 尚未連線至大屏，請確認大屏已開啟且 PIN 相符", 0, "#ef4444");
+        }
+        return res;
+      }).catch((err) => {
+        activeVideoTransferPromise = null;
+        videoTransferDone = false;
+        console.error("影片傳送失敗:", err);
+        updateTransferUI("❌ 影片傳送失敗，請點擊下方按鈕重試", 0, "#ef4444");
+        return { sentViaP2P: false, sentViaLocal: false };
+      });
+
+      return activeVideoTransferPromise;
+    }
+
+    let wifiWarningTimer = null;
+    const wifiWarningBanner = document.getElementById("wifiWarningBanner");
+
+    function startWifiWarningCountdown() {
+      clearTimeout(wifiWarningTimer);
+      wifiWarningTimer = setTimeout(() => {
+        if (!syncManager.p2pConnected && !syncManager.isFirebaseReady) {
+          wifiWarningBanner.classList.add("visible");
+        }
+      }, 6000);
+    }
+    startWifiWarningCountdown();
+
+    syncManager.onConnectionChange((state) => {
+      if (state.p2pConnected) {
+        clearTimeout(wifiWarningTimer);
+        wifiWarningBanner.classList.remove("visible");
+        connDot.style.background = "#10b981";
+        connPill.style.borderColor = "rgba(16, 185, 129, 0.4)";
+        connPill.style.color = "#10b981";
+        connRoomText.textContent = `🟢 P2P已連線 | ${screenId}`;
+
+        // 若手機端先前已完成分析，連上 P2P 後自動補傳數據與影片
+        if (!wasP2PConnected && processedTrajectory && processedTrajectory.length > 0) {
+          pushAllToScreen({ autoSwitchTab: false });
+        }
+        wasP2PConnected = true;
+      } else if (state.firebaseReady) {
+        clearTimeout(wifiWarningTimer);
+        wifiWarningBanner.classList.remove("visible");
+        wasP2PConnected = false;
+        connDot.style.background = "#38bdf8";
+        connPill.style.borderColor = "rgba(56, 189, 248, 0.4)";
+        connPill.style.color = "#38bdf8";
+        connRoomText.textContent = `☁️ 雲端連線 | ${screenId}`;
+      } else {
+        // 若連線中斷或大屏重整，允許重新傳送影片
+        if (wasP2PConnected) {
+          videoTransferDone = false;
+          wifiWarningBanner.classList.add("visible");
+        } else {
+          startWifiWarningCountdown();
+        }
+        wasP2PConnected = false;
+        connDot.style.background = "#f59e0b";
+        connPill.style.borderColor = "rgba(245, 158, 11, 0.4)";
+        connPill.style.color = "#f59e0b";
+        connRoomText.textContent = `🟡 等待配對 | ${screenId}`;
+      }
+    });
+
+    // 初始化手機手寫板
+    const mobileAnnotation = new AnnotationLayer(mobileDrawCanvas, {
+      onDrawEvent: (e) => syncManager.sendDrawEvent(e)
+    });
+
+    // 2. 標籤頁切換 (手動切換至 0.入口 / 1.影像 / 2.感測 時，同步大屏實驗模式)
+    let suppressModeBroadcast = false;
+    function activateTab(tabId, { silent = true } = {}) {
+      suppressModeBroadcast = silent;
+      document.querySelector(`[data-tab="${tabId}"]`)?.click();
+      suppressModeBroadcast = false;
+    }
+
+    document.querySelectorAll(".tab-btn").forEach(btn => {
+      btn.onclick = async () => {
+        document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+        document.querySelectorAll(".tab-pane").forEach(p => p.classList.remove("active"));
+
+        btn.classList.add("active");
+        const target = document.getElementById(btn.dataset.tab);
+        if (target) target.classList.add("active");
+
+        if (btn.dataset.tab === "tab-draw") {
+          mobileAnnotation.syncSize(mobileDrawCanvas.parentElement);
+        }
+
+        if (!suppressModeBroadcast) {
+          if (btn.dataset.tab === "tab-home") {
+            await mobileSensorLab.stop();
+            syncManager.broadcastCommand({ cmd: "SET_MODE", mode: "HOME" });
+          } else if (btn.dataset.tab === "tab-track") {
+            await mobileSensorLab.stop();
+            syncManager.broadcastCommand({ cmd: "SET_MODE", mode: "VIDEO_TRACKER" });
+          } else if (btn.dataset.tab === "tab-sensors") {
+            syncManager.broadcastCommand({ cmd: "SET_MODE", mode: selectedSensorMode });
+          }
+        }
+      };
+    });
+
+    // 3. 影片載入邏輯
+    document.getElementById("btnChooseVideo").onclick = () => {
+      document.getElementById("videoFileInput").click();
+    };
+
+    document.getElementById("videoFileInput").onchange = (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        currentVideoFile = file;
+        currentVideoType = "custom";
+        videoTransferDone = false;
+        activeVideoTransferPromise = null;
+        const url = URL.createObjectURL(file);
+        loadVideoUrl(url, "custom");
+      }
+    };
+
+    document.getElementById("btnGenerateDemo").onclick = async () => {
+      const btn = document.getElementById("btnGenerateDemo");
+      btn.textContent = "⏳ 生成中...";
+      btn.disabled = true;
+
+      try {
+        const blob = await VideoTracker.generateDemoVideo(2.5, 60);
+        currentVideoFile = null;
+        currentVideoType = "demo";
+        videoTransferDone = true;
+        activeVideoTransferPromise = null;
+        const url = URL.createObjectURL(blob);
+        loadVideoUrl(url, "demo");
+      } catch (err) {
+        console.error("生成示範影片失敗:", err);
+        alert("生成示範影片失敗: " + (err.message || err));
+      } finally {
+        btn.textContent = "🧪 示範拋體影片";
+        btn.disabled = false;
+      }
+    };
+
+    function loadVideoUrl(url, videoType = "custom") {
+      mobileVideo.src = url;
+      mobileVideo.load();
+
+      let readyNotified = false;
+      const onVideoReady = () => {
+        if (readyNotified) return;
+        readyNotified = true;
+
+        previewCanvas.width = mobileVideo.videoWidth || 640;
+        previewCanvas.height = mobileVideo.videoHeight || 360;
+
+        // 初始化預設水平的尺標兩點 (單位：公尺)
+        initDefaultHorizontalRuler(videoType);
+
+        const dur = (mobileVideo.duration && isFinite(mobileVideo.duration)) ? mobileVideo.duration : 2.5;
+        document.getElementById("remoteTotalDuration").textContent = `${dur.toFixed(2)} s`;
+        document.getElementById("remoteScrubber").max = dur;
+
+        // 初始化分析開頭/結尾區間控制
+        previewScrubber.max = dur;
+        previewScrubber.value = 0;
+        inputStartTime.max = dur;
+        inputStartTime.value = "0.00";
+        inputEndTime.max = dur;
+        inputEndTime.value = dur.toFixed(2);
+        updateTrimDisplay(0, dur);
+
+        drawPreviewFrame();
+
+        // 同步通知大屏 (自選影片將於分析完成後一併精準傳送，避免與逐幀分析搶佔 I/O)
+        syncManager.updateStatus({
+          state: "ready",
+          videoType: videoType,
+          currentTime: 0,
+          playbackRate: currentSpeed,
+          isPlaying: false
+        });
+      };
+
+      mobileVideo.onloadeddata = onVideoReady;
+      mobileVideo.onloadedmetadata = onVideoReady;
+    }
+
+    // 專用離屏取色畫布 (確保取色不受準心/尺標圖形污染)
+    const colorSampleCanvas = document.createElement("canvas");
+    colorSampleCanvas.width = 16;
+    colorSampleCanvas.height = 16;
+    const colorSampleCtx = colorSampleCanvas.getContext("2d", { willReadFrequently: true });
+
+    function sampleVideoColorAt(aimX, aimY) {
+      if (!mobileVideo.videoWidth) return null;
+      const sampleRadius = 4;
+      const sx = Math.max(0, Math.floor(aimX - sampleRadius));
+      const sy = Math.max(0, Math.floor(aimY - sampleRadius));
+      const sWidth = Math.min(previewCanvas.width - sx, sampleRadius * 2 + 1);
+      const sHeight = Math.min(previewCanvas.height - sy, sampleRadius * 2 + 1);
+      if (sWidth <= 0 || sHeight <= 0) return null;
+
+      colorSampleCtx.clearRect(0, 0, 16, 16);
+      colorSampleCtx.drawImage(mobileVideo, sx, sy, sWidth, sHeight, 0, 0, sWidth, sHeight);
+      const imgData = colorSampleCtx.getImageData(0, 0, sWidth, sHeight).data;
+
+      let bestR = imgData[0], bestG = imgData[1], bestB = imgData[2];
+      let maxSaturation = -1;
+
+      for (let i = 0; i < imgData.length; i += 4) {
+        const pr = imgData[i], pg = imgData[i + 1], pb = imgData[i + 2];
+        const maxVal = Math.max(pr, pg, pb);
+        const minVal = Math.min(pr, pg, pb);
+        const sat = maxVal > 0 ? (maxVal - minVal) / maxVal : 0;
+        if (maxVal > 40 && !(pr > 215 && pg > 215 && pb > 215)) {
+          if (sat > maxSaturation) {
+            maxSaturation = sat;
+            bestR = pr;
+            bestG = pg;
+            bestB = pb;
+          }
+        }
+      }
+      return { r: bestR, g: bestG, b: bestB };
+    }
+
+    function drawPreviewFrame(aimInfo = null) {
+      if (!mobileVideo.videoWidth) return;
+      previewCtx.drawImage(mobileVideo, 0, 0, previewCanvas.width, previewCanvas.height);
+
+      const realLen = Number(inputRealLength.value) || 1.0;
+
+      // 繪製尺標標記 (全部以公尺與水平傾角標示，不使用像素單位)
+      if (scalePoints.length > 0) {
+        previewCtx.save();
+        previewCtx.strokeStyle = "#38bdf8";
+        previewCtx.fillStyle = "#38bdf8";
+        previewCtx.lineWidth = Math.max(3, previewCanvas.width / 320);
+        const fontSize = Math.max(14, Math.round(previewCanvas.width / 55));
+        previewCtx.font = `bold ${fontSize}px -apple-system, sans-serif`;
+
+        scalePoints.forEach((p, idx) => {
+          previewCtx.beginPath();
+          previewCtx.arc(p.x, p.y, Math.max(6, previewCanvas.width / 160), 0, Math.PI * 2);
+          previewCtx.fill();
+          previewCtx.fillText(`P${idx + 1}`, p.x + 10, p.y - 10);
+        });
+
+        if (scalePoints.length === 2) {
+          const p1 = scalePoints[0];
+          const p2 = scalePoints[1];
+
+          // 若有傾角，畫出淡色水平參考虛線輔助對齊
+          if (Math.abs(p2.y - p1.y) > 2) {
+            previewCtx.save();
+            previewCtx.strokeStyle = "rgba(255, 255, 255, 0.35)";
+            previewCtx.setLineDash([6, 6]);
+            previewCtx.lineWidth = 1.5;
+            previewCtx.beginPath();
+            previewCtx.moveTo(p1.x, p1.y);
+            previewCtx.lineTo(p2.x, p1.y);
+            previewCtx.stroke();
+            previewCtx.restore();
+          }
+
+          // 主尺標線段
+          previewCtx.beginPath();
+          previewCtx.moveTo(p1.x, p1.y);
+          previewCtx.lineTo(p2.x, p2.y);
+          previewCtx.stroke();
+
+          // 中點標示實際長度 (公尺) 與水平傾角
+          const midX = (p1.x + p2.x) / 2;
+          const midY = (p1.y + p2.y) / 2;
+          const angleDeg = (horizonAngleRad * 180 / Math.PI).toFixed(1);
+          const label = Math.abs(Number(angleDeg)) < 0.2
+            ? `${realLen.toFixed(2)} m (水平)`
+            : `${realLen.toFixed(2)} m (${angleDeg}°)`;
+
+          const metrics = previewCtx.measureText(label);
+          previewCtx.fillStyle = "rgba(15, 23, 42, 0.85)";
+          previewCtx.fillRect(midX - metrics.width / 2 - 6, midY - fontSize - 10, metrics.width + 12, fontSize + 8);
+          previewCtx.fillStyle = "#38bdf8";
+          previewCtx.fillText(label, midX - metrics.width / 2, midY - 12);
+        }
+        previewCtx.restore();
+      }
+
+      // 長按拖曳時的上方偏移準心與局部放大鏡 (避免手機螢幕太小被手指擋住)
+      if (aimInfo) {
+        const { fingerX, fingerY, aimX, aimY } = aimInfo;
+        const unit = Math.max(1, previewCanvas.width / 320);
+        const dotColor = calibrationMode === "ruler"
+          ? "#38bdf8"
+          : (trackingMode === "dual" && activePickTarget === "B" ? "#fb7185" : "#facc15");
+
+        previewCtx.save();
+
+        // 1. 手指觸控處虛線環
+        previewCtx.strokeStyle = "rgba(255, 255, 255, 0.45)";
+        previewCtx.lineWidth = 1.5 * unit;
+        previewCtx.setLineDash([4 * unit, 4 * unit]);
+        previewCtx.beginPath();
+        previewCtx.arc(fingerX, fingerY, 12 * unit, 0, Math.PI * 2);
+        previewCtx.stroke();
+
+        // 2. 連接手指與上方準心小點的引導線
+        previewCtx.beginPath();
+        previewCtx.moveTo(fingerX, fingerY);
+        previewCtx.lineTo(aimX, aimY);
+        previewCtx.stroke();
+        previewCtx.setLineDash([]);
+
+        // 3. 局部 2.6x 圓形放大鏡 (顯示在準心旁，不遮擋目標)
+        const loupeR = Math.max(36, previewCanvas.width * 0.065);
+        const loupeX = aimX < previewCanvas.width * 0.25 ? aimX + loupeR + 18 * unit : (aimX > previewCanvas.width * 0.75 ? aimX - loupeR - 18 * unit : aimX);
+        const loupeY = aimY > loupeR * 2.2 ? aimY - loupeR - 18 * unit : aimY + loupeR + 24 * unit;
+        const srcHalf = loupeR / 2.6;
+
+        previewCtx.save();
+        previewCtx.beginPath();
+        previewCtx.arc(loupeX, loupeY, loupeR, 0, Math.PI * 2);
+        previewCtx.fillStyle = "#000";
+        previewCtx.fill();
+        previewCtx.clip();
+        previewCtx.drawImage(
+          mobileVideo,
+          aimX - srcHalf, aimY - srcHalf, srcHalf * 2, srcHalf * 2,
+          loupeX - loupeR, loupeY - loupeR, loupeR * 2, loupeR * 2
+        );
+        // 放大鏡中央十字線
+        previewCtx.strokeStyle = dotColor;
+        previewCtx.lineWidth = 1.5 * unit;
+        previewCtx.beginPath();
+        previewCtx.moveTo(loupeX - 8 * unit, loupeY);
+        previewCtx.lineTo(loupeX + 8 * unit, loupeY);
+        previewCtx.moveTo(loupeX, loupeY - 8 * unit);
+        previewCtx.lineTo(loupeX, loupeY + 8 * unit);
+        previewCtx.stroke();
+        previewCtx.restore();
+
+        previewCtx.strokeStyle = dotColor;
+        previewCtx.lineWidth = 2.5 * unit;
+        previewCtx.beginPath();
+        previewCtx.arc(loupeX, loupeY, loupeR, 0, Math.PI * 2);
+        previewCtx.stroke();
+
+        // 4. 手指上方實際選取小點 (Crosshair Dot)
+        previewCtx.fillStyle = dotColor;
+        previewCtx.strokeStyle = "#0f172a";
+        previewCtx.lineWidth = 2 * unit;
+        previewCtx.beginPath();
+        previewCtx.arc(aimX, aimY, 5.5 * unit, 0, Math.PI * 2);
+        previewCtx.fill();
+        previewCtx.stroke();
+
+        previewCtx.restore();
+      }
+    }
+
+    // 4. 取色、影片裁切與兩點尺標/水平校準
+    let calibrationMode = "color"; // "color" | "ruler"
+    let calibratedScalePx = 250;
+    let horizonAngleRad = 0;
+
+    const btnTrackSingle = document.getElementById("btnTrackSingle");
+    const btnTrackDual = document.getElementById("btnTrackDual");
+    const dualTargetPickerRow = document.getElementById("dualTargetPickerRow");
+    const btnPickTargetA = document.getElementById("btnPickTargetA");
+    const btnPickTargetB = document.getElementById("btnPickTargetB");
+    const colorRowB = document.getElementById("colorRowB");
+    const colorLabelA = document.getElementById("colorLabelA");
+
+    function updateTrackingModeUI() {
+      const isDual = trackingMode === "dual";
+      btnTrackSingle.className = isDual ? "btn btn-secondary" : "btn btn-primary";
+      btnTrackDual.className = isDual ? "btn btn-primary" : "btn btn-secondary";
+      dualTargetPickerRow.style.display = isDual ? "flex" : "none";
+      colorRowB.style.display = isDual ? "flex" : "none";
+      colorLabelA.textContent = isDual ? "點 A 色彩 (RGB)：" : "目標色彩 (RGB)：";
+      btnPickTargetA.className = activePickTarget === "A" ? "btn btn-primary" : "btn btn-secondary";
+      btnPickTargetB.className = activePickTarget === "B" ? "btn btn-primary" : "btn btn-secondary";
+    }
+
+    btnTrackSingle.onclick = () => {
+      trackingMode = "single";
+      activePickTarget = "A";
+      updateTrackingModeUI();
+    };
+    btnTrackDual.onclick = () => {
+      trackingMode = "dual";
+      updateTrackingModeUI();
+      document.getElementById("previewHint").textContent = "雙點模式：請分別選取點 A 與點 B 顏色（建議兩物體不同色）";
+    };
+    btnPickTargetA.onclick = () => {
+      activePickTarget = "A";
+      calibrationMode = "color";
+      btnModePickColor.className = "btn btn-primary";
+      btnModeSetRuler.className = "btn btn-secondary";
+      updateTrackingModeUI();
+      document.getElementById("previewHint").textContent = "長按拖曳上方小點對準「目標 A」，放開取色";
+    };
+    btnPickTargetB.onclick = () => {
+      activePickTarget = "B";
+      calibrationMode = "color";
+      btnModePickColor.className = "btn btn-primary";
+      btnModeSetRuler.className = "btn btn-secondary";
+      updateTrackingModeUI();
+      document.getElementById("previewHint").textContent = "長按拖曳上方小點對準「目標 B」，放開取色";
+    };
+
+    const btnModePickColor = document.getElementById("btnModePickColor");
+    const btnModeSetRuler = document.getElementById("btnModeSetRuler");
+    const inputRealLength = document.getElementById("inputRealLength");
+    const rulerStatusText = document.getElementById("rulerStatusText");
+    const btnResetHorizontal = document.getElementById("btnResetHorizontal");
+
+    // 預覽區間裁切控制項
+    const previewScrubber = document.getElementById("previewScrubber");
+    const previewTimeText = document.getElementById("previewTimeText");
+    const inputStartTime = document.getElementById("inputStartTime");
+    const inputEndTime = document.getElementById("inputEndTime");
+    const trimSummaryText = document.getElementById("trimSummaryText");
+
+    function getTrimRange() {
+      const dur = (mobileVideo.duration && isFinite(mobileVideo.duration)) ? mobileVideo.duration : 2.5;
+      const s = Math.max(0, Math.min(dur, Number(inputStartTime.value) || 0));
+      const e = Math.max(s + 0.05, Math.min(dur, Number(inputEndTime.value) || dur));
+      return { start: s, end: e, dur };
+    }
+
+    function updateTrimDisplay(curTime, totalDur) {
+      const dur = totalDur || ((mobileVideo.duration && isFinite(mobileVideo.duration)) ? mobileVideo.duration : 2.5);
+      const tCur = curTime !== undefined ? curTime : (mobileVideo.currentTime || 0);
+      previewTimeText.textContent = `${tCur.toFixed(2)} / ${dur.toFixed(2)} s`;
+
+      const { start: s, end: e } = getTrimRange();
+      const span = Math.max(0, e - s);
+      const sizeHint = (currentVideoType === "custom" && currentVideoFile)
+        ? `｜原檔 ${(currentVideoFile.size / (1024 * 1024)).toFixed(1)} MB`
+        : "";
+      trimSummaryText.textContent = `分析區間：${s.toFixed(2)} s ~ ${e.toFixed(2)} s (共 ${span.toFixed(2)} s)${sizeHint}`;
+
+      // 同步更新播放遙控拉桿的起訖邊界
+      const rScrub = document.getElementById("remoteScrubber");
+      const rDur = document.getElementById("remoteTotalDuration");
+      if (rScrub) {
+        rScrub.min = s;
+        rScrub.max = e;
+      }
+      if (rDur) rDur.textContent = `${e.toFixed(2)} s`;
+    }
+
+    previewScrubber.oninput = (e) => {
+      if (!mobileVideo.src) return;
+      const t = Number(e.target.value);
+      mobileVideo.currentTime = t;
+      updateTrimDisplay(t);
+    };
+
+    mobileVideo.addEventListener("seeked", () => {
+      drawPreviewFrame();
+      updateTrimDisplay(mobileVideo.currentTime);
+    });
+
+    document.getElementById("btnSetStartTime").onclick = () => {
+      const t = mobileVideo.currentTime || 0;
+      inputStartTime.value = t.toFixed(2);
+      if (Number(inputEndTime.value) <= t) {
+        const dur = (mobileVideo.duration && isFinite(mobileVideo.duration)) ? mobileVideo.duration : 2.5;
+        inputEndTime.value = Math.min(dur, t + 0.2).toFixed(2);
+      }
+      updateTrimDisplay();
+    };
+
+    document.getElementById("btnSetEndTime").onclick = () => {
+      const t = mobileVideo.currentTime || 0;
+      inputEndTime.value = t.toFixed(2);
+      if (Number(inputStartTime.value) >= t) {
+        inputStartTime.value = Math.max(0, t - 0.2).toFixed(2);
+      }
+      updateTrimDisplay();
+    };
+
+    inputStartTime.oninput = () => updateTrimDisplay();
+    inputEndTime.oninput = () => updateTrimDisplay();
+
+    function initDefaultHorizontalRuler(videoType = "custom") {
+      const w = previewCanvas.width || 1280;
+      const h = previewCanvas.height || 720;
+      if (videoType === "demo" && w === 1280 && h === 720) {
+        // 示範影片自帶 1.0 m 標準水平線段
+        scalePoints = [{ x: 120, y: 640 }, { x: 370, y: 640 }];
+      } else {
+        const span = Math.max(80, Math.round(w * 0.25));
+        const yPos = Math.round(h * 0.85);
+        const xStart = Math.round((w - span) / 2);
+        scalePoints = [{ x: xStart, y: yPos }, { x: xStart + span, y: yPos }];
+      }
+      recalculateRulerFromPoints();
+    }
+
+    function recalculateRulerFromPoints() {
+      if (scalePoints.length !== 2) return;
+      const [p1, p2] = scalePoints;
+      calibratedScalePx = Math.max(1, Math.hypot(p2.x - p1.x, p2.y - p1.y));
+      // 確保由左到右計算水平夾角，保證 +Y 永遠向上
+      const leftPt = p1.x <= p2.x ? p1 : p2;
+      const rightPt = p1.x <= p2.x ? p2 : p1;
+      horizonAngleRad = Math.atan2(rightPt.y - leftPt.y, rightPt.x - leftPt.x);
+      updateRulerStatusUI();
+    }
+
+    function updateRulerStatusUI() {
+      const realL = Number(inputRealLength.value) || 1.0;
+      const angleDeg = (horizonAngleRad * 180 / Math.PI).toFixed(1);
+      const horizLabel = Math.abs(Number(angleDeg)) < 0.2 ? "水平 0.0°" : `傾角 ${angleDeg}°`;
+      rulerStatusText.textContent = `已校準 ${realL.toFixed(2)} m (${horizLabel})`;
+    }
+
+    inputRealLength.oninput = () => {
+      updateRulerStatusUI();
+      drawPreviewFrame();
+    };
+
+    btnResetHorizontal.onclick = () => {
+      if (scalePoints.length === 2) {
+        const len = Math.hypot(scalePoints[1].x - scalePoints[0].x, scalePoints[1].y - scalePoints[0].y);
+        const minX = Math.min(scalePoints[0].x, scalePoints[1].x);
+        const avgY = Math.round((scalePoints[0].y + scalePoints[1].y) / 2);
+        scalePoints = [{ x: minX, y: avgY }, { x: minX + len, y: avgY }];
+        recalculateRulerFromPoints();
+        drawPreviewFrame();
+      } else {
+        initDefaultHorizontalRuler(currentVideoType);
+        drawPreviewFrame();
+      }
+    };
+
+    btnModePickColor.onclick = () => {
+      calibrationMode = "color";
+      btnModePickColor.className = "btn btn-primary";
+      btnModeSetRuler.className = "btn btn-secondary";
+      document.getElementById("previewHint").textContent = "長按拖曳上方小點對準球體，放開取色";
+    };
+
+    btnModeSetRuler.onclick = () => {
+      calibrationMode = "ruler";
+      btnModeSetRuler.className = "btn btn-primary";
+      btnModePickColor.className = "btn btn-secondary";
+      scalePoints = [];
+      drawPreviewFrame();
+      document.getElementById("previewHint").textContent = "長按拖曳上方小點設定 P1，再長按拖曳設定 P2";
+    };
+
+    // 長按拖曳手指上方準心互動 (同時支援手機 Touch 與電腦滑鼠拖曳)
+    let isAiming = false;
+    let activeRulerIdx = 0;
+    let latestAim = null;
+
+    function computeAimPoint(clientX, clientY) {
+      const rect = previewCanvas.getBoundingClientRect();
+      const scaleX = previewCanvas.width / rect.width;
+      const scaleY = previewCanvas.height / rect.height;
+      const fingerX = Math.max(0, Math.min(previewCanvas.width, (clientX - rect.left) * scaleX));
+      const fingerY = Math.max(0, Math.min(previewCanvas.height, (clientY - rect.top) * scaleY));
+      // 在手指上方 50 CSS 像素處顯示實際選取點，避開手指遮擋視線
+      const offsetYCanvas = 50 * scaleY;
+      const aimX = fingerX;
+      const aimY = Math.max(4, fingerY - offsetYCanvas);
+      return { fingerX, fingerY, aimX, aimY };
+    }
+
+    function applyLiveAim(aim) {
+      if (calibrationMode === "ruler") {
+        scalePoints[activeRulerIdx] = { x: aim.aimX, y: aim.aimY };
+        if (scalePoints.length === 2) {
+          recalculateRulerFromPoints();
+          const realL = Number(inputRealLength.value) || 1.0;
+          const angleDeg = (horizonAngleRad * 180 / Math.PI).toFixed(1);
+          document.getElementById("previewHint").textContent = `移動中：${realL.toFixed(2)} m (傾角 ${angleDeg}°)`;
+        } else {
+          document.getElementById("previewHint").textContent = "拖曳對準 P1 起點，放開確認";
+        }
+      } else {
+        const sampled = sampleVideoColorAt(aim.aimX, aim.aimY);
+        if (sampled) {
+          const isB = trackingMode === "dual" && activePickTarget === "B";
+          const swatchEl = document.getElementById(isB ? "colorSwatchB" : "colorSwatch");
+          const rgbTextEl = document.getElementById(isB ? "colorRgbTextB" : "colorRgbText");
+          swatchEl.style.background = `rgb(${sampled.r}, ${sampled.g}, ${sampled.b})`;
+          rgbTextEl.textContent = `(${sampled.r}, ${sampled.g}, ${sampled.b})`;
+          const tag = trackingMode === "dual" ? `點${activePickTarget} ` : "";
+          document.getElementById("previewHint").textContent = `對準中 ${tag}RGB(${sampled.r},${sampled.g},${sampled.b})`;
+        }
+      }
+      drawPreviewFrame(aim);
+    }
+
+    function startAimDrag(clientX, clientY) {
+      if (!mobileVideo.videoWidth) return;
+      isAiming = true;
+      const aim = computeAimPoint(clientX, clientY);
+      latestAim = aim;
+
+      if (calibrationMode === "ruler") {
+        if (scalePoints.length >= 2) {
+          scalePoints = [{ x: aim.aimX, y: aim.aimY }];
+          activeRulerIdx = 0;
+        } else if (scalePoints.length === 0) {
+          scalePoints = [{ x: aim.aimX, y: aim.aimY }];
+          activeRulerIdx = 0;
+        } else {
+          scalePoints = [scalePoints[0], { x: aim.aimX, y: aim.aimY }];
+          activeRulerIdx = 1;
+        }
+      }
+      applyLiveAim(aim);
+    }
+
+    function moveAimDrag(clientX, clientY) {
+      if (!isAiming || !mobileVideo.videoWidth) return;
+      const aim = computeAimPoint(clientX, clientY);
+      latestAim = aim;
+      applyLiveAim(aim);
+    }
+
+    function endAimDrag() {
+      if (!isAiming) return;
+      isAiming = false;
+      const aim = latestAim;
+      latestAim = null;
+
+      if (!aim || !mobileVideo.videoWidth) {
+        drawPreviewFrame();
+        return;
+      }
+
+      if (calibrationMode === "ruler") {
+        scalePoints[activeRulerIdx] = { x: aim.aimX, y: aim.aimY };
+        if (scalePoints.length === 1) {
+          drawPreviewFrame();
+          document.getElementById("previewHint").textContent = "已鎖定 P1，請長按拖曳設定 P2 終點";
+        } else if (scalePoints.length === 2) {
+          recalculateRulerFromPoints();
+          drawPreviewFrame();
+          const realL = Number(inputRealLength.value) || 1.0;
+          const angleDeg = (horizonAngleRad * 180 / Math.PI).toFixed(1);
+          document.getElementById("previewHint").textContent = `已標定 ${realL.toFixed(2)} m (傾角 ${angleDeg}°)`;
+        }
+      } else {
+        const sampled = sampleVideoColorAt(aim.aimX, aim.aimY);
+        if (sampled) {
+          if (trackingMode === "dual" && activePickTarget === "B") {
+            targetColorB = sampled;
+            videoTracker.setTargetColorB(sampled.r, sampled.g, sampled.b, 80);
+            document.getElementById("colorSwatchB").style.background = `rgb(${sampled.r}, ${sampled.g}, ${sampled.b})`;
+            document.getElementById("colorRgbTextB").textContent = `(${sampled.r}, ${sampled.g}, ${sampled.b})`;
+            document.getElementById("previewHint").textContent = `已鎖定點 B 色 (${sampled.r},${sampled.g},${sampled.b})`;
+          } else {
+            targetColorA = sampled;
+            videoTracker.setTargetColor(sampled.r, sampled.g, sampled.b, 80);
+            document.getElementById("colorSwatch").style.background = `rgb(${sampled.r}, ${sampled.g}, ${sampled.b})`;
+            document.getElementById("colorRgbText").textContent = `(${sampled.r}, ${sampled.g}, ${sampled.b})`;
+            const tag = trackingMode === "dual" ? "點 A " : "目標";
+            document.getElementById("previewHint").textContent = `已鎖定${tag}色 (${sampled.r},${sampled.g},${sampled.b})`;
+          }
+        }
+        drawPreviewFrame();
+      }
+    }
+
+    previewCanvas.addEventListener("touchstart", (e) => {
+      if (!mobileVideo.videoWidth || e.touches.length === 0) return;
+      e.preventDefault();
+      startAimDrag(e.touches[0].clientX, e.touches[0].clientY);
+    }, { passive: false });
+
+    previewCanvas.addEventListener("touchmove", (e) => {
+      if (!isAiming || e.touches.length === 0) return;
+      e.preventDefault();
+      moveAimDrag(e.touches[0].clientX, e.touches[0].clientY);
+    }, { passive: false });
+
+    window.addEventListener("touchend", endAimDrag);
+    window.addEventListener("touchcancel", endAimDrag);
+
+    previewCanvas.addEventListener("mousedown", (e) => {
+      if (!mobileVideo.videoWidth) return;
+      startAimDrag(e.clientX, e.clientY);
+    });
+
+    window.addEventListener("mousemove", (e) => {
+      if (!isAiming) return;
+      moveAimDrag(e.clientX, e.clientY);
+    });
+
+    window.addEventListener("mouseup", endAimDrag);
+
+    // 5. 離線逐幀質心分析
+    document.getElementById("btnStartAnalysis").onclick = async () => {
+      const btn = document.getElementById("btnStartAnalysis");
+      if (!mobileVideo.src) {
+        alert("請先點擊上方「📁 選取手機影片」或「🧪 示範拋體影片」載入影片！");
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = "⏳ 正在分析軌跡中...";
+
+      try {
+        const fps = Number(document.getElementById("selectFps").value);
+        const realLen = Number(document.getElementById("inputRealLength").value) || 1.0;
+        const scalePx = calibratedScalePx || 250;
+        const dur = (mobileVideo.duration && isFinite(mobileVideo.duration)) ? mobileVideo.duration : 2.5;
+        const startTime = Math.max(0, Number(inputStartTime.value) || 0);
+        const endTime = Math.min(dur, Number(inputEndTime.value) || dur);
+
+        if (endTime <= startTime + 0.02) {
+          alert("⚠️ 分析結尾時間必須大於開頭時間！");
+          return;
+        }
+
+        videoTracker.setFPS(fps);
+        videoTracker.setScale(scalePx, realLen);
+        videoTracker.setTargetColor(targetColorA.r, targetColorA.g, targetColorA.b, 80);
+        videoTracker.setTargetColorB(targetColorB.r, targetColorB.g, targetColorB.b, 80);
+        physicsEngine.setScale(scalePx, realLen);
+        physicsEngine.setHorizonAngle(horizonAngleRad);
+
+        const progressBox = document.getElementById("analysisProgressBox");
+        const progressBar = document.getElementById("progressBar");
+        const progressText = document.getElementById("progressText");
+        const progressFrames = document.getElementById("progressFrames");
+        const resultBox = document.getElementById("analysisResultBox");
+
+        progressBox.style.display = "block";
+        resultBox.style.display = "none";
+
+        const isDual = trackingMode === "dual";
+        const analyzeOut = await videoTracker.analyzeVideo(mobileVideo, {
+          startTime,
+          endTime,
+          dual: isDual,
+          colorB: targetColorB,
+          onProgress: (p) => {
+            progressBar.style.width = `${p.percent}%`;
+            progressText.textContent = `逐幀提取中... ${p.percent}%`;
+            progressFrames.textContent = `${p.currentFrame} / ${p.totalFrames} 幀`;
+          }
+        });
+
+        const rawPointsA = isDual ? analyzeOut.primary : analyzeOut;
+        const rawPointsB = isDual ? analyzeOut.secondary : [];
+
+        if (!rawPointsA || rawPointsA.length === 0 || (isDual && (!rawPointsB || rawPointsB.length === 0))) {
+          alert(isDual
+            ? "⚠️ 雙點模式未能同時追蹤到 A 與 B 的目標色彩！\n請確認兩者分別取色完成且顏色有區別。"
+            : "⚠️ 未能在影片中追蹤到目標色彩！\n請先在預覽畫面中長按拖曳進行「取色」，再點擊開始分析。");
+          progressBox.style.display = "none";
+          return;
+        }
+
+        // 雙點比較時共用點 A 起點為物理座標原點，方便直接比較相對位置與碰撞交會
+        if (isDual) {
+          const sharedOrigin = { x: rawPointsA[0].x, y: rawPointsA[0].y };
+          physicsEngine.origin = sharedOrigin;
+          const physicsEngineB = new PhysicsEngine({
+            pixelToMeter: physicsEngine.pixelToMeter,
+            horizonAngle: horizonAngleRad,
+            origin: sharedOrigin
+          });
+          processedTrajectory = physicsEngine.processTrajectory(rawPointsA);
+          processedTrajectoryB = physicsEngineB.processTrajectory(rawPointsB);
+        } else {
+          physicsEngine.origin = null;
+          processedTrajectory = physicsEngine.processTrajectory(rawPointsA);
+          processedTrajectoryB = [];
+        }
+
+        progressBox.style.display = "none";
+        resultBox.style.display = "block";
+
+        const maxV = (processedTrajectory && processedTrajectory.length > 0)
+          ? Math.max(...processedTrajectory.map(p => p.v || 0)).toFixed(2)
+          : "0.00";
+
+        if (isDual) {
+          const maxVB = Math.max(...processedTrajectoryB.map(p => p.v || 0)).toFixed(2);
+          document.getElementById("resultSummaryText").textContent =
+            `雙點比較解析完成！點 A ${processedTrajectory.length} 幀 (vmax ${maxV} m/s) ｜ 點 B ${processedTrajectoryB.length} 幀 (vmax ${maxVB} m/s)。`;
+        } else {
+          document.getElementById("resultSummaryText").textContent =
+            `共解析 ${processedTrajectory.length} 影格點，最大速度 ${maxV} m/s。已由 Savitzky-Golay 濾波完成微積分平滑！`;
+        }
+
+        // 分析完成後自動啟動同步至大屏 (包含物理數據與影片檔)
+        await pushAllToScreen({ autoSwitchTab: false });
+      } catch (err) {
+        console.error("逐幀分析出錯:", err);
+        alert("逐幀分析失敗: " + (err.message || err));
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "🚀 開始逐幀分析軌跡";
+      }
+    };
+
+    // 6. 同步物理數據與影片至大屏
+    async function pushAllToScreen({ autoSwitchTab = false } = {}) {
+      if (!processedTrajectory || processedTrajectory.length === 0) return;
+
+      const pushBtn = document.getElementById("btnPushToScreen");
+      pushBtn.disabled = true;
+
+      try {
+        const { start: clipStart, end: clipEnd } = getTrimRange();
+        const selectedFps = Number(document.getElementById("selectFps").value) || 60;
+        mobileVideo.currentTime = clipStart;
+
+        const physicsPayload = (processedTrajectoryB && processedTrajectoryB.length > 0)
+          ? { mode: "dual", primary: processedTrajectory, secondary: processedTrajectoryB }
+          : processedTrajectory;
+        await syncManager.sendPhysicsData(physicsPayload);
+        await syncManager.updateStatus({
+          state: "analyzed",
+          videoType: currentVideoType,
+          fps: selectedFps,
+          clipStart,
+          clipEnd,
+          currentTime: clipStart,
+          playbackRate: currentSpeed,
+          isPlaying: false
+        });
+
+        if (currentVideoType === "custom" && currentVideoFile && !videoTransferDone) {
+          pushBtn.textContent = "⏳ 正在傳送影片至大屏...";
+          await startVideoTransfer();
+        } else if (currentVideoType === "demo") {
+          updateTransferUI("✅ 示範影片與物理數據已同步至大屏！", 100, "#10b981");
+        }
+
+        if (autoSwitchTab && (videoTransferDone || currentVideoType !== "custom")) {
+          document.querySelector('[data-tab="tab-remote"]').click();
+        }
+      } finally {
+        pushBtn.disabled = false;
+        pushBtn.textContent = (currentVideoType === "custom" && !videoTransferDone)
+          ? "🔄 重傳影片並前往播放遙控"
+          : "📡 同步並前往播放遙控";
+      }
+    }
+
+    document.getElementById("btnPushToScreen").onclick = () => {
+      pushAllToScreen({ autoSwitchTab: true });
+    };
+
+    // 7. 播放遙控功能
+    const btnPlayPause = document.getElementById("btnPlayPause");
+    const playIcon = document.getElementById("playIcon");
+    const playLabel = document.getElementById("playLabel");
+    const remoteScrubber = document.getElementById("remoteScrubber");
+    const remoteCurrentTime = document.getElementById("remoteCurrentTime");
+
+    btnPlayPause.onclick = () => {
+      isPlaying = !isPlaying;
+      updatePlayState();
+    };
+
+    function updatePlayState() {
+      const { start, end } = getTrimRange();
+      if (isPlaying) {
+        if (mobileVideo.currentTime >= end - 0.02 || mobileVideo.currentTime < start) {
+          mobileVideo.currentTime = start;
+        }
+        playIcon.textContent = "⏸️";
+        playLabel.textContent = "暫停";
+        mobileVideo.play();
+      } else {
+        playIcon.textContent = "▶️";
+        playLabel.textContent = "播放";
+        mobileVideo.pause();
+      }
+
+      syncManager.updateStatus({
+        isPlaying: isPlaying,
+        clipStart: start,
+        clipEnd: end,
+        currentTime: mobileVideo.currentTime,
+        playbackRate: currentSpeed
+      });
+    }
+
+    document.getElementById("btnStepBack").onclick = () => {
+      const { start } = getTrimRange();
+      const dt = 1 / Number(document.getElementById("selectFps").value);
+      mobileVideo.currentTime = Math.max(start, mobileVideo.currentTime - dt);
+      syncManager.updateStatus({ currentTime: mobileVideo.currentTime, isPlaying: false });
+    };
+
+    document.getElementById("btnStepForward").onclick = () => {
+      const { end } = getTrimRange();
+      const dt = 1 / Number(document.getElementById("selectFps").value);
+      mobileVideo.currentTime = Math.min(end, mobileVideo.currentTime + dt);
+      syncManager.updateStatus({ currentTime: mobileVideo.currentTime, isPlaying: false });
+    };
+
+    remoteScrubber.oninput = (e) => {
+      const { start, end } = getTrimRange();
+      const t = Math.min(end, Math.max(start, Number(e.target.value)));
+      mobileVideo.currentTime = t;
+      remoteCurrentTime.textContent = `${t.toFixed(2)} s`;
+      syncManager.updateStatus({ currentTime: t });
+    };
+
+    mobileVideo.ontimeupdate = () => {
+      const { start, end } = getTrimRange();
+      if (isPlaying && mobileVideo.currentTime >= end) {
+        mobileVideo.pause();
+        mobileVideo.currentTime = end;
+        isPlaying = false;
+        playIcon.textContent = "▶️";
+        playLabel.textContent = "播放";
+        syncManager.updateStatus({ isPlaying: false, currentTime: end });
+      }
+      remoteScrubber.value = Math.min(end, Math.max(start, mobileVideo.currentTime));
+      remoteCurrentTime.textContent = `${mobileVideo.currentTime.toFixed(2)} s`;
+    };
+
+    // 速度選擇倍率
+    document.querySelectorAll(".speed-chip").forEach(chip => {
+      chip.onclick = () => {
+        document.querySelectorAll(".speed-chip").forEach(c => c.classList.remove("active"));
+        chip.classList.add("active");
+        currentSpeed = Number(chip.dataset.speed);
+        mobileVideo.playbackRate = currentSpeed;
+        syncManager.updateStatus({ playbackRate: currentSpeed });
+      };
+    });
+
+    // 圖層顯示開關 (已移除速度與加速度箭頭選項，維持大屏畫面簡潔)
+    const toggleGhost = document.getElementById("toggleGhost");
+
+    function pushDisplayOpts() {
+      syncManager.updateDisplayOpts({
+        showGhost: toggleGhost.checked,
+        showVelocity: false,
+        showAcceleration: false
+      });
+    }
+
+    toggleGhost.onchange = pushDisplayOpts;
+
+    // 8. 白板調色盤
+    document.querySelectorAll(".color-dot").forEach(dot => {
+      dot.onclick = () => {
+        document.querySelectorAll(".color-dot").forEach(d => d.classList.remove("active"));
+        dot.classList.add("active");
+        mobileAnnotation.setColor(dot.dataset.color);
+      };
+    });
+
+    document.getElementById("penSizeSlider").oninput = (e) => {
+      mobileAnnotation.setSize(Number(e.target.value));
+    };
+
+    document.getElementById("btnClearMobileDraw").onclick = () => {
+      mobileAnnotation.clear(true);
+    };
+
+    // 9. PIN 碼與 Firebase 設定
+    document.getElementById("btnConnectPin").onclick = () => {
+      const newPin = document.getElementById("inputRoomPin").value.trim();
+      if (newPin) {
+        screenId = newPin;
+        localStorage.setItem("last_room_pin", screenId);
+        videoTransferDone = false;
+        wasP2PConnected = false;
+        activeVideoTransferPromise = null;
+        connRoomText.textContent = `連線中 | ${screenId}`;
+        syncManager.setScreenId(screenId);
+        alert(`已切換至房間 PIN: ${screenId}，正在建立 P2P 連線...`);
+      }
+    };
+
+    window.addEventListener("beforeunload", () => {
+      mobileSensorLab.stop();
+      syncManager.destroy();
+    });
+
+    document.getElementById("btnSaveMobileConfig").onclick = () => {
+      const cfg = {
+        apiKey: document.getElementById("mCfgApiKey").value.trim(),
+        databaseURL: document.getElementById("mCfgDbUrl").value.trim(),
+        projectId: document.getElementById("mCfgProjectId").value.trim()
+      };
+      localStorage.setItem("physics_tracker_firebase_config", JSON.stringify(cfg));
+      syncManager.initFirebase(cfg).then(ok => {
+        if (ok) alert("Firebase 雲端同步設定成功並已連線！");
+      });
+    };
+
+    // 10. 5 大感測器實驗控制引擎整合 (含大屏廣播自動切換與 iOS 手勢授權閘門)
+    const SENSOR_MODE_IDS = LAB_MODE_ORDER.filter(id => id !== "VIDEO_TRACKER");
+    let selectedSensorMode = SENSOR_MODE_IDS[0];
+
+    const mobileSensorGrid = document.getElementById("mobileSensorGrid");
+    const mobileSensorTitle = document.getElementById("mobileSensorTitle");
+    const mobileSensorDesc = document.getElementById("mobileSensorDesc");
+    const btnToggleSensorRun = document.getElementById("btnToggleSensorRun");
+    const btnSensorZeroTare = document.getElementById("btnSensorZeroTare");
+    const mobileThresholdBox = document.getElementById("mobileThresholdBox");
+    const mobileThresholdLabel = document.getElementById("mobileThresholdLabel");
+    const mobileThresholdVal = document.getElementById("mobileThresholdVal");
+    const mobileThresholdSlider = document.getElementById("mobileThresholdSlider");
+    const mobileSensorStatusBox = document.getElementById("mobileSensorStatusBox");
+    const mobileNodeBadge = document.getElementById("mobileNodeBadge");
+
+    const mobileSensorLab = new MobileSensorLab(syncManager, {
+      onTelemetry: (text) => {
+        mobileSensorStatusBox.textContent = `🟢 傳送中 [${syncManager.nodeId}]：${text}`;
+      },
+      onStateChange: ({ running, mode, error }) => {
+        btnToggleSensorRun.classList.toggle("running", running);
+        btnToggleSensorRun.textContent = running ? "⏹ 停止實驗並釋放感測器" : "⚡ 啟動感測器並開始實驗";
+        if (error) {
+          mobileSensorStatusBox.textContent = `⚠️ 啟動失敗：${error}`;
+          mobileSensorStatusBox.style.color = "#fca5a5";
+        } else if (running) {
+          mobileSensorStatusBox.style.color = "#6ee7b7";
+          mobileSensorStatusBox.textContent = `🟢 已啟動 ${LAB_MODES[mode]?.shortTitle || mode}（螢幕常亮鎖定中）`;
+        } else {
+          mobileSensorStatusBox.style.color = "#94a3b8";
+          mobileSensorStatusBox.textContent = "狀態：已待機（可點上方按鈕重新啟動）";
+        }
+      }
+    });
+
+    function selectMobileSensorMode(modeId) {
+      if (!LAB_MODES[modeId] || modeId === "VIDEO_TRACKER") return;
+      selectedSensorMode = modeId;
+      const info = LAB_MODES[modeId];
+
+      mobileSensorGrid.querySelectorAll(".sensor-mode-chip").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.sensorMode === modeId);
+      });
+      mobileSensorTitle.textContent = `${info.icon} ${info.title}`;
+      mobileSensorDesc.textContent = info.desc;
+
+      btnSensorZeroTare.style.display = (modeId === "ACCEL_3D" || modeId === "INCLINE_GYRO" || modeId === "CAM_PHOTOGATE") ? "block" : "none";
+      btnSensorZeroTare.textContent = modeId === "CAM_PHOTOGATE" ? "🔆 本機環境光自動校準" : "🧭 歸零校準 (Zero/Tare)";
+
+      if (modeId === "ACOUSTIC_TIMER") {
+        mobileThresholdBox.style.display = "block";
+        mobileThresholdLabel.textContent = "聲響觸發閾值";
+        mobileThresholdSlider.min = 0.05;
+        mobileThresholdSlider.max = 0.85;
+        mobileThresholdSlider.step = 0.05;
+        mobileThresholdSlider.value = mobileSensorLab.acousticThreshold;
+        mobileThresholdVal.textContent = `${Math.round(mobileSensorLab.acousticThreshold * 100)}%`;
+      } else if (modeId === "CAM_PHOTOGATE") {
+        mobileThresholdBox.style.display = "block";
+        mobileThresholdLabel.textContent = "遮光亮度閾值";
+        mobileThresholdSlider.min = 10;
+        mobileThresholdSlider.max = 240;
+        mobileThresholdSlider.step = 5;
+        mobileThresholdSlider.value = mobileSensorLab.photogateThreshold;
+        mobileThresholdVal.textContent = `${mobileSensorLab.photogateThreshold} / 255`;
+      } else {
+        mobileThresholdBox.style.display = "none";
+      }
+    }
+
+    mobileSensorGrid.innerHTML = SENSOR_MODE_IDS.map(id => {
+      const m = LAB_MODES[id];
+      return `<button class="sensor-mode-chip" data-sensor-mode="${id}"><span>${m.icon}</span><span>${m.shortTitle}</span></button>`;
+    }).join("");
+
+    mobileSensorGrid.querySelectorAll(".sensor-mode-chip").forEach(btn => {
+      btn.onclick = async () => {
+        await mobileSensorLab.stop();
+        const modeId = btn.dataset.sensorMode;
+        selectMobileSensorMode(modeId);
+        syncManager.broadcastCommand({ cmd: "SET_MODE", mode: modeId });
+      };
+    });
+    selectMobileSensorMode(selectedSensorMode);
+
+    btnToggleSensorRun.onclick = async () => {
+      if (mobileSensorLab.running) {
+        await mobileSensorLab.stop();
+      } else {
+        await mobileSensorLab.start(selectedSensorMode);
+      }
+    };
+
+    btnSensorZeroTare.onclick = () => {
+      mobileSensorLab.zeroTare();
+      if (selectedSensorMode === "CAM_PHOTOGATE") {
+        mobileThresholdSlider.value = mobileSensorLab.photogateThreshold;
+        mobileThresholdVal.textContent = `${mobileSensorLab.photogateThreshold} / 255`;
+      }
+      mobileSensorStatusBox.textContent = "✅ 已完成歸零/校準！";
+    };
+
+    mobileThresholdSlider.oninput = (e) => {
+      const val = Number(e.target.value);
+      if (selectedSensorMode === "ACOUSTIC_TIMER") {
+        mobileSensorLab.setAcousticThreshold(val);
+        mobileThresholdVal.textContent = `${Math.round(val * 100)}%`;
+      } else if (selectedSensorMode === "CAM_PHOTOGATE") {
+        mobileSensorLab.setPhotogateThreshold(val);
+        mobileThresholdVal.textContent = `${val} / 255`;
+      }
+    };
+
+    // 接收大屏廣播切換模式與校準指令
+    syncManager.onLabCommand(async (cmdObj) => {
+      if (!cmdObj || !cmdObj.cmd) return;
+      if (cmdObj.cmd === "SET_MODE" && cmdObj.mode) {
+        if (cmdObj.mode === "HOME") {
+          await mobileSensorLab.stop();
+          activateTab("tab-home", { silent: true });
+        } else if (cmdObj.mode === "VIDEO_TRACKER") {
+          await mobileSensorLab.stop();
+          activateTab("tab-track", { silent: true });
+        } else if (LAB_MODES[cmdObj.mode]) {
+          if (mobileSensorLab.running && mobileSensorLab.activeMode !== cmdObj.mode) {
+            await mobileSensorLab.stop();
+          }
+          selectMobileSensorMode(cmdObj.mode);
+          activateTab("tab-sensors", { silent: true });
+        }
+      } else if (cmdObj.cmd === "ZERO_TARE") {
+        mobileSensorLab.zeroTare();
+      } else if (cmdObj.cmd === "SET_ACOUSTIC_THRESHOLD") {
+        mobileSensorLab.setAcousticThreshold(cmdObj.threshold);
+        if (selectedSensorMode === "ACOUSTIC_TIMER") {
+          mobileThresholdSlider.value = cmdObj.threshold;
+          mobileThresholdVal.textContent = `${Math.round(cmdObj.threshold * 100)}%`;
+        }
+      } else if (cmdObj.cmd === "SET_PHOTOGATE_THRESHOLD") {
+        mobileSensorLab.setPhotogateThreshold(cmdObj.threshold);
+        if (selectedSensorMode === "CAM_PHOTOGATE") {
+          mobileThresholdSlider.value = cmdObj.threshold;
+          mobileThresholdVal.textContent = `${cmdObj.threshold} / 255`;
+        }
+      }
+    });
+
+    // 顯示大屏分配的節點編號 (node_01..)
+    syncManager.onConnectionChange(() => {
+      if (mobileNodeBadge && syncManager.nodeId) {
+        mobileNodeBadge.textContent = `${syncManager.nodeId}`;
+        mobileNodeBadge.style.color = syncManager.nodeColor || "#38bdf8";
+      }
+      const homeLbl = document.getElementById("homeNodeLabel");
+      if (homeLbl && syncManager.nodeId) {
+        homeLbl.textContent = `${syncManager.nodeId}`;
+        homeLbl.style.color = syncManager.nodeColor || "#38bdf8";
+      }
+    });
+
+    // 11. 0 分頁（入口掃碼與實驗選擇）邏輯
+    const mobileHomeHubGrid = document.getElementById("mobileHomeHubGrid");
+    mobileHomeHubGrid.innerHTML = LAB_MODE_ORDER.map(id => {
+      const m = LAB_MODES[id];
+      return `<button class="sensor-mode-chip" data-home-mode="${id}" style="border-color: rgba(255,255,255,0.14);"><span>${m.icon}</span><span>${m.shortTitle}</span></button>`;
+    }).join("");
+
+    mobileHomeHubGrid.querySelectorAll("[data-home-mode]").forEach(btn => {
+      btn.onclick = async () => {
+        const modeId = btn.dataset.homeMode;
+        if (modeId === "VIDEO_TRACKER") {
+          await mobileSensorLab.stop();
+          activateTab("tab-track", { silent: true });
+          syncManager.broadcastCommand({ cmd: "SET_MODE", mode: "VIDEO_TRACKER" });
+        } else if (LAB_MODES[modeId]) {
+          if (mobileSensorLab.running && mobileSensorLab.activeMode !== modeId) {
+            await mobileSensorLab.stop();
+          }
+          selectMobileSensorMode(modeId);
+          activateTab("tab-sensors", { silent: true });
+          syncManager.broadcastCommand({ cmd: "SET_MODE", mode: modeId });
+        }
+      };
+    });
+
+    document.getElementById("btnHomeQuickConnect").onclick = () => {
+      const newPin = document.getElementById("homeQuickPin").value.trim();
+      if (newPin) {
+        document.getElementById("inputRoomPin").value = newPin;
+        document.getElementById("btnConnectPin").click();
+      }
+    };
+  </script>
+</body>
+</html>

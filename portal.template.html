@@ -177,7 +177,7 @@
                     </span>
                 </div>
                 <p class="text-xs text-slate-300 hidden sm:block">
-                    力學 × 波動 × 光學 × 熱學 × 電磁學 × 化學 × 近代物理 × 理化遊戲
+                    力學 × 波動 × 光學 × 熱學 × 電磁學 × 化學 × 近代物理 × 滑車運動分析 × 理化遊戲
                 </p>
             </div>
         </div>
@@ -267,6 +267,10 @@
             <button onclick="focusDeskItem('modern-physics')" id="dock-modern-physics" class="dock-btn shrink-0 px-3 py-2 rounded-xl flex items-center justify-center gap-1.5 text-xs font-bold text-slate-300 hover:text-white hover:bg-white/10 transition-all">
                 <i class="fa-solid fa-atom text-indigo-400 text-sm"></i>
                 <span class="whitespace-nowrap">近代物理</span>
+            </button>
+            <button onclick="focusDeskItem('physics-tracker')" id="dock-physics-tracker" class="dock-btn shrink-0 px-3 py-2 rounded-xl flex items-center justify-center gap-1.5 text-xs font-bold text-slate-300 hover:text-white hover:bg-white/10 transition-all">
+                <i class="fa-solid fa-gauge-high text-teal-300 text-sm"></i>
+                <span class="whitespace-nowrap">滑車分析</span>
             </button>
             <button onclick="focusDeskItem('games')" id="dock-games" class="dock-btn shrink-0 px-3 py-2 rounded-xl flex items-center justify-center gap-1.5 text-xs font-bold text-slate-300 hover:text-white hover:bg-white/10 transition-all">
                 <i class="fa-solid fa-gamepad text-purple-400 text-sm"></i>
@@ -432,6 +436,7 @@
                         <div class="px-2 py-1.5 rounded-lg bg-slate-950 border border-white/10 text-rose-300">electromagnetism/ <span class="text-slate-400">電磁</span></div>
                         <div class="px-2 py-1.5 rounded-lg bg-slate-950 border border-white/10 text-emerald-300">chemistry/ <span class="text-slate-400">化學</span></div>
                         <div class="px-2 py-1.5 rounded-lg bg-slate-950 border border-white/10 text-indigo-300">modern-physics/ <span class="text-slate-400">近代</span></div>
+                        <div class="px-2 py-1.5 rounded-lg bg-slate-950 border border-white/10 text-teal-300">physics-tracker/ <span class="text-slate-400">滑車</span></div>
                         <div class="px-2 py-1.5 rounded-lg bg-slate-950 border border-white/10 text-purple-300">games/ <span class="text-slate-400">遊戲</span></div>
                     </div>
                     <p class="text-[11px] text-slate-400 leading-relaxed">
@@ -460,6 +465,7 @@
             'waves',
             'optics',
             'thermodynamics',
+            'physics-tracker',
             'electromagnetism',
             'chemistry',
             'modern-physics',
@@ -555,6 +561,17 @@
                 camPos: { x: 0.9, y: 3.9, z: 5.6 },
                 lookAt: { x: 0.85, y: 1.1, z: -0.1 }
             },
+            'physics-tracker': {
+                shortName: "滑車分析",
+                title: "滑車實驗・Physics Tracker 運動分析",
+                subtitle: "手機慢動作影片追蹤 × 速度加速度曲線擬合 × 5 大手機感測器實驗室",
+                icon: "fa-gauge-high",
+                emoji: "🛒",
+                badgeClass: "bg-teal-500/20 text-teal-300 border-teal-400/40",
+                pillColor: "bg-teal-400 text-slate-950",
+                camPos: { x: 2.1, y: 3.8, z: 6.5 },
+                lookAt: { x: 1.95, y: 0.85, z: 2.0 }
+            },
             games: {
                 shortName: "理化遊戲",
                 title: "物理與化學互動挑戰遊戲",
@@ -627,6 +644,9 @@
             { level: 1.95, color: 0xef4444, label: '高溫沸騰（分子動能劇烈狂飆 🔥）' }
         ];
 
+        let trackerCartGroup, trackerGateLed;
+        let cartX = -0.65, cartVel = 1.15, cartPrevX = -0.65, cartManualX = null, cartGateGlow = 0;
+
         // Web Audio 輕量合成音效（無外部音檔）
         let isSoundEnabled = localStorage.getItem('hwaba_sound_enabled') !== 'false';
         let audioCtx = null;
@@ -690,8 +710,9 @@
             buildChemistryProp();          // 5. 右中：發光錐形瓶與分子（化學）
             buildOpticsProp();             // 6. 左前：三稜鏡色散與凸透鏡（光學）
             buildThermodynamicsProp();     // 7. 左中：熱學氣體動力室與溫度計（熱學）
-            buildGamesProp();              // 8. 中前：漂浮卡牌與遊戲光環（理化遊戲）
-            buildNotebookProp();           // 9. 右前：實驗筆記本（全部工具）
+            buildTrackerCartProp();        // 8. 右前中：滑車軌道與光電門（Physics Tracker 運動分析入口）
+            buildGamesProp();              // 9. 中前：漂浮卡牌與遊戲光環（理化遊戲）
+            buildNotebookProp();           // 10. 右前角：實驗筆記本（全部工具）
             buildFloatingParticles();
 
             createHTMLHotspotLabels();
@@ -1078,7 +1099,7 @@
         // 5. 【化學】發光實驗錐形瓶與分子模型
         function buildChemistryProp() {
             const group = new THREE.Group();
-            group.position.set(4.6, 0, 0.35);
+            group.position.set(5.0, 0, 0.15);
 
             // 實驗墊板
             const pad = new THREE.Mesh(
@@ -1145,7 +1166,7 @@
             });
             group.add(chemMoleculesGroup);
 
-            registerInteractiveGroup(group, 'chemistry', '🧪 化學', '分子模型與反應實驗', new THREE.Vector3(4.6, 2.3, 0.35));
+            registerInteractiveGroup(group, 'chemistry', '🧪 化學', '分子模型與反應實驗', new THREE.Vector3(5.0, 2.3, 0.15));
             scene.add(group);
         }
 
@@ -1320,6 +1341,90 @@
             scene.add(group);
         }
 
+        // 8. 【滑車運動分析】鋁製力學軌道 ＋ 光電門 ＋ 紅色實驗滑車（Physics Tracker 入口）
+        function buildTrackerCartProp() {
+            const group = new THREE.Group();
+            group.position.set(1.95, 0, 2.0);
+            group.rotation.y = -0.15;
+
+            const trackMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.85, roughness: 0.25 });
+            const standMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.5, roughness: 0.4 });
+
+            // 軌道兩側支撐座
+            [-0.95, 0.95].forEach(px => {
+                const stand = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.18, 0.52), standMat);
+                stand.position.set(px, 0.09, 0);
+                stand.castShadow = true;
+                group.add(stand);
+
+                // 兩端防撞緩衝器
+                const bumper = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.14, 0.42), new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x0284c7, emissiveIntensity: 0.3 }));
+                bumper.position.set(px * 1.12, 0.27, 0);
+                group.add(bumper);
+            });
+
+            // 鋁製滑車導軌主體
+            const track = new THREE.Mesh(new THREE.BoxGeometry(2.35, 0.06, 0.44), trackMat);
+            track.position.y = 0.20;
+            track.castShadow = true;
+            group.add(track);
+
+            // 中央光電門偵測拱門
+            const gateMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.6, roughness: 0.3 });
+            [-0.25, 0.25].forEach(pz => {
+                const post = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.58, 0.06), gateMat);
+                post.position.set(0, 0.52, pz);
+                group.add(post);
+            });
+            const gateTop = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, 0.58), gateMat);
+            gateTop.position.set(0, 0.83, 0);
+            group.add(gateTop);
+
+            trackerGateLed = new THREE.Mesh(
+                new THREE.SphereGeometry(0.065, 12, 12),
+                new THREE.MeshStandardMaterial({ color: 0x10b981, emissive: 0x10b981, emissiveIntensity: 0.4 })
+            );
+            trackerGateLed.position.set(0, 0.90, 0);
+            group.add(trackerGateLed);
+
+            // 紅色物理實驗滑車 + 四輪 + 質心追蹤黃點
+            trackerCartGroup = new THREE.Group();
+            trackerCartGroup.position.set(cartX, 0.23, 0);
+
+            const body = new THREE.Mesh(
+                new THREE.BoxGeometry(0.46, 0.14, 0.28),
+                new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0x991b1b, emissiveIntensity: 0.3, roughness: 0.25, metalness: 0.35 })
+            );
+            body.position.y = 0.10;
+            body.castShadow = true;
+            trackerCartGroup.add(body);
+
+            // 遮光旗標與黃色影像追蹤點
+            const flag = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.16, 0.03), new THREE.MeshStandardMaterial({ color: 0x0f172a }));
+            flag.position.set(0, 0.24, 0);
+            trackerCartGroup.add(flag);
+
+            const trackerDot = new THREE.Mesh(
+                new THREE.SphereGeometry(0.055, 12, 12),
+                new THREE.MeshBasicMaterial({ color: 0xfacc15 })
+            );
+            trackerDot.position.set(0, 0.17, 0.15);
+            trackerCartGroup.add(trackerDot);
+
+            const wheelMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.6 });
+            [[-0.15, -0.14], [0.15, -0.14], [-0.15, 0.14], [0.15, 0.14]].forEach(([wx, wz]) => {
+                const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.03, 14), wheelMat);
+                wheel.rotation.x = Math.PI / 2;
+                wheel.position.set(wx, 0.045, wz);
+                trackerCartGroup.add(wheel);
+            });
+
+            group.add(trackerCartGroup);
+
+            registerInteractiveGroup(group, 'physics-tracker', '🛒 滑車分析', '運動分析・Physics Tracker', new THREE.Vector3(1.95, 1.55, 2.0));
+            scene.add(group);
+        }
+
         // 7. 【理化遊戲】漂浮互動卡牌陣與魔法遊戲光環
         function buildGamesProp() {
             const group = new THREE.Group();
@@ -1362,10 +1467,10 @@
             scene.add(group);
         }
 
-        // 8. 【全部工具】華爸的物理筆記本
+        // 10. 【全部工具】華爸的物理筆記本
         function buildNotebookProp() {
             const group = new THREE.Group();
-            group.position.set(3.9, 0, 2.45);
+            group.position.set(4.9, 0, 2.45);
             group.rotation.y = 0.32;
 
             const book = new THREE.Mesh(
@@ -1383,7 +1488,7 @@
             pages.position.set(0.03, 0.09, 0);
             group.add(pages);
 
-            registerInteractiveGroup(group, 'all', '📓 全部總覽', '一覽所有模擬與遊戲', new THREE.Vector3(3.9, 1.05, 2.45));
+            registerInteractiveGroup(group, 'all', '📓 全部總覽', '一覽所有模擬與遊戲', new THREE.Vector3(4.9, 1.05, 2.45));
             scene.add(group);
         }
 
@@ -1927,6 +2032,40 @@
                 }
             }
 
+            // 8. 滑車軌道實驗與光電門偵測（穿過中點光電門亮綠燈＋蜂鳴提示）
+            if (trackerCartGroup) {
+                if (cartGateGlow > 0) cartGateGlow = Math.max(0, cartGateGlow - dt * 2.8);
+                cartPrevX = cartX;
+                if (cartManualX !== null) {
+                    cartX = cartManualX;
+                } else {
+                    cartX += cartVel * dt;
+                    if (cartX > 0.90) {
+                        cartX = 0.90;
+                        cartVel = -Math.abs(cartVel);
+                    } else if (cartX < -0.90) {
+                        cartX = -0.90;
+                        cartVel = Math.abs(cartVel);
+                    }
+                    const speed = Math.abs(cartVel);
+                    if (speed > 1.15) {
+                        cartVel -= Math.sign(cartVel) * dt * 0.55;
+                    } else if (speed < 0.95) {
+                        cartVel = (cartVel >= 0 ? 1 : -1) * 1.05;
+                    }
+                }
+                if ((cartPrevX < 0 && cartX >= 0) || (cartPrevX > 0 && cartX <= 0)) {
+                    cartGateGlow = 1.0;
+                    if (Math.abs(cartVel) > 1.45 || cartManualX !== null) {
+                        playPhotogateBeep();
+                    }
+                }
+                trackerCartGroup.position.x = cartX;
+                if (trackerGateLed) {
+                    trackerGateLed.material.emissiveIntensity = 0.35 + cartGateGlow * 2.6;
+                }
+            }
+
             // 鏡頭平滑阻尼（結合陀螺儀視差偏移與運鏡）
             gyroOffsetAz += (gyroTargetAz - gyroOffsetAz) * 0.08;
             gyroOffsetEl += (gyroTargetEl - gyroOffsetEl) * 0.08;
@@ -1949,6 +2088,23 @@
             }
 
             renderer.render(scene, camera);
+        }
+
+        // 光電門感應清脆短嗶聲
+        function playPhotogateBeep() {
+            const ctx = ensureAudioContext();
+            if (!ctx) return;
+            const now = ctx.currentTime;
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(1480, now);
+            gain.gain.setValueAtTime(0.08, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.085);
         }
 
         // 觸發 3D 道具單點擊物理彩蛋（大屏/手機不用進子頁面就能現場示範物理現象）
@@ -2019,6 +2175,11 @@
                 if (thermoHeaterMesh) thermoHeaterMesh.material.emissive.setHex(st.color);
                 playQuantumChime();
                 showLabToast(`🔥 熱學氣室：${st.label}（上下滑動可無段加減火力！）`);
+            } else if (category === 'physics-tracker') {
+                cartManualX = null;
+                cartVel = (cartVel >= 0 ? 1 : -1) * 3.1;
+                playPhotogateBeep();
+                showLabToast('🛒 滑車加速衝過光電門！點上方「🛒 滑車分析」標籤進入運動分析實驗室');
             } else if (category === 'games') {
                 cardSpinBoost = 1.0;
                 playQuantumChime();
@@ -2135,6 +2296,9 @@
                         updatePlasmaTouchFromPointer(e.clientX, e.clientY);
                         playPlasmaBuzz(false);
                         plasmaLastBuzzTs = performance.now();
+                    } else if (hit.category === 'physics-tracker') {
+                        activePropDrag.startCartX = cartX;
+                        activePropDrag.cartVelSample = 0;
                     }
                     isDragging = false;
                 } else {
@@ -2197,6 +2361,9 @@
                                 thermoMercuryMesh.material.emissive.setHex(hCol);
                             }
                             if (thermoHeaterMesh) thermoHeaterMesh.material.emissive.setHex(hCol);
+                        } else if (cat === 'physics-tracker') {
+                            cartManualX = Math.max(-0.9, Math.min(0.9, activePropDrag.startCartX + totalDx * 0.01));
+                            activePropDrag.cartVelSample = dx * 0.16;
                         }
                     }
                     return;
@@ -2244,6 +2411,11 @@
                         showLabToast('💡 三稜鏡角度已偏折彩虹光束（點「💡 光學」開光學教材）');
                     } else if (dragInfo.category === 'thermodynamics' && dragInfo.moved) {
                         showLabToast('🔥 溫度越高、氣體分子平均動能越大（點上方「🔥 熱學」開教材）');
+                    } else if (dragInfo.category === 'physics-tracker' && dragInfo.moved) {
+                        cartManualX = null;
+                        const flick = dragInfo.cartVelSample || 2.2;
+                        cartVel = Math.max(-3.6, Math.min(3.6, Math.abs(flick) < 0.5 ? (flick >= 0 ? 2.2 : -2.2) : flick * 1.4));
+                        showLabToast('🛒 已推動實驗滑車！（點擊「🛒 滑車分析」標籤進入運動分析系統）');
                     } else if (!dragInfo.moved && e.target === dom) {
                         triggerPropTapEasterEgg(dragInfo.category);
                     }
@@ -2437,7 +2609,15 @@
                     <a href="https://docs.google.com/spreadsheets/d/18SjUr3EBKQxNu6GyNoPkZR5SIp-uJzjAWF-W-xMsXHU/edit" target="_blank" rel="noopener noreferrer" class="px-2.5 py-1.5 rounded-xl bg-sky-500/20 hover:bg-sky-500/35 text-sky-200 text-[11px] font-bold flex items-center gap-1 transition">
                         <span>🗂️ 關卡資料庫 ↗</span>
                     </a>
-                </div>` : '';
+                </div>` : (currentCategoryFilter === 'physics-tracker' ? `
+                <div class="p-3 rounded-2xl bg-teal-500/10 border border-teal-400/25 flex flex-wrap gap-2">
+                    <a href="physics-tracker/index.html" target="_blank" rel="noopener noreferrer" class="px-3 py-1.5 rounded-xl bg-teal-500/25 hover:bg-teal-500/40 text-teal-100 text-[11px] font-bold flex items-center gap-1 transition">
+                        <span>🖥️ 開啟大屏接收端 ↗</span>
+                    </a>
+                    <a href="physics-tracker/mobile.html" target="_blank" rel="noopener noreferrer" class="px-3 py-1.5 rounded-xl bg-sky-500/20 hover:bg-sky-500/35 text-sky-200 text-[11px] font-bold flex items-center gap-1 transition">
+                        <span>📱 直接開啟手機端控制器 ↗</span>
+                    </a>
+                </div>` : '');
 
             if (filtered.length === 0) {
                 const isPlannedEmpty = !query && currentCategoryFilter !== 'all' && (CATEGORY_COUNTS[currentCategoryFilter] || 0) === 0;
