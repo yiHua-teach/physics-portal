@@ -1,0 +1,3873 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>物質的分類與變化：從混合物到元素的微觀之旅</title>
+  <meta name="description" content="國高中理化巨微觀雙視窗互動模擬：從混合物過濾與結晶（物理變化），到純物質化合物分解成元素（化學變化），並內建 5 題微觀粒子隨堂測驗。" />
+  <meta name="portal-tags" content="化學, 物質分類, 混合物與純物質, 物理化學變化" />
+  <meta name="portal-badge" content="互動教材 + 測驗" />
+  <meta name="portal-featured" content="true" />
+  <style>
+    /* ==========================================================================
+       全域設計變數與現代科學實驗室風格 (Light Theme, High Contrast for Projectors)
+       ========================================================================== */
+    :root {
+      --bg-page: #f0f4f8;
+      --bg-card: #ffffff;
+      --bg-subtle: #f8fafc;
+      --border-light: #e2e8f0;
+      --border-med: #cbd5e1;
+
+      --navy-900: #0f172a;
+      --navy-800: #1e293b;
+      --navy-700: #1e3a8a;
+      --primary: #0284c7;
+      --primary-hover: #0369a1;
+      --primary-light: #e0f2fe;
+      --teal: #0d9488;
+      --teal-light: #ccfbf1;
+      --amber: #d97706;
+      --amber-light: #fef3c7;
+      --rose: #e11d48;
+      --rose-light: #ffe4e6;
+      --purple: #7c3aed;
+      --purple-light: #ede9fe;
+      --emerald: #059669;
+      --emerald-light: #d1fae5;
+
+      --text-main: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #64748b;
+
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+      --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+      --font-sans: "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: var(--font-sans);
+      background-color: var(--bg-page);
+      color: var(--text-main);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    /* ==========================================================================
+       整體版面架構 (桌面版一屏呈現，行動版平滑響應)
+       ========================================================================== */
+    .app-shell {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 10px 14px 14px;
+      gap: 10px;
+    }
+
+    @media (min-width: 1120px) {
+      .app-shell {
+        height: 100vh;
+        overflow: hidden;
+      }
+    }
+
+    /* --- 頂部標題與分頁列 --- */
+    .top-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 60%, #0369a1 100%);
+      color: #ffffff;
+      padding: 10px 18px;
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      flex-shrink: 0;
+    }
+
+    .brand-area {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.14);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .brand-text h1 {
+      font-size: clamp(1rem, 1.45vw, 1.25rem);
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      line-height: 1.25;
+    }
+
+    .brand-text p {
+      font-size: 0.78rem;
+      color: #bae6fd;
+      font-weight: 500;
+    }
+
+    .nav-tabs {
+      display: flex;
+      background: rgba(15, 23, 42, 0.35);
+      padding: 4px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      gap: 4px;
+    }
+
+    .nav-tab-btn {
+      border: none;
+      background: transparent;
+      color: #cbd5e1;
+      font-family: inherit;
+      font-size: 0.88rem;
+      font-weight: 700;
+      padding: 7px 16px;
+      border-radius: 9px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .nav-tab-btn:hover {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .nav-tab-btn.active {
+      background: #ffffff;
+      color: var(--navy-700);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+    }
+
+    /* ==========================================================================
+       教學動畫主視圖
+       ========================================================================== */
+    .view-panel {
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .view-panel.active {
+      display: flex;
+    }
+
+    /* --- 互動式步驟時間軸與播放控制 --- */
+    .timeline-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-md);
+      padding: 8px 14px;
+      box-shadow: var(--shadow-sm);
+      flex-shrink: 0;
+    }
+
+    .steps-track {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
+      min-width: 280px;
+      overflow-x: auto;
+      padding: 2px 0;
+    }
+
+    .step-pill {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 6px 11px;
+      border-radius: 10px;
+      border: 1.5px solid var(--border-light);
+      background: var(--bg-subtle);
+      color: var(--text-secondary);
+      font-family: inherit;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .step-pill:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+      background: #f0f9ff;
+    }
+
+    .step-pill .step-num {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--border-light);
+      color: var(--text-secondary);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 800;
+      transition: all 0.2s ease;
+    }
+
+    .step-pill.active {
+      background: var(--primary-light);
+      border-color: var(--primary);
+      color: var(--navy-700);
+      box-shadow: 0 2px 8px rgba(2, 132, 199, 0.16);
+    }
+
+    .step-pill.active .step-num {
+      background: var(--primary);
+      color: #ffffff;
+    }
+
+    .step-pill.completed .step-num {
+      background: var(--teal);
+      color: #ffffff;
+    }
+
+    .step-arrow {
+      color: #94a3b8;
+      font-size: 0.85rem;
+      user-select: none;
+      flex-shrink: 0;
+    }
+
+    .playback-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .ctrl-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      padding: 7px 12px;
+      border-radius: 9px;
+      border: 1px solid var(--border-med);
+      background: #ffffff;
+      color: var(--navy-800);
+      font-family: inherit;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      white-space: nowrap;
+    }
+
+    .ctrl-btn:hover:not(:disabled) {
+      background: var(--bg-subtle);
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .ctrl-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .ctrl-btn.primary {
+      background: linear-gradient(135deg, #0284c7, #0d9488);
+      border-color: transparent;
+      color: #ffffff;
+      box-shadow: 0 2px 6px rgba(2, 132, 199, 0.28);
+    }
+
+    .ctrl-btn.primary:hover:not(:disabled) {
+      filter: brightness(1.06);
+      color: #ffffff;
+    }
+
+    .ctrl-btn.playing {
+      background: linear-gradient(135deg, #ea580c, #d97706);
+      border-color: transparent;
+      color: #ffffff;
+    }
+
+    /* --- 主工作區：左雙視窗 × 右側資訊欄 --- */
+    .workspace-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      flex: 1;
+      min-height: 0;
+    }
+
+    @media (min-width: 1120px) {
+      .workspace-grid {
+        grid-template-columns: minmax(0, 1.85fr) minmax(320px, 1fr);
+      }
+    }
+
+    /* --- 左側：巨觀 × 微觀雙視窗 --- */
+    .visual-stage {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-height: 0;
+    }
+
+    .dual-windows {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      flex: 1;
+      min-height: 0;
+    }
+
+    @media (min-width: 768px) {
+      .dual-windows {
+        grid-template-columns: minmax(220px, 0.62fr) minmax(0, 1.38fr);
+      }
+    }
+
+    .lab-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 8px 13px;
+      background: var(--bg-subtle);
+      border-bottom: 1px solid var(--border-light);
+      flex-shrink: 0;
+      flex-wrap: wrap;
+    }
+
+    .card-title {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 0.9rem;
+      font-weight: 800;
+      color: var(--navy-900);
+    }
+
+    .title-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--primary);
+    }
+
+    .title-dot.teal { background: var(--teal); }
+    .title-dot.amber { background: var(--amber); }
+    .title-dot.purple { background: var(--purple); }
+
+    /* --- 巨觀實驗視窗 --- */
+    .macro-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px;
+      background: radial-gradient(circle at 50% 35%, #ffffff 0%, #f1f5f9 100%);
+      position: relative;
+      min-height: 260px;
+    }
+
+    .macro-svg-wrap {
+      width: 100%;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 0;
+    }
+
+    .macro-svg-wrap svg {
+      width: 100%;
+      height: 100%;
+      max-height: 360px;
+      display: block;
+    }
+
+    .macro-caption {
+      width: 100%;
+      text-align: center;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--navy-800);
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid var(--border-light);
+      padding: 6px 10px;
+      border-radius: 9px;
+      margin-top: 6px;
+    }
+
+    /* --- 微觀原子分子視窗 --- */
+    .micro-toggles {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .toggle-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--text-secondary);
+      cursor: pointer;
+      user-select: none;
+      background: #ffffff;
+      border: 1px solid var(--border-med);
+      padding: 4px 9px;
+      border-radius: 999px;
+      transition: all 0.15s ease;
+    }
+
+    .toggle-chip:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .toggle-chip input {
+      accent-color: var(--primary);
+      cursor: pointer;
+      width: 14px;
+      height: 14px;
+    }
+
+    .micro-canvas-wrap {
+      position: relative;
+      flex: 1;
+      width: 100%;
+      min-height: 300px;
+      background: linear-gradient(180deg, #f8fbff 0%, #eef5fb 100%);
+      overflow: hidden;
+    }
+
+    #microCanvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* --- 階段專屬互動控制列 (置於雙視窗下方) --- */
+    .stage-action-bar {
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-md);
+      padding: 9px 14px;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      flex-shrink: 0;
+      min-height: 54px;
+    }
+
+    .action-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      flex: 1;
+    }
+
+    .action-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .action-btn-lg {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 16px;
+      border-radius: 10px;
+      border: none;
+      font-family: inherit;
+      font-size: 0.88rem;
+      font-weight: 800;
+      cursor: pointer;
+      color: #ffffff;
+      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+      box-shadow: 0 3px 10px rgba(2, 132, 199, 0.28);
+      transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+    }
+
+    .action-btn-lg:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.06);
+    }
+
+    .action-btn-lg:active {
+      transform: translateY(0);
+    }
+
+    .action-btn-lg.heat {
+      background: linear-gradient(135deg, #f97316 0%, #dc2626 100%);
+      box-shadow: 0 3px 10px rgba(220, 38, 38, 0.28);
+    }
+
+    .action-btn-lg.light {
+      background: linear-gradient(135deg, #7c3aed 0%, #d97706 100%);
+      box-shadow: 0 3px 10px rgba(124, 58, 237, 0.28);
+    }
+
+    .action-btn-lg.done {
+      background: linear-gradient(135deg, #0d9488 0%, #059669 100%);
+      box-shadow: 0 3px 10px rgba(13, 148, 136, 0.25);
+    }
+
+    /* 化合物切換開關 */
+    .compound-switcher {
+      display: inline-flex;
+      background: #e2e8f0;
+      padding: 3px;
+      border-radius: 10px;
+      gap: 3px;
+    }
+
+    .compound-opt {
+      border: none;
+      background: transparent;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.82rem;
+      font-weight: 800;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .compound-opt.active {
+      background: #ffffff;
+      color: var(--navy-700);
+      box-shadow: 0 1px 4px rgba(15, 23, 42, 0.12);
+    }
+
+    /* 能量滑桿組件 */
+    .energy-slider-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-light);
+      padding: 5px 12px;
+      border-radius: 10px;
+      flex: 1;
+      min-width: 210px;
+      max-width: 360px;
+    }
+
+    .energy-slider-group label {
+      font-size: 0.82rem;
+      font-weight: 800;
+      white-space: nowrap;
+      color: var(--navy-800);
+    }
+
+    .energy-slider {
+      flex: 1;
+      accent-color: #ef4444;
+      cursor: pointer;
+      height: 6px;
+    }
+
+    .energy-slider.uv-mode {
+      accent-color: #7c3aed;
+    }
+
+    .energy-val {
+      font-size: 0.82rem;
+      font-weight: 800;
+      min-width: 38px;
+      text-align: right;
+      color: var(--navy-900);
+    }
+
+    .equation-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #fffbeb;
+      border: 1.5px solid #fcd34d;
+      color: #92400e;
+      padding: 5px 12px;
+      border-radius: 9px;
+      font-size: 0.88rem;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+    }
+
+    .equation-badge.uv {
+      background: #f5f3ff;
+      border-color: #c4b5fd;
+      color: #5b21b6;
+    }
+
+    .stage-status-hint {
+      font-size: 0.84rem;
+      font-weight: 700;
+      color: var(--text-secondary);
+    }
+
+    /* ==========================================================================
+       右側資訊面板 (概念樹、觀念卡、圖例)
+       ========================================================================== */
+    .info-sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-height: 0;
+    }
+
+    @media (min-width: 1120px) {
+      .info-sidebar {
+        overflow-y: auto;
+        padding-right: 2px;
+      }
+    }
+
+    /* --- 物質分類概念樹 --- */
+    .tree-box {
+      padding: 8px 10px 6px;
+      background: #ffffff;
+    }
+
+    .tree-svg {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .tree-node rect {
+      transition: all 0.3s ease;
+    }
+
+    .tree-node text {
+      transition: all 0.3s ease;
+      font-family: var(--font-sans);
+    }
+
+    .tree-node.active rect {
+      stroke-width: 2.8px;
+      filter: drop-shadow(0 0 6px rgba(2, 132, 199, 0.35));
+    }
+
+    .tree-arrow {
+      transition: all 0.3s ease;
+    }
+
+    .tree-arrow.active {
+      stroke-width: 2.8px;
+      animation: pulseDash 1.1s linear infinite;
+    }
+
+    @keyframes pulseDash {
+      from { stroke-dashoffset: 16; }
+      to { stroke-dashoffset: 0; }
+    }
+
+    /* --- 本階段核心觀念卡 --- */
+    .concept-body {
+      padding: 10px 13px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .meta-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .meta-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 9px;
+      border-radius: 999px;
+      font-size: 0.76rem;
+      font-weight: 800;
+      border: 1px solid transparent;
+    }
+
+    .badge-phys { background: var(--primary-light); color: #0369a1; border-color: #bae6fd; }
+    .badge-chem { background: var(--rose-light); color: #be123c; border-color: #fecdd3; }
+    .badge-neutral { background: #f1f5f9; color: #334155; border-color: #cbd5e1; }
+    .badge-teal { background: var(--teal-light); color: #0f766e; border-color: #99f6e4; }
+    .badge-amber { background: var(--amber-light); color: #b45309; border-color: #fde68a; }
+
+    .concept-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .concept-list li {
+      position: relative;
+      padding-left: 16px;
+      font-size: 0.83rem;
+      color: var(--navy-800);
+      line-height: 1.48;
+    }
+
+    .concept-list li::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 7px;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--primary);
+    }
+
+    .concept-list li strong {
+      color: var(--navy-900);
+    }
+
+    .concept-highlight-box {
+      background: #fffbeb;
+      border-left: 4px solid #f59e0b;
+      padding: 7px 10px;
+      border-radius: 0 8px 8px 0;
+      font-size: 0.8rem;
+      color: #78350f;
+      font-weight: 700;
+      line-height: 1.45;
+    }
+
+    /* --- 圖例 (Legend) --- */
+    .legend-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 7px;
+      padding: 9px 11px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 8px;
+      border-radius: 9px;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-light);
+      transition: all 0.2s ease;
+    }
+
+    .legend-item.highlight {
+      background: #f0f9ff;
+      border-color: #7dd3fc;
+      box-shadow: 0 1px 4px rgba(2, 132, 199, 0.12);
+    }
+
+    .legend-icon {
+      width: 34px;
+      height: 26px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .legend-text {
+      min-width: 0;
+    }
+
+    .legend-name {
+      font-size: 0.78rem;
+      font-weight: 800;
+      color: var(--navy-900);
+      line-height: 1.2;
+    }
+
+    .legend-sub {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      line-height: 1.2;
+    }
+
+    /* ==========================================================================
+       微觀粒子隨堂測驗視圖
+       ========================================================================== */
+    .quiz-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      max-width: 1040px;
+      width: 100%;
+      margin: 0 auto;
+      gap: 12px;
+      min-height: 0;
+      overflow-y: auto;
+      padding-bottom: 12px;
+    }
+
+    .quiz-top-strip {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-md);
+      padding: 12px 18px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .quiz-progress-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+      min-width: 220px;
+    }
+
+    .quiz-progress-track {
+      flex: 1;
+      height: 10px;
+      background: #e2e8f0;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .quiz-progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #0284c7, #0d9488);
+      border-radius: 999px;
+      transition: width 0.35s ease;
+    }
+
+    .quiz-score-pill {
+      background: var(--emerald-light);
+      color: #065f46;
+      border: 1px solid #6ee7b7;
+      padding: 5px 14px;
+      border-radius: 999px;
+      font-size: 0.88rem;
+      font-weight: 800;
+    }
+
+    .quiz-main-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      padding: 20px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 20px;
+      align-items: center;
+    }
+
+    @media (min-width: 820px) {
+      .quiz-main-card {
+        grid-template-columns: 1.05fr 1fr;
+      }
+    }
+
+    .quiz-canvas-frame {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      background: linear-gradient(180deg, #f8fbff 0%, #ebf3fa 100%);
+      border: 2px solid #cbd5e1;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      box-shadow: inset 0 2px 8px rgba(15, 23, 42, 0.05);
+    }
+
+    #quizCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .quiz-q-area {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .quiz-q-title {
+      font-size: 1.18rem;
+      font-weight: 800;
+      color: var(--navy-900);
+    }
+
+    .quiz-q-desc {
+      font-size: 0.92rem;
+      color: var(--text-secondary);
+    }
+
+    .quiz-options {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .quiz-opt-btn {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 13px 16px;
+      border-radius: 12px;
+      border: 2px solid var(--border-light);
+      background: var(--bg-subtle);
+      color: var(--navy-900);
+      font-family: inherit;
+      font-size: 0.98rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      text-align: left;
+    }
+
+    .quiz-opt-btn:hover:not(:disabled) {
+      border-color: var(--primary);
+      background: #f0f9ff;
+      transform: translateX(3px);
+    }
+
+    .quiz-opt-btn:disabled {
+      cursor: default;
+    }
+
+    .quiz-opt-btn.correct {
+      background: var(--emerald-light);
+      border-color: var(--emerald);
+      color: #064e3b;
+    }
+
+    .quiz-opt-btn.wrong {
+      background: var(--rose-light);
+      border-color: var(--rose);
+      color: #881337;
+    }
+
+    .quiz-opt-sub {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .quiz-feedback {
+      display: none;
+      padding: 14px 16px;
+      border-radius: 12px;
+      font-size: 0.88rem;
+      line-height: 1.55;
+      border: 1.5px solid transparent;
+    }
+
+    .quiz-feedback.show {
+      display: block;
+    }
+
+    .quiz-feedback.ok {
+      background: #ecfdf5;
+      border-color: #6ee7b7;
+      color: #065f46;
+    }
+
+    .quiz-feedback.err {
+      background: #fff1f2;
+      border-color: #fda4af;
+      color: #9f1239;
+    }
+
+    .quiz-feedback-title {
+      font-weight: 800;
+      font-size: 0.95rem;
+      margin-bottom: 4px;
+    }
+
+    .quiz-next-row {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 4px;
+    }
+
+    .quiz-summary-card {
+      display: none;
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      padding: 26px 24px;
+      text-align: center;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .quiz-summary-card.show {
+      display: flex;
+    }
+
+    .summary-score-big {
+      font-size: 2.8rem;
+      font-weight: 900;
+      background: linear-gradient(135deg, #0284c7, #0d9488);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      line-height: 1.1;
+    }
+
+    .summary-list {
+      width: 100%;
+      max-width: 720px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 10px;
+      text-align: left;
+    }
+
+    .summary-item {
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border-light);
+      background: var(--bg-subtle);
+      font-size: 0.82rem;
+    }
+
+    .summary-item.pass { border-left: 4px solid var(--emerald); }
+    .summary-item.fail { border-left: 4px solid var(--rose); }
+
+    /* 輔助小動畫 */
+    @keyframes floatUp {
+      0% { transform: translateY(4px); opacity: 0.15; }
+      50% { opacity: 0.85; }
+      100% { transform: translateY(-14px); opacity: 0; }
+    }
+    .svg-steam {
+      animation: floatUp 2.2s ease-in-out infinite;
+    }
+    .svg-steam-delay {
+      animation: floatUp 2.2s ease-in-out 0.9s infinite;
+    }
+    @keyframes flameFlicker {
+      0%, 100% { transform: scaleY(1) scaleX(1); }
+      50% { transform: scaleY(1.12) scaleX(0.94); }
+    }
+    .svg-flame {
+      transform-origin: center bottom;
+      animation: flameFlicker 0.35s ease-in-out infinite;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <!-- ======================================================================
+         頂部標題列與分頁切換
+         ====================================================================== -->
+    <header class="top-header">
+      <div class="brand-area">
+        <div class="brand-icon" aria-hidden="true">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="3.2" fill="#38bdf8"/>
+            <ellipse cx="12" cy="12" rx="9.5" ry="4" stroke="#e0f2fe" stroke-width="1.6" transform="rotate(30 12 12)"/>
+            <ellipse cx="12" cy="12" rx="9.5" ry="4" stroke="#5eead4" stroke-width="1.6" transform="rotate(-30 12 12)"/>
+            <circle cx="19.5" cy="8" r="1.8" fill="#fbbf24"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>物質的分類與變化：從混合物到元素的微觀之旅</h1>
+          <p>國高中理化互動式微觀動畫教材 — 混合物 ⇄ 純物質（化合物 ⇄ 元素）</p>
+        </div>
+      </div>
+
+      <nav class="nav-tabs" aria-label="主要功能分頁">
+        <button class="nav-tab-btn active" id="tabAnimBtn" type="button">
+          <span>🧪</span> 教學動畫
+        </button>
+        <button class="nav-tab-btn" id="tabQuizBtn" type="button">
+          <span>📝</span> 微觀粒子隨堂測驗
+        </button>
+      </nav>
+    </header>
+
+    <!-- ======================================================================
+         視圖一：教學動畫 (5 階段時間軸 + 巨微觀雙視窗 + 概念樹與觀念卡)
+         ====================================================================== -->
+    <main class="view-panel active" id="view-animation">
+      <!-- 步驟時間軸與播放控制列 -->
+      <section class="timeline-bar" aria-label="教學步驟時間軸">
+        <div class="steps-track" id="stepsTrack">
+          <button class="step-pill active" data-step="0" type="button">
+            <span class="step-num">1</span> 混合物
+          </button>
+          <span class="step-arrow">➜</span>
+          <button class="step-pill" data-step="1" type="button">
+            <span class="step-num">2</span> 過濾（物理）
+          </button>
+          <span class="step-arrow">➜</span>
+          <button class="step-pill" data-step="2" type="button">
+            <span class="step-num">3</span> 結晶（物理）
+          </button>
+          <span class="step-arrow">➜</span>
+          <button class="step-pill" data-step="3" type="button">
+            <span class="step-num">4</span> 化合物（純物質）
+          </button>
+          <span class="step-arrow">➜</span>
+          <button class="step-pill" data-step="4" type="button">
+            <span class="step-num">5</span> 分解成元素（化學）
+          </button>
+        </div>
+
+        <div class="playback-controls">
+          <button class="ctrl-btn primary" id="btnAutoPlay" type="button">▶ 自動播放</button>
+          <button class="ctrl-btn" id="btnPrev" type="button">◀ 上一步</button>
+          <button class="ctrl-btn" id="btnNext" type="button">下一步 ▶</button>
+          <button class="ctrl-btn" id="btnReplay" type="button">↻ 重播本階段</button>
+        </div>
+      </section>
+
+      <!-- 主工作區 -->
+      <div class="workspace-grid">
+        <!-- 左側：巨觀實驗 × 微觀原子分子雙視窗 + 階段操作列 -->
+        <div class="visual-stage">
+          <div class="dual-windows">
+            <!-- 巨觀實驗視窗 -->
+            <section class="lab-card" aria-label="巨觀實驗裝置視窗">
+              <div class="card-header">
+                <div class="card-title">
+                  <span class="title-dot amber"></span>
+                  巨觀實驗裝置
+                </div>
+                <span id="macroStageTag" style="font-size:0.74rem;font-weight:800;color:#0369a1;background:#e0f2fe;padding:2px 8px;border-radius:999px;">燒杯混合液</span>
+              </div>
+              <div class="macro-body">
+                <div class="macro-svg-wrap" id="macroSvgContainer">
+                  <!-- 由 JS 動態渲染並即時更新對應階段的 SVG 實驗器材 -->
+                </div>
+                <div class="macro-caption" id="macroCaption">
+                  橘紅色氧化汞粉末懸浮於澄清食鹽水中
+                </div>
+              </div>
+            </section>
+
+            <!-- 微觀原子分子視窗 -->
+            <section class="lab-card" aria-label="微觀原子分子動態模擬視窗">
+              <div class="card-header">
+                <div class="card-title">
+                  <span class="title-dot"></span>
+                  微觀原子分子模型（放大觀察）
+                </div>
+                <div class="micro-toggles">
+                  <label class="toggle-chip">
+                    <input type="checkbox" id="chkSymbols" checked>
+                    顯示原子符號
+                  </label>
+                  <label class="toggle-chip">
+                    <input type="checkbox" id="chkSlowMo">
+                    慢動作 (0.4×)
+                  </label>
+                </div>
+              </div>
+              <div class="micro-canvas-wrap" id="microCanvasWrap">
+                <canvas id="microCanvas"></canvas>
+              </div>
+            </section>
+          </div>
+
+          <!-- 階段專屬互動控制列 -->
+          <section class="stage-action-bar" id="stageActionBar" aria-label="本階段實驗操作控制">
+            <!-- 由 JS 依據目前階段動態填入按鈕、滑桿或化合物切換開關 -->
+          </section>
+        </div>
+
+        <!-- 右側資訊面板：概念樹 + 核心觀念卡 + 圖例 -->
+        <aside class="info-sidebar">
+          <!-- 1. 物質分類概念樹（即時高亮） -->
+          <section class="lab-card">
+            <div class="card-header">
+              <div class="card-title">
+                <span class="title-dot teal"></span>
+                物質分類概念樹（即時高亮）
+              </div>
+            </div>
+            <div class="tree-box">
+              <svg class="tree-svg" id="conceptTreeSvg" viewBox="0 0 380 186" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <marker id="arrowGray" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#94a3b8"/>
+                  </marker>
+                  <marker id="arrowBlue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#0284c7"/>
+                  </marker>
+                  <marker id="arrowRose" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#e11d48"/>
+                  </marker>
+                </defs>
+
+                <!-- 樹枝連線：物質 -> 混合物 / 純物質 -->
+                <path d="M190 34 L190 48 L80 48 L80 62" fill="none" stroke="#cbd5e1" stroke-width="2"/>
+                <path d="M190 48 L284 48 L284 62" fill="none" stroke="#cbd5e1" stroke-width="2"/>
+
+                <!-- 物理方法雙向箭頭：混合物 ⇄ 純物質 -->
+                <line id="arrow-phys" class="tree-arrow" x1="136" y1="81" x2="226" y2="81"
+                      stroke="#94a3b8" stroke-width="2" stroke-dasharray="5 3"
+                      marker-start="url(#arrowGray)" marker-end="url(#arrowGray)"/>
+                <rect id="label-phys-bg" x="148" y="61" width="66" height="16" rx="5" fill="#f1f5f9"/>
+                <text id="label-phys-txt" x="181" y="72.5" text-anchor="middle" font-size="10.5" font-weight="800" fill="#64748b">物理方法</text>
+                <text x="181" y="95" text-anchor="middle" font-size="9.5" font-weight="700" fill="#64748b">過濾・結晶</text>
+
+                <!-- 樹枝連線：純物質 -> 化合物 / 元素 -->
+                <path d="M284 100 L284 118 L188 118 L188 134" fill="none" stroke="#cbd5e1" stroke-width="2"/>
+                <path d="M284 118 L334 118 L334 134" fill="none" stroke="#cbd5e1" stroke-width="2"/>
+
+                <!-- 化學方法雙向箭頭：化合物 ⇄ 元素 -->
+                <line id="arrow-chem" class="tree-arrow" x1="234" y1="154" x2="288" y2="154"
+                      stroke="#94a3b8" stroke-width="2" stroke-dasharray="5 3"
+                      marker-start="url(#arrowGray)" marker-end="url(#arrowGray)"/>
+                <rect id="label-chem-bg" x="234" y="162" width="54" height="16" rx="5" fill="#f1f5f9"/>
+                <text id="label-chem-txt" x="261" y="173.5" text-anchor="middle" font-size="10" font-weight="800" fill="#64748b">化學方法</text>
+
+                <!-- 節點：物質 -->
+                <g class="tree-node" id="node-matter">
+                  <rect x="144" y="6" width="92" height="28" rx="8" fill="#1e293b" stroke="#0f172a" stroke-width="1.5"/>
+                  <text x="190" y="24" text-anchor="middle" font-size="13" font-weight="800" fill="#ffffff">物 質</text>
+                </g>
+
+                <!-- 節點：混合物 -->
+                <g class="tree-node" id="node-mixture">
+                  <rect x="28" y="62" width="102" height="38" rx="9" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.8"/>
+                  <text x="79" y="79" text-anchor="middle" font-size="12.5" font-weight="800" fill="#334155">混合物</text>
+                  <text x="79" y="93" text-anchor="middle" font-size="9.5" font-weight="700" fill="#64748b">多種微粒混雜</text>
+                </g>
+
+                <!-- 節點：純物質 -->
+                <g class="tree-node" id="node-pure">
+                  <rect x="232" y="62" width="104" height="38" rx="9" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.8"/>
+                  <text x="284" y="79" text-anchor="middle" font-size="12.5" font-weight="800" fill="#334155">純物質</text>
+                  <text x="284" y="93" text-anchor="middle" font-size="9.5" font-weight="700" fill="#64748b">單一微粒組成</text>
+                </g>
+
+                <!-- 節點：化合物 -->
+                <g class="tree-node" id="node-compound">
+                  <rect x="142" y="134" width="88" height="38" rx="9" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.8"/>
+                  <text x="186" y="151" text-anchor="middle" font-size="12.5" font-weight="800" fill="#334155">化合物</text>
+                  <text x="186" y="165" text-anchor="middle" font-size="9.2" font-weight="700" fill="#64748b">不同原子化合</text>
+                </g>
+
+                <!-- 節點：元素 -->
+                <g class="tree-node" id="node-element">
+                  <rect x="292" y="134" width="80" height="38" rx="9" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.8"/>
+                  <text x="332" y="151" text-anchor="middle" font-size="12.5" font-weight="800" fill="#334155">元 素</text>
+                  <text x="332" y="165" text-anchor="middle" font-size="9.2" font-weight="700" fill="#64748b">單一種原子</text>
+                </g>
+              </svg>
+            </div>
+          </section>
+
+          <!-- 2. 本階段核心觀念與微觀特徵卡片 -->
+          <section class="lab-card">
+            <div class="card-header">
+              <div class="card-title">
+                <span class="title-dot purple"></span>
+                <span id="conceptCardTitle">階段一：混合物</span>
+              </div>
+            </div>
+            <div class="concept-body">
+              <div class="meta-badges" id="conceptBadges"></div>
+              <ul class="concept-list" id="conceptPoints"></ul>
+              <div class="concept-highlight-box" id="conceptTakeaway"></div>
+            </div>
+          </section>
+
+          <!-- 3. 原子與分子圖例 (Legend) -->
+          <section class="lab-card">
+            <div class="card-header">
+              <div class="card-title">
+                <span class="title-dot"></span>
+                原子與分子圖例
+              </div>
+            </div>
+            <div class="legend-grid" id="legendGrid">
+              <!-- 由 JS 渲染高對比立體球圖例 -->
+            </div>
+          </section>
+        </aside>
+      </div>
+    </main>
+
+    <!-- ======================================================================
+         視圖二：微觀粒子隨堂測驗
+         ====================================================================== -->
+    <section class="view-panel" id="view-quiz" aria-label="微觀粒子隨堂測驗">
+      <div class="quiz-container">
+        <div class="quiz-top-strip">
+          <div class="quiz-progress-wrap">
+            <strong id="quizStepLabel" style="font-size:0.95rem;color:var(--navy-900);white-space:nowrap;">第 1 / 5 題</strong>
+            <div class="quiz-progress-track">
+              <div class="quiz-progress-fill" id="quizProgressFill" style="width: 20%;"></div>
+            </div>
+          </div>
+          <div class="quiz-score-pill" id="quizScorePill">目前得分：0 / 5</div>
+        </div>
+
+        <!-- 測驗作答區 -->
+        <div class="quiz-main-card" id="quizQuestionCard">
+          <div class="quiz-canvas-frame">
+            <canvas id="quizCanvas"></canvas>
+          </div>
+          <div class="quiz-q-area">
+            <div>
+              <h2 class="quiz-q-title" id="quizQTitle">請觀察左側微觀粒子示意圖：</h2>
+              <p class="quiz-q-desc" id="quizQDesc">圖中每一顆彩球代表一種原子，連在一起的球代表彼此化學鍵結形成的分子。請問這個容器內的物質屬於哪一類？</p>
+            </div>
+
+            <div class="quiz-options" id="quizOptions">
+              <button class="quiz-opt-btn" data-choice="element" type="button">
+                <span>A. 元素（純物質）</span>
+                <span class="quiz-opt-sub">單一物質・同一種原子</span>
+              </button>
+              <button class="quiz-opt-btn" data-choice="compound" type="button">
+                <span>B. 化合物（純物質）</span>
+                <span class="quiz-opt-sub">單一物質・多種原子化合</span>
+              </button>
+              <button class="quiz-opt-btn" data-choice="mixture" type="button">
+                <span>C. 混合物</span>
+                <span class="quiz-opt-sub">含兩種以上不同微粒</span>
+              </button>
+            </div>
+
+            <div class="quiz-feedback" id="quizFeedback">
+              <div class="quiz-feedback-title" id="quizFeedbackTitle"></div>
+              <div id="quizFeedbackBody"></div>
+              <div class="quiz-next-row">
+                <button class="action-btn-lg" id="btnQuizNext" type="button">下一題 ➜</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 測驗總結卡片 -->
+        <div class="quiz-summary-card" id="quizSummaryCard">
+          <h2 style="font-size:1.45rem;color:var(--navy-900);">🎉 隨堂測驗完成！</h2>
+          <div class="summary-score-big" id="summaryScoreText">5 / 5</div>
+          <p id="summaryComment" style="font-size:0.95rem;color:var(--text-secondary);max-width:560px;"></p>
+          <div class="summary-list" id="summaryList"></div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:6px;">
+            <button class="action-btn-lg" id="btnQuizRestart" type="button">↻ 重新挑戰測驗</button>
+            <button class="ctrl-btn" id="btnBackToAnim" type="button" style="padding:9px 16px;">🧪 回到教學動畫複習</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    /**
+     * ========================================================================
+     * 物質的分類與變化：從混合物到元素的微觀之旅
+     * 純原生 HTML5 Canvas + SVG + JavaScript 互動式教學動畫與隨堂測驗
+     * ========================================================================
+     */
+    (function () {
+      'use strict';
+
+      /* ======================================================================
+         1. 原子視覺規格與 3D 球體繪製工具
+         ====================================================================== */
+      const ATOM_STYLES = {
+        O:  { symbol: 'O',  name: '氧', r: 13.5, base: '#ef4444', light: '#fca5a5', dark: '#991b1b', text: '#ffffff' },
+        H:  { symbol: 'H',  name: '氫', r: 8.5,  base: '#f8fafc', light: '#ffffff', dark: '#94a3b8', text: '#0f172a', stroke: '#475569' },
+        Na: { symbol: 'Na', name: '鈉', r: 13,   base: '#8b5cf6', light: '#ddd6fe', dark: '#5b21b6', text: '#ffffff' },
+        Cl: { symbol: 'Cl', name: '氯', r: 14.5, base: '#22c55e', light: '#bbf7d0', dark: '#15803d', text: '#ffffff' },
+        Hg: { symbol: 'Hg', name: '汞', r: 16.5, base: '#94a3b8', light: '#f1f5f9', dark: '#334155', text: '#0f172a', stroke: '#475569' },
+        Ag: { symbol: 'Ag', name: '銀', r: 15.5, base: '#cbd5e1', light: '#ffffff', dark: '#475569', text: '#0f172a', stroke: '#334155' },
+        // 測驗專用擴充原子
+        He: { symbol: 'He', name: '氦', r: 13,   base: '#f59e0b', light: '#fde68a', dark: '#b45309', text: '#ffffff' },
+        N:  { symbol: 'N',  name: '氮', r: 13.5, base: '#3b82f6', light: '#bfdbfe', dark: '#1d4ed8', text: '#ffffff' },
+        C:  { symbol: 'C',  name: '碳', r: 14,   base: '#475569', light: '#cbd5e1', dark: '#0f172a', text: '#ffffff' }
+      };
+
+      /**
+       * 在 Canvas 上繪製具有立體高光與陰影的 3D 原子球體
+       */
+      function drawAtom3D(ctx, x, y, type, showSymbol, scale = 1, alpha = 1) {
+        const spec = ATOM_STYLES[type] || ATOM_STYLES.O;
+        const r = spec.r * scale;
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+
+        // 柔和投影增強立體層次
+        ctx.beginPath();
+        ctx.arc(x + 1.5 * scale, y + 2.5 * scale, r, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.14)';
+        ctx.fill();
+
+        // 3D 放射狀漸層球體
+        const grad = ctx.createRadialGradient(
+          x - r * 0.34, y - r * 0.34, r * 0.1,
+          x, y, r
+        );
+        grad.addColorStop(0, spec.light);
+        grad.addColorStop(0.45, spec.base);
+        grad.addColorStop(1, spec.dark);
+
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fillStyle = grad;
+        ctx.fill();
+
+        // 外框線（白色/淺銀色原子在淺色背景上保持高對比）
+        ctx.lineWidth = spec.stroke ? 1.4 : 0.9;
+        ctx.strokeStyle = spec.stroke || 'rgba(15, 23, 42, 0.25)';
+        ctx.stroke();
+
+        // 左上角高光點
+        ctx.beginPath();
+        ctx.ellipse(x - r * 0.32, y - r * 0.34, r * 0.25, r * 0.15, -Math.PI / 4, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.52)';
+        ctx.fill();
+
+        // 原子符號標記
+        if (showSymbol) {
+          const fontSize = Math.max(8, Math.round(r * (spec.symbol.length > 1 ? 0.85 : 1.02)));
+          ctx.font = `800 ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillStyle = spec.text;
+          ctx.fillText(spec.symbol, x, y + 0.5);
+        }
+        ctx.restore();
+      }
+
+      /**
+       * 繪製兩原子間的化學鍵結棒
+       */
+      function drawBondStick(ctx, x1, y1, x2, y2, color = '#64748b', width = 5, doubleBond = false) {
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.lineCap = 'round';
+        if (!doubleBond) {
+          ctx.lineWidth = width;
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x2, y2);
+          ctx.stroke();
+        } else {
+          const dx = x2 - x1;
+          const dy = y2 - y1;
+          const len = Math.hypot(dx, dy) || 1;
+          const nx = (-dy / len) * 3.4;
+          const ny = (dx / len) * 3.4;
+          ctx.lineWidth = 3.2;
+          ctx.beginPath();
+          ctx.moveTo(x1 + nx, y1 + ny);
+          ctx.lineTo(x2 + nx, y2 + ny);
+          ctx.moveTo(x1 - nx, y1 - ny);
+          ctx.lineTo(x2 - nx, y2 - ny);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      /**
+       * 繪製圓角矩形文字標籤，避免文字模糊或與背景重疊
+       */
+      function drawPillLabel(ctx, text, cx, cy, options = {}) {
+        const {
+          bg = 'rgba(255, 255, 255, 0.94)',
+          border = '#0284c7',
+          color = '#0f172a',
+          fontSize = 13,
+          paddingX = 12,
+          paddingY = 6
+        } = options;
+
+        ctx.save();
+        ctx.font = `800 ${fontSize}px "PingFang TC", "Microsoft JhengHei", sans-serif`;
+        const textWidth = ctx.measureText(text).width;
+        const w = textWidth + paddingX * 2;
+        const h = fontSize + paddingY * 2;
+        const x = cx - w / 2;
+        const y = cy - h / 2;
+
+        ctx.beginPath();
+        roundRectPath(ctx, x, y, w, h, h / 2);
+        ctx.fillStyle = bg;
+        ctx.fill();
+        ctx.lineWidth = 1.6;
+        ctx.strokeStyle = border;
+        ctx.stroke();
+
+        ctx.fillStyle = color;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, cx, cy + 0.5);
+        ctx.restore();
+      }
+
+      function roundRectPath(ctx, x, y, w, h, r) {
+        const radius = Math.min(r, w / 2, h / 2);
+        ctx.moveTo(x + radius, y);
+        ctx.arcTo(x + w, y, x + w, y + h, radius);
+        ctx.arcTo(x + w, y + h, x, y + h, radius);
+        ctx.arcTo(x, y + h, x, y, radius);
+        ctx.arcTo(x, y, x + w, y, radius);
+        ctx.closePath();
+      }
+
+      /* ======================================================================
+         2. 教學階段資料定義 (台灣國高中理化課綱用語)
+         ====================================================================== */
+      const STAGE_INFO = [
+        {
+          id: 0,
+          title: '階段一：混合物（Mixture）',
+          macroTag: '燒杯混合液',
+          macroCaption: '橘紅色氧化汞粉末懸浮於澄清食鹽水中',
+          badges: [
+            { text: '物質分類：混合物', cls: 'badge-amber' },
+            { text: '微粒種類：3 種（H₂O、NaCl、HgO）', cls: 'badge-neutral' },
+            { text: '組成比例：不固定', cls: 'badge-teal' }
+          ],
+          points: [
+            '由<strong>兩種以上不同物質</strong>混合而成（水、食鹽、氧化汞固體）。',
+            '各成分微粒彼此自由混雜，<strong>沒有發生化學鍵重組</strong>，各自保留原有性質。',
+            '因微粒大小、溶解度與沸點不同，可利用<strong>物理方法</strong>逐一分離。'
+          ],
+          takeaway: '💡 觀察重點：畫布中同時存在 3 種截然不同的微粒，彼此互不干擾地熱運動！',
+          treeNodes: ['mixture'],
+          treeArrows: [],
+          legends: ['H2O', 'NaCl', 'HgO']
+        },
+        {
+          id: 1,
+          title: '階段二：物理方法 — 過濾（Filtration）',
+          macroTag: '漏斗濾紙過濾',
+          macroCaption: '濾紙攔截橘紅色氧化汞濾渣，澄清食鹽水成為濾液',
+          badges: [
+            { text: '物理變化（不產生新物質）', cls: 'badge-phys' },
+            { text: '分子本身：完全不變', cls: 'badge-teal' },
+            { text: '原理：顆粒大小與溶解度差異', cls: 'badge-neutral' }
+          ],
+          points: [
+            '<strong>氧化汞（HgO）</strong>難溶於水且聚集成較大固體微粒群，被濾紙纖維攔截於上方，得到<strong>純物質濾渣</strong>。',
+            '<strong>水分子（H₂O）與溶解的食鹽微粒（NaCl）</strong>體積遠小於濾紙孔隙，順利通過進入下方。',
+            '下方澄清<strong>濾液（食鹽水）仍含有 2 種物質</strong>，因此依然屬於混合物！'
+          ],
+          takeaway: '💡 關鍵觀念：過濾只是把不同微粒「分開」，每個分子內部的原子排列完全沒有改變！',
+          treeNodes: ['mixture', 'pure'],
+          treeArrows: ['phys'],
+          legends: ['H2O', 'NaCl', 'HgO']
+        },
+        {
+          id: 2,
+          title: '階段三：物理方法 — 蒸發結晶（Crystallization）',
+          macroTag: '蒸發皿溫和加熱',
+          macroCaption: '食鹽水溫和加熱蒸發水氣，蒸發皿底析出白色食鹽晶體',
+          badges: [
+            { text: '物理變化（狀態改變）', cls: 'badge-phys' },
+            { text: '分子本身：H-O 鍵完全不斷裂', cls: 'badge-teal' },
+            { text: '原理：沸點差異', cls: 'badge-neutral' }
+          ],
+          points: [
+            '水的沸點（100°C）遠低於食鹽（1465°C），溫和加熱時<strong>水分子運動加快</strong>並脫離液面化為水蒸氣。',
+            '注意觀察：水汽化只是水分子之間的距離拉大，<strong>H₂O 分子內部的 H-O 鍵完全不斷裂</strong>！',
+            '留下的食鹽微粒（NaCl）規則堆疊成晶體，成功分離出兩種<strong>純物質</strong>（純水與純食鹽）。'
+          ],
+          takeaway: '💡 關鍵觀念：加熱蒸發是物理變化，改變的是「分子間距」而非「分子組成」！',
+          treeNodes: ['mixture', 'pure'],
+          treeArrows: ['phys'],
+          legends: ['H2O', 'NaCl']
+        },
+        {
+          id: 3,
+          title: '階段四：純物質 — 化合物（Compound）',
+          macroTag: '純化合物樣品',
+          macroCaptionHgO: '已分離出的純氧化汞（HgO）橘紅色粉末',
+          macroCaptionAgCl: '純氯化銀（AgCl）白色固體樣品',
+          badges: [
+            { text: '物質分類：純物質（化合物）', cls: 'badge-teal' },
+            { text: '微粒種類：僅 1 種相同微粒', cls: 'badge-neutral' },
+            { text: '原子種類：每單位含 2 種不同原子', cls: 'badge-amber' }
+          ],
+          pointsHgO: [
+            '容器內<strong>只有氧化汞（HgO）單一種物質</strong>，因此屬於<strong>純物質</strong>，具有固定熔點與性質。',
+            '每個單位皆由「銀灰汞原子（Hg）與紅氧原子（O）」<strong>兩種不同原子</strong>緊密化合而成，故屬於<strong>化合物</strong>。',
+            '無法再用過濾、蒸發等物理方法將 Hg 與 O 分開，必須使用<strong>化學方法</strong>！'
+          ],
+          pointsAgCl: [
+            '容器內<strong>只有氯化銀（AgCl）單一種物質</strong>，因此屬於<strong>純物質</strong>，組成比例固定。',
+            '每個單位皆由「銀白銀原子（Ag）與綠氯原子（Cl）」<strong>兩種不同原子</strong>化合而成，故屬於<strong>化合物</strong>。',
+            '無法再用過濾、蒸發等物理方法分開 Ag 與 Cl，必須透過<strong>照光等化學方法</strong>分解！'
+          ],
+          takeaway: '💡 老師可點選下方開關，切換「氧化汞（加熱）」或「氯化銀（照光）」進行下階段分解實驗。',
+          treeNodes: ['pure', 'compound'],
+          treeArrows: [],
+          legendsHgO: ['HgO'],
+          legendsAgCl: ['AgCl']
+        },
+        {
+          id: 4,
+          title: '階段五：化學方法 — 分解成元素（Elements）',
+          macroTagHgO: '酒精燈加熱分解',
+          macroTagAgCl: '強光／紫外線照光分解',
+          macroCaptionHgO: '氧化汞受熱分解產生銀色液態汞（Hg）與氧氣（O₂↑）',
+          macroCaptionAgCl: '氯化銀照光分解析出灰銀色金屬銀（Ag）與氯氣（Cl₂↑）',
+          badges: [
+            { text: '化學變化（產生新物質）', cls: 'badge-chem' },
+            { text: '微觀本質：舊鍵斷裂、原子重排', cls: 'badge-amber' },
+            { text: '產物：兩種元素', cls: 'badge-teal' }
+          ],
+          pointsHgO: [
+            '吸收足夠熱能後，Hg-O 化學鍵閃光斷裂，<strong>原子重新排列組合</strong>成新物質。',
+            '氧原子兩兩結合成<strong>氧氣分子（O₂）</strong>向上飄散；汞原子聚集形成<strong>金屬汞（Hg）</strong>。',
+            '<strong>重要觀念</strong>：O₂ 雖是兩顆原子相連，但皆為「同一種氧原子」，故屬於<strong>元素</strong>而非化合物！'
+          ],
+          pointsAgCl: [
+            '吸收高能量光子後，Ag-Cl 化學鍵閃光斷裂，<strong>原子重新排列組合</strong>成新物質。',
+            '氯原子兩兩結合成<strong>氯氣分子（Cl₂）</strong>向上飄散；銀原子析出聚集為<strong>金屬銀（Ag）</strong>。',
+            '<strong>重要觀念</strong>：Cl₂ 雖是兩顆原子相連，但皆為「同一種氯原子」，故屬於<strong>元素</strong>而非化合物！'
+          ],
+          takeaway: '🔥 核心比較：物理方法只分開不同分子；化學方法則是打斷化學鍵、讓原子重新組合！',
+          treeNodes: ['pure', 'compound', 'element'],
+          treeArrows: ['chem'],
+          legendsHgO: ['HgO', 'Hg', 'O2'],
+          legendsAgCl: ['AgCl', 'Ag', 'Cl2']
+        }
+      ];
+
+      /* ======================================================================
+         3. 全域應用程式狀態
+         ====================================================================== */
+      const state = {
+        activeTab: 'animation',   // 'animation' | 'quiz'
+        stage: 0,                 // 0 ~ 4
+        compound: 'HgO',          // 'HgO' | 'AgCl'
+        showSymbols: true,
+        slowMo: false,
+        autoPlay: false,
+        autoTimer: 0,
+
+        // 各階段互動進度 (0 ~ 1)
+        filterRunning: false,
+        filterProgress: 0,
+
+        evapRunning: false,
+        evapProgress: 0,
+
+        // 階段五能量 (0 ~ 100) 與分解狀態
+        energy: 0,
+        energyAutoRamp: false,
+        decomposed: false,
+        decomposeProgress: 0
+      };
+
+      /* ======================================================================
+         4. 巨觀實驗視窗動態 SVG 渲染器
+         ====================================================================== */
+      function renderMacroSVG() {
+        const container = document.getElementById('macroSvgContainer');
+        const captionEl = document.getElementById('macroCaption');
+        const tagEl = document.getElementById('macroStageTag');
+        const info = STAGE_INFO[state.stage];
+
+        if (state.stage === 0) {
+          tagEl.textContent = info.macroTag;
+          captionEl.textContent = info.macroCaption;
+          container.innerHTML = `
+            <svg viewBox="0 0 240 270" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="salineGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#bae6fd" stop-opacity="0.72"/>
+                  <stop offset="100%" stop-color="#38bdf8" stop-opacity="0.62"/>
+                </linearGradient>
+                <linearGradient id="glassShine" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stop-color="#ffffff" stop-opacity="0.65"/>
+                  <stop offset="25%" stop-color="#ffffff" stop-opacity="0.08"/>
+                  <stop offset="100%" stop-color="#cbd5e1" stop-opacity="0.25"/>
+                </linearGradient>
+              </defs>
+              <!-- 實驗台桌面 -->
+              <rect x="20" y="232" width="200" height="12" rx="6" fill="#cbd5e1"/>
+              <!-- 燒杯液體 -->
+              <path d="M58 108 L58 220 Q58 232 70 232 L170 232 Q182 232 182 220 L182 108 Z" fill="url(#salineGrad)"/>
+              <ellipse cx="120" cy="108" rx="62" ry="9" fill="#7dd3fc" opacity="0.8"/>
+              <!-- 懸浮的橘紅色氧化汞粉末 -->
+              <g id="macroMixPowder">
+                <circle cx="84" cy="148" r="4.5" fill="#ea580c"/>
+                <circle cx="105" cy="134" r="3.8" fill="#dc2626"/>
+                <circle cx="136" cy="152" r="4.8" fill="#ea580c"/>
+                <circle cx="155" cy="138" r="3.6" fill="#c2410c"/>
+                <circle cx="94" cy="176" r="5" fill="#dc2626"/>
+                <circle cx="124" cy="182" r="4.4" fill="#ea580c"/>
+                <circle cx="148" cy="174" r="4.2" fill="#dc2626"/>
+                <circle cx="78" cy="202" r="4.8" fill="#c2410c"/>
+                <circle cx="112" cy="206" r="5.2" fill="#ea580c"/>
+                <circle cx="140" cy="208" r="4.6" fill="#dc2626"/>
+                <circle cx="164" cy="198" r="4" fill="#ea580c"/>
+                <!-- 底部略微沉降粉末 -->
+                <path d="M64 224 Q120 214 176 224 Q174 231 168 231 L72 231 Q66 231 64 224 Z" fill="#ea580c" opacity="0.82"/>
+              </g>
+              <!-- 燒杯玻璃外框 -->
+              <path d="M52 62 L58 72 L58 220 Q58 232 70 232 L170 232 Q182 232 182 220 L182 72 L188 62"
+                    fill="url(#glassShine)" stroke="#475569" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+              <!-- 刻度線 -->
+              <line x1="158" y1="125" x2="174" y2="125" stroke="#475569" stroke-width="1.5"/>
+              <line x1="163" y1="150" x2="174" y2="150" stroke="#475569" stroke-width="1.5"/>
+              <line x1="158" y1="175" x2="174" y2="175" stroke="#475569" stroke-width="1.5"/>
+              <line x1="163" y1="200" x2="174" y2="200" stroke="#475569" stroke-width="1.5"/>
+              <!-- 標籤 -->
+              <rect x="64" y="20" width="112" height="24" rx="12" fill="#fff7ed" stroke="#fb923c" stroke-width="1.5"/>
+              <text x="120" y="36" text-anchor="middle" font-size="11.5" font-weight="800" fill="#9a3412">HgO + 食鹽水</text>
+            </svg>
+          `;
+        } else if (state.stage === 1) {
+          tagEl.textContent = info.macroTag;
+          const p = state.filterProgress;
+          captionEl.textContent = p < 0.05
+            ? '準備將混合液倒入裝有濾紙的漏斗中'
+            : (p < 0.95 ? '過濾進行中：水與食鹽通過濾紙，氧化汞被攔截' : '過濾完成！上方濾渣為純 HgO，下方為澄清食鹽水');
+
+          const filtrateH = Math.round(p * 48);
+          const residueScale = Math.min(1, p * 1.15);
+          const pouringOpacity = (p > 0.02 && p < 0.92) ? 1 : 0;
+
+          container.innerHTML = `
+            <svg viewBox="0 0 240 270" xmlns="http://www.w3.org/2000/svg">
+              <!-- 鐵架台底座與支柱 -->
+              <rect x="24" y="242" width="192" height="10" rx="5" fill="#94a3b8"/>
+              <rect x="38" y="32" width="8" height="212" rx="3" fill="#64748b"/>
+              <rect x="46" y="106" width="52" height="7" rx="3" fill="#64748b"/>
+
+              <!-- 上方傾倒燒杯 -->
+              <g transform="translate(152, 46) rotate(${p > 0.02 && p < 0.95 ? -42 : -18})">
+                <path d="M-24 -24 L-24 22 Q-24 28 -18 28 L18 28 Q24 28 24 22 L24 -24"
+                      fill="#e0f2fe" fill-opacity="0.7" stroke="#475569" stroke-width="2.4"/>
+                <rect x="-22" y="${-6 + p * 26}" width="44" height="${Math.max(4, 30 - p * 26)}" fill="#fb923c" fill-opacity="0.65"/>
+              </g>
+
+              <!-- 傾倒液柱 -->
+              <path d="M132 56 Q124 72 124 92" fill="none" stroke="#f97316" stroke-width="4.5" stroke-linecap="round" opacity="${pouringOpacity}"/>
+
+              <!-- 漏斗與濾紙 -->
+              <polygon points="82,78 166,78 131,134 117,134" fill="#ffffff" stroke="#94a3b8" stroke-width="2"/>
+              <!-- 濾紙內緣 -->
+              <polygon points="88,82 160,82 128,131 120,131" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="3 2"/>
+              <!-- 橘紅色濾渣累積 -->
+              <polygon points="${124 - 22 * residueScale},${128 - 18 * residueScale} ${124 + 22 * residueScale},${128 - 18 * residueScale} 127,131 121,131"
+                       fill="#ea580c" opacity="${residueScale > 0.05 ? 0.95 : 0}"/>
+              <!-- 漏斗頸 -->
+              <rect x="119" y="133" width="10" height="36" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+
+              <!-- 滴落的澄清濾液水滴 -->
+              <g opacity="${pouringOpacity}">
+                <circle cx="124" cy="${176 + ((Date.now() / 12) % 28)}" r="3.5" fill="#38bdf8"/>
+                <circle cx="124" cy="${188 + (((Date.now() / 12) + 14) % 28)}" r="3" fill="#0ea5e9"/>
+              </g>
+
+              <!-- 下方承接燒杯 -->
+              <path d="M84 176 L84 234 Q84 242 92 242 L156 242 Q164 242 164 234 L164 176"
+                    fill="#ffffff" fill-opacity="0.45" stroke="#475569" stroke-width="2.6"/>
+              <!-- 澄清濾液 -->
+              <path d="M86 ${240 - filtrateH} L162 ${240 - filtrateH} L162 234 Q162 240 156 240 L92 240 Q86 240 86 234 Z"
+                    fill="#38bdf8" fill-opacity="0.62"/>
+
+              <!-- 標示文字 -->
+              <text x="176" y="106" font-size="10.5" font-weight="800" fill="#c2410c">濾渣 HgO</text>
+              <line x1="146" y1="108" x2="173" y2="103" stroke="#ea580c" stroke-width="1.3"/>
+              <text x="174" y="218" font-size="10.5" font-weight="800" fill="#0369a1">澄清濾液</text>
+              <text x="174" y="231" font-size="9.5" font-weight="700" fill="#475569">(食鹽水)</text>
+            </svg>
+          `;
+        } else if (state.stage === 2) {
+          tagEl.textContent = info.macroTag;
+          const p = state.evapProgress;
+          captionEl.textContent = p < 0.05
+            ? '將澄清食鹽水倒入蒸發皿，準備溫和加熱'
+            : (p < 0.95 ? '水分子吸熱汽化上升，食鹽逐漸在皿底析出' : '蒸發完成！水分完全汽化，皿底留下白色食鹽晶體');
+
+          const waterOpacity = Math.max(0, 0.78 - p * 0.78);
+          const crystalOpacity = Math.min(1, Math.max(0, (p - 0.18) * 1.25));
+          const heating = state.evapRunning || (p > 0.02 && p < 0.99);
+
+          container.innerHTML = `
+            <svg viewBox="0 0 240 270" xmlns="http://www.w3.org/2000/svg">
+              <!-- 水蒸氣上升動畫 -->
+              <g opacity="${heating ? 0.9 : 0}">
+                <path class="svg-steam" d="M96 92 Q90 76 98 62 Q104 48 96 34" fill="none" stroke="#38bdf8" stroke-width="3" stroke-linecap="round"/>
+                <path class="svg-steam-delay" d="M120 88 Q126 70 118 54 Q112 38 122 24" fill="none" stroke="#0ea5e9" stroke-width="3.2" stroke-linecap="round"/>
+                <path class="svg-steam" d="M144 92 Q150 76 142 60 Q136 46 144 34" fill="none" stroke="#7dd3fc" stroke-width="2.8" stroke-linecap="round"/>
+                <text x="120" y="19" text-anchor="middle" font-size="11" font-weight="800" fill="#0284c7">水蒸氣 H₂O↑</text>
+              </g>
+
+              <!-- 蒸發皿 (白色陶瓷碗) -->
+              <path d="M56 106 Q120 154 184 106 Z" fill="#f8fafc" stroke="#64748b" stroke-width="3"/>
+              <!-- 皿內食鹽水 -->
+              <path d="M68 110 Q120 144 172 110 Z" fill="#38bdf8" opacity="${waterOpacity}"/>
+              <!-- 析出的白色食鹽晶體 -->
+              <g opacity="${crystalOpacity}">
+                <rect x="96" y="114" width="9" height="9" fill="#ffffff" stroke="#94a3b8" stroke-width="1.2" transform="rotate(12 100 118)"/>
+                <rect x="108" y="118" width="10" height="10" fill="#ffffff" stroke="#94a3b8" stroke-width="1.2" transform="rotate(-8 113 123)"/>
+                <rect x="122" y="117" width="9" height="9" fill="#ffffff" stroke="#94a3b8" stroke-width="1.2" transform="rotate(15 126 121)"/>
+                <rect x="134" y="113" width="8" height="8" fill="#ffffff" stroke="#94a3b8" stroke-width="1.2" transform="rotate(-14 138 117)"/>
+                <rect x="114" y="110" width="8" height="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.2"/>
+              </g>
+
+              <!-- 陶瓷纖維網與三腳架 -->
+              <rect x="58" y="135" width="124" height="6" rx="3" fill="#94a3b8"/>
+              <line x1="72" y1="141" x2="54" y2="242" stroke="#475569" stroke-width="5" stroke-linecap="round"/>
+              <line x1="168" y1="141" x2="186" y2="242" stroke="#475569" stroke-width="5" stroke-linecap="round"/>
+              <line x1="120" y1="141" x2="120" y2="236" stroke="#64748b" stroke-width="3.5" opacity="0.5"/>
+              <rect x="28" y="242" width="184" height="10" rx="5" fill="#cbd5e1"/>
+
+              <!-- 酒精燈火焰 -->
+              <g class="svg-flame" opacity="${heating ? 1 : 0.18}">
+                <path d="M120 144 Q134 166 120 184 Q106 166 120 144 Z" fill="#f97316"/>
+                <path d="M120 156 Q128 169 120 182 Q112 169 120 156 Z" fill="#fef08a"/>
+              </g>
+
+              <!-- 酒精燈本體 -->
+              <rect x="115" y="182" width="10" height="10" rx="2" fill="#e2e8f0" stroke="#64748b" stroke-width="1.5"/>
+              <path d="M96 196 Q96 190 104 190 L136 190 Q144 190 144 196 L152 232 Q153 242 142 242 L98 242 Q87 242 88 232 Z"
+                    fill="#e0f2fe" stroke="#475569" stroke-width="2.4"/>
+              <path d="M92 216 L148 216 L151 234 Q151 240 142 240 L98 240 Q89 240 89 234 Z" fill="#bae6fd"/>
+              <line x1="120" y1="184" x2="120" y2="232" stroke="#94a3b8" stroke-width="2.5" stroke-dasharray="3 2"/>
+
+              <!-- 標示 -->
+              ${crystalOpacity > 0.5 ? `<text x="184" y="124" font-size="10.5" font-weight="800" fill="#0f766e">食鹽晶體</text>` : ''}
+            </svg>
+          `;
+        } else if (state.stage === 3) {
+          const isHgO = state.compound === 'HgO';
+          tagEl.textContent = isHgO ? '純氧化汞 HgO' : '純氯化銀 AgCl';
+          captionEl.textContent = isHgO ? info.macroCaptionHgO : info.macroCaptionAgCl;
+
+          container.innerHTML = `
+            <svg viewBox="0 0 240 270" xmlns="http://www.w3.org/2000/svg">
+              <rect x="26" y="232" width="188" height="12" rx="6" fill="#cbd5e1"/>
+              ${isHgO ? `
+                <!-- 試管與純氧化汞粉末 -->
+                <g transform="translate(120, 140) rotate(14)">
+                  <rect x="-24" y="-86" width="48" height="154" rx="24" fill="#ffffff" fill-opacity="0.7" stroke="#475569" stroke-width="3"/>
+                  <path d="M-21 26 L21 26 L21 44 A21 21 0 0 1 -21 44 Z" fill="#ea580c"/>
+                  <ellipse cx="0" cy="26" rx="21" ry="5.5" fill="#f97316"/>
+                  <!-- 試管口 -->
+                  <rect x="-28" y="-90" width="56" height="8" rx="4" fill="#f8fafc" stroke="#475569" stroke-width="2.4"/>
+                </g>
+                <rect x="52" y="22" width="136" height="26" rx="13" fill="#fff7ed" stroke="#fb923c" stroke-width="1.6"/>
+                <text x="120" y="39" text-anchor="middle" font-size="11.5" font-weight="800" fill="#9a3412">純物質：氧化汞 (HgO)</text>
+              ` : `
+                <!-- 錶玻璃上的白色純氯化銀固體 -->
+                <path d="M44 176 Q120 218 196 176" fill="#e2e8f0" fill-opacity="0.45" stroke="#475569" stroke-width="3"/>
+                <path d="M74 178 Q120 144 166 178 Q120 198 74 178 Z" fill="#ffffff" stroke="#94a3b8" stroke-width="2"/>
+                <circle cx="105" cy="170" r="3" fill="#e2e8f0"/>
+                <circle cx="122" cy="164" r="3.5" fill="#e2e8f0"/>
+                <circle cx="136" cy="172" r="3" fill="#e2e8f0"/>
+                <!-- 頂部預備照光燈罩 -->
+                <path d="M90 66 L150 66 L162 88 L78 88 Z" fill="#475569"/>
+                <ellipse cx="120" cy="88" rx="42" ry="6" fill="#cbd5e1"/>
+                <rect x="48" y="22" width="144" height="26" rx="13" fill="#f5f3ff" stroke="#a78bfa" stroke-width="1.6"/>
+                <text x="120" y="39" text-anchor="middle" font-size="11.5" font-weight="800" fill="#5b21b6">純物質：氯化銀 (AgCl)</text>
+              `}
+            </svg>
+          `;
+        } else {
+          // Stage 5: 化學分解 (HgO 加熱 / AgCl 照光)
+          const isHgO = state.compound === 'HgO';
+          const e = state.energy / 100;
+          const dec = state.decomposeProgress;
+
+          tagEl.textContent = isHgO ? info.macroTagHgO : info.macroTagAgCl;
+          if (dec > 0.7) {
+            captionEl.textContent = isHgO ? info.macroCaptionHgO : info.macroCaptionAgCl;
+          } else if (e > 0.15) {
+            captionEl.textContent = isHgO ? '酒精燈強力加熱中，氧化汞吸收熱能！' : '強光／紫外線持續照射，氯化銀吸收光能！';
+          } else {
+            captionEl.textContent = isHgO ? '請拖曳能量滑桿或點選加熱按鈕啟動分解' : '請拖曳光強滑桿或點選照光按鈕啟動分解';
+          }
+
+          if (isHgO) {
+            const flameScale = 0.25 + e * 1.05;
+            container.innerHTML = `
+              <svg viewBox="0 0 240 270" xmlns="http://www.w3.org/2000/svg">
+                <!-- 鐵架台 -->
+                <rect x="24" y="242" width="192" height="10" rx="5" fill="#cbd5e1"/>
+                <rect x="34" y="34" width="8" height="210" rx="3" fill="#64748b"/>
+                <rect x="42" y="102" width="50" height="7" rx="3" fill="#64748b"/>
+
+                <!-- 氧氣氣流飄出 -->
+                <g opacity="${dec > 0.15 ? Math.min(1, dec * 1.2) : 0}">
+                  <circle class="svg-steam" cx="176" cy="54" r="5" fill="#ef4444" fill-opacity="0.45" stroke="#dc2626" stroke-width="1.2"/>
+                  <circle class="svg-steam-delay" cx="192" cy="40" r="6" fill="#ef4444" fill-opacity="0.4" stroke="#dc2626" stroke-width="1.2"/>
+                  <text x="190" y="24" text-anchor="middle" font-size="11" font-weight="800" fill="#dc2626">O₂↑ 氧氣</text>
+                </g>
+
+                <!-- 傾斜試管 -->
+                <g transform="translate(124, 114) rotate(36)">
+                  <rect x="-20" y="-76" width="40" height="136" rx="20" fill="#ffffff" fill-opacity="0.72" stroke="#475569" stroke-width="2.8"/>
+                  <!-- 剩餘橘紅色氧化汞隨分解減少 -->
+                  <path d="M-17 24 L17 24 L17 40 A17 17 0 0 1 -17 40 Z" fill="#ea580c" opacity="${Math.max(0.05, 1 - dec * 0.95)}"/>
+                  <!-- 管壁出現銀白色液態汞滴 -->
+                  <g opacity="${dec}">
+                    <circle cx="-11" cy="-8" r="4.5" fill="#94a3b8" stroke="#334155" stroke-width="1"/>
+                    <circle cx="10" cy="-16" r="4" fill="#cbd5e1" stroke="#334155" stroke-width="1"/>
+                    <circle cx="-8" cy="14" r="5" fill="#94a3b8" stroke="#334155" stroke-width="1"/>
+                    <path d="M-16 32 L16 32 L16 40 A16 16 0 0 1 -16 40 Z" fill="#94a3b8"/>
+                  </g>
+                </g>
+
+                <!-- 酒精燈火焰 -->
+                <g transform="translate(96, 198) scale(${flameScale})" opacity="${e > 0.05 ? 1 : 0.15}">
+                  <path class="svg-flame" d="M0 -42 Q14 -18 0 0 Q-14 -18 0 -42 Z" fill="#ef4444"/>
+                  <path class="svg-flame" d="M0 -28 Q8 -12 0 0 Q-8 -12 0 -28 Z" fill="#fef08a"/>
+                </g>
+
+                <!-- 酒精燈 -->
+                <rect x="91" y="198" width="10" height="8" rx="2" fill="#e2e8f0" stroke="#64748b" stroke-width="1.4"/>
+                <path d="M74 210 Q74 205 81 205 L111 205 Q118 205 118 210 L124 236 Q124 242 116 242 L76 242 Q68 242 68 236 Z"
+                      fill="#e0f2fe" stroke="#475569" stroke-width="2.2"/>
+                <text x="176" y="198" text-anchor="middle" font-size="10.5" font-weight="800" fill="#475569" opacity="${dec > 0.4 ? 1 : 0}">銀色液態汞 Hg</text>
+              </svg>
+            `;
+          } else {
+            container.innerHTML = `
+              <svg viewBox="0 0 240 270" xmlns="http://www.w3.org/2000/svg">
+                <rect x="26" y="232" width="188" height="12" rx="6" fill="#cbd5e1"/>
+
+                <!-- UV 紫外線燈罩 -->
+                <path d="M84 36 L156 36 L168 62 L72 62 Z" fill="#312e81"/>
+                <ellipse cx="120" cy="62" rx="48" ry="7" fill="${e > 0.1 ? '#facc15' : '#cbd5e1'}"/>
+                <text x="120" y="26" text-anchor="middle" font-size="11" font-weight="800" fill="#5b21b6">強光／紫外線光源</text>
+
+                <!-- 光束錐體 -->
+                <polygon points="82,66 158,66 192,190 48,190" fill="url(#uvBeamGrad)" opacity="${e * 0.78}"/>
+                <defs>
+                  <linearGradient id="uvBeamGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#facc15" stop-opacity="0.85"/>
+                    <stop offset="55%" stop-color="#a855f7" stop-opacity="0.5"/>
+                    <stop offset="100%" stop-color="#a855f7" stop-opacity="0.08"/>
+                  </linearGradient>
+                </defs>
+
+                <!-- 黃綠色氯氣飄升 -->
+                <g opacity="${dec > 0.15 ? Math.min(1, dec * 1.2) : 0}">
+                  <path class="svg-steam" d="M84 164 Q76 144 86 128" fill="none" stroke="#22c55e" stroke-width="3.2" stroke-linecap="round"/>
+                  <path class="svg-steam-delay" d="M156 164 Q166 142 154 126" fill="none" stroke="#16a34a" stroke-width="3.2" stroke-linecap="round"/>
+                  <text x="188" y="128" text-anchor="middle" font-size="11" font-weight="800" fill="#15803d">Cl₂↑ 氯氣</text>
+                </g>
+
+                <!-- 錶玻璃 -->
+                <path d="M44 186 Q120 226 196 186" fill="#e2e8f0" fill-opacity="0.45" stroke="#475569" stroke-width="3"/>
+                <!-- 白色 AgCl 轉變為深銀灰色金屬 Ag -->
+                <path d="M74 188 Q120 156 166 188 Q120 206 74 188 Z"
+                      fill="${dec > 0.5 ? '#64748b' : (dec > 0.2 ? '#94a3b8' : '#ffffff')}"
+                      stroke="#475569" stroke-width="2"/>
+                <text x="120" y="222" text-anchor="middle" font-size="10.5" font-weight="800" fill="#334155">
+                  ${dec > 0.5 ? '析出灰銀色金屬銀 (Ag)' : '白色氯化銀 (AgCl)'}
+                </text>
+              </svg>
+            `;
+          }
+        }
+      }
+
+      /* ======================================================================
+         5. 物質分類概念樹高亮更新
+         ====================================================================== */
+      function updateConceptTree() {
+        const info = STAGE_INFO[state.stage];
+        const activeNodes = new Set(info.treeNodes);
+        const activeArrows = new Set(info.treeArrows);
+
+        // 動態判斷：在階段二開始過濾前僅高亮混合物；過濾中/完成高亮混合物與純物質
+        if (state.stage === 1 && state.filterProgress < 0.05) {
+          activeNodes.clear();
+          activeNodes.add('mixture');
+        }
+        // 階段五尚未達分解門檻前，主要高亮化合物；開始分解後同時高亮化學方法與元素
+        if (state.stage === 4 && state.energy < 20 && !state.decomposed) {
+          activeNodes.clear();
+          activeNodes.add('pure');
+          activeNodes.add('compound');
+          activeArrows.clear();
+        }
+
+        const nodeStyles = {
+          mixture:  { fill: '#fef3c7', stroke: '#d97706', txt: '#92400e' },
+          pure:     { fill: '#e0f2fe', stroke: '#0284c7', txt: '#0369a1' },
+          compound: { fill: '#ede9fe', stroke: '#7c3aed', txt: '#5b21b6' },
+          element:  { fill: '#d1fae5', stroke: '#059669', txt: '#065f46' }
+        };
+
+        ['mixture', 'pure', 'compound', 'element'].forEach((key) => {
+          const g = document.getElementById(`node-${key}`);
+          if (!g) return;
+          const rect = g.querySelector('rect');
+          const texts = g.querySelectorAll('text');
+          const isActive = activeNodes.has(key);
+          g.classList.toggle('active', isActive);
+          if (isActive) {
+            rect.setAttribute('fill', nodeStyles[key].fill);
+            rect.setAttribute('stroke', nodeStyles[key].stroke);
+            texts[0].setAttribute('fill', nodeStyles[key].txt);
+          } else {
+            rect.setAttribute('fill', '#f8fafc');
+            rect.setAttribute('stroke', '#cbd5e1');
+            texts[0].setAttribute('fill', '#64748b');
+          }
+        });
+
+        // 物理方法箭頭
+        const physLine = document.getElementById('arrow-phys');
+        const physBg = document.getElementById('label-phys-bg');
+        const physTxt = document.getElementById('label-phys-txt');
+        const physOn = activeArrows.has('phys');
+        physLine.classList.toggle('active', physOn);
+        physLine.setAttribute('stroke', physOn ? '#0284c7' : '#cbd5e1');
+        physLine.setAttribute('marker-start', physOn ? 'url(#arrowBlue)' : 'url(#arrowGray)');
+        physLine.setAttribute('marker-end', physOn ? 'url(#arrowBlue)' : 'url(#arrowGray)');
+        physBg.setAttribute('fill', physOn ? '#e0f2fe' : '#f1f5f9');
+        physTxt.setAttribute('fill', physOn ? '#0369a1' : '#64748b');
+
+        // 化學方法箭頭
+        const chemLine = document.getElementById('arrow-chem');
+        const chemBg = document.getElementById('label-chem-bg');
+        const chemTxt = document.getElementById('label-chem-txt');
+        const chemOn = activeArrows.has('chem');
+        chemLine.classList.toggle('active', chemOn);
+        chemLine.setAttribute('stroke', chemOn ? '#e11d48' : '#cbd5e1');
+        chemLine.setAttribute('marker-start', chemOn ? 'url(#arrowRose)' : 'url(#arrowGray)');
+        chemLine.setAttribute('marker-end', chemOn ? 'url(#arrowRose)' : 'url(#arrowGray)');
+        chemBg.setAttribute('fill', chemOn ? '#ffe4e6' : '#f1f5f9');
+        chemTxt.setAttribute('fill', chemOn ? '#be123c' : '#64748b');
+      }
+
+      /* ======================================================================
+         6. 右側觀念卡片與立體圖例渲染
+         ====================================================================== */
+      const LEGEND_CATALOG = {
+        H2O: {
+          name: '水分子 (H₂O)',
+          sub: '1紅氧 + 2白氫',
+          svg: `<svg width="34" height="26" viewBox="0 0 34 26">
+            <line x1="17" y1="14" x2="9" y2="7" stroke="#64748b" stroke-width="2.2"/>
+            <line x1="17" y1="14" x2="25" y2="7" stroke="#64748b" stroke-width="2.2"/>
+            <circle cx="9" cy="7" r="4.5" fill="#f8fafc" stroke="#475569" stroke-width="1.2"/>
+            <circle cx="25" cy="7" r="4.5" fill="#f8fafc" stroke="#475569" stroke-width="1.2"/>
+            <circle cx="17" cy="15" r="7.5" fill="#ef4444" stroke="#991b1b" stroke-width="1"/>
+          </svg>`
+        },
+        NaCl: {
+          name: '食鹽微粒 (NaCl)',
+          sub: '紫鈉 + 淺綠氯',
+          svg: `<svg width="34" height="26" viewBox="0 0 34 26">
+            <circle cx="11" cy="13" r="6.8" fill="#8b5cf6" stroke="#5b21b6" stroke-width="1"/>
+            <circle cx="23" cy="13" r="7.5" fill="#22c55e" stroke="#15803d" stroke-width="1"/>
+          </svg>`
+        },
+        HgO: {
+          name: '氧化汞 (HgO)',
+          sub: '銀灰汞 + 紅氧',
+          svg: `<svg width="34" height="26" viewBox="0 0 34 26">
+            <circle cx="11" cy="13" r="8" fill="#94a3b8" stroke="#334155" stroke-width="1.2"/>
+            <circle cx="23" cy="13" r="6.8" fill="#ef4444" stroke="#991b1b" stroke-width="1"/>
+          </svg>`
+        },
+        AgCl: {
+          name: '氯化銀 (AgCl)',
+          sub: '銀白銀 + 綠氯',
+          svg: `<svg width="34" height="26" viewBox="0 0 34 26">
+            <circle cx="11" cy="13" r="7.6" fill="#cbd5e1" stroke="#334155" stroke-width="1.2"/>
+            <circle cx="23" cy="13" r="7.2" fill="#22c55e" stroke="#15803d" stroke-width="1"/>
+          </svg>`
+        },
+        Hg: {
+          name: '汞元素 (Hg)',
+          sub: '單原子金屬元素',
+          svg: `<svg width="34" height="26" viewBox="0 0 34 26">
+            <circle cx="17" cy="13" r="8.5" fill="#94a3b8" stroke="#334155" stroke-width="1.2"/>
+          </svg>`
+        },
+        O2: {
+          name: '氧氣元素 (O₂)',
+          sub: '同種雙原子分子',
+          svg: `<svg width="34" height="26" viewBox="0 0 34 26">
+            <line x1="11" y1="11.5" x2="23" y2="11.5" stroke="#991b1b" stroke-width="1.8"/>
+            <line x1="11" y1="14.5" x2="23" y2="14.5" stroke="#991b1b" stroke-width="1.8"/>
+            <circle cx="10.5" cy="13" r="6.8" fill="#ef4444" stroke="#991b1b" stroke-width="1"/>
+            <circle cx="23.5" cy="13" r="6.8" fill="#ef4444" stroke="#991b1b" stroke-width="1"/>
+          </svg>`
+        },
+        Ag: {
+          name: '銀元素 (Ag)',
+          sub: '單原子金屬元素',
+          svg: `<svg width="34" height="26" viewBox="0 0 34 26">
+            <circle cx="17" cy="13" r="8.2" fill="#cbd5e1" stroke="#334155" stroke-width="1.2"/>
+          </svg>`
+        },
+        Cl2: {
+          name: '氯氣元素 (Cl₂)',
+          sub: '同種雙原子分子',
+          svg: `<svg width="34" height="26" viewBox="0 0 34 26">
+            <line x1="11" y1="13" x2="23" y2="13" stroke="#15803d" stroke-width="2.5"/>
+            <circle cx="10.5" cy="13" r="7" fill="#22c55e" stroke="#15803d" stroke-width="1"/>
+            <circle cx="23.5" cy="13" r="7" fill="#22c55e" stroke="#15803d" stroke-width="1"/>
+          </svg>`
+        }
+      };
+
+      function updateInfoPanels() {
+        const info = STAGE_INFO[state.stage];
+        const isHgO = state.compound === 'HgO';
+
+        document.getElementById('conceptCardTitle').textContent = info.title;
+
+        // 徽章
+        const badgesHtml = info.badges
+          .map((b) => `<span class="meta-badge ${b.cls}">${b.text}</span>`)
+          .join('');
+        document.getElementById('conceptBadges').innerHTML = badgesHtml;
+
+        // 條列重點
+        let points = info.points;
+        if (state.stage === 3 || state.stage === 4) {
+          points = isHgO ? info.pointsHgO : info.pointsAgCl;
+        }
+        document.getElementById('conceptPoints').innerHTML = points
+          .map((p) => `<li>${p}</li>`)
+          .join('');
+
+        document.getElementById('conceptTakeaway').textContent = info.takeaway;
+
+        // 圖例渲染
+        let activeLegends = info.legends;
+        if (state.stage === 3 || state.stage === 4) {
+          activeLegends = isHgO ? info.legendsHgO : info.legendsAgCl;
+        }
+        const activeSet = new Set(activeLegends);
+        const displayKeys = state.stage <= 2
+          ? ['H2O', 'NaCl', 'HgO', 'O2']
+          : (isHgO ? ['HgO', 'Hg', 'O2', 'H2O'] : ['AgCl', 'Ag', 'Cl2', 'H2O']);
+
+        document.getElementById('legendGrid').innerHTML = displayKeys.map((k) => {
+          const item = LEGEND_CATALOG[k];
+          const hl = activeSet.has(k) ? 'highlight' : '';
+          return `
+            <div class="legend-item ${hl}">
+              <div class="legend-icon">${item.svg}</div>
+              <div class="legend-text">
+                <div class="legend-name">${item.name}</div>
+                <div class="legend-sub">${item.sub}</div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      /* ======================================================================
+         7. 階段專屬操作控制列渲染
+         ====================================================================== */
+      function renderStageActionBar() {
+        const bar = document.getElementById('stageActionBar');
+
+        if (state.stage === 0) {
+          bar.innerHTML = `
+            <div class="action-left">
+              <span class="stage-status-hint">👀 觀察燒杯中的微觀世界：水分子、食鹽微粒與氧化汞固體團塊正混合在一起。</span>
+            </div>
+            <div class="action-right">
+              <button class="action-btn-lg" id="btnGoFilter" type="button">前往下一階段：開始過濾 ➜</button>
+            </div>
+          `;
+          document.getElementById('btnGoFilter').addEventListener('click', () => {
+            stopAutoPlay();
+            goToStage(1);
+          });
+        } else if (state.stage === 1) {
+          const isDone = state.filterProgress >= 0.98;
+          const btnText = isDone ? '✓ 過濾完成（點此重來）' : (state.filterRunning ? '⏳ 過濾進行中…' : '🧪 開始過濾');
+          const btnCls = isDone ? 'action-btn-lg done' : 'action-btn-lg';
+          bar.innerHTML = `
+            <div class="action-left">
+              <button class="${btnCls}" id="btnStartFilter" type="button">${btnText}</button>
+              <span class="stage-status-hint" id="filterStatusHint">
+                ${isDone ? '成功分離：上方濾渣為純物質 HgO，下方濾液仍為混合物！' : '點擊按鈕觀察不同大小微粒如何通過濾紙網格'}
+              </span>
+            </div>
+            <div class="action-right">
+              ${isDone ? `<button class="ctrl-btn primary" id="btnNextFromFilter" type="button">繼續蒸發結晶 ➜</button>` : ''}
+            </div>
+          `;
+          document.getElementById('btnStartFilter').addEventListener('click', () => {
+            stopAutoPlay();
+            if (state.filterProgress >= 0.98) {
+              MicroSim.initStage(1);
+              state.filterRunning = true;
+            } else {
+              state.filterRunning = true;
+            }
+            renderStageActionBar();
+          });
+          const nextBtn = document.getElementById('btnNextFromFilter');
+          if (nextBtn) {
+            nextBtn.addEventListener('click', () => {
+              stopAutoPlay();
+              goToStage(2);
+            });
+          }
+        } else if (state.stage === 2) {
+          const isDone = state.evapProgress >= 0.98;
+          const btnText = isDone ? '✓ 結晶完成（點此重來）' : (state.evapRunning ? '🔥 溫和加熱蒸發中…' : '🔥 溫和加熱蒸發');
+          const btnCls = isDone ? 'action-btn-lg done' : 'action-btn-lg heat';
+          bar.innerHTML = `
+            <div class="action-left">
+              <button class="${btnCls}" id="btnStartEvap" type="button">${btnText}</button>
+              <span class="stage-status-hint">
+                ${isDone ? '純水（蒸氣）與純食鹽（規則晶格）已完全分離！' : '觀察 H₂O 分子吸熱加速脫離液面，且分子內化學鍵不斷裂'}
+              </span>
+            </div>
+            <div class="action-right">
+              ${isDone ? `<button class="ctrl-btn primary" id="btnNextFromEvap" type="button">觀察純物質化合物 ➜</button>` : ''}
+            </div>
+          `;
+          document.getElementById('btnStartEvap').addEventListener('click', () => {
+            stopAutoPlay();
+            if (state.evapProgress >= 0.98) {
+              MicroSim.initStage(2);
+              state.evapRunning = true;
+            } else {
+              state.evapRunning = true;
+            }
+            renderStageActionBar();
+          });
+          const nextBtn = document.getElementById('btnNextFromEvap');
+          if (nextBtn) {
+            nextBtn.addEventListener('click', () => {
+              stopAutoPlay();
+              goToStage(3);
+            });
+          }
+        } else if (state.stage === 3) {
+          const isHgO = state.compound === 'HgO';
+          bar.innerHTML = `
+            <div class="action-left">
+              <span style="font-size:0.84rem;font-weight:800;color:var(--navy-900);">選擇經典化合物實例：</span>
+              <div class="compound-switcher" role="group" aria-label="化合物實例選擇">
+                <button class="compound-opt ${isHgO ? 'active' : ''}" data-comp="HgO" type="button">實例 A：氧化汞 HgO（加熱分解）</button>
+                <button class="compound-opt ${!isHgO ? 'active' : ''}" data-comp="AgCl" type="button">實例 B：氯化銀 AgCl（照光分解）</button>
+              </div>
+            </div>
+            <div class="action-right">
+              <button class="action-btn-lg ${isHgO ? 'heat' : 'light'}" id="btnGoDecomp" type="button">
+                ${isHgO ? '🔥 前往加熱分解成元素 ➜' : '☀️ 前往照光分解成元素 ➜'}
+              </button>
+            </div>
+          `;
+          bar.querySelectorAll('.compound-opt').forEach((btn) => {
+            btn.addEventListener('click', () => {
+              stopAutoPlay();
+              state.compound = btn.dataset.comp;
+              MicroSim.initStage(3);
+              renderMacroSVG();
+              updateInfoPanels();
+              renderStageActionBar();
+            });
+          });
+          document.getElementById('btnGoDecomp').addEventListener('click', () => {
+            stopAutoPlay();
+            goToStage(4);
+          });
+        } else {
+          // Stage 5: 化學分解
+          const isHgO = state.compound === 'HgO';
+          const eqText = isHgO ? '2HgO —(加熱)→ 2Hg + O₂↑' : '2AgCl —(照光)→ 2Ag + Cl₂↑';
+          const btnIcon = isHgO ? '🔥' : '☀️';
+          const btnLabel = state.decomposed
+            ? '↻ 重置重新分解'
+            : (state.energyAutoRamp ? '⏸ 暫停加能' : (isHgO ? '🔥 酒精燈持續加熱' : '☀️ 開啟強光／紫外線照射'));
+
+          bar.innerHTML = `
+            <div class="action-left">
+              <div class="compound-switcher" role="group" aria-label="切換反應實例">
+                <button class="compound-opt ${isHgO ? 'active' : ''}" data-comp="HgO" type="button">HgO 加熱</button>
+                <button class="compound-opt ${!isHgO ? 'active' : ''}" data-comp="AgCl" type="button">AgCl 照光</button>
+              </div>
+              <button class="action-btn-lg ${isHgO ? 'heat' : 'light'}" id="btnTriggerEnergy" type="button">${btnLabel}</button>
+              <div class="energy-slider-group">
+                <label for="energySlider">${btnIcon} ${isHgO ? '加熱能量' : '照光強度'}</label>
+                <input class="energy-slider ${isHgO ? '' : 'uv-mode'}" id="energySlider" type="range" min="0" max="100" value="${Math.round(state.energy)}">
+                <span class="energy-val" id="energyValText">${Math.round(state.energy)}%</span>
+              </div>
+            </div>
+            <div class="action-right">
+              <div class="equation-badge ${isHgO ? '' : 'uv'}">${eqText}</div>
+            </div>
+          `;
+
+          bar.querySelectorAll('.compound-opt').forEach((btn) => {
+            btn.addEventListener('click', () => {
+              stopAutoPlay();
+              state.compound = btn.dataset.comp;
+              MicroSim.initStage(4);
+              renderMacroSVG();
+              updateInfoPanels();
+              updateConceptTree();
+              renderStageActionBar();
+            });
+          });
+
+          const slider = document.getElementById('energySlider');
+          const valTxt = document.getElementById('energyValText');
+          slider.addEventListener('input', (ev) => {
+            stopAutoPlay();
+            state.energyAutoRamp = false;
+            state.energy = Number(ev.target.value);
+            valTxt.textContent = `${Math.round(state.energy)}%`;
+            if (state.energy >= 62 && !state.decomposed) {
+              MicroSim.triggerChemicalBondBreak();
+            }
+            renderMacroSVG();
+            updateConceptTree();
+          });
+
+          document.getElementById('btnTriggerEnergy').addEventListener('click', () => {
+            stopAutoPlay();
+            if (state.decomposed && state.decomposeProgress >= 0.95) {
+              MicroSim.initStage(4);
+              state.energyAutoRamp = true;
+            } else {
+              state.energyAutoRamp = !state.energyAutoRamp;
+            }
+            renderStageActionBar();
+          });
+        }
+      }
+
+      /* ======================================================================
+         8. 微觀 60fps HTML5 Canvas 粒子模擬引擎
+         ====================================================================== */
+      const MicroSim = (function () {
+        let canvas, ctx;
+        let W = 600, H = 400;
+        let particles = [];
+        let sparks = [];
+        let photons = [];
+        let time = 0;
+
+        function initCanvas() {
+          canvas = document.getElementById('microCanvas');
+          ctx = canvas.getContext('2d');
+          resize();
+          if (typeof ResizeObserver !== 'undefined') {
+            const ro = new ResizeObserver(() => resize());
+            ro.observe(document.getElementById('microCanvasWrap'));
+          }
+          window.addEventListener('resize', resize);
+        }
+
+        function resize() {
+          if (!canvas) return;
+          const wrap = document.getElementById('microCanvasWrap');
+          const rect = wrap.getBoundingClientRect();
+          if (rect.width < 10 || rect.height < 10) return;
+          const prevW = W;
+          const prevH = H;
+          const dpr = Math.min(window.devicePixelRatio || 1, 2);
+          W = rect.width;
+          H = rect.height;
+          canvas.width = Math.round(W * dpr);
+          canvas.height = Math.round(H * dpr);
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+          if (prevW > 0 && prevH > 0 && particles.length > 0 && (Math.abs(W - prevW) > 6 || Math.abs(H - prevH) > 6)) {
+            const sx = W / prevW;
+            const sy = H / prevH;
+            particles.forEach((p) => {
+              if (typeof p.x === 'number') p.x *= sx;
+              if (typeof p.y === 'number') p.y *= sy;
+              if (typeof p.baseX === 'number') p.baseX *= sx;
+              if (typeof p.baseY === 'number') p.baseY *= sy;
+              if (typeof p.targetX === 'number') p.targetX *= sx;
+              if (typeof p.targetY === 'number') p.targetY *= sy;
+              if (typeof p.metalTargetX === 'number') p.metalTargetX *= sx;
+              if (typeof p.metalTargetY === 'number') p.metalTargetY *= sy;
+              if (typeof p.gasTargetX === 'number') p.gasTargetX *= sx;
+              if (typeof p.gasTargetY === 'number') p.gasTargetY *= sy;
+            });
+          }
+        }
+
+        // 工具：隨機範圍
+        const rand = (min, max) => min + Math.random() * (max - min);
+
+        /**
+         * 初始化指定階段的粒子分布
+         */
+        function initStage(stageIdx) {
+          particles = [];
+          sparks = [];
+          photons = [];
+          state.filterRunning = false;
+          state.filterProgress = 0;
+          state.evapRunning = false;
+          state.evapProgress = 0;
+          state.energy = 0;
+          state.energyAutoRamp = false;
+          state.decomposed = false;
+          state.decomposeProgress = 0;
+
+          const padX = 48;
+          const padY = 58;
+
+          if (stageIdx === 0) {
+            // 階段一：混合物 (H2O + NaCl + HgO 大團塊)
+            for (let i = 0; i < 11; i++) {
+              particles.push({
+                kind: 'H2O',
+                x: rand(padX, W - padX),
+                y: rand(padY, H - padY),
+                vx: rand(-1.35, 1.35),
+                vy: rand(-1.35, 1.35),
+                angle: rand(0, Math.PI * 2),
+                va: rand(-0.025, 0.025)
+              });
+            }
+            for (let i = 0; i < 6; i++) {
+              particles.push({
+                kind: 'NaCl',
+                x: rand(padX, W - padX),
+                y: rand(padY, H - padY),
+                vx: rand(-1.05, 1.05),
+                vy: rand(-1.05, 1.05),
+                angle: rand(0, Math.PI * 2),
+                va: rand(-0.02, 0.02)
+              });
+            }
+            for (let i = 0; i < 4; i++) {
+              particles.push({
+                kind: 'HgO_cluster',
+                x: rand(90, W - 90),
+                y: rand(95, H - 70),
+                vx: rand(-0.42, 0.42),
+                vy: rand(-0.35, 0.35),
+                angle: rand(0, Math.PI * 2),
+                va: rand(-0.008, 0.008)
+              });
+            }
+          } else if (stageIdx === 1) {
+            // 階段二：過濾（初始全在濾紙上方）
+            const topMaxY = H * 0.42;
+            for (let i = 0; i < 11; i++) {
+              particles.push({
+                kind: 'H2O',
+                x: rand(44, W - 44),
+                y: rand(52, topMaxY),
+                vx: rand(-1.1, 1.1),
+                vy: rand(-0.8, 0.8),
+                angle: rand(0, Math.PI * 2),
+                va: rand(-0.025, 0.025),
+                passed: false,
+                passDelay: rand(0.05, 0.72)
+              });
+            }
+            for (let i = 0; i < 6; i++) {
+              particles.push({
+                kind: 'NaCl',
+                x: rand(50, W - 50),
+                y: rand(54, topMaxY),
+                vx: rand(-0.9, 0.9),
+                vy: rand(-0.7, 0.7),
+                angle: rand(0, Math.PI * 2),
+                va: rand(-0.02, 0.02),
+                passed: false,
+                passDelay: rand(0.12, 0.8)
+              });
+            }
+            const clusterXs = [0.22, 0.42, 0.62, 0.8];
+            for (let i = 0; i < 4; i++) {
+              particles.push({
+                kind: 'HgO_cluster',
+                x: W * clusterXs[i],
+                y: rand(68, topMaxY - 18),
+                vx: rand(-0.28, 0.28),
+                vy: rand(-0.2, 0.2),
+                angle: rand(-0.3, 0.3),
+                va: rand(-0.005, 0.005),
+                trapped: false
+              });
+            }
+          } else if (stageIdx === 2) {
+            // 階段三：蒸發結晶（下方液體區有 H2O 與 NaCl）
+            const liqTop = H * 0.50;
+            for (let i = 0; i < 12; i++) {
+              particles.push({
+                kind: 'H2O',
+                x: rand(48, W - 48),
+                y: rand(liqTop + 18, H - 36),
+                vx: rand(-1.1, 1.1),
+                vy: rand(-0.9, 0.9),
+                angle: rand(0, Math.PI * 2),
+                va: rand(-0.025, 0.025),
+                evaporated: false,
+                evapThreshold: 0.08 + (i / 12) * 0.78
+              });
+            }
+            // 8 個食鹽微粒將整齊排列成 4x2 晶格
+            const cols = 4;
+            const rows = 2;
+            const cellW = 54;
+            const cellH = 30;
+            const startX = W / 2 - ((cols - 1) * cellW) / 2;
+            const startY = H - 72;
+            for (let idx = 0; idx < 8; idx++) {
+              const r = Math.floor(idx / cols);
+              const c = idx % cols;
+              particles.push({
+                kind: 'NaCl',
+                x: rand(60, W - 60),
+                y: rand(liqTop + 26, H - 38),
+                vx: rand(-0.85, 0.85),
+                vy: rand(-0.65, 0.65),
+                angle: rand(0, Math.PI * 2),
+                va: rand(-0.02, 0.02),
+                targetX: startX + c * cellW,
+                targetY: startY + r * cellH,
+                flip: (r + c) % 2 === 1 // 交錯排列呈現 Na-Cl-Na-Cl 規則晶格
+              });
+            }
+          } else if (stageIdx === 3) {
+            // 階段四：純物質 — 化合物（HgO 或 AgCl，整齊單一微粒）
+            const cols = 4;
+            const rows = 2;
+            const spanX = Math.min(W - 140, 380);
+            const spanY = Math.min(H - 180, 130);
+            const sx = W / 2 - spanX / 2;
+            const sy = H / 2 - spanY / 2 + 8;
+            for (let r = 0; r < rows; r++) {
+              for (let c = 0; c < cols; c++) {
+                const bx = sx + (c / (cols - 1)) * spanX;
+                const by = sy + (r / (rows - 1)) * spanY;
+                particles.push({
+                  kind: state.compound,
+                  baseX: bx,
+                  baseY: by,
+                  x: bx,
+                  y: by,
+                  phase: rand(0, Math.PI * 2),
+                  angle: (r + c) % 2 === 0 ? -0.18 : 0.18
+                });
+              }
+            }
+          } else if (stageIdx === 4) {
+            // 階段五：化學分解成元素（6 組化合物分子 -> 6 顆金屬原子 + 3 顆雙原子氣體分子）
+            const count = 6;
+            const marginX = Math.max(70, W * 0.14);
+            const stepX = (W - marginX * 2) / (count - 1);
+            for (let i = 0; i < count; i++) {
+              const bx = marginX + i * stepX;
+              const by = H * 0.56 + (i % 2 === 0 ? -24 : 24);
+              particles.push({
+                kind: 'compound_decomp',
+                pairIndex: Math.floor(i / 2), // 0, 1, 2 (兩兩配對形成 O2 或 Cl2)
+                isLeftOfPair: i % 2 === 0,
+                baseX: bx,
+                baseY: by,
+                // 金屬原子位置 (Hg / Ag)
+                mx: bx - 14,
+                my: by,
+                mvx: 0,
+                mvy: 0,
+                // 非金屬原子位置 (O / Cl)
+                nx: bx + 14,
+                ny: by,
+                nvx: 0,
+                nvy: 0,
+                // 目標聚集位置
+                metalTargetX: W * (0.24 + (i / (count - 1)) * 0.52),
+                metalTargetY: H * 0.77 + (i % 2 === 0 ? -12 : 12),
+                gasTargetX: W * (0.26 + Math.floor(i / 2) * 0.24),
+                gasTargetY: H * 0.28 + (Math.floor(i / 2) % 2 === 0 ? -8 : 14),
+                phase: rand(0, Math.PI * 2)
+              });
+            }
+          }
+        }
+
+        /**
+         * 觸發階段五化學鍵斷裂閃光特效
+         */
+        function triggerChemicalBondBreak() {
+          if (state.decomposed) return;
+          state.decomposed = true;
+          state.decomposeProgress = 0.01;
+          particles.forEach((p) => {
+            if (p.kind === 'compound_decomp') {
+              sparks.push({
+                x: (p.mx + p.nx) / 2,
+                y: (p.my + p.ny) / 2,
+                r: 4,
+                maxR: 34,
+                alpha: 1,
+                color: state.compound === 'HgO' ? '#f97316' : '#a855f7'
+              });
+            }
+          });
+          updateConceptTree();
+          renderStageActionBar();
+        }
+
+        /* --------------------------------------------------------------------
+           繪製各類分子的輔助函式
+           -------------------------------------------------------------------- */
+        function drawH2O(x, y, angle) {
+          const ox = x;
+          const oy = y;
+          const dist = 16;
+          const halfSpread = 0.92; // ~105° 夾角
+          const h1x = ox + Math.cos(angle - halfSpread) * dist;
+          const h1y = oy + Math.sin(angle - halfSpread) * dist;
+          const h2x = ox + Math.cos(angle + halfSpread) * dist;
+          const h2y = oy + Math.sin(angle + halfSpread) * dist;
+
+          drawBondStick(ctx, ox, oy, h1x, h1y, '#94a3b8', 4.5);
+          drawBondStick(ctx, ox, oy, h2x, h2y, '#94a3b8', 4.5);
+          drawAtom3D(ctx, h1x, h1y, 'H', state.showSymbols);
+          drawAtom3D(ctx, h2x, h2y, 'H', state.showSymbols);
+          drawAtom3D(ctx, ox, oy, 'O', state.showSymbols);
+        }
+
+        function drawNaCl(x, y, angle) {
+          const half = 12.5;
+          const x1 = x - Math.cos(angle) * half;
+          const y1 = y - Math.sin(angle) * half;
+          const x2 = x + Math.cos(angle) * half;
+          const y2 = y + Math.sin(angle) * half;
+
+          drawBondStick(ctx, x1, y1, x2, y2, '#94a3b8', 5);
+          drawAtom3D(ctx, x1, y1, 'Na', state.showSymbols);
+          drawAtom3D(ctx, x2, y2, 'Cl', state.showSymbols);
+        }
+
+        function drawHgOCluster(x, y, angle) {
+          // 4 顆原子緊密結合的較大固體團塊 (2 Hg + 2 O)
+          const pts = [
+            { type: 'Hg', dx: -14, dy: -10 },
+            { type: 'O',  dx: 12,  dy: -11 },
+            { type: 'O',  dx: -12, dy: 12 },
+            { type: 'Hg', dx: 14,  dy: 11 }
+          ];
+          const cos = Math.cos(angle);
+          const sin = Math.sin(angle);
+          const world = pts.map((pt) => ({
+            type: pt.type,
+            wx: x + pt.dx * cos - pt.dy * sin,
+            wy: y + pt.dx * sin + pt.dy * cos
+          }));
+
+          // 團塊光暈底圈，凸顯其體積遠大於濾網孔隙
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(x, y, 31, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(234, 88, 12, 0.11)';
+          ctx.fill();
+          ctx.setLineDash([4, 3]);
+          ctx.strokeStyle = 'rgba(234, 88, 12, 0.45)';
+          ctx.lineWidth = 1.4;
+          ctx.stroke();
+          ctx.restore();
+
+          drawBondStick(ctx, world[0].wx, world[0].wy, world[1].wx, world[1].wy, '#64748b', 5);
+          drawBondStick(ctx, world[0].wx, world[0].wy, world[2].wx, world[2].wy, '#64748b', 5);
+          drawBondStick(ctx, world[3].wx, world[3].wy, world[1].wx, world[1].wy, '#64748b', 5);
+          drawBondStick(ctx, world[3].wx, world[3].wy, world[2].wx, world[2].wy, '#64748b', 5);
+
+          world.forEach((w) => drawAtom3D(ctx, w.wx, w.wy, w.type, state.showSymbols, 0.92));
+        }
+
+        function drawCompoundUnit(x, y, angle, compType, scale = 1, bondColor = '#64748b') {
+          const half = 15 * scale;
+          const x1 = x - Math.cos(angle) * half;
+          const y1 = y - Math.sin(angle) * half;
+          const x2 = x + Math.cos(angle) * half;
+          const y2 = y + Math.sin(angle) * half;
+
+          const metal = compType === 'HgO' ? 'Hg' : 'Ag';
+          const nonMetal = compType === 'HgO' ? 'O' : 'Cl';
+
+          drawBondStick(ctx, x1, y1, x2, y2, bondColor, 6 * scale);
+          drawAtom3D(ctx, x1, y1, metal, state.showSymbols, scale);
+          drawAtom3D(ctx, x2, y2, nonMetal, state.showSymbols, scale);
+        }
+
+        /* --------------------------------------------------------------------
+           主更新與繪製迴圈 (60fps)
+           -------------------------------------------------------------------- */
+        function stepAndDraw(dtRaw) {
+          const speedMul = state.slowMo ? 0.38 : 1.0;
+          const dt = Math.min(dtRaw, 0.05) * speedMul;
+          const stepScale = dt * 60;
+          time += dt;
+
+          // 自動播放排程器
+          if (state.autoPlay && state.activeTab === 'animation') {
+            handleAutoPlay(dtRaw);
+          }
+
+          ctx.clearRect(0, 0, W, H);
+
+          // 依階段執行對應的物理與化學微觀模擬
+          if (state.stage === 0) {
+            updateAndDrawStage1(stepScale);
+          } else if (state.stage === 1) {
+            updateAndDrawStage2(dt, stepScale);
+          } else if (state.stage === 2) {
+            updateAndDrawStage3(dt, stepScale);
+          } else if (state.stage === 3) {
+            updateAndDrawStage4();
+          } else if (state.stage === 4) {
+            updateAndDrawStage5(dt, stepScale);
+          }
+        }
+
+        /* --- 階段一：混合物 --- */
+        function updateAndDrawStage1(s) {
+          // 柔和液體微觀背景網格
+          ctx.save();
+          ctx.fillStyle = 'rgba(224, 242, 254, 0.32)';
+          ctx.fillRect(0, 0, W, H);
+          ctx.restore();
+
+          particles.forEach((p) => {
+            const rad = p.kind === 'HgO_cluster' ? 36 : 24;
+            p.x += p.vx * s;
+            p.y += p.vy * s;
+            p.angle += p.va * s;
+
+            if (p.x < rad) { p.x = rad; p.vx = Math.abs(p.vx); }
+            if (p.x > W - rad) { p.x = W - rad; p.vx = -Math.abs(p.vx); }
+            if (p.y < rad + 32) { p.y = rad + 32; p.vy = Math.abs(p.vy); }
+            if (p.y > H - rad - 10) { p.y = H - rad - 10; p.vy = -Math.abs(p.vy); }
+
+            if (p.kind === 'H2O') drawH2O(p.x, p.y, p.angle);
+            else if (p.kind === 'NaCl') drawNaCl(p.x, p.y, p.angle);
+            else drawHgOCluster(p.x, p.y, p.angle);
+          });
+
+          drawPillLabel(ctx, '混合物：同時含有多種不同微粒，彼此混雜但未重新鍵結', W / 2, 24, {
+            border: '#d97706', color: '#92400e', bg: 'rgba(255, 251, 235, 0.95)', fontSize: 12.5
+          });
+        }
+
+        /* --- 階段二：過濾 --- */
+        function updateAndDrawStage2(dt, s) {
+          const meshY = H * 0.50;
+
+          if (state.filterRunning && state.filterProgress < 1) {
+            const prevStep = Math.floor(state.filterProgress * 20);
+            state.filterProgress = Math.min(1, state.filterProgress + dt * 0.22);
+            const curStep = Math.floor(state.filterProgress * 20);
+            if (curStep !== prevStep || state.filterProgress >= 0.99) {
+              renderMacroSVG();
+              updateConceptTree();
+            }
+            if (state.filterProgress >= 0.99) {
+              state.filterRunning = false;
+              renderStageActionBar();
+            }
+          }
+
+          // 上下區域淡淡色區分
+          ctx.save();
+          ctx.fillStyle = 'rgba(255, 247, 237, 0.35)';
+          ctx.fillRect(0, 0, W, meshY);
+          ctx.fillStyle = 'rgba(224, 242, 254, 0.35)';
+          ctx.fillRect(0, meshY, W, H - meshY);
+
+          // 繪製濾紙纖維半透網格 (可見孔隙)
+          ctx.fillStyle = '#e2e8f0';
+          ctx.fillRect(0, meshY - 6, W, 12);
+          ctx.strokeStyle = '#94a3b8';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(0, meshY - 6);
+          ctx.lineTo(W, meshY - 6);
+          ctx.moveTo(0, meshY + 6);
+          ctx.lineTo(W, meshY + 6);
+          ctx.stroke();
+
+          // 繪製孔隙通道
+          const poreSpacing = 44;
+          for (let px = 26; px < W - 20; px += poreSpacing) {
+            ctx.fillStyle = '#f0f9ff';
+            ctx.fillRect(px, meshY - 7, 22, 14);
+            ctx.strokeStyle = '#64748b';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(px, meshY - 6);
+            ctx.lineTo(px, meshY + 6);
+            ctx.moveTo(px + 22, meshY - 6);
+            ctx.lineTo(px + 22, meshY + 6);
+            ctx.stroke();
+          }
+          ctx.restore();
+
+          // 更新並繪製粒子
+          particles.forEach((p) => {
+            if (p.kind === 'HgO_cluster') {
+              if (state.filterProgress > 0.02) {
+                // 向下飄至濾網上方被攔截
+                const stopY = meshY - 37;
+                if (p.y < stopY) {
+                  p.y += 1.45 * s;
+                } else {
+                  p.y = stopY + Math.sin(time * 4 + p.x) * 1.2;
+                  p.trapped = true;
+                }
+                p.x += p.vx * 0.35 * s;
+              } else {
+                p.x += p.vx * s;
+                p.y += p.vy * s;
+                if (p.y > meshY - 40) { p.y = meshY - 40; p.vy = -Math.abs(p.vy); }
+                if (p.y < 52) { p.y = 52; p.vy = Math.abs(p.vy); }
+              }
+              if (p.x < 44) { p.x = 44; p.vx = Math.abs(p.vx); }
+              if (p.x > W - 44) { p.x = W - 44; p.vx = -Math.abs(p.vx); }
+              drawHgOCluster(p.x, p.y, p.angle);
+            } else {
+              // H2O 與 NaCl 小分子
+              const canPass = state.filterProgress >= p.passDelay;
+              p.x += p.vx * s;
+              p.angle += p.va * s;
+
+              if (canPass && !p.passed) {
+                // 順著水流往下通過濾網孔隙
+                p.y += 2.35 * s;
+                if (p.y > meshY + 26) {
+                  p.passed = true;
+                }
+              } else {
+                p.y += p.vy * s;
+                if (!p.passed) {
+                  if (p.y < 46) { p.y = 46; p.vy = Math.abs(p.vy); }
+                  if (p.y > meshY - 26) { p.y = meshY - 26; p.vy = -Math.abs(p.vy); }
+                } else {
+                  if (p.y < meshY + 28) { p.y = meshY + 28; p.vy = Math.abs(p.vy); }
+                  if (p.y > H - 36) { p.y = H - 36; p.vy = -Math.abs(p.vy); }
+                }
+              }
+
+              if (p.x < 28) { p.x = 28; p.vx = Math.abs(p.vx); }
+              if (p.x > W - 28) { p.x = W - 28; p.vx = -Math.abs(p.vx); }
+
+              if (p.kind === 'H2O') drawH2O(p.x, p.y, p.angle);
+              else drawNaCl(p.x, p.y, p.angle);
+            }
+          });
+
+          // 濾網標籤
+          drawPillLabel(ctx, '濾紙纖維網格（小微粒可通過，大團塊被攔截）', W / 2, meshY, {
+            border: '#475569', color: '#1e293b', bg: 'rgba(255, 255, 255, 0.96)', fontSize: 11.5, paddingX: 10, paddingY: 4
+          });
+
+          // 完成後清楚標示上下區域分類
+          if (state.filterProgress > 0.78) {
+            drawPillLabel(ctx, '濾渣：純物質（氧化汞 HgO 固體）', W / 2, 24, {
+              border: '#ea580c', color: '#9a3412', bg: 'rgba(255, 247, 237, 0.96)', fontSize: 12.5
+            });
+            drawPillLabel(ctx, '濾液：仍為混合物（水分子 H₂O + 食鹽微粒 NaCl）', W / 2, H - 22, {
+              border: '#0284c7', color: '#0369a1', bg: 'rgba(240, 249, 255, 0.96)', fontSize: 12.5
+            });
+          } else {
+            drawPillLabel(ctx, '物理方法：僅依「顆粒大小與溶解度」分離，分子本身完全不變！', W / 2, 24, {
+              border: '#0284c7', color: '#0369a1', bg: 'rgba(240, 249, 255, 0.95)', fontSize: 12
+            });
+          }
+        }
+
+        /* --- 階段三：蒸發結晶 --- */
+        function updateAndDrawStage3(dt, s) {
+          if (state.evapRunning && state.evapProgress < 1) {
+            const prevStep = Math.floor(state.evapProgress * 20);
+            state.evapProgress = Math.min(1, state.evapProgress + dt * 0.2);
+            const curStep = Math.floor(state.evapProgress * 20);
+            if (curStep !== prevStep || state.evapProgress >= 0.99) {
+              renderMacroSVG();
+              updateConceptTree();
+            }
+            if (state.evapProgress >= 0.99) {
+              state.evapRunning = false;
+              renderStageActionBar();
+            }
+          }
+
+          const p = state.evapProgress;
+          // 液面隨蒸發緩慢下降
+          const waterSurfaceY = H * (0.48 + p * 0.34);
+
+          // 繪製液體區背景（水未完全蒸乾時）
+          if (p < 0.96) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(0, waterSurfaceY);
+            for (let x = 0; x <= W; x += 24) {
+              const wy = waterSurfaceY + Math.sin(x * 0.03 + time * 4) * 3.5;
+              ctx.lineTo(x, wy);
+            }
+            ctx.lineTo(W, H);
+            ctx.lineTo(0, H);
+            ctx.closePath();
+            ctx.fillStyle = `rgba(125, 211, 252, ${Math.max(0.05, 0.36 * (1 - p))})`;
+            ctx.fill();
+            ctx.strokeStyle = `rgba(14, 165, 233, ${Math.max(0.1, 0.7 * (1 - p))})`;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.restore();
+          }
+
+          // 底部溫和加熱紅橘色光暈
+          if (state.evapRunning || (p > 0.02 && p < 0.98)) {
+            const glow = ctx.createLinearGradient(0, H, 0, H - 70);
+            glow.addColorStop(0, 'rgba(249, 115, 22, 0.28)');
+            glow.addColorStop(1, 'rgba(249, 115, 22, 0)');
+            ctx.fillStyle = glow;
+            ctx.fillRect(0, H - 70, W, 70);
+          }
+
+          // 若食鹽開始結晶，畫出規則晶格底框提示
+          if (p > 0.45) {
+            ctx.save();
+            ctx.globalAlpha = Math.min(1, (p - 0.45) * 2.2);
+            const boxW = 248;
+            const boxH = 84;
+            const bx = W / 2 - boxW / 2;
+            const by = H - 102;
+            ctx.beginPath();
+            roundRectPath(ctx, bx, by, boxW, boxH, 12);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.72)';
+            ctx.fill();
+            ctx.strokeStyle = '#0d9488';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([6, 4]);
+            ctx.stroke();
+            ctx.restore();
+          }
+
+          // 更新與繪製分子
+          particles.forEach((pt) => {
+            if (pt.kind === 'H2O') {
+              const boost = 1 + p * 1.4;
+              if (p >= pt.evapThreshold) {
+                pt.evaporated = true;
+              }
+              pt.x += pt.vx * boost * s;
+              pt.angle += pt.va * boost * s;
+
+              if (pt.evaporated) {
+                // 往上飄散成水蒸氣區
+                if (pt.y > H * 0.42) {
+                  pt.y -= 2.2 * s;
+                } else {
+                  pt.y += pt.vy * 1.35 * s;
+                  if (pt.y < 48) { pt.y = 48; pt.vy = Math.abs(pt.vy); }
+                  if (pt.y > H * 0.42) { pt.y = H * 0.42; pt.vy = -Math.abs(pt.vy); }
+                }
+              } else {
+                pt.y += pt.vy * boost * s;
+                const minY = Math.min(H - 50, waterSurfaceY + 18);
+                if (pt.y < minY) { pt.y = minY; pt.vy = Math.abs(pt.vy); }
+                if (pt.y > H - 28) { pt.y = H - 28; pt.vy = -Math.abs(pt.vy); }
+              }
+
+              if (pt.x < 28) { pt.x = 28; pt.vx = Math.abs(pt.vx); }
+              if (pt.x > W - 28) { pt.x = W - 28; pt.vx = -Math.abs(pt.vx); }
+
+              drawH2O(pt.x, pt.y, pt.angle);
+            } else {
+              // NaCl：隨水分減少逐步平滑歸位排列成規則晶格
+              if (p > 0.25) {
+                const lerp = Math.min(0.12, (p - 0.22) * 0.14) * s;
+                pt.x += (pt.targetX - pt.x) * lerp;
+                pt.y += (pt.targetY - pt.y) * lerp;
+                const targetAngle = pt.flip ? Math.PI : 0;
+                pt.angle += (targetAngle - pt.angle) * lerp;
+                // 微幅晶格熱振動
+                const jx = Math.sin(time * 9 + pt.targetX) * (1 - p) * 1.5;
+                const jy = Math.cos(time * 8 + pt.targetY) * (1 - p) * 1.5;
+                drawNaCl(pt.x + jx, pt.y + jy, pt.angle);
+              } else {
+                pt.x += pt.vx * s;
+                pt.y += pt.vy * s;
+                pt.angle += pt.va * s;
+                if (pt.x < 34) { pt.x = 34; pt.vx = Math.abs(pt.vx); }
+                if (pt.x > W - 34) { pt.x = W - 34; pt.vx = -Math.abs(pt.vx); }
+                if (pt.y < waterSurfaceY + 20) { pt.y = waterSurfaceY + 20; pt.vy = Math.abs(pt.vy); }
+                if (pt.y > H - 30) { pt.y = H - 30; pt.vy = -Math.abs(pt.vy); }
+                drawNaCl(pt.x, pt.y, pt.angle);
+              }
+            }
+          });
+
+          // 動態教學標註
+          if (p > 0.35) {
+            drawPillLabel(ctx, '純物質：水蒸氣（H₂O 分子的 H-O 鍵完全不斷裂！）', W / 2, 24, {
+              border: '#0284c7', color: '#0369a1', bg: 'rgba(240, 249, 255, 0.96)', fontSize: 12
+            });
+          } else {
+            drawPillLabel(ctx, '物理變化：利用「沸點差異」將食鹽水分離成純水與純食鹽', W / 2, 24, {
+              border: '#0284c7', color: '#0369a1', bg: 'rgba(240, 249, 255, 0.95)', fontSize: 12
+            });
+          }
+
+          if (p > 0.72) {
+            drawPillLabel(ctx, '純物質：食鹽晶體（NaCl 規則排列）', W / 2, H - 118, {
+              border: '#0d9488', color: '#0f766e', bg: 'rgba(240, 253, 250, 0.96)', fontSize: 12
+            });
+          }
+        }
+
+        /* --- 階段四：純物質 — 化合物 --- */
+        function updateAndDrawStage4() {
+          const isHgO = state.compound === 'HgO';
+
+          // 柔和純淨背景
+          ctx.save();
+          ctx.fillStyle = isHgO ? 'rgba(255, 247, 237, 0.32)' : 'rgba(245, 243, 255, 0.34)';
+          ctx.fillRect(0, 0, W, H);
+          ctx.restore();
+
+          // 放大聚焦框標示其中一顆代表分子
+          if (particles.length > 1) {
+            const p0 = particles[1];
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(p0.baseX, p0.baseY, 44, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(124, 58, 237, 0.08)';
+            ctx.fill();
+            ctx.setLineDash([5, 4]);
+            ctx.strokeStyle = '#7c3aed';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.restore();
+          }
+
+          particles.forEach((p) => {
+            const ox = Math.sin(time * 2.4 + p.phase) * 3.5;
+            const oy = Math.cos(time * 2.1 + p.phase) * 3.5;
+            const rot = p.angle + Math.sin(time * 1.6 + p.phase) * 0.08;
+            drawCompoundUnit(p.baseX + ox, p.baseY + oy, rot, state.compound, 1.12);
+          });
+
+          const nameLabel = isHgO ? '氧化汞（HgO）' : '氯化銀（AgCl）';
+          drawPillLabel(ctx, `純物質（化合物）：畫布中只有單一種微粒 — ${nameLabel}`, W / 2, 26, {
+            border: '#7c3aed', color: '#5b21b6', bg: 'rgba(245, 243, 255, 0.96)', fontSize: 12.5
+          });
+          drawPillLabel(ctx, '每一個微粒皆由「兩種不同原子」緊密化合，無法用過濾或結晶分開', W / 2, H - 24, {
+            border: '#0d9488', color: '#0f766e', bg: 'rgba(240, 253, 250, 0.96)', fontSize: 12
+          });
+        }
+
+        /* --- 階段五：化學分解成元素 --- */
+        function updateAndDrawStage5(dt, s) {
+          const isHgO = state.compound === 'HgO';
+
+          // 若開啟自動升能按鈕，平滑推升能量滑桿
+          if (state.energyAutoRamp) {
+            state.energy = Math.min(100, state.energy + dt * 28);
+            const slider = document.getElementById('energySlider');
+            const valTxt = document.getElementById('energyValText');
+            if (slider) slider.value = Math.round(state.energy);
+            if (valTxt) valTxt.textContent = `${Math.round(state.energy)}%`;
+
+            if (state.energy >= 62 && !state.decomposed) {
+              triggerChemicalBondBreak();
+            }
+            if (state.energy >= 100) {
+              state.energyAutoRamp = false;
+            }
+            renderMacroSVG();
+          }
+
+          // 分解進度平滑推進
+          if (state.decomposed && state.decomposeProgress < 1) {
+            state.decomposeProgress = Math.min(1, state.decomposeProgress + dt * 0.34);
+            if (Math.floor(state.decomposeProgress * 15) !== Math.floor((state.decomposeProgress - dt * 0.34) * 15)) {
+              renderMacroSVG();
+            }
+            if (state.decomposeProgress >= 0.99) {
+              renderStageActionBar();
+            }
+          }
+
+          const e = state.energy / 100;
+          const dec = state.decomposeProgress;
+
+          // 1. 能量視覺效果（加熱熱波紋 vs 照光紫外線光子束）
+          if (e > 0.08 && dec < 0.85) {
+            if (isHgO) {
+              // 底部加熱波紋
+              ctx.save();
+              const heatAlpha = Math.min(0.42, e * 0.45) * (1 - dec * 0.7);
+              const g = ctx.createLinearGradient(0, H, 0, H * 0.45);
+              g.addColorStop(0, `rgba(239, 68, 68, ${heatAlpha})`);
+              g.addColorStop(1, 'rgba(249, 115, 22, 0)');
+              ctx.fillStyle = g;
+              ctx.fillRect(0, H * 0.45, W, H * 0.55);
+
+              // 上升波動熱浪線
+              ctx.strokeStyle = `rgba(234, 88, 12, ${heatAlpha * 1.4})`;
+              ctx.lineWidth = 2.4;
+              for (let i = 0; i < 6; i++) {
+                const wx = W * (0.12 + i * 0.15);
+                const offset = (time * 90 + i * 40) % 140;
+                ctx.beginPath();
+                for (let dy = 0; dy <= 55; dy += 6) {
+                  const yPos = H - offset - dy;
+                  const xPos = wx + Math.sin(dy * 0.22 + time * 12) * 6;
+                  if (dy === 0) ctx.moveTo(xPos, yPos);
+                  else ctx.lineTo(xPos, yPos);
+                }
+                ctx.stroke();
+              }
+              ctx.restore();
+            } else {
+              // 紫外線／強光斜向光束與光子粒子
+              ctx.save();
+              const beamAlpha = Math.min(0.28, e * 0.3) * (1 - dec * 0.7);
+              const grad = ctx.createLinearGradient(0, 0, W * 0.6, H);
+              grad.addColorStop(0, `rgba(250, 204, 21, ${beamAlpha * 1.6})`);
+              grad.addColorStop(0.55, `rgba(168, 85, 247, ${beamAlpha})`);
+              grad.addColorStop(1, 'rgba(168, 85, 247, 0)');
+              ctx.fillStyle = grad;
+              ctx.beginPath();
+              ctx.moveTo(W * 0.05, 0);
+              ctx.lineTo(W * 0.65, 0);
+              ctx.lineTo(W, H);
+              ctx.lineTo(W * 0.25, H);
+              ctx.closePath();
+              ctx.fill();
+
+              // 產生飛馳光子 (hν)
+              if (Math.random() < e * 0.42) {
+                photons.push({
+                  x: rand(W * 0.05, W * 0.75),
+                  y: -10,
+                  vx: 2.2,
+                  vy: 4.5,
+                  color: Math.random() > 0.5 ? '#eab308' : '#9333ea'
+                });
+              }
+              for (let i = photons.length - 1; i >= 0; i--) {
+                const ph = photons[i];
+                ph.x += ph.vx * s;
+                ph.y += ph.vy * s;
+                ctx.beginPath();
+                ctx.moveTo(ph.x - 10, ph.y - 20);
+                ctx.lineTo(ph.x, ph.y);
+                ctx.strokeStyle = ph.color;
+                ctx.lineWidth = 2.6;
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.arc(ph.x, ph.y, 3.5, 0, Math.PI * 2);
+                ctx.fillStyle = '#fef08a';
+                ctx.fill();
+                if (ph.y > H + 20) photons.splice(i, 1);
+              }
+              ctx.restore();
+            }
+          }
+
+          // 2. 分解完成後的「元素對比標籤框」
+          if (dec > 0.78) {
+            const boxAlpha = Math.min(1, (dec - 0.78) / 0.22);
+            ctx.save();
+            ctx.globalAlpha = boxAlpha;
+
+            // 上框：雙原子氣體元素 (O2 / Cl2)
+            ctx.beginPath();
+            roundRectPath(ctx, 22, 46, W - 44, H * 0.36, 14);
+            ctx.fillStyle = isHgO ? 'rgba(254, 242, 242, 0.72)' : 'rgba(240, 253, 244, 0.75)';
+            ctx.fill();
+            ctx.strokeStyle = isHgO ? '#ef4444' : '#16a34a';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([7, 4]);
+            ctx.stroke();
+
+            // 下框：單原子金屬元素 (Hg / Ag)
+            ctx.beginPath();
+            roundRectPath(ctx, 22, H * 0.54, W - 44, H * 0.34, 14);
+            ctx.fillStyle = 'rgba(241, 245, 249, 0.78)';
+            ctx.fill();
+            ctx.strokeStyle = '#475569';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.restore();
+          }
+
+          // 3. 更新並繪製原子與分子
+          const metalType = isHgO ? 'Hg' : 'Ag';
+          const gasType = isHgO ? 'O' : 'Cl';
+
+          if (!state.decomposed) {
+            // 尚未斷鍵：隨能量升高劇烈原地振動，化學鍵發紅/發紫緊繃
+            const vibAmp = e > 0.12 ? (e * e) * 11 : 1.5;
+            const vibFreq = 12 + e * 38;
+            const bondStress = e > 0.35
+              ? (isHgO ? '#ef4444' : '#9333ea')
+              : '#64748b';
+
+            particles.forEach((p) => {
+              const jx = Math.sin(time * vibFreq + p.phase) * vibAmp;
+              const jy = Math.cos(time * (vibFreq * 1.15) + p.phase) * vibAmp;
+              const stretch = 14 + e * 4.5;
+              p.mx = p.baseX - stretch + jx;
+              p.my = p.baseY + jy;
+              p.nx = p.baseX + stretch + jx;
+              p.ny = p.baseY + jy;
+
+              drawBondStick(ctx, p.mx, p.my, p.nx, p.ny, bondStress, 5.5);
+              drawAtom3D(ctx, p.mx, p.my, metalType, state.showSymbols);
+              drawAtom3D(ctx, p.nx, p.ny, gasType, state.showSymbols);
+            });
+          } else {
+            // 已斷鍵！分階段平滑演進：
+            // dec 0~0.35: 原子彈開分離 -> dec 0.35~1.0: 金屬沉降聚集，氣體原子兩兩配對結合成雙原子分子向上飄浮
+            particles.forEach((p) => {
+              const sepEase = Math.min(1, dec / 0.35);
+              const formEase = Math.max(0, Math.min(1, (dec - 0.25) / 0.65));
+              const smooth = formEase * formEase * (3 - 2 * formEase);
+
+              // 金屬原子：下沉聚集為單原子元素
+              const mFloatX = Math.sin(time * 2.2 + p.phase) * 3;
+              const mFloatY = Math.cos(time * 2.5 + p.phase) * 3;
+              const startMx = p.baseX - 18 - sepEase * 10;
+              const startMy = p.baseY + sepEase * 14;
+              p.mx = startMx + (p.metalTargetX - startMx) * smooth + mFloatX;
+              p.my = startMy + (p.metalTargetY - startMy) * smooth + mFloatY;
+
+              // 非金屬原子：兩兩配對成 O₂ 或 Cl₂ 向上飄浮
+              const pairGap = 13.5;
+              const pairFloatX = Math.sin(time * 2.0 + p.pairIndex * 2.1) * 9;
+              const pairFloatY = Math.cos(time * 2.3 + p.pairIndex * 1.7) * 6;
+              const targetNx = p.gasTargetX + (p.isLeftOfPair ? -pairGap : pairGap) + pairFloatX;
+              const targetNy = p.gasTargetY + pairFloatY;
+
+              const startNx = p.baseX + 18 + sepEase * 10;
+              const startNy = p.baseY - sepEase * 16;
+              p.nx = startNx + (targetNx - startNx) * smooth;
+              p.ny = startNy + (targetNy - startNy) * smooth;
+            });
+
+            // 繪製新生成的 O₂ / Cl₂ 雙原子共價鍵（當兩顆同種原子靠近時）
+            for (let pair = 0; pair < 3; pair++) {
+              const a = particles[pair * 2];
+              const b = particles[pair * 2 + 1];
+              if (a && b && dec > 0.45) {
+                const bondAlpha = Math.min(1, (dec - 0.45) * 3);
+                ctx.save();
+                ctx.globalAlpha = bondAlpha;
+                drawBondStick(
+                  ctx, a.nx, a.ny, b.nx, b.ny,
+                  isHgO ? '#b91c1c' : '#15803d',
+                  5,
+                  isHgO // O2 為雙鍵，Cl2 為單鍵
+                );
+                ctx.restore();
+              }
+            }
+
+            // 繪製所有重組後的原子
+            particles.forEach((p) => {
+              drawAtom3D(ctx, p.mx, p.my, metalType, state.showSymbols);
+              drawAtom3D(ctx, p.nx, p.ny, gasType, state.showSymbols);
+            });
+          }
+
+          // 4. 斷鍵閃光粒子特效
+          for (let i = sparks.length - 1; i >= 0; i--) {
+            const sp = sparks[i];
+            sp.r += 2.2 * s;
+            sp.alpha -= 0.045 * s;
+            if (sp.alpha <= 0) {
+              sparks.splice(i, 1);
+              continue;
+            }
+            ctx.save();
+            ctx.globalAlpha = sp.alpha;
+            ctx.beginPath();
+            ctx.arc(sp.x, sp.y, sp.r, 0, Math.PI * 2);
+            ctx.strokeStyle = sp.color;
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            ctx.restore();
+          }
+
+          // 5. 頂部與底部清晰狀態標示
+          if (dec > 0.78) {
+            const gasName = isHgO ? '氧氣 O₂' : '氯氣 Cl₂';
+            const metalName = isHgO ? '汞 Hg' : '銀 Ag';
+            drawPillLabel(ctx, `元素 B：雙原子分子（${gasName} — 同種原子兩兩結合）`, W / 2, 24, {
+              border: isHgO ? '#dc2626' : '#16a34a',
+              color: isHgO ? '#991b1b' : '#166534',
+              bg: 'rgba(255, 255, 255, 0.96)',
+              fontSize: 12
+            });
+            drawPillLabel(ctx, `元素 A：單原子金屬元素（${metalName}）`, W / 2, H * 0.54, {
+              border: '#475569', color: '#1e293b', bg: 'rgba(255, 255, 255, 0.96)', fontSize: 12
+            });
+            drawPillLabel(
+              ctx,
+              `💡 ${isHgO ? 'O₂' : 'Cl₂'} 雖是兩顆原子連在一起，但因是「同一種原子」，屬於元素而非化合物！`,
+              W / 2,
+              H - 20,
+              { border: '#d97706', color: '#92400e', bg: 'rgba(255, 251, 235, 0.97)', fontSize: 11.5 }
+            );
+          } else if (state.decomposed) {
+            drawPillLabel(ctx, '⚡ 化學鍵斷裂！原子正在重新排列結合成兩種「元素」…', W / 2, 24, {
+              border: '#e11d48', color: '#be123c', bg: 'rgba(255, 241, 242, 0.96)', fontSize: 12.5
+            });
+          } else if (e >= 0.2) {
+            drawPillLabel(
+              ctx,
+              `${isHgO ? '🔥 吸收熱能中' : '☀️ 吸收光能中'}：分子劇烈振動！能量達 62% 即斷鍵分解`,
+              W / 2,
+              24,
+              { border: '#f97316', color: '#9a3412', bg: 'rgba(255, 247, 237, 0.96)', fontSize: 12 }
+            );
+          } else {
+            drawPillLabel(
+              ctx,
+              `請拖曳下方${isHgO ? '加熱能量滑桿' : '照光強度滑桿'}，觀察化學鍵斷裂與原子重組`,
+              W / 2,
+              24,
+              { border: '#0284c7', color: '#0369a1', bg: 'rgba(240, 249, 255, 0.96)', fontSize: 12 }
+            );
+          }
+        }
+
+        return {
+          initCanvas,
+          resize,
+          initStage,
+          stepAndDraw,
+          triggerChemicalBondBreak
+        };
+      })();
+
+      /* ======================================================================
+         9. 自動播放與階段切換邏輯
+         ====================================================================== */
+      function goToStage(idx) {
+        state.stage = Math.max(0, Math.min(4, idx));
+        state.autoTimer = 0;
+
+        // 更新時間軸樣式
+        document.querySelectorAll('.step-pill').forEach((el) => {
+          const s = Number(el.dataset.step);
+          el.classList.toggle('active', s === state.stage);
+          el.classList.toggle('completed', s < state.stage);
+        });
+
+        document.getElementById('btnPrev').disabled = state.stage === 0;
+        document.getElementById('btnNext').disabled = state.stage === 4;
+
+        MicroSim.initStage(state.stage);
+        renderMacroSVG();
+        updateConceptTree();
+        updateInfoPanels();
+        renderStageActionBar();
+      }
+
+      function toggleAutoPlay() {
+        state.autoPlay = !state.autoPlay;
+        state.autoTimer = 0;
+        updateAutoPlayBtn();
+        if (state.autoPlay) {
+          // 若已在最後一階段且分解完成，從頭自動播放
+          if (state.stage === 4 && state.decomposeProgress >= 0.98) {
+            goToStage(0);
+          }
+        }
+      }
+
+      function stopAutoPlay() {
+        if (!state.autoPlay) return;
+        state.autoPlay = false;
+        updateAutoPlayBtn();
+      }
+
+      function updateAutoPlayBtn() {
+        const btn = document.getElementById('btnAutoPlay');
+        if (state.autoPlay) {
+          btn.textContent = '⏸ 暫停播放';
+          btn.classList.remove('primary');
+          btn.classList.add('playing');
+        } else {
+          btn.textContent = '▶ 自動播放';
+          btn.classList.remove('playing');
+          btn.classList.add('primary');
+        }
+      }
+
+      function handleAutoPlay(dt) {
+        state.autoTimer += dt;
+        if (state.stage === 0) {
+          if (state.autoTimer > 4.2) goToStage(1);
+        } else if (state.stage === 1) {
+          if (state.autoTimer > 0.7 && !state.filterRunning && state.filterProgress < 0.05) {
+            state.filterRunning = true;
+            renderStageActionBar();
+          }
+          if (state.filterProgress >= 0.99 && state.autoTimer > 8.2) {
+            goToStage(2);
+          }
+        } else if (state.stage === 2) {
+          if (state.autoTimer > 0.7 && !state.evapRunning && state.evapProgress < 0.05) {
+            state.evapRunning = true;
+            renderStageActionBar();
+          }
+          if (state.evapProgress >= 0.99 && state.autoTimer > 8.6) {
+            goToStage(3);
+          }
+        } else if (state.stage === 3) {
+          if (state.autoTimer > 4.6) goToStage(4);
+        } else if (state.stage === 4) {
+          if (state.autoTimer > 0.8 && !state.energyAutoRamp && state.energy < 10) {
+            state.energyAutoRamp = true;
+            renderStageActionBar();
+          }
+          if (state.decomposeProgress >= 0.99 && state.autoTimer > 11.5) {
+            stopAutoPlay();
+          }
+        }
+      }
+
+      /* ======================================================================
+         10. 微觀粒子隨堂測驗模組 (5 題動態 Canvas 示意圖 + 即時解析)
+         ====================================================================== */
+      const QuizModule = (function () {
+        let qCanvas, qCtx;
+        let QW = 440, QH = 330;
+        let qParticles = [];
+
+        const QUESTIONS = [
+          {
+            id: 1,
+            title: '第 1 題：請判斷此微觀容器中的物質分類',
+            answer: 'element',
+            answerLabel: '元素（純物質）',
+            shortName: '單原子元素（如氦氣 He）',
+            explanation: '容器中「只有一種粒子」，且每個粒子都只是單一顆相同種類的原子（例如氦氣 He、氖氣 Ne），因此屬於【元素（純物質）】。',
+            build: (w, h) => {
+              const arr = [];
+              for (let i = 0; i < 12; i++) {
+                arr.push({ shape: 'mono', a1: 'He', x: 50 + (i % 4) * ((w - 100) / 3), y: 65 + Math.floor(i / 4) * ((h - 130) / 2), vx: (Math.random() - 0.5) * 1.6, vy: (Math.random() - 0.5) * 1.6, ang: 0, va: 0 });
+              }
+              return arr;
+            }
+          },
+          {
+            id: 2,
+            title: '第 2 題：小心陷阱！兩顆球連在一起是元素還是化合物？',
+            answer: 'element',
+            answerLabel: '元素（純物質）',
+            shortName: '雙原子元素（如氧氣 O₂）',
+            explanation: '雖然每個分子都是由兩顆原子鍵結而成，但因為這兩顆是「完全相同的原子」（如氧氣 O₂、氮氣 N₂），只含單一種元素，所以屬於【元素（純物質）】而非化合物！',
+            build: (w, h) => {
+              const arr = [];
+              for (let i = 0; i < 8; i++) {
+                arr.push({ shape: 'di_same', a1: 'N', x: 60 + (i % 4) * ((w - 120) / 3), y: 90 + Math.floor(i / 4) * (h - 180), vx: (Math.random() - 0.5) * 1.4, vy: (Math.random() - 0.5) * 1.4, ang: Math.random() * 6, va: (Math.random() - 0.5) * 0.04 });
+              }
+              return arr;
+            }
+          },
+          {
+            id: 3,
+            title: '第 3 題：觀察所有分子的長相與原子組成',
+            answer: 'compound',
+            answerLabel: '化合物（純物質）',
+            shortName: '純化合物（如水 H₂O）',
+            explanation: '容器中所有分子的結構「完全相同」（單一物質＝純物質），但每一個分子內部都由「兩種不同原子」化學鍵結而成（例如水 H₂O），因此屬於【化合物】！',
+            build: (w, h) => {
+              const arr = [];
+              for (let i = 0; i < 9; i++) {
+                arr.push({ shape: 'tri_bent', a1: 'O', a2: 'H', x: 65 + (i % 3) * ((w - 130) / 2), y: 65 + Math.floor(i / 3) * ((h - 130) / 2), vx: (Math.random() - 0.5) * 1.3, vy: (Math.random() - 0.5) * 1.3, ang: Math.random() * 6, va: (Math.random() - 0.5) * 0.03 });
+              }
+              return arr;
+            }
+          },
+          {
+            id: 4,
+            title: '第 4 題：這箱粒子裡面有幾種不同的微粒呢？',
+            answer: 'mixture',
+            answerLabel: '混合物',
+            shortName: '元素與化合物的混合物',
+            explanation: '容器內同時混雜了「兩種結構不同的分子」（藍色雙原子元素 N₂ ＋ 紅白三原子化合物 H₂O），含有兩種以上物質，因此屬於【混合物】！',
+            build: (w, h) => {
+              const arr = [];
+              for (let i = 0; i < 5; i++) {
+                arr.push({ shape: 'di_same', a1: 'N', x: 60 + Math.random() * (w - 120), y: 55 + Math.random() * (h - 110), vx: (Math.random() - 0.5) * 1.5, vy: (Math.random() - 0.5) * 1.5, ang: Math.random() * 6, va: 0.02 });
+              }
+              for (let i = 0; i < 5; i++) {
+                arr.push({ shape: 'tri_bent', a1: 'O', a2: 'H', x: 60 + Math.random() * (w - 120), y: 55 + Math.random() * (h - 110), vx: (Math.random() - 0.5) * 1.4, vy: (Math.random() - 0.5) * 1.4, ang: Math.random() * 6, va: -0.025 });
+              }
+              return arr;
+            }
+          },
+          {
+            id: 5,
+            title: '第 5 題：進階思考！兩種元素放在一起屬於哪一類？',
+            answer: 'mixture',
+            answerLabel: '混合物',
+            shortName: '兩種元素的混合物（He + O₂）',
+            explanation: '雖然橘色單原子（He）和紅色雙原子（O₂）各自都是元素，但當它們「混在同一個容器內且未互相化合」時，含有兩種不同物質，整體屬於【混合物】！',
+            build: (w, h) => {
+              const arr = [];
+              for (let i = 0; i < 6; i++) {
+                arr.push({ shape: 'mono', a1: 'He', x: 55 + Math.random() * (w - 110), y: 55 + Math.random() * (h - 110), vx: (Math.random() - 0.5) * 1.7, vy: (Math.random() - 0.5) * 1.7, ang: 0, va: 0 });
+              }
+              for (let i = 0; i < 5; i++) {
+                arr.push({ shape: 'di_same', a1: 'O', x: 55 + Math.random() * (w - 110), y: 55 + Math.random() * (h - 110), vx: (Math.random() - 0.5) * 1.3, vy: (Math.random() - 0.5) * 1.3, ang: Math.random() * 6, va: 0.028 });
+              }
+              return arr;
+            }
+          }
+        ];
+
+        let currentIdx = 0;
+        let score = 0;
+        let answered = false;
+        let records = [];
+
+        function init() {
+          qCanvas = document.getElementById('quizCanvas');
+          qCtx = qCanvas.getContext('2d');
+          resize();
+          window.addEventListener('resize', resize);
+
+          document.querySelectorAll('.quiz-opt-btn').forEach((btn) => {
+            btn.addEventListener('click', () => handleAnswer(btn.dataset.choice));
+          });
+          document.getElementById('btnQuizNext').addEventListener('click', nextQuestion);
+          document.getElementById('btnQuizRestart').addEventListener('click', restart);
+          document.getElementById('btnBackToAnim').addEventListener('click', () => switchTab('animation'));
+
+          loadQuestion(0);
+        }
+
+        function resize() {
+          if (!qCanvas) return;
+          const rect = qCanvas.parentElement.getBoundingClientRect();
+          if (rect.width < 10 || rect.height < 10) return;
+          const dpr = Math.min(window.devicePixelRatio || 1, 2);
+          QW = rect.width;
+          QH = rect.height;
+          qCanvas.width = Math.round(QW * dpr);
+          qCanvas.height = Math.round(QH * dpr);
+          qCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        function loadQuestion(idx) {
+          currentIdx = idx;
+          answered = false;
+          const q = QUESTIONS[idx];
+
+          document.getElementById('quizQuestionCard').style.display = '';
+          document.getElementById('quizSummaryCard').classList.remove('show');
+
+          document.getElementById('quizStepLabel').textContent = `第 ${idx + 1} / ${QUESTIONS.length} 題`;
+          document.getElementById('quizProgressFill').style.width = `${((idx + 1) / QUESTIONS.length) * 100}%`;
+          document.getElementById('quizScorePill').textContent = `目前得分：${score} / ${QUESTIONS.length}`;
+          document.getElementById('quizQTitle').textContent = q.title;
+
+          document.querySelectorAll('.quiz-opt-btn').forEach((btn) => {
+            btn.disabled = false;
+            btn.classList.remove('correct', 'wrong');
+          });
+          const fb = document.getElementById('quizFeedback');
+          fb.classList.remove('show', 'ok', 'err');
+          document.getElementById('btnQuizNext').textContent = idx === QUESTIONS.length - 1 ? '查看總成績 🏆' : '下一題 ➜';
+
+          resize();
+          qParticles = q.build(QW, QH);
+        }
+
+        function handleAnswer(choice) {
+          if (answered) return;
+          answered = true;
+          const q = QUESTIONS[currentIdx];
+          const isCorrect = choice === q.answer;
+          if (isCorrect) score++;
+
+          records.push({
+            num: currentIdx + 1,
+            shortName: q.shortName,
+            answerLabel: q.answerLabel,
+            isCorrect
+          });
+
+          document.getElementById('quizScorePill').textContent = `目前得分：${score} / ${QUESTIONS.length}`;
+
+          document.querySelectorAll('.quiz-opt-btn').forEach((btn) => {
+            btn.disabled = true;
+            if (btn.dataset.choice === q.answer) btn.classList.add('correct');
+            else if (btn.dataset.choice === choice && !isCorrect) btn.classList.add('wrong');
+          });
+
+          const fb = document.getElementById('quizFeedback');
+          fb.classList.add('show', isCorrect ? 'ok' : 'err');
+          document.getElementById('quizFeedbackTitle').textContent = isCorrect
+            ? `✅ 答對了！正確答案是「${q.answerLabel}」`
+            : `❌ 再想想看喔！正確答案是「${q.answerLabel}」`;
+          document.getElementById('quizFeedbackBody').textContent = q.explanation;
+        }
+
+        function nextQuestion() {
+          if (currentIdx < QUESTIONS.length - 1) {
+            loadQuestion(currentIdx + 1);
+          } else {
+            showSummary();
+          }
+        }
+
+        function showSummary() {
+          document.getElementById('quizQuestionCard').style.display = 'none';
+          const card = document.getElementById('quizSummaryCard');
+          card.classList.add('show');
+          document.getElementById('summaryScoreText').textContent = `${score} / ${QUESTIONS.length}`;
+
+          const comment = score === QUESTIONS.length
+            ? '太棒了！你已經完全掌握混合物、化合物與元素的微觀辨別技巧，連雙原子元素的經典陷阱也完美破解！'
+            : (score >= 3
+              ? '表現很不錯！建議再特別複習答錯的題目，牢記「先數微粒有幾種，再數每顆微粒有幾種原子」的口訣。'
+              : '沒關係，多看幾次微觀動畫會更有感覺！記住：只有一種微粒是純物質；含不同種原子才是化合物喔！');
+          document.getElementById('summaryComment').textContent = comment;
+
+          document.getElementById('summaryList').innerHTML = records.map((r) => `
+            <div class="summary-item ${r.isCorrect ? 'pass' : 'fail'}">
+              <div style="font-weight:800;margin-bottom:2px;">第 ${r.num} 題 ${r.isCorrect ? '✅' : '❌'}</div>
+              <div style="color:var(--text-secondary);">${r.shortName}</div>
+              <div style="font-weight:700;color:var(--navy-700);margin-top:2px;">正解：${r.answerLabel}</div>
+            </div>
+          `).join('');
+        }
+
+        function restart() {
+          score = 0;
+          records = [];
+          loadQuestion(0);
+        }
+
+        function drawFrame(dtRaw) {
+          if (state.activeTab !== 'quiz' || !qCtx) return;
+          const s = Math.min(dtRaw, 0.05) * 60;
+          qCtx.clearRect(0, 0, QW, QH);
+
+          // 微弱實驗網格底紋
+          qCtx.save();
+          qCtx.strokeStyle = 'rgba(148, 163, 184, 0.14)';
+          qCtx.lineWidth = 1;
+          for (let gx = 32; gx < QW; gx += 32) {
+            qCtx.beginPath(); qCtx.moveTo(gx, 0); qCtx.lineTo(gx, QH); qCtx.stroke();
+          }
+          for (let gy = 32; gy < QH; gy += 32) {
+            qCtx.beginPath(); qCtx.moveTo(0, gy); qCtx.lineTo(QW, gy); qCtx.stroke();
+          }
+          qCtx.restore();
+
+          qParticles.forEach((p) => {
+            p.x += p.vx * s;
+            p.y += p.vy * s;
+            p.ang += p.va * s;
+
+            const pad = 32;
+            if (p.x < pad) { p.x = pad; p.vx = Math.abs(p.vx); }
+            if (p.x > QW - pad) { p.x = QW - pad; p.vx = -Math.abs(p.vx); }
+            if (p.y < pad) { p.y = pad; p.vy = Math.abs(p.vy); }
+            if (p.y > QH - pad) { p.y = QH - pad; p.vy = -Math.abs(p.vy); }
+
+            if (p.shape === 'mono') {
+              drawAtom3D(qCtx, p.x, p.y, p.a1, false, 1.15);
+            } else if (p.shape === 'di_same') {
+              const half = 13.5;
+              const x1 = p.x - Math.cos(p.ang) * half;
+              const y1 = p.y - Math.sin(p.ang) * half;
+              const x2 = p.x + Math.cos(p.ang) * half;
+              const y2 = p.y + Math.sin(p.ang) * half;
+              drawBondStick(qCtx, x1, y1, x2, y2, '#475569', 5, p.a1 === 'O');
+              drawAtom3D(qCtx, x1, y1, p.a1, false, 1.05);
+              drawAtom3D(qCtx, x2, y2, p.a1, false, 1.05);
+            } else if (p.shape === 'tri_bent') {
+              const dist = 17;
+              const sp = 0.92;
+              const h1x = p.x + Math.cos(p.ang - sp) * dist;
+              const h1y = p.y + Math.sin(p.ang - sp) * dist;
+              const h2x = p.x + Math.cos(p.ang + sp) * dist;
+              const h2y = p.y + Math.sin(p.ang + sp) * dist;
+              drawBondStick(qCtx, p.x, p.y, h1x, h1y, '#64748b', 4.5);
+              drawBondStick(qCtx, p.x, p.y, h2x, h2y, '#64748b', 4.5);
+              drawAtom3D(qCtx, h1x, h1y, p.a2, false, 1.05);
+              drawAtom3D(qCtx, h2x, h2y, p.a2, false, 1.05);
+              drawAtom3D(qCtx, p.x, p.y, p.a1, false, 1.05);
+            }
+          });
+        }
+
+        return { init, resize, drawFrame };
+      })();
+
+      /* ======================================================================
+         11. 分頁切換、事件綁定與動畫主迴圈啟動
+         ====================================================================== */
+      function switchTab(tabName) {
+        state.activeTab = tabName;
+        stopAutoPlay();
+
+        document.getElementById('tabAnimBtn').classList.toggle('active', tabName === 'animation');
+        document.getElementById('tabQuizBtn').classList.toggle('active', tabName === 'quiz');
+        document.getElementById('view-animation').classList.toggle('active', tabName === 'animation');
+        document.getElementById('view-quiz').classList.toggle('active', tabName === 'quiz');
+
+        if (tabName === 'animation') {
+          requestAnimationFrame(() => MicroSim.resize());
+        } else {
+          requestAnimationFrame(() => QuizModule.resize());
+        }
+      }
+
+      function bindGlobalEvents() {
+        document.getElementById('tabAnimBtn').addEventListener('click', () => switchTab('animation'));
+        document.getElementById('tabQuizBtn').addEventListener('click', () => switchTab('quiz'));
+
+        // 時間軸點擊
+        document.querySelectorAll('.step-pill').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            stopAutoPlay();
+            goToStage(Number(btn.dataset.step));
+          });
+        });
+
+        // 播放列按鈕
+        document.getElementById('btnAutoPlay').addEventListener('click', toggleAutoPlay);
+        document.getElementById('btnPrev').addEventListener('click', () => {
+          stopAutoPlay();
+          goToStage(state.stage - 1);
+        });
+        document.getElementById('btnNext').addEventListener('click', () => {
+          stopAutoPlay();
+          goToStage(state.stage + 1);
+        });
+        document.getElementById('btnReplay').addEventListener('click', () => {
+          stopAutoPlay();
+          goToStage(state.stage);
+        });
+
+        // 微觀顯示開關
+        document.getElementById('chkSymbols').addEventListener('change', (e) => {
+          state.showSymbols = e.target.checked;
+        });
+        document.getElementById('chkSlowMo').addEventListener('change', (e) => {
+          state.slowMo = e.target.checked;
+        });
+
+        // 支援鍵盤左右方向鍵切換步驟，方便簡報筆操作
+        window.addEventListener('keydown', (e) => {
+          if (state.activeTab !== 'animation') return;
+          if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON')) return;
+          if (e.key === 'ArrowRight' && state.stage < 4) {
+            stopAutoPlay();
+            goToStage(state.stage + 1);
+          } else if (e.key === 'ArrowLeft' && state.stage > 0) {
+            stopAutoPlay();
+            goToStage(state.stage - 1);
+          }
+        });
+      }
+
+      // 主 60fps 動畫迴圈
+      let lastTimestamp = 0;
+      function mainLoop(ts) {
+        try {
+          if (!lastTimestamp) lastTimestamp = ts;
+          const dt = (ts - lastTimestamp) / 1000;
+          lastTimestamp = ts;
+
+          if (state.activeTab === 'animation') {
+            MicroSim.stepAndDraw(dt);
+          } else {
+            QuizModule.drawFrame(dt);
+          }
+        } catch (err) {
+          console.error('Animation frame error:', err);
+        }
+        requestAnimationFrame(mainLoop);
+      }
+
+      // 於頁面載入完成後啟動所有模組
+      window.onload = function () {
+        try {
+          MicroSim.initCanvas();
+          QuizModule.init();
+          bindGlobalEvents();
+          goToStage(0);
+          requestAnimationFrame(mainLoop);
+        } catch (err) {
+          console.error('App initialization error:', err);
+        }
+      };
+    })();
+  </script>
+</body>
+</html>
