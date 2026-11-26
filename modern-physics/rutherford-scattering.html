@@ -1,0 +1,2965 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>拉塞福 α 粒子散射實驗 3D 互動教學模擬</title>
+  <meta name="description" content="3D 互動模擬 1909 蓋革－馬士登金箔實驗：可切換微觀庫侖散射軌跡（RK4 精準積分）與巨觀 ZnS 螢光屏裝置，並對照拉塞福核式模型與湯姆森布丁模型。" />
+  <meta name="portal-tags" content="近代物理, 拉塞福散射, 原子結構, 3D視覺" />
+  <meta name="portal-badge" content="3D 互動模擬" />
+  <meta name="portal-featured" content="true" />
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Three.js r128 CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <!-- Google Fonts: Noto Sans TC & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-deep: #050816;
+      --bg-indigo: #0c142c;
+      --panel-bg: rgba(11, 18, 38, 0.78);
+      --panel-border: rgba(148, 163, 184, 0.22);
+      --gold: #fbbf24;
+      --ruby: #f43f5e;
+      --emerald: #34d399;
+      --cyan: #38bdf8;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Noto Sans TC', 'Inter', system-ui, -apple-system, sans-serif;
+      background: radial-gradient(circle at 50% 42%, #132044 0%, #091026 52%, #040712 100%);
+      color: #f1f5f9;
+      user-select: none;
+    }
+
+    .font-mono-num {
+      font-family: 'JetBrains Mono', 'Inter', monospace;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* 3D WebGL 畫布全螢幕定位 */
+    #canvas-container {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      touch-action: none;
+    }
+
+    #canvas-container canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* 玻璃擬態實驗室面板 */
+    .lab-panel {
+      background: var(--panel-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--panel-border);
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    }
+
+    /* 自訂捲軸（深邃低調） */
+    .lab-scroll::-webkit-scrollbar {
+      width: 5px;
+    }
+    .lab-scroll::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.35);
+      border-radius: 99px;
+    }
+    .lab-scroll::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.35);
+      border-radius: 99px;
+    }
+    .lab-scroll::-webkit-scrollbar-thumb:hover {
+      background: rgba(251, 191, 36, 0.6);
+    }
+
+    /* 滑桿美化 */
+    input[type="range"].lab-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(51, 65, 85, 0.85);
+      outline: none;
+      cursor: pointer;
+    }
+    input[type="range"].lab-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #fde68a 0%, #f59e0b 100%);
+      border: 2px solid #0f172a;
+      box-shadow: 0 0 10px rgba(251, 191, 36, 0.65);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    input[type="range"].lab-slider::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+      box-shadow: 0 0 14px rgba(251, 191, 36, 0.9);
+    }
+    input[type="range"].lab-slider.emerald-thumb::-webkit-slider-thumb {
+      background: linear-gradient(135deg, #a7f3d0 0%, #10b981 100%);
+      box-shadow: 0 0 10px rgba(52, 211, 153, 0.65);
+    }
+    input[type="range"].lab-slider.cyan-thumb::-webkit-slider-thumb {
+      background: linear-gradient(135deg, #bae6fd 0%, #0ea5e9 100%);
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.65);
+    }
+
+    /* 面板平滑展開/收合 */
+    .panel-transition {
+      transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.25s ease;
+    }
+    .panel-hidden-left {
+      transform: translateX(-115%);
+      opacity: 0;
+      pointer-events: none;
+    }
+    .panel-hidden-right {
+      transform: translateX(115%);
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* 發光按鈕特效 */
+    .btn-fire {
+      background: linear-gradient(135deg, #f59e0b 0%, #ea580c 55%, #e11d48 100%);
+      box-shadow: 0 4px 18px rgba(245, 158, 11, 0.38);
+      transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.2s ease;
+    }
+    .btn-fire:hover {
+      filter: brightness(1.08);
+      box-shadow: 0 6px 24px rgba(244, 63, 94, 0.5);
+    }
+    .btn-fire:active {
+      transform: scale(0.97);
+    }
+
+    /* 提示訊息 Toast */
+    #toast-box {
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+    #toast-box.toast-hide {
+      opacity: 0;
+      transform: translate(-50%, -14px);
+      pointer-events: none;
+    }
+
+    /* 分段切換標籤 */
+    .seg-btn {
+      transition: all 0.2s ease;
+    }
+    .seg-btn.active-gold {
+      background: linear-gradient(135deg, rgba(251, 191, 36, 0.26), rgba(245, 158, 11, 0.14));
+      border-color: rgba(251, 191, 36, 0.72);
+      color: #fef3c7;
+      box-shadow: 0 0 14px rgba(251, 191, 36, 0.22);
+    }
+    .seg-btn.active-ruby {
+      background: linear-gradient(135deg, rgba(244, 63, 94, 0.28), rgba(225, 29, 72, 0.14));
+      border-color: rgba(251, 113, 133, 0.75);
+      color: #ffe4e6;
+      box-shadow: 0 0 14px rgba(244, 63, 94, 0.24);
+    }
+    .seg-btn.active-emerald {
+      background: linear-gradient(135deg, rgba(52, 211, 153, 0.25), rgba(16, 185, 129, 0.12));
+      border-color: rgba(52, 211, 153, 0.75);
+      color: #d1fae5;
+      box-shadow: 0 0 14px rgba(52, 211, 153, 0.22);
+    }
+    .seg-btn.active-cyan {
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.26), rgba(14, 165, 233, 0.12));
+      border-color: rgba(56, 189, 248, 0.75);
+      color: #e0f2fe;
+      box-shadow: 0 0 14px rgba(56, 189, 248, 0.22);
+    }
+
+    /* 數理公式排版 */
+    .math-frac {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      vertical-align: middle;
+      line-height: 1.1;
+      margin: 0 3px;
+    }
+    .math-frac .num {
+      border-bottom: 1px solid rgba(253, 230, 138, 0.7);
+      padding: 0 4px 2px 4px;
+    }
+    .math-frac .den {
+      padding: 2px 4px 0 4px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Three.js 3D 渲染容器 -->
+  <div id="canvas-container"></div>
+
+  <!-- 頂部導覽與核心切換列 -->
+  <header class="fixed top-3 left-3 right-3 z-30 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
+    <!-- 左上角標題與徽章 -->
+    <div class="lab-panel pointer-events-auto rounded-2xl px-4 py-2.5 flex items-center gap-3">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400/25 via-rose-500/25 to-indigo-500/25 border border-amber-400/40 flex items-center justify-center shrink-0">
+        <!-- 原子核心圖示 SVG -->
+        <svg class="w-5 h-5 text-amber-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <circle cx="12" cy="12" r="2.6" fill="#f43f5e" stroke="#fda4af" />
+          <ellipse cx="12" cy="12" rx="9.5" ry="3.8" transform="rotate(30 12 12)" stroke-opacity="0.85" />
+          <ellipse cx="12" cy="12" rx="9.5" ry="3.8" transform="rotate(-30 12 12)" stroke-opacity="0.85" />
+          <ellipse cx="12" cy="12" rx="9.5" ry="3.8" transform="rotate(90 12 12)" stroke-opacity="0.55" />
+        </svg>
+      </div>
+      <div>
+        <h1 class="text-sm sm:text-base font-bold tracking-wide text-slate-50 leading-tight">
+          拉塞福 α 粒子散射實驗 <span class="text-amber-300 font-semibold">3D</span>
+        </h1>
+        <p class="text-[11px] text-slate-300/80 hidden sm:block">
+          1909 蓋革－馬士登金箔實驗・核式原子模型互動教學
+        </p>
+      </div>
+    </div>
+
+    <!-- 中央快速雙切換：視角 + 原子模型 -->
+    <div class="flex flex-wrap items-center gap-2 pointer-events-auto">
+      <!-- 雙視角無縫切換 -->
+      <div class="lab-panel rounded-2xl p-1 flex items-center gap-1">
+        <button id="btn-view-micro" class="seg-btn active-gold rounded-xl px-3 py-1.5 text-xs sm:text-sm font-medium border border-transparent flex items-center gap-1.5 cursor-pointer">
+          <span class="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_8px_#fbbf24]"></span>
+          微觀原子視角
+        </button>
+        <button id="btn-view-macro" class="seg-btn rounded-xl px-3 py-1.5 text-xs sm:text-sm font-medium border border-transparent text-slate-300 hover:text-white flex items-center gap-1.5 cursor-pointer">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]"></span>
+          巨觀實驗裝置
+        </button>
+      </div>
+
+      <!-- 原子模型對照切換 -->
+      <div class="lab-panel rounded-2xl p-1 flex items-center gap-1">
+        <button id="btn-model-rutherford" class="seg-btn active-ruby rounded-xl px-3 py-1.5 text-xs sm:text-sm font-medium border border-transparent cursor-pointer">
+          拉塞福核式 (1911)
+        </button>
+        <button id="btn-model-thomson" class="seg-btn rounded-xl px-3 py-1.5 text-xs sm:text-sm font-medium border border-transparent text-slate-300 hover:text-white cursor-pointer">
+          湯姆森布丁 (1904)
+        </button>
+      </div>
+    </div>
+
+    <!-- 右上角視角重置與一鍵摺疊面板 -->
+    <div class="lab-panel pointer-events-auto rounded-2xl p-1 flex items-center gap-1">
+      <button id="btn-reset-cam" title="重置 3D 視角 (快速鍵 R)" class="rounded-xl px-3 py-1.5 text-xs sm:text-sm font-medium text-slate-200 hover:bg-slate-700/60 hover:text-amber-200 transition flex items-center gap-1.5 cursor-pointer">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 12a9 9 0 1 0 3-6.7L3 8" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M3 3v5h5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="hidden md:inline">重置視角</span>
+      </button>
+      <div class="w-px h-5 bg-slate-600/50"></div>
+      <button id="btn-toggle-panels" title="一鍵摺疊/展開面板以利全螢幕展示 (快速鍵 F)" class="rounded-xl px-3 py-1.5 text-xs sm:text-sm font-medium text-amber-200 hover:bg-amber-500/20 transition flex items-center gap-1.5 cursor-pointer">
+        <svg id="icon-toggle-panels" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="4" width="18" height="16" rx="3"/>
+          <path d="M9 4v16"/>
+        </svg>
+        <span id="label-toggle-panels">隱藏面板</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- 中央上方狀態提示 Toast -->
+  <div id="toast-box" class="toast-hide fixed top-20 left-1/2 -translate-x-1/2 z-40 lab-panel rounded-full px-5 py-2 text-xs sm:text-sm font-medium text-amber-100 border-amber-400/40 shadow-lg flex items-center gap-2">
+    <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+    <span id="toast-text">已切換模型</span>
+  </div>
+
+  <!-- 左側：實驗控制面板 -->
+  <aside id="left-panel" class="panel-transition fixed top-[74px] sm:top-[78px] left-3 bottom-3 w-[calc(100vw-24px)] max-w-[320px] z-20 flex flex-col gap-2.5 pointer-events-none">
+    <div class="lab-panel lab-scroll pointer-events-auto rounded-2xl p-4 overflow-y-auto flex-1 space-y-4">
+
+      <!-- 播放與重置操作列 -->
+      <div class="grid grid-cols-2 gap-2">
+        <button id="btn-play-pause" class="rounded-xl py-2 px-3 text-xs sm:text-sm font-semibold bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/50 text-amber-100 transition flex items-center justify-center gap-1.5 cursor-pointer">
+          <svg id="icon-pause" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+          <svg id="icon-play" class="w-4 h-4 hidden" viewBox="0 0 24 24" fill="currentColor"><polygon points="6,4 20,12 6,20"/></svg>
+          <span id="label-play-pause">暫停模擬</span>
+        </button>
+        <button id="btn-clear-all" class="rounded-xl py-2 px-3 text-xs sm:text-sm font-semibold bg-slate-800/75 hover:bg-rose-500/25 border border-slate-600/60 hover:border-rose-400/50 text-slate-200 hover:text-rose-100 transition flex items-center justify-center gap-1.5 cursor-pointer">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          清除軌跡統計
+        </button>
+      </div>
+
+      <!-- 微觀視角專屬：發射模式切換 -->
+      <div id="section-micro-mode" class="space-y-3 border-t border-slate-700/60 pt-3">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-300">微觀發射模式</span>
+          <span id="badge-mode-hint" class="text-[11px] text-amber-300/90">統計觀察</span>
+        </div>
+        <div class="grid grid-cols-2 gap-1.5 bg-slate-900/70 p-1 rounded-xl border border-slate-700/60">
+          <button id="btn-mode-beam" class="seg-btn active-gold rounded-lg py-1.5 text-xs font-semibold border border-transparent cursor-pointer">
+            連續粒子束
+          </button>
+          <button id="btn-mode-single" class="seg-btn rounded-lg py-1.5 text-xs font-semibold border border-transparent text-slate-300 hover:text-white cursor-pointer">
+            單顆精準瞄準
+          </button>
+        </div>
+
+        <!-- 單顆精準瞄準專屬控制 -->
+        <div id="section-single-controls" class="hidden space-y-3 bg-slate-900/60 rounded-xl p-3 border border-cyan-500/30">
+          <div>
+            <div class="flex items-center justify-between text-xs mb-1.5">
+              <label for="slider-b" class="text-cyan-200 font-medium">撞擊參數 b</label>
+              <span class="font-mono-num text-sm font-bold text-cyan-300"><span id="val-b">21.0</span> fm</span>
+            </div>
+            <input id="slider-b" type="range" min="0" max="220" step="0.5" value="21.0" class="lab-slider cyan-thumb" />
+            <!-- 常用教學撞擊參數捷徑 -->
+            <div class="grid grid-cols-3 gap-1.5 mt-2">
+              <button data-preset-b="0" class="preset-b-btn rounded-lg py-1 text-[11px] bg-rose-500/20 hover:bg-rose-500/35 border border-rose-400/40 text-rose-200 cursor-pointer transition">正撞 (180°)</button>
+              <button data-preset-b="90deg" class="preset-b-btn rounded-lg py-1 text-[11px] bg-orange-500/20 hover:bg-orange-500/35 border border-orange-400/40 text-orange-200 cursor-pointer transition">直角 (90°)</button>
+              <button data-preset-b="140" class="preset-b-btn rounded-lg py-1 text-[11px] bg-amber-500/20 hover:bg-amber-500/35 border border-amber-400/40 text-amber-200 cursor-pointer transition">遠掠 (140 fm)</button>
+            </div>
+          </div>
+
+          <button id="btn-fire-single" class="btn-fire w-full rounded-xl py-2.5 px-4 text-sm font-bold text-white flex items-center justify-center gap-2 cursor-pointer">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+            發射單顆 α 粒子
+          </button>
+
+          <label class="flex items-center justify-between text-xs text-slate-300 cursor-pointer pt-0.5">
+            <span>顯示預覽雙曲線與 r<sub>min</sub> / θ 標示</span>
+            <input id="chk-preview-guides" type="checkbox" checked class="w-4 h-4 accent-cyan-400 rounded cursor-pointer" />
+          </label>
+        </div>
+      </div>
+
+      <!-- 巨觀視角專屬：觀察顯微鏡角度控制 -->
+      <div id="section-macro-controls" class="hidden space-y-3 border-t border-slate-700/60 pt-3">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold uppercase tracking-wider text-emerald-300">觀察顯微鏡位置</span>
+          <span class="font-mono-num text-sm font-bold text-emerald-300"><span id="val-scope-angle">30</span>°</span>
+        </div>
+        <input id="slider-scope-angle" type="range" min="0" max="170" step="1" value="30" class="lab-slider emerald-thumb" />
+        <div class="grid grid-cols-4 gap-1.5">
+          <button data-scope-angle="0" class="scope-preset-btn rounded-lg py-1 text-[11px] bg-slate-800 hover:bg-emerald-500/25 border border-slate-600/60 text-slate-200 cursor-pointer">0°</button>
+          <button data-scope-angle="45" class="scope-preset-btn rounded-lg py-1 text-[11px] bg-slate-800 hover:bg-emerald-500/25 border border-slate-600/60 text-slate-200 cursor-pointer">45°</button>
+          <button data-scope-angle="90" class="scope-preset-btn rounded-lg py-1 text-[11px] bg-slate-800 hover:bg-emerald-500/25 border border-slate-600/60 text-slate-200 cursor-pointer">90°</button>
+          <button data-scope-angle="150" class="scope-preset-btn rounded-lg py-1 text-[11px] bg-slate-800 hover:bg-emerald-500/25 border border-slate-600/60 text-slate-200 cursor-pointer">150°</button>
+        </div>
+        <div class="rounded-xl bg-emerald-950/45 border border-emerald-500/35 px-3 py-2 flex items-center justify-between text-xs">
+          <span class="text-emerald-200/90">視野內閃爍計數 (±8°)</span>
+          <span id="val-scope-hits" class="font-mono-num text-base font-bold text-emerald-300">0</span>
+        </div>
+      </div>
+
+      <!-- 靶材原子核快速切換 -->
+      <div class="space-y-2 border-t border-slate-700/60 pt-3">
+        <div class="flex items-center justify-between text-xs">
+          <span class="font-semibold uppercase tracking-wider text-slate-300">靶材原子核</span>
+          <span class="font-mono-num text-amber-300 font-semibold" id="val-element-label">金 Au (Z = 79)</span>
+        </div>
+        <div class="grid grid-cols-4 gap-1.5">
+          <button data-element="Al" class="el-btn rounded-xl py-2 px-1 text-center border border-slate-600/60 bg-slate-800/70 hover:bg-slate-700/80 transition cursor-pointer">
+            <div class="text-xs font-bold text-slate-100">Al 鋁</div>
+            <div class="text-[10px] font-mono-num text-slate-400">Z=13</div>
+          </button>
+          <button data-element="Cu" class="el-btn rounded-xl py-2 px-1 text-center border border-slate-600/60 bg-slate-800/70 hover:bg-slate-700/80 transition cursor-pointer">
+            <div class="text-xs font-bold text-orange-200">Cu 銅</div>
+            <div class="text-[10px] font-mono-num text-slate-400">Z=29</div>
+          </button>
+          <button data-element="Ag" class="el-btn rounded-xl py-2 px-1 text-center border border-slate-600/60 bg-slate-800/70 hover:bg-slate-700/80 transition cursor-pointer">
+            <div class="text-xs font-bold text-slate-200">Ag 銀</div>
+            <div class="text-[10px] font-mono-num text-slate-400">Z=47</div>
+          </button>
+          <button data-element="Au" class="el-btn seg-btn active-gold rounded-xl py-2 px-1 text-center border border-amber-400/70 transition cursor-pointer">
+            <div class="text-xs font-bold text-amber-200">Au 金</div>
+            <div class="text-[10px] font-mono-num text-amber-300/90">Z=79</div>
+          </button>
+        </div>
+      </div>
+
+      <!-- 物理參數滑桿 -->
+      <div class="space-y-3.5 border-t border-slate-700/60 pt-3">
+        <!-- α 粒子動能 Ek -->
+        <div>
+          <div class="flex items-center justify-between text-xs mb-1.5">
+            <label for="slider-energy" class="text-slate-200 font-medium">α 粒子動能 E<sub>k</sub></label>
+            <span class="font-mono-num text-sm font-bold text-amber-300"><span id="val-energy">5.5</span> MeV</span>
+          </div>
+          <input id="slider-energy" type="range" min="2.0" max="10.0" step="0.1" value="5.5" class="lab-slider" />
+          <div class="flex justify-between text-[10px] text-slate-400 mt-0.5 font-mono-num">
+            <span>2.0 MeV</span>
+            <span>Po-210 ≈ 5.3</span>
+            <span>10.0 MeV</span>
+          </div>
+        </div>
+
+        <!-- 發射頻率 -->
+        <div id="wrap-rate-slider">
+          <div class="flex items-center justify-between text-xs mb-1.5">
+            <label for="slider-rate" class="text-slate-200 font-medium">粒子束發射頻率</label>
+            <span class="font-mono-num text-xs font-semibold text-slate-200"><span id="val-rate">14</span> 顆/秒</span>
+          </div>
+          <input id="slider-rate" type="range" min="2" max="30" step="1" value="14" class="lab-slider" />
+        </div>
+
+        <!-- 模擬速度 -->
+        <div>
+          <div class="flex items-center justify-between text-xs mb-1.5">
+            <label for="slider-speed" class="text-slate-200 font-medium">模擬時間倍率</label>
+            <span class="font-mono-num text-xs font-semibold text-slate-200"><span id="val-speed">1.0</span>×</span>
+          </div>
+          <input id="slider-speed" type="range" min="0.2" max="2.5" step="0.1" value="1.0" class="lab-slider" />
+        </div>
+      </div>
+
+      <!-- 教學模型對照簡明摘要 -->
+      <div id="model-info-card" class="rounded-xl bg-slate-900/70 border border-slate-700/70 p-3 text-xs leading-relaxed text-slate-300">
+        <div class="font-semibold text-rose-300 mb-1 flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-rose-400"></span>
+          <span id="model-info-title">拉塞福核式模型（1911）</span>
+        </div>
+        <p id="model-info-desc">
+          原子幾乎全為空曠空間，全部正電荷與絕大部分質量集中於極微小的原子核。當 α 粒子以極小撞擊參數 b 靠近核心時，強烈庫侖斥力使其大幅偏轉甚至 180° 反彈。
+        </p>
+      </div>
+    </div>
+  </aside>
+
+  <!-- 右側：即時數據、理論公式與散射角度統計儀表板 -->
+  <aside id="right-panel" class="panel-transition fixed top-[74px] sm:top-[78px] right-3 bottom-3 w-[calc(100vw-24px)] max-w-[330px] z-20 flex flex-col gap-2.5 pointer-events-none">
+    <div class="lab-panel lab-scroll pointer-events-auto rounded-2xl p-4 overflow-y-auto flex-1 space-y-4">
+
+      <!-- 單顆精準瞄準：即時理論散射數據卡 -->
+      <div id="single-theory-card" class="hidden rounded-xl bg-gradient-to-br from-cyan-950/60 via-slate-900/80 to-indigo-950/60 border border-cyan-400/40 p-3.5 space-y-2.5">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-cyan-200 tracking-wide">庫侖散射理論計算</span>
+          <span id="theory-model-tag" class="text-[10px] px-2 py-0.5 rounded-full bg-rose-500/25 text-rose-200 border border-rose-400/40">雙曲線軌跡</span>
+        </div>
+
+        <!-- 庫侖散射公式 -->
+        <div id="formula-rutherford" class="rounded-lg bg-slate-950/70 border border-slate-700/70 py-2 px-2.5 text-center text-xs sm:text-sm text-amber-200 font-mono-num">
+          tan(θ/2) =
+          <span class="math-frac">
+            <span class="num">k · Z · e²</span>
+            <span class="den">b · E<sub>k</sub></span>
+          </span>
+        </div>
+        <div id="formula-thomson" class="hidden rounded-lg bg-slate-950/70 border border-slate-700/70 py-2 px-2.5 text-center text-xs text-rose-200">
+          高斯定律均勻正電球：E(r) ∝ r（極微弱）<br/>預期偏轉角 θ &lt; 1°
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <div class="rounded-lg bg-slate-900/80 p-2 border border-slate-700/60">
+            <div class="text-[10px] text-slate-400">理論散射角 θ</div>
+            <div id="theory-theta" class="font-mono-num text-base font-bold text-amber-300 mt-0.5">90.0°</div>
+          </div>
+          <div class="rounded-lg bg-slate-900/80 p-2 border border-slate-700/60">
+            <div class="text-[10px] text-slate-400">最近距離 r<sub>min</sub></div>
+            <div id="theory-rmin" class="font-mono-num text-base font-bold text-cyan-300 mt-0.5">49.9 fm</div>
+          </div>
+          <div class="rounded-lg bg-slate-900/80 p-2 border border-slate-700/60">
+            <div class="text-[10px] text-slate-400">正撞距離 d<sub>0</sub></div>
+            <div id="theory-d0" class="font-mono-num text-sm font-semibold text-slate-200 mt-0.5">41.4 fm</div>
+          </div>
+          <div class="rounded-lg bg-slate-900/80 p-2 border border-slate-700/60">
+            <div class="text-[10px] text-slate-400">實測數值積分 θ</div>
+            <div id="measured-theta" class="font-mono-num text-sm font-semibold text-emerald-300 mt-0.5">--</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 即時統計總覽 -->
+      <div class="space-y-2.5">
+        <div class="flex items-center justify-between">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-slate-200">即時散射統計</h2>
+          <div class="text-xs text-slate-300">
+            總數 <span id="stat-total" class="font-mono-num text-base font-bold text-white ml-1">0</span>
+          </div>
+        </div>
+
+        <!-- 三大散射區間卡片 -->
+        <div class="space-y-2">
+          <!-- 直進穿透 < 10° -->
+          <div class="rounded-xl bg-slate-900/75 border border-amber-400/30 p-2.5">
+            <div class="flex items-center justify-between text-xs mb-1">
+              <span class="flex items-center gap-1.5 text-amber-200 font-medium">
+                <span class="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-[0_0_8px_#fbbf24]"></span>
+                直進穿透 (&lt;10°)
+              </span>
+              <span class="font-mono-num text-slate-100 font-semibold">
+                <span id="stat-small-cnt">0</span>
+                <span class="text-amber-300 ml-1" id="stat-small-pct">0.0%</span>
+              </span>
+            </div>
+            <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+              <div id="bar-small" class="h-full bg-gradient-to-r from-amber-400 to-yellow-300 transition-all duration-200" style="width: 0%"></div>
+            </div>
+          </div>
+
+          <!-- 大角度偏轉 10° ~ 90° -->
+          <div class="rounded-xl bg-slate-900/75 border border-orange-400/30 p-2.5">
+            <div class="flex items-center justify-between text-xs mb-1">
+              <span class="flex items-center gap-1.5 text-orange-200 font-medium">
+                <span class="w-2.5 h-2.5 rounded-full bg-orange-500 shadow-[0_0_8px_#f97316]"></span>
+                大角度偏轉 (10°~90°)
+              </span>
+              <span class="font-mono-num text-slate-100 font-semibold">
+                <span id="stat-med-cnt">0</span>
+                <span class="text-orange-300 ml-1" id="stat-med-pct">0.0%</span>
+              </span>
+            </div>
+            <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+              <div id="bar-med" class="h-full bg-gradient-to-r from-orange-500 to-amber-500 transition-all duration-200" style="width: 0%"></div>
+            </div>
+          </div>
+
+          <!-- 背向反彈 > 90° -->
+          <div class="rounded-xl bg-slate-900/75 border border-rose-500/40 p-2.5">
+            <div class="flex items-center justify-between text-xs mb-1">
+              <span class="flex items-center gap-1.5 text-rose-200 font-medium">
+                <span class="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-[0_0_8px_#f43f5e]"></span>
+                背向反彈 (&gt;90°)
+              </span>
+              <span class="font-mono-num text-slate-100 font-semibold">
+                <span id="stat-back-cnt">0</span>
+                <span class="text-rose-300 ml-1" id="stat-back-pct">0.0%</span>
+              </span>
+            </div>
+            <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+              <div id="bar-back" class="h-full bg-gradient-to-r from-rose-500 to-fuchsia-500 transition-all duration-200" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 即時散射角度分布長條圖 -->
+      <div class="space-y-2 border-t border-slate-700/60 pt-3">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-slate-200">散射角度分布圖 (0°–180°)</span>
+          <div class="flex items-center bg-slate-900/90 rounded-lg p-0.5 border border-slate-700/70">
+            <button id="btn-scale-linear" class="seg-btn active-cyan rounded-md px-2 py-0.5 text-[11px] font-medium border border-transparent cursor-pointer">線性</button>
+            <button id="btn-scale-log" class="seg-btn rounded-md px-2 py-0.5 text-[11px] font-medium border border-transparent text-slate-400 hover:text-white cursor-pointer">對數</button>
+          </div>
+        </div>
+        <div class="rounded-xl bg-slate-950/75 border border-slate-700/70 p-2">
+          <canvas id="histogram-canvas" class="w-full h-[155px] block"></canvas>
+        </div>
+        <p class="text-[11px] text-slate-400 leading-snug">
+          提示：切換至「對數刻度」可清楚對比隨角度急劇下降的 1/sin⁴(θ/2) 分布特性。
+        </p>
+      </div>
+
+      <!-- 圖例與操作指南 -->
+      <div class="border-t border-slate-700/60 pt-3 space-y-2 text-[11px] text-slate-300">
+        <div class="font-semibold text-slate-200">粒子與軌跡圖例</div>
+        <div class="grid grid-cols-2 gap-1.5">
+          <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block"></span>質子 (+)</div>
+          <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-slate-300 inline-block"></span>中子 (0)</div>
+          <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-sky-400 inline-block"></span>電子 (−)</div>
+          <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block"></span>ZnS 螢光閃爍</div>
+        </div>
+        <div class="text-[10px] text-slate-400 pt-1">
+          滑鼠左鍵拖曳旋轉・滾輪縮放・右鍵平移（觸控支援單指旋轉與雙指縮放）
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- 底部中央：比例尺說明與實驗提示徽章（即使隱藏面板時仍清晰呈現） -->
+  <div id="bottom-scale-badge" class="fixed bottom-3 left-1/2 -translate-x-1/2 z-20 pointer-events-none max-w-[92vw]">
+    <div class="lab-panel rounded-full px-4 py-1.5 text-[11px] sm:text-xs text-slate-200 flex items-center gap-2 shadow-lg">
+      <span id="scale-dot" class="w-2 h-2 rounded-full bg-amber-400 shrink-0"></span>
+      <span id="scale-note-text" class="truncate sm:whitespace-normal">
+        比例尺說明：為利觀察已將原子核大幅放大，實際原子核直徑僅約原子的十萬分之一 (10⁻⁵)
+      </span>
+    </div>
+  </div>
+
+  <!-- 主模擬程式腳本 -->
+  <script>
+    (function () {
+      'use strict';
+
+      // =========================================================================
+      // 1. 物理常數與實驗配置表
+      // =========================================================================
+      const PHYSICS = {
+        // k * e^2 = 1.43996 MeV·fm；對 α 粒子 (Z_alpha = 2)，正撞最近距離 d0 = 2 * 1.43996 * Z / Ek
+        KE2_MEV_FM: 1.43996,
+        // 3D 微觀場景單位換算：1 scene unit = 22 fm
+        FM_PER_UNIT: 22.0,
+        // 電子雲半徑（3D 單位）
+        CLOUD_RADIUS: 25.0,
+        // 微觀發射起始 X 座標（左方）與邊界半徑
+        MICRO_EMIT_X: -31.0,
+        MICRO_BOUND_R: 36.5,
+        // 基礎速度（場景單位 / 秒，對應 Ek = 5.5 MeV）
+        BASE_SPEED_UNITS: 26.0,
+        // 湯姆森均勻正電荷球等效擴散半徑（fm），依高斯定律使偏轉角 < 1°
+        THOMSON_EFF_RADIUS_FM: 1350.0,
+        // 巨觀裝置幾何尺寸
+        MACRO_SCREEN_RADIUS: 19.5,
+        MACRO_SCREEN_HEIGHT: 7.5,
+        MACRO_EMIT_X: -27.5
+      };
+
+      const ELEMENTS = {
+        Al: { symbol: 'Al', name: '鋁', Z: 13, A: 27, visualRadius: 0.72, nucleonCount: 27, foilColor: 0xdbe4ee, foilEmissive: 0x1e293b },
+        Cu: { symbol: 'Cu', name: '銅', Z: 29, A: 64, visualRadius: 0.90, nucleonCount: 52, foilColor: 0xd97742, foilEmissive: 0x3b1808 },
+        Ag: { symbol: 'Ag', name: '銀', Z: 47, A: 108, visualRadius: 1.04, nucleonCount: 72, foilColor: 0xe2e8f0, foilEmissive: 0x263242 },
+        Au: { symbol: 'Au', name: '金', Z: 79, A: 197, visualRadius: 1.18, nucleonCount: 96, foilColor: 0xf5b935, foilEmissive: 0x452b05 }
+      };
+
+      // 應用程式全域狀態
+      const state = {
+        viewMode: 'micro',          // 'micro' | 'macro'
+        atomicModel: 'rutherford',  // 'rutherford' | 'thomson'
+        emissionMode: 'beam',       // 'beam' | 'single'
+        elementKey: 'Au',
+        energyMeV: 5.5,
+        impactParamFm: 21.0,
+        emissionRate: 14,           // 顆/秒
+        simSpeed: 1.0,
+        isPaused: false,
+        showGuides: true,
+        panelsVisible: true,
+        histScale: 'linear',        // 'linear' | 'log'
+        microscopeAngleDeg: 30,
+        microscopeHits: 0,
+        lastMeasuredTheta: null,
+
+        // 統計資料（18 個 10° 區間：0-10, 10-20, ..., 170-180）
+        stats: {
+          total: 0,
+          small: 0,   // < 10°
+          medium: 0,  // 10° ~ 90°
+          back: 0,    // > 90°
+          bins: new Array(18).fill(0)
+        }
+      };
+
+      // =========================================================================
+      // 2. 內建平滑 OrbitControls（支援滑鼠拖曳、滾輪縮放、右鍵平移與多點觸控）
+      // =========================================================================
+      class SmoothOrbitControls {
+        constructor(camera, domElement) {
+          this.camera = camera;
+          this.domElement = domElement;
+          this.target = new THREE.Vector3(0, 0, 0);
+          this.desiredTarget = new THREE.Vector3(0, 0, 0);
+
+          this.spherical = new THREE.Spherical();
+          this.desiredSpherical = new THREE.Spherical();
+
+          this.minDistance = 12;
+          this.maxDistance = 115;
+          this.minPolarAngle = 0.08;
+          this.maxPolarAngle = Math.PI - 0.08;
+          this.damping = 0.1;
+
+          this.isDragging = false;
+          this.dragMode = 'rotate'; // 'rotate' | 'pan'
+          this.prevX = 0;
+          this.prevY = 0;
+          this.pinchDist = 0;
+
+          this.setFromCamera();
+          this.bindEvents();
+        }
+
+        setFromCamera() {
+          const offset = new THREE.Vector3().subVectors(this.camera.position, this.target);
+          this.spherical.setFromVector3(offset);
+          this.desiredSpherical.copy(this.spherical);
+          this.desiredTarget.copy(this.target);
+        }
+
+        flyTo(posVec, targetVec) {
+          this.desiredTarget.copy(targetVec);
+          const offset = new THREE.Vector3().subVectors(posVec, targetVec);
+          this.desiredSpherical.setFromVector3(offset);
+        }
+
+        pan(dx, dy) {
+          const element = this.domElement;
+          const dist = this.desiredSpherical.radius;
+          const vFov = (this.camera.fov * Math.PI) / 180;
+          const targetHeight = 2 * Math.tan(vFov / 2) * dist;
+          const scale = targetHeight / Math.max(1, element.clientHeight);
+
+          const xAxis = new THREE.Vector3().setFromMatrixColumn(this.camera.matrix, 0);
+          const yAxis = new THREE.Vector3().setFromMatrixColumn(this.camera.matrix, 1);
+
+          this.desiredTarget.addScaledVector(xAxis, -dx * scale);
+          this.desiredTarget.addScaledVector(yAxis, dy * scale);
+          // 限制平移範圍避免迷路
+          this.desiredTarget.clampLength(0, 35);
+        }
+
+        rotate(dx, dy) {
+          const rotSpeed = 0.0065;
+          this.desiredSpherical.theta -= dx * rotSpeed;
+          this.desiredSpherical.phi -= dy * rotSpeed;
+          this.desiredSpherical.phi = Math.max(this.minPolarAngle, Math.min(this.maxPolarAngle, this.desiredSpherical.phi));
+        }
+
+        zoom(factor) {
+          this.desiredSpherical.radius = Math.max(
+            this.minDistance,
+            Math.min(this.maxDistance, this.desiredSpherical.radius * factor)
+          );
+        }
+
+        update() {
+          this.target.lerp(this.desiredTarget, this.damping);
+          // 處理角度平滑插值（走最短路徑）
+          let dTheta = this.desiredSpherical.theta - this.spherical.theta;
+          while (dTheta > Math.PI) dTheta -= Math.PI * 2;
+          while (dTheta < -Math.PI) dTheta += Math.PI * 2;
+          this.spherical.theta += dTheta * this.damping;
+          this.spherical.phi += (this.desiredSpherical.phi - this.spherical.phi) * this.damping;
+          this.spherical.radius += (this.desiredSpherical.radius - this.spherical.radius) * this.damping;
+
+          const offset = new THREE.Vector3().setFromSpherical(this.spherical);
+          this.camera.position.copy(this.target).add(offset);
+          this.camera.lookAt(this.target);
+        }
+
+        bindEvents() {
+          const el = this.domElement;
+          el.addEventListener('contextmenu', (e) => e.preventDefault());
+
+          el.addEventListener('mousedown', (e) => {
+            this.isDragging = true;
+            this.dragMode = (e.button === 2 || e.shiftKey) ? 'pan' : 'rotate';
+            this.prevX = e.clientX;
+            this.prevY = e.clientY;
+          });
+
+          window.addEventListener('mousemove', (e) => {
+            if (!this.isDragging) return;
+            const dx = e.clientX - this.prevX;
+            const dy = e.clientY - this.prevY;
+            this.prevX = e.clientX;
+            this.prevY = e.clientY;
+            if (this.dragMode === 'pan') this.pan(dx, dy);
+            else this.rotate(dx, dy);
+          });
+
+          window.addEventListener('mouseup', () => {
+            this.isDragging = false;
+          });
+
+          el.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const factor = e.deltaY > 0 ? 1.09 : 0.915;
+            this.zoom(factor);
+          }, { passive: false });
+
+          // 觸控事件支援（單指旋轉、雙指縮放與平移）
+          el.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 1) {
+              this.isDragging = true;
+              this.dragMode = 'rotate';
+              this.prevX = e.touches[0].clientX;
+              this.prevY = e.touches[0].clientY;
+            } else if (e.touches.length === 2) {
+              this.isDragging = true;
+              this.dragMode = 'pinch';
+              const dx = e.touches[0].clientX - e.touches[1].clientX;
+              const dy = e.touches[0].clientY - e.touches[1].clientY;
+              this.pinchDist = Math.hypot(dx, dy);
+              this.prevX = (e.touches[0].clientX + e.touches[1].clientX) * 0.5;
+              this.prevY = (e.touches[0].clientY + e.touches[1].clientY) * 0.5;
+            }
+          }, { passive: true });
+
+          el.addEventListener('touchmove', (e) => {
+            if (!this.isDragging) return;
+            e.preventDefault();
+            if (e.touches.length === 1 && this.dragMode === 'rotate') {
+              const dx = e.touches[0].clientX - this.prevX;
+              const dy = e.touches[0].clientY - this.prevY;
+              this.prevX = e.touches[0].clientX;
+              this.prevY = e.touches[0].clientY;
+              this.rotate(dx * 1.15, dy * 1.15);
+            } else if (e.touches.length === 2) {
+              const dx = e.touches[0].clientX - e.touches[1].clientX;
+              const dy = e.touches[0].clientY - e.touches[1].clientY;
+              const dist = Math.hypot(dx, dy);
+              if (this.pinchDist > 0) {
+                this.zoom(this.pinchDist / dist);
+              }
+              this.pinchDist = dist;
+
+              const cx = (e.touches[0].clientX + e.touches[1].clientX) * 0.5;
+              const cy = (e.touches[0].clientY + e.touches[1].clientY) * 0.5;
+              this.pan(cx - this.prevX, cy - this.prevY);
+              this.prevX = cx;
+              this.prevY = cy;
+            }
+          }, { passive: false });
+
+          el.addEventListener('touchend', () => {
+            this.isDragging = false;
+          });
+        }
+      }
+
+      // =========================================================================
+      // 3. 程式化紋理產生器（無任何外部圖片依賴）
+      // =========================================================================
+      function createGlowTexture(innerColor, midColor, outerColor) {
+        const size = 128;
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        const grad = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+        grad.addColorStop(0.0, innerColor);
+        grad.addColorStop(0.32, midColor);
+        grad.addColorStop(0.7, outerColor);
+        grad.addColorStop(1.0, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, size, size);
+        const tex = new THREE.CanvasTexture(canvas);
+        tex.needsUpdate = true;
+        return tex;
+      }
+
+      // 角度刻度環紋理（用於巨觀 ZnS 螢幕上緣）
+      function createAngleRulerTexture() {
+        const width = 2048;
+        const height = 128;
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, width, height);
+
+        // 背景細帶
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+        ctx.fillRect(0, 0, width, height);
+
+        // 繪製 0°~360° 刻度（uv.x=0 對應 -180°, uv.x=0.5 對應 0° 前向）
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.55)';
+        ctx.fillStyle = '#a7f3d0';
+        ctx.font = 'bold 34px "JetBrains Mono", monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        for (let deg = -180; deg <= 180; deg += 5) {
+          const u = (deg + 180) / 360;
+          const x = u * width;
+          const isMajor = deg % 30 === 0;
+          const isMid = deg % 15 === 0;
+          ctx.beginPath();
+          ctx.lineWidth = isMajor ? 3 : 1.5;
+          ctx.moveTo(x, height);
+          ctx.lineTo(x, isMajor ? height - 42 : (isMid ? height - 28 : height - 16));
+          ctx.stroke();
+
+          if (isMajor && Math.abs(deg) <= 150) {
+            const label = Math.abs(deg) + '°';
+            ctx.fillStyle = deg === 0 ? '#fde047' : (Math.abs(deg) >= 90 ? '#fda4af' : '#a7f3d0');
+            ctx.fillText(label, x, 42);
+          }
+        }
+        const tex = new THREE.CanvasTexture(canvas);
+        tex.wrapS = THREE.RepeatWrapping;
+        tex.needsUpdate = true;
+        return tex;
+      }
+
+      // =========================================================================
+      // 4. 物理核心計算：RK4 庫侖散射與理論公式
+      // =========================================================================
+      function getCurrentElement() {
+        return ELEMENTS[state.elementKey];
+      }
+
+      // 計算正撞最近距離 d0 (fm)
+      function calcHeadOnD0(Z, Ek) {
+        return (2.0 * PHYSICS.KE2_MEV_FM * Z) / Ek;
+      }
+
+      // 理論散射角（弧度）與最近距離 r_min (fm)
+      function calcAnalyticalScattering(bFm, Z, Ek, model) {
+        const d0 = calcHeadOnD0(Z, Ek);
+        if (model === 'thomson') {
+          // 均勻正電球（高斯定律）：最大偏轉角極小 (<1°)
+          const Rcloud = PHYSICS.CLOUD_RADIUS * PHYSICS.FM_PER_UNIT;
+          const Reff = PHYSICS.THOMSON_EFF_RADIUS_FM;
+          const bEff = Math.min(bFm, Rcloud);
+          const thetaRad = (d0 * bEff * Rcloud) / Math.pow(Reff, 3);
+          return {
+            d0,
+            thetaRad,
+            thetaDeg: (thetaRad * 180) / Math.PI,
+            rMinFm: bFm
+          };
+        }
+        // 拉塞福核式模型：tan(theta/2) = kZe^2 / (b * Ek) = d0 / (2b)
+        const thetaRad = bFm < 1e-4 ? Math.PI : 2.0 * Math.atan(d0 / (2.0 * bFm));
+        const rMinFm = 0.5 * d0 + Math.sqrt(0.25 * d0 * d0 + bFm * bFm);
+        return {
+          d0,
+          thetaRad,
+          thetaDeg: (thetaRad * 180) / Math.PI,
+          rMinFm
+        };
+      }
+
+      // 計算在 3D 場景單位中的加速度向量 a(pos)
+      function computeAcceleration(pos, outAcc) {
+        const el = getCurrentElement();
+        const Z = el.Z;
+        // 物理嚴格化：k_eff * Z 使初始速度 v0 = BASE_SPEED_UNITS * sqrt(Ek/5.5) 時，正撞距離正好等於 d0 / FM_PER_UNIT
+        const vBase = PHYSICS.BASE_SPEED_UNITS;
+        const d0BaseUnits = calcHeadOnD0(Z, 5.5) / PHYSICS.FM_PER_UNIT;
+        const kEffZ = 0.5 * vBase * vBase * d0BaseUnits;
+
+        const rSq = pos.x * pos.x + pos.y * pos.y + pos.z * pos.z;
+
+        if (state.atomicModel === 'thomson') {
+          // 湯姆森模型：依高斯定律，球內 E ∝ r 且強度遠低於核式模型
+          const Rcloud = PHYSICS.CLOUD_RADIUS;
+          if (rSq < Rcloud * Rcloud) {
+            const ReffUnits = PHYSICS.THOMSON_EFF_RADIUS_FM / PHYSICS.FM_PER_UNIT;
+            const factor = kEffZ / (ReffUnits * ReffUnits * ReffUnits);
+            outAcc.set(pos.x * factor, pos.y * factor, pos.z * factor);
+          } else {
+            outAcc.set(0, 0, 0);
+          }
+          return;
+        }
+
+        // 拉塞福核式模型：a = (k_eff * Z) * r_vec / |r|^3
+        // 加入極微小的軟化項 eps 防止數值除零
+        const epsSq = 0.0025;
+        const rSoft = Math.sqrt(rSq + epsSq);
+        const invR3 = kEffZ / (rSoft * rSoft * rSoft);
+        outAcc.set(pos.x * invR3, pos.y * invR3, pos.z * invR3);
+      }
+
+      // 單步 3D RK4 積分器（零配置臨時向量，確保 60fps 無 GC 停頓）
+      const _k1p = new THREE.Vector3(), _k1v = new THREE.Vector3();
+      const _k2p = new THREE.Vector3(), _k2v = new THREE.Vector3();
+      const _k3p = new THREE.Vector3(), _k3v = new THREE.Vector3();
+      const _k4p = new THREE.Vector3(), _k4v = new THREE.Vector3();
+      const _tmpP = new THREE.Vector3();
+
+      function rk4Step(pos, vel, h) {
+        // k1
+        _k1p.copy(vel);
+        computeAcceleration(pos, _k1v);
+
+        // k2
+        _tmpP.copy(pos).addScaledVector(_k1p, 0.5 * h);
+        _k2p.copy(vel).addScaledVector(_k1v, 0.5 * h);
+        computeAcceleration(_tmpP, _k2v);
+
+        // k3
+        _tmpP.copy(pos).addScaledVector(_k2p, 0.5 * h);
+        _k3p.copy(vel).addScaledVector(_k2v, 0.5 * h);
+        computeAcceleration(_tmpP, _k3v);
+
+        // k4
+        _tmpP.copy(pos).addScaledVector(_k3p, h);
+        _k4p.copy(vel).addScaledVector(_k3v, h);
+        computeAcceleration(_tmpP, _k4v);
+
+        // 合併更新
+        const h6 = h / 6.0;
+        pos.x += h6 * (_k1p.x + 2 * _k2p.x + 2 * _k3p.x + _k4p.x);
+        pos.y += h6 * (_k1p.y + 2 * _k2p.y + 2 * _k3p.y + _k4p.y);
+        pos.z += h6 * (_k1p.z + 2 * _k2p.z + 2 * _k3p.z + _k4p.z);
+
+        vel.x += h6 * (_k1v.x + 2 * _k2v.x + 2 * _k3v.x + _k4v.x);
+        vel.y += h6 * (_k1v.y + 2 * _k2v.y + 2 * _k3v.y + _k4v.y);
+        vel.z += h6 * (_k1v.z + 2 * _k2v.z + 2 * _k3v.z + _k4v.z);
+      }
+
+      // 自適應細分 RK4（在靠近原子核時自動縮短步長，確保 180° 反彈精準無誤差）
+      function integrateRK4Adaptive(pos, vel, dtTotal) {
+        let remaining = dtTotal;
+        let steps = 0;
+        const maxSteps = 32;
+        while (remaining > 1e-6 && steps < maxSteps) {
+          const r = pos.length();
+          const v = vel.length();
+          // 步長與距離成正比，靠近核時極為精細
+          let h = Math.min(remaining, Math.max(0.0005, (0.075 * Math.max(r, 0.25)) / (v + 1.0)));
+          rk4Step(pos, vel, h);
+          remaining -= h;
+          steps++;
+        }
+      }
+
+      // 依偏轉角度取得對應顏色（小角暖金、中大角亮橘、背向反彈鮮紅品紅）
+      function getAngleColor(angleDeg, targetColor) {
+        if (angleDeg < 10) {
+          targetColor.setHex(0xfbbf24); // 暖金
+        } else if (angleDeg <= 90) {
+          // 10°~90° 之間由亮橘平滑漸變至紅橘
+          const t = (angleDeg - 10) / 80;
+          targetColor.setRGB(1.0, 0.62 - 0.24 * t, 0.16 - 0.04 * t);
+        } else {
+          // >90° 鮮紅品紅
+          const t = Math.min(1, (angleDeg - 90) / 90);
+          targetColor.setRGB(0.98, 0.18 + 0.06 * t, 0.42 + 0.26 * t);
+        }
+        return targetColor;
+      }
+
+      // =========================================================================
+      // 5. Three.js 場景、燈光與雙視角群組建構
+      // =========================================================================
+      let renderer, scene, camera, controls;
+      let microGroup, macroGroup;
+      let rutherfordGroup, thomsonGroup;
+      let protonMesh, neutronMesh, protonBasePos = [], neutronBasePos = [];
+      let nucleusHaloSprite, electronCloudGroup, electronDots = [];
+      let thomsonElectrons = [];
+      let guideGroup; // 單顆瞄準虛線、預覽軌跡、r_min、θ 扇形
+
+      // 巨觀裝置組件引用
+      let macroFoilMesh, macroMicroscopeGroup, macroSourceGlow;
+      let znsCanvas, znsCtx, znsTexture;
+
+      // 物件池（確保 60fps 與零記憶體洩漏）
+      const MAX_MICRO_PARTICLES = 56;
+      const MAX_TRAILS = 85;
+      const TRAIL_MAX_PTS = 150;
+      const microParticles = [];
+      const microTrails = [];
+
+      const MAX_MACRO_PARTICLES = 65;
+      const MAX_FLASHES = 45;
+      const macroParticles = [];
+      const macroFlashes = [];
+
+      // 共用紋理
+      let texGoldGlow, texRubyGlow, texGreenGlow, texCyanGlow;
+
+      function initThree() {
+        const container = document.getElementById('canvas-container');
+        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.15;
+        container.appendChild(renderer.domElement);
+
+        scene = new THREE.Scene();
+
+        camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.2, 400);
+        camera.position.set(0, 12, 56);
+
+        controls = new SmoothOrbitControls(camera, renderer.domElement);
+
+        // 實驗室多層次燈光
+        const ambient = new THREE.AmbientLight(0x8fa8d8, 0.65);
+        scene.add(ambient);
+
+        const hemi = new THREE.HemisphereLight(0xc7d2fe, 0x0f172a, 0.55);
+        scene.add(hemi);
+
+        const keyLight = new THREE.DirectionalLight(0xfffbeb, 1.35);
+        keyLight.position.set(24, 34, 28);
+        scene.add(keyLight);
+
+        const rimLight = new THREE.DirectionalLight(0x38bdf8, 0.65);
+        rimLight.position.set(-28, -14, -24);
+        scene.add(rimLight);
+
+        const coreLight = new THREE.PointLight(0xf43f5e, 1.8, 36);
+        coreLight.position.set(0, 0, 0);
+        scene.add(coreLight);
+
+        // 生成發光貼圖
+        texGoldGlow = createGlowTexture('rgba(255,251,210,1)', 'rgba(251,191,36,0.75)', 'rgba(245,158,11,0.16)');
+        texRubyGlow = createGlowTexture('rgba(255,228,235,0.95)', 'rgba(244,63,94,0.58)', 'rgba(190,18,60,0.12)');
+        texGreenGlow = createGlowTexture('rgba(236,253,245,1)', 'rgba(74,222,128,0.85)', 'rgba(16,185,129,0.18)');
+        texCyanGlow = createGlowTexture('rgba(224,242,254,0.95)', 'rgba(56,189,248,0.55)', 'rgba(14,165,233,0.10)');
+
+        // 背景微星塵粒子（增添深邃實驗室空間感）
+        createAmbientDust();
+
+        // 建構兩大視角群組
+        microGroup = new THREE.Group();
+        macroGroup = new THREE.Group();
+        scene.add(microGroup);
+        scene.add(macroGroup);
+        macroGroup.visible = false;
+
+        buildMicroScene();
+        buildMacroScene();
+        initMicroPools();
+        initMacroPools();
+
+        updateElementVisuals();
+        updateModelVisuals();
+        updateSingleAimingGuides();
+      }
+
+      function createAmbientDust() {
+        const count = 260;
+        const pos = new Float32Array(count * 3);
+        for (let i = 0; i < count; i++) {
+          const r = 48 + Math.random() * 65;
+          const theta = Math.random() * Math.PI * 2;
+          const phi = Math.acos(2 * Math.random() - 1);
+          pos[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+          pos[i * 3 + 1] = r * Math.cos(phi);
+          pos[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta);
+        }
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+        const mat = new THREE.PointsMaterial({
+          color: 0x93c5fd,
+          size: 0.45,
+          transparent: true,
+          opacity: 0.28,
+          depthWrite: false
+        });
+        scene.add(new THREE.Points(geo, mat));
+      }
+
+      // =========================================================================
+      // 5A. 微觀原子視角建構
+      // =========================================================================
+      function buildMicroScene() {
+        // 1. 拉塞福核式模型群組
+        rutherfordGroup = new THREE.Group();
+        microGroup.add(rutherfordGroup);
+
+        // 核子實例化網格（紅寶石色質子 + 銀白色中子）
+        const nucleonGeo = new THREE.SphereGeometry(0.24, 14, 14);
+        const protonMat = new THREE.MeshStandardMaterial({
+          color: 0xf43f5e,
+          emissive: 0xbe123c,
+          emissiveIntensity: 0.65,
+          roughness: 0.25,
+          metalness: 0.25
+        });
+        const neutronMat = new THREE.MeshStandardMaterial({
+          color: 0xe2e8f0,
+          emissive: 0x475569,
+          emissiveIntensity: 0.25,
+          roughness: 0.3,
+          metalness: 0.45
+        });
+
+        protonMesh = new THREE.InstancedMesh(nucleonGeo, protonMat, 60);
+        neutronMesh = new THREE.InstancedMesh(nucleonGeo, neutronMat, 60);
+        rutherfordGroup.add(protonMesh);
+        rutherfordGroup.add(neutronMesh);
+
+        // 電位場柔和光暈
+        const haloMat = new THREE.SpriteMaterial({
+          map: texRubyGlow,
+          transparent: true,
+          opacity: 0.78,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false
+        });
+        nucleusHaloSprite = new THREE.Sprite(haloMat);
+        nucleusHaloSprite.scale.set(9.5, 9.5, 1);
+        rutherfordGroup.add(nucleusHaloSprite);
+
+        // 第二層柔和金色電場光環
+        const fieldShellGeo = new THREE.SphereGeometry(3.4, 24, 24);
+        const fieldShellMat = new THREE.MeshBasicMaterial({
+          color: 0xfb7185,
+          transparent: true,
+          opacity: 0.06,
+          side: THREE.BackSide,
+          depthWrite: false
+        });
+        rutherfordGroup.add(new THREE.Mesh(fieldShellGeo, fieldShellMat));
+
+        // 外圍半透明電子雲球層
+        electronCloudGroup = new THREE.Group();
+        rutherfordGroup.add(electronCloudGroup);
+
+        const cloudGeo = new THREE.SphereGeometry(PHYSICS.CLOUD_RADIUS, 40, 32);
+        const cloudMat = new THREE.MeshPhongMaterial({
+          color: 0x38bdf8,
+          emissive: 0x0c4a6e,
+          emissiveIntensity: 0.35,
+          transparent: true,
+          opacity: 0.055,
+          shininess: 90,
+          side: THREE.FrontSide,
+          depthWrite: false
+        });
+        electronCloudGroup.add(new THREE.Mesh(cloudGeo, cloudMat));
+
+        // 電子雲外緣纖細經緯線（提升立體球感）
+        const wireGeo = new THREE.SphereGeometry(PHYSICS.CLOUD_RADIUS, 24, 16);
+        const wireMat = new THREE.MeshBasicMaterial({
+          color: 0x38bdf8,
+          wireframe: true,
+          transparent: true,
+          opacity: 0.045,
+          depthWrite: false
+        });
+        electronCloudGroup.add(new THREE.Mesh(wireGeo, wireMat));
+
+        // 環繞電子雲微光電子點
+        const eGeo = new THREE.SphereGeometry(0.22, 10, 10);
+        const eMat = new THREE.MeshBasicMaterial({ color: 0x7dd3fc });
+        for (let i = 0; i < 26; i++) {
+          const eMesh = new THREE.Mesh(eGeo, eMat);
+          const orbitR = 9 + Math.random() * (PHYSICS.CLOUD_RADIUS - 10);
+          const incl = (Math.random() - 0.5) * Math.PI;
+          const asc = Math.random() * Math.PI * 2;
+          const phase = Math.random() * Math.PI * 2;
+          const speed = (0.35 + Math.random() * 0.65) * (Math.random() < 0.5 ? 1 : -1);
+          electronDots.push({ mesh: eMesh, r: orbitR, incl, asc, phase, speed });
+          electronCloudGroup.add(eMesh);
+        }
+
+        // 2. 湯姆森葡萄乾布丁模型群組（1904）
+        thomsonGroup = new THREE.Group();
+        microGroup.add(thomsonGroup);
+
+        // 均勻正電荷半透明球體
+        const puddingGeo = new THREE.SphereGeometry(PHYSICS.CLOUD_RADIUS, 42, 32);
+        const puddingMat = new THREE.MeshPhongMaterial({
+          color: 0xfb7185,
+          emissive: 0x9f1239,
+          emissiveIntensity: 0.42,
+          transparent: true,
+          opacity: 0.16,
+          shininess: 40,
+          depthWrite: false
+        });
+        thomsonGroup.add(new THREE.Mesh(puddingGeo, puddingMat));
+
+        // 內層溫潤正電球暈
+        const innerPuddingGeo = new THREE.SphereGeometry(PHYSICS.CLOUD_RADIUS * 0.99, 28, 20);
+        const innerPuddingMat = new THREE.MeshBasicMaterial({
+          color: 0xfda4af,
+          wireframe: true,
+          transparent: true,
+          opacity: 0.06,
+          depthWrite: false
+        });
+        thomsonGroup.add(new THREE.Mesh(innerPuddingGeo, innerPuddingMat));
+
+        // 鑲嵌於布丁內部的負電子（「葡萄乾」）
+        const raisinGeo = new THREE.SphereGeometry(0.42, 12, 12);
+        const raisinMat = new THREE.MeshStandardMaterial({
+          color: 0x38bdf8,
+          emissive: 0x0284c7,
+          emissiveIntensity: 0.95,
+          roughness: 0.2
+        });
+        const raisinHaloMat = new THREE.SpriteMaterial({
+          map: texCyanGlow,
+          transparent: true,
+          opacity: 0.65,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false
+        });
+
+        for (let i = 0; i < 42; i++) {
+          // 均勻分布於球體內
+          const u = Math.random();
+          const r = (PHYSICS.CLOUD_RADIUS - 2.2) * Math.cbrt(u);
+          const theta = Math.random() * Math.PI * 2;
+          const phi = Math.acos(2 * Math.random() - 1);
+          const basePos = new THREE.Vector3(
+            r * Math.sin(phi) * Math.cos(theta),
+            r * Math.cos(phi),
+            r * Math.sin(phi) * Math.sin(theta)
+          );
+          const holder = new THREE.Group();
+          holder.position.copy(basePos);
+          holder.add(new THREE.Mesh(raisinGeo, raisinMat));
+          const sp = new THREE.Sprite(raisinHaloMat);
+          sp.scale.set(2.2, 2.2, 1);
+          holder.add(sp);
+          thomsonGroup.add(holder);
+          thomsonElectrons.push({
+            group: holder,
+            base: basePos,
+            phase: Math.random() * Math.PI * 2,
+            freq: 1.5 + Math.random() * 1.5
+          });
+        }
+        thomsonGroup.visible = false;
+
+        // 3. 左側微觀 α 粒子束發射口指示環
+        const emitterRingGeo = new THREE.TorusGeometry(2.6, 0.14, 12, 32);
+        const emitterRingMat = new THREE.MeshStandardMaterial({
+          color: 0xfbbf24,
+          emissive: 0xb45309,
+          emissiveIntensity: 0.65,
+          metalness: 0.7,
+          roughness: 0.3
+        });
+        const emitterRing = new THREE.Mesh(emitterRingGeo, emitterRingMat);
+        emitterRing.rotation.y = Math.PI / 2;
+        emitterRing.position.set(PHYSICS.MICRO_EMIT_X - 1.0, 0, 0);
+        microGroup.add(emitterRing);
+
+        // 4. 單顆瞄準模式輔助幾何群組（虛線瞄準線、預覽軌跡、r_min、θ 扇形）
+        guideGroup = new THREE.Group();
+        microGroup.add(guideGroup);
+      }
+
+      // 依據所選靶材元素重建原子核球體排列
+      function updateElementVisuals() {
+        const el = getCurrentElement();
+        const total = el.nucleonCount;
+        const pCount = Math.min(60, Math.round((el.Z / el.A) * total));
+        const nCount = Math.min(60, total - pCount);
+
+        protonBasePos = [];
+        neutronBasePos = [];
+
+        // 使用黃金螺旋球面層緊密排列核子
+        const allPositions = [];
+        const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+        for (let i = 0; i < pCount + nCount; i++) {
+          const frac = (i + 0.5) / (pCount + nCount);
+          const r = el.visualRadius * Math.cbrt(frac) * 0.92;
+          const y = 1 - 2 * frac;
+          const radAtY = Math.sqrt(Math.max(0, 1 - y * y));
+          const theta = goldenAngle * i;
+          allPositions.push(new THREE.Vector3(
+            Math.cos(theta) * radAtY * r,
+            y * r,
+            Math.sin(theta) * radAtY * r
+          ));
+        }
+
+        // 交錯分配質子與中子使分布均勻美觀
+        let pi = 0, ni = 0;
+        for (let i = 0; i < allPositions.length; i++) {
+          const pickProton = (pi < pCount) && (ni >= nCount || (i % 2 === 0 && pi / pCount <= ni / Math.max(1, nCount)));
+          if (pickProton) {
+            protonBasePos.push({ pos: allPositions[i], phase: Math.random() * Math.PI * 2 });
+            pi++;
+          } else if (ni < nCount) {
+            neutronBasePos.push({ pos: allPositions[i], phase: Math.random() * Math.PI * 2 });
+            ni++;
+          }
+        }
+
+        protonMesh.count = protonBasePos.length;
+        neutronMesh.count = neutronBasePos.length;
+
+        const haloSize = 5.5 + el.visualRadius * 4.2;
+        if (nucleusHaloSprite) nucleusHaloSprite.scale.set(haloSize, haloSize, 1);
+
+        // 同步更新巨觀金屬箔顏色
+        if (macroFoilMesh) {
+          macroFoilMesh.material.color.setHex(el.foilColor);
+          macroFoilMesh.material.emissive.setHex(el.foilEmissive);
+        }
+      }
+
+      // =========================================================================
+      // 5B. 單顆精準瞄準預覽線、r_min 與散射角 θ 扇形標示
+      // =========================================================================
+      function clearGroup(grp) {
+        while (grp.children.length > 0) {
+          const child = grp.children[0];
+          grp.remove(child);
+          if (child.geometry) child.geometry.dispose();
+          if (child.material) child.material.dispose();
+        }
+      }
+
+      function updateSingleAimingGuides() {
+        clearGroup(guideGroup);
+        updateTheoryCard();
+
+        if (state.viewMode !== 'micro' || state.emissionMode !== 'single' || !state.showGuides) {
+          return;
+        }
+
+        const bUnits = state.impactParamFm / PHYSICS.FM_PER_UNIT;
+        const startX = PHYSICS.MICRO_EMIT_X;
+        const endX = 28.0;
+
+        // 1. 虛線瞄準線（沿著 y = b, z = 0 的未偏轉參考路徑）
+        const aimPts = [
+          new THREE.Vector3(startX, bUnits, 0),
+          new THREE.Vector3(endX, bUnits, 0)
+        ];
+        const aimGeo = new THREE.BufferGeometry().setFromPoints(aimPts);
+        const aimMat = new THREE.LineDashedMaterial({
+          color: 0x94a3b8,
+          dashSize: 1.1,
+          gapSize: 0.75,
+          transparent: true,
+          opacity: 0.55
+        });
+        const aimLine = new THREE.Line(aimGeo, aimMat);
+        aimLine.computeLineDistances();
+        guideGroup.add(aimLine);
+
+        // 撞擊參數 b 垂直標尺（從核中心到瞄準線）
+        if (bUnits > 0.25) {
+          const bGeo = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(startX + 4, 0, 0),
+            new THREE.Vector3(startX + 4, bUnits, 0)
+          ]);
+          const bMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.85 });
+          guideGroup.add(new THREE.Line(bGeo, bMat));
+        }
+
+        // 2. 以精確 RK4 預先模擬完整雙曲線軌跡，同時尋找 r_min 位置與漸近出射角
+        const v0 = PHYSICS.BASE_SPEED_UNITS * Math.sqrt(state.energyMeV / 5.5);
+        const simPos = new THREE.Vector3(startX, bUnits, 0);
+        const simVel = new THREE.Vector3(v0, 0, 0);
+        const trajPts = [simPos.clone()];
+
+        let minR = Infinity;
+        const minRPoint = new THREE.Vector3();
+
+        for (let step = 0; step < 340; step++) {
+          integrateRK4Adaptive(simPos, simVel, 0.016);
+          trajPts.push(simPos.clone());
+          const r = simPos.length();
+          if (r < minR) {
+            minR = r;
+            minRPoint.copy(simPos);
+          }
+          if (r > PHYSICS.MICRO_BOUND_R - 1.5 && step > 10) break;
+        }
+
+        const el = getCurrentElement();
+        const theory = calcAnalyticalScattering(state.impactParamFm, el.Z, state.energyMeV, state.atomicModel);
+        const previewCol = getAngleColor(theory.thetaDeg, new THREE.Color());
+
+        const previewGeo = new THREE.BufferGeometry().setFromPoints(trajPts);
+        const previewMat = new THREE.LineDashedMaterial({
+          color: previewCol,
+          dashSize: 0.85,
+          gapSize: 0.45,
+          transparent: true,
+          opacity: 0.82
+        });
+        const previewLine = new THREE.Line(previewGeo, previewMat);
+        previewLine.computeLineDistances();
+        guideGroup.add(previewLine);
+
+        // 3. 最近距離 r_min 連線與發光標記點
+        if (state.atomicModel === 'rutherford') {
+          const rMinGeo = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(0, 0, 0),
+            minRPoint
+          ]);
+          const rMinMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.9 });
+          guideGroup.add(new THREE.Line(rMinGeo, rMinMat));
+
+          const dotGeo = new THREE.SphereGeometry(0.36, 14, 14);
+          const dotMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+          const dot = new THREE.Mesh(dotGeo, dotMat);
+          dot.position.copy(minRPoint);
+          guideGroup.add(dot);
+        }
+
+        // 4. 散射角 θ 扇形標示（由正向 +x 軸張開至出射方向 θ）
+        const thetaRad = Math.min(Math.PI, Math.max(0.01, theory.thetaRad));
+        if (thetaRad > 0.03) {
+          const fanRadius = 9.5;
+          const segments = Math.max(12, Math.round((thetaRad / Math.PI) * 40));
+          const fanShape = new THREE.Shape();
+          fanShape.moveTo(0, 0);
+          fanShape.absarc(0, 0, fanRadius, 0, thetaRad, false);
+          fanShape.lineTo(0, 0);
+
+          const fanGeo = new THREE.ShapeGeometry(fanShape, segments);
+          const fanMat = new THREE.MeshBasicMaterial({
+            color: previewCol,
+            transparent: true,
+            opacity: 0.22,
+            side: THREE.DoubleSide,
+            depthWrite: false
+          });
+          const fanMesh = new THREE.Mesh(fanGeo, fanMat);
+          guideGroup.add(fanMesh);
+
+          // 扇形外弧高亮線
+          const arcPts = [];
+          for (let i = 0; i <= segments; i++) {
+            const a = (i / segments) * thetaRad;
+            arcPts.push(new THREE.Vector3(Math.cos(a) * fanRadius, Math.sin(a) * fanRadius, 0.02));
+          }
+          const arcGeo = new THREE.BufferGeometry().setFromPoints(arcPts);
+          const arcMat = new THREE.LineBasicMaterial({ color: previewCol, transparent: true, opacity: 0.92 });
+          guideGroup.add(new THREE.Line(arcGeo, arcMat));
+
+          // 扇形兩邊基準射線（+x 軸與出射漸近方向）
+          const rayGeo = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(0, 0, 0.02),
+            new THREE.Vector3(fanRadius + 3.5, 0, 0.02),
+            new THREE.Vector3(0, 0, 0.02),
+            new THREE.Vector3(Math.cos(thetaRad) * (fanRadius + 3.5), Math.sin(thetaRad) * (fanRadius + 3.5), 0.02)
+          ]);
+          const rayMat = new THREE.LineBasicMaterial({ color: 0xe2e8f0, transparent: true, opacity: 0.45 });
+          guideGroup.add(new THREE.LineSegments(rayGeo, rayMat));
+        }
+      }
+
+      // =========================================================================
+      // 5C. 巨觀實驗裝置視角建構（1909 拉塞福／蓋革－馬士登裝置）
+      // =========================================================================
+      function buildMacroScene() {
+        // 1. 深邃光學實驗平台底座與圓形刻度網格
+        const baseGeo = new THREE.CylinderGeometry(28, 29.5, 1.2, 64);
+        const baseMat = new THREE.MeshStandardMaterial({
+          color: 0x0f172a,
+          roughness: 0.65,
+          metalness: 0.35
+        });
+        const baseMesh = new THREE.Mesh(baseGeo, baseMat);
+        baseMesh.position.y = -4.6;
+        macroGroup.add(baseMesh);
+
+        // 細緻極座標光學網格
+        const polarGrid = new THREE.PolarGridHelper(27, 12, 6, 64, 0x334155, 0x1e293b);
+        polarGrid.position.y = -3.98;
+        macroGroup.add(polarGrid);
+
+        // 2. 厚重金屬鉛盒（含準直狹縫與發光釙-210 放射源）
+        const leadBoxGroup = new THREE.Group();
+        leadBoxGroup.position.set(PHYSICS.MACRO_EMIT_X, 0, 0);
+        macroGroup.add(leadBoxGroup);
+
+        const leadMat = new THREE.MeshStandardMaterial({
+          color: 0x475569,
+          roughness: 0.55,
+          metalness: 0.72
+        });
+        const leadDarkMat = new THREE.MeshStandardMaterial({
+          color: 0x1e293b,
+          roughness: 0.6,
+          metalness: 0.6
+        });
+
+        // 主鉛盒外殼（保留頂部視窗與前方狹縫）
+        const bodyBack = new THREE.Mesh(new THREE.BoxGeometry(5.2, 5.4, 5.6), leadMat);
+        bodyBack.position.x = -1.6;
+        leadBoxGroup.add(bodyBack);
+
+        // 前方上下厚鉛板構成精準準直狹縫
+        const slitTop = new THREE.Mesh(new THREE.BoxGeometry(3.2, 2.2, 5.6), leadMat);
+        slitTop.position.set(2.5, 1.6, 0);
+        leadBoxGroup.add(slitTop);
+
+        const slitBot = new THREE.Mesh(new THREE.BoxGeometry(3.2, 2.2, 5.6), leadMat);
+        slitBot.position.set(2.5, -1.6, 0);
+        leadBoxGroup.add(slitBot);
+
+        // 準直狹縫左右擋塊
+        const slitLeft = new THREE.Mesh(new THREE.BoxGeometry(3.2, 1.0, 2.35), leadDarkMat);
+        slitLeft.position.set(2.5, 0, 1.62);
+        leadBoxGroup.add(slitLeft);
+
+        const slitRight = new THREE.Mesh(new THREE.BoxGeometry(3.2, 1.0, 2.35), leadDarkMat);
+        slitRight.position.set(2.5, 0, -1.62);
+        leadBoxGroup.add(slitRight);
+
+        // 鉛盒底座支撐腳
+        const standBox = new THREE.Mesh(new THREE.BoxGeometry(7.2, 1.4, 4.6), leadDarkMat);
+        standBox.position.set(0.4, -3.3, 0);
+        leadBoxGroup.add(standBox);
+
+        // 內部發光放射性 Po-210 α 射源膠囊
+        const sourceGeo = new THREE.CylinderGeometry(0.65, 0.65, 1.4, 20);
+        sourceGeo.rotateZ(Math.PI / 2);
+        const sourceMat = new THREE.MeshStandardMaterial({
+          color: 0xfef08a,
+          emissive: 0xf59e0b,
+          emissiveIntensity: 1.8
+        });
+        const sourceCapsule = new THREE.Mesh(sourceGeo, sourceMat);
+        sourceCapsule.position.set(0.5, 0, 0);
+        leadBoxGroup.add(sourceCapsule);
+
+        const srcSpriteMat = new THREE.SpriteMaterial({
+          map: texGoldGlow,
+          transparent: true,
+          opacity: 0.9,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false
+        });
+        macroSourceGlow = new THREE.Sprite(srcSpriteMat);
+        macroSourceGlow.scale.set(4.5, 4.5, 1);
+        macroSourceGlow.position.set(1.2, 0, 0);
+        leadBoxGroup.add(macroSourceGlow);
+
+        // 3. 中央支架與極薄光澤金箔
+        const holderGroup = new THREE.Group();
+        macroGroup.add(holderGroup);
+
+        const brassMat = new THREE.MeshStandardMaterial({
+          color: 0xb45309,
+          metalness: 0.8,
+          roughness: 0.28
+        });
+
+        // 底座立柱
+        const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.45, 3.2, 16), brassMat);
+        pillar.position.y = -2.6;
+        holderGroup.add(pillar);
+
+        // 金箔圓形框架（垂直於入射粒子束 X 軸）
+        const frameRing = new THREE.Mesh(new THREE.TorusGeometry(2.35, 0.16, 16, 48), brassMat);
+        frameRing.rotation.y = Math.PI / 2;
+        holderGroup.add(frameRing);
+
+        // 極薄光澤金箔本體
+        const foilGeo = new THREE.CircleGeometry(2.26, 48);
+        foilGeo.rotateY(Math.PI / 2);
+        const foilMat = new THREE.MeshStandardMaterial({
+          color: 0xf5b935,
+          emissive: 0x452b05,
+          emissiveIntensity: 0.35,
+          metalness: 0.92,
+          roughness: 0.16,
+          side: THREE.DoubleSide,
+          transparent: true,
+          opacity: 0.88
+        });
+        macroFoilMesh = new THREE.Mesh(foilGeo, foilMat);
+        holderGroup.add(macroFoilMesh);
+
+        // 4. 360°（含入射窄口）環形硫化鋅 (ZnS) 螢光屏
+        // 建立動態 CanvasTexture 作為螢光屏餘暉累計熱區
+        znsCanvas = document.createElement('canvas');
+        znsCanvas.width = 1024;
+        znsCanvas.height = 256;
+        znsCtx = znsCanvas.getContext('2d');
+        resetZnSCanvas();
+
+        znsTexture = new THREE.CanvasTexture(znsCanvas);
+        znsTexture.needsUpdate = true;
+
+        // 圓筒留出入口狹口（在 -X 方向，約 20° 缺口讓射束進入）
+        // Three.js CylinderGeometry theta=0 在 +Z，沿逆時針增加：
+        // -X 對應 theta = 1.5*PI，+X 對應 theta = 0.5*PI
+        const gapAngle = 0.28; // 約 16° 開口
+        const thetaStart = -Math.PI * 0.5 + gapAngle * 0.5;
+        const thetaLength = Math.PI * 2 - gapAngle;
+
+        const screenInnerGeo = new THREE.CylinderGeometry(
+          PHYSICS.MACRO_SCREEN_RADIUS,
+          PHYSICS.MACRO_SCREEN_RADIUS,
+          PHYSICS.MACRO_SCREEN_HEIGHT,
+          96,
+          1,
+          true,
+          thetaStart,
+          thetaLength
+        );
+        const screenInnerMat = new THREE.MeshBasicMaterial({
+          map: znsTexture,
+          side: THREE.BackSide,
+          transparent: true,
+          opacity: 0.94
+        });
+        const screenInner = new THREE.Mesh(screenInnerGeo, screenInnerMat);
+        macroGroup.add(screenInner);
+
+        // 螢光屏深色金屬外殼
+        const screenOuterGeo = new THREE.CylinderGeometry(
+          PHYSICS.MACRO_SCREEN_RADIUS + 0.28,
+          PHYSICS.MACRO_SCREEN_RADIUS + 0.28,
+          PHYSICS.MACRO_SCREEN_HEIGHT + 0.2,
+          96,
+          1,
+          true,
+          thetaStart,
+          thetaLength
+        );
+        const screenOuterMat = new THREE.MeshStandardMaterial({
+          color: 0x1e293b,
+          metalness: 0.65,
+          roughness: 0.45,
+          side: THREE.FrontSide
+        });
+        macroGroup.add(new THREE.Mesh(screenOuterGeo, screenOuterMat));
+
+        // 螢幕上緣發光角度刻度環
+        const rulerTex = createAngleRulerTexture();
+        const rulerGeo = new THREE.CylinderGeometry(
+          PHYSICS.MACRO_SCREEN_RADIUS + 0.35,
+          PHYSICS.MACRO_SCREEN_RADIUS + 0.35,
+          1.25,
+          96,
+          1,
+          true,
+          -Math.PI * 0.5,
+          Math.PI * 2
+        );
+        const rulerMat = new THREE.MeshBasicMaterial({
+          map: rulerTex,
+          side: THREE.DoubleSide,
+          transparent: true,
+          opacity: 0.92
+        });
+        const rulerMesh = new THREE.Mesh(rulerGeo, rulerMat);
+        rulerMesh.position.y = PHYSICS.MACRO_SCREEN_HEIGHT * 0.5 + 0.72;
+        macroGroup.add(rulerMesh);
+
+        // 5. 可繞圓周移動的觀察顯微鏡與圓形滑軌
+        const railGeo = new THREE.TorusGeometry(PHYSICS.MACRO_SCREEN_RADIUS + 2.8, 0.22, 12, 96);
+        railGeo.rotateX(Math.PI / 2);
+        const railMat = new THREE.MeshStandardMaterial({
+          color: 0x64748b,
+          metalness: 0.8,
+          roughness: 0.25
+        });
+        const railMesh = new THREE.Mesh(railGeo, railMat);
+        railMesh.position.y = -3.7;
+        macroGroup.add(railMesh);
+
+        macroMicroscopeGroup = new THREE.Group();
+        macroGroup.add(macroMicroscopeGroup);
+
+        const scopeDist = PHYSICS.MACRO_SCREEN_RADIUS + 2.8;
+        const scopeAssembly = new THREE.Group();
+        // 放置於 +X（0°）方向，之後繞 Y 軸旋轉即可沿圓周滑行
+        scopeAssembly.position.set(scopeDist, 0, 0);
+        macroMicroscopeGroup.add(scopeAssembly);
+
+        const scopeDarkMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.75, roughness: 0.3 });
+        const scopeBrassMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.82, roughness: 0.25 });
+
+        // 滑台底座與支架
+        const carriage = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.8, 2.8), scopeDarkMat);
+        carriage.position.y = -3.4;
+        scopeAssembly.add(carriage);
+
+        const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.36, 3.6, 16), scopeBrassMat);
+        arm.position.y = -1.6;
+        scopeAssembly.add(arm);
+
+        // 顯微鏡鏡筒（對準 ZnS 螢幕）
+        const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.68, 4.6, 24), scopeDarkMat);
+        barrel.rotation.z = Math.PI / 2;
+        barrel.position.set(0.7, 0.35, 0);
+        scopeAssembly.add(barrel);
+
+        // 物鏡金屬環（朝向內側螢幕）
+        const objLens = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.56, 1.1, 20), scopeBrassMat);
+        objLens.rotation.z = Math.PI / 2;
+        objLens.position.set(-1.95, 0.35, 0);
+        scopeAssembly.add(objLens);
+
+        // 目鏡（朝向外側）
+        const eyepiece = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.38, 1.3, 20), scopeBrassMat);
+        eyepiece.rotation.z = Math.PI / 2;
+        eyepiece.position.set(3.4, 0.35, 0);
+        scopeAssembly.add(eyepiece);
+
+        // 調焦旋鈕
+        const knob = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 1.8, 16), scopeBrassMat);
+        knob.rotation.x = Math.PI / 2;
+        knob.position.set(0.3, -0.35, 0);
+        scopeAssembly.add(knob);
+
+        // 顯微鏡觀察視野綠色光錐指示
+        const coneGeo = new THREE.ConeGeometry(1.6, 2.2, 24, 1, true);
+        coneGeo.rotateZ(-Math.PI / 2);
+        const coneMat = new THREE.MeshBasicMaterial({
+          color: 0x34d399,
+          transparent: true,
+          opacity: 0.18,
+          side: THREE.DoubleSide,
+          depthWrite: false
+        });
+        const fovCone = new THREE.Mesh(coneGeo, coneMat);
+        fovCone.position.set(-2.6, 0.35, 0);
+        scopeAssembly.add(fovCone);
+
+        updateMicroscopeTransform();
+      }
+
+      // 重設 ZnS 螢幕累積熱區畫布
+      function resetZnSCanvas() {
+        if (!znsCtx) return;
+        znsCtx.fillStyle = '#071612';
+        znsCtx.fillRect(0, 0, znsCanvas.width, znsCanvas.height);
+
+        // 繪製細微磷光網格質感
+        znsCtx.strokeStyle = 'rgba(52, 211, 153, 0.09)';
+        znsCtx.lineWidth = 1;
+        for (let x = 0; x < znsCanvas.width; x += 32) {
+          znsCtx.beginPath();
+          znsCtx.moveTo(x, 0);
+          znsCtx.lineTo(x, znsCanvas.height);
+          znsCtx.stroke();
+        }
+        znsCtx.beginPath();
+        znsCtx.moveTo(0, znsCanvas.height / 2);
+        znsCtx.lineTo(znsCanvas.width, znsCanvas.height / 2);
+        znsCtx.stroke();
+
+        if (znsTexture) znsTexture.needsUpdate = true;
+      }
+
+      // 在 ZnS 螢幕對應 3D 撞擊座標處繪製螢光綠餘暉點
+      function paintZnSScintillation(hitPos) {
+        if (!znsCtx) return;
+        // 對應 CylinderGeometry UV 映射：thetaStart = -PI/2 + gap/2
+        const gapAngle = 0.28;
+        const thetaStart = -Math.PI * 0.5 + gapAngle * 0.5;
+        const thetaLength = Math.PI * 2 - gapAngle;
+
+        // Three.js Cylinder 頂點計算為 x = R*sin(theta), z = R*cos(theta)
+        let theta = Math.atan2(hitPos.x, hitPos.z);
+        let rel = theta - thetaStart;
+        while (rel < 0) rel += Math.PI * 2;
+        while (rel >= Math.PI * 2) rel -= Math.PI * 2;
+        const u = rel / thetaLength;
+        if (u < 0 || u > 1) return;
+
+        const v = 0.5 - hitPos.y / PHYSICS.MACRO_SCREEN_HEIGHT;
+        const cx = u * znsCanvas.width;
+        const cy = Math.max(8, Math.min(znsCanvas.height - 8, v * znsCanvas.height));
+
+        const grad = znsCtx.createRadialGradient(cx, cy, 0, cx, cy, 13);
+        grad.addColorStop(0, 'rgba(220, 255, 232, 0.85)');
+        grad.addColorStop(0.35, 'rgba(74, 222, 128, 0.45)');
+        grad.addColorStop(1, 'rgba(16, 185, 129, 0)');
+        znsCtx.fillStyle = grad;
+        znsCtx.beginPath();
+        znsCtx.arc(cx, cy, 13, 0, Math.PI * 2);
+        znsCtx.fill();
+
+        znsTexture.needsUpdate = true;
+      }
+
+      function updateMicroscopeTransform() {
+        if (!macroMicroscopeGroup) return;
+        // angleDeg = 0° 在 +X 方向，正向逆時針轉向 -Z/+Z
+        const rad = (state.microscopeAngleDeg * Math.PI) / 180;
+        macroMicroscopeGroup.rotation.y = rad;
+      }
+
+      // =========================================================================
+      // 6. 粒子與發光軌跡物件池（高效 60fps、零動態記憶體洩漏）
+      // =========================================================================
+      function createAlphaParticleMesh() {
+        const g = new THREE.Group();
+        const r = 0.17;
+        const pGeo = new THREE.SphereGeometry(r, 10, 10);
+        const pMat = new THREE.MeshStandardMaterial({ color: 0xf43f5e, emissive: 0xe11d48, emissiveIntensity: 0.7 });
+        const nMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, emissive: 0x94a3b8, emissiveIntensity: 0.35 });
+
+        // 四面體緊密排列：2 質子 + 2 中子
+        const offsets = [
+          [0.12, 0.12, 0.12, pMat],
+          [-0.12, -0.12, 0.12, pMat],
+          [-0.12, 0.12, -0.12, nMat],
+          [0.12, -0.12, -0.12, nMat]
+        ];
+        for (const [ox, oy, oz, mat] of offsets) {
+          const m = new THREE.Mesh(pGeo, mat);
+          m.position.set(ox, oy, oz);
+          g.add(m);
+        }
+
+        // 外層金黃粒子團發光光暈
+        const glowMat = new THREE.SpriteMaterial({
+          map: texGoldGlow,
+          transparent: true,
+          opacity: 0.92,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false
+        });
+        const sprite = new THREE.Sprite(glowMat);
+        sprite.scale.set(2.1, 2.1, 1);
+        g.add(sprite);
+
+        g.visible = false;
+        return g;
+      }
+
+      function initMicroPools() {
+        for (let i = 0; i < MAX_MICRO_PARTICLES; i++) {
+          const mesh = createAlphaParticleMesh();
+          microGroup.add(mesh);
+          microParticles.push({
+            active: false,
+            mesh,
+            pos: new THREE.Vector3(),
+            vel: new THREE.Vector3(),
+            trailIndex: -1,
+            counted: false,
+            isSingleShot: false,
+            sampleTimer: 0
+          });
+        }
+
+        for (let i = 0; i < MAX_TRAILS; i++) {
+          const positions = new Float32Array(TRAIL_MAX_PTS * 3);
+          const colors = new Float32Array(TRAIL_MAX_PTS * 3);
+          const geo = new THREE.BufferGeometry();
+          geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+          geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+          geo.setDrawRange(0, 0);
+
+          const mat = new THREE.LineBasicMaterial({
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.9,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+          });
+          const line = new THREE.Line(geo, mat);
+          line.frustumCulled = false;
+          line.visible = false;
+          microGroup.add(line);
+
+          microTrails.push({
+            active: false,
+            attached: false,
+            line,
+            positions,
+            colors,
+            pointCount: 0,
+            ageAfterDetach: 0,
+            maxFadeAge: 4.2,
+            baseColor: new THREE.Color(0xfbbf24)
+          });
+        }
+      }
+
+      function allocateTrail() {
+        // 優先找未使用的軌跡，否則回收最老的已脫離軌跡
+        let bestIdx = -1;
+        let oldestAge = -1;
+        for (let i = 0; i < MAX_TRAILS; i++) {
+          if (!microTrails[i].active) return i;
+          if (!microTrails[i].attached && microTrails[i].ageAfterDetach > oldestAge) {
+            oldestAge = microTrails[i].ageAfterDetach;
+            bestIdx = i;
+          }
+        }
+        return bestIdx;
+      }
+
+      function spawnMicroAlpha(customBFm = null, isSingleShot = false) {
+        let slot = null;
+        for (let i = 0; i < MAX_MICRO_PARTICLES; i++) {
+          if (!microParticles[i].active) {
+            slot = microParticles[i];
+            break;
+          }
+        }
+        if (!slot) return;
+
+        const trailIdx = allocateTrail();
+        if (trailIdx === -1) return;
+
+        let by, bz;
+        if (customBFm !== null) {
+          by = customBFm / PHYSICS.FM_PER_UNIT;
+          bz = 0;
+        } else {
+          // 連續粒子束：3D 圓形截面，稍聚焦以利課堂在數十秒內同時觀察多數直進與珍貴背向反彈
+          const maxBeamFm = 540.0;
+          const bFm = maxBeamFm * Math.pow(Math.random(), 0.72);
+          const phi = Math.random() * Math.PI * 2;
+          const bUnits = bFm / PHYSICS.FM_PER_UNIT;
+          by = Math.cos(phi) * bUnits;
+          bz = Math.sin(phi) * bUnits;
+        }
+
+        const v0 = PHYSICS.BASE_SPEED_UNITS * Math.sqrt(state.energyMeV / 5.5);
+
+        slot.active = true;
+        slot.counted = false;
+        slot.isSingleShot = isSingleShot;
+        slot.sampleTimer = 0;
+        slot.pos.set(PHYSICS.MICRO_EMIT_X, by, bz);
+        slot.vel.set(v0, 0, 0);
+        slot.mesh.position.copy(slot.pos);
+        slot.mesh.visible = true;
+
+        // 初始化軌跡
+        const tr = microTrails[trailIdx];
+        tr.active = true;
+        tr.attached = true;
+        tr.pointCount = 1;
+        tr.ageAfterDetach = 0;
+        tr.maxFadeAge = isSingleShot ? 10.0 : 4.2;
+        tr.baseColor.setHex(0xfbbf24);
+        tr.positions[0] = slot.pos.x;
+        tr.positions[1] = slot.pos.y;
+        tr.positions[2] = slot.pos.z;
+        tr.colors[0] = tr.baseColor.r;
+        tr.colors[1] = tr.baseColor.g;
+        tr.colors[2] = tr.baseColor.b;
+        tr.line.geometry.setDrawRange(0, 1);
+        tr.line.geometry.attributes.position.needsUpdate = true;
+        tr.line.geometry.attributes.color.needsUpdate = true;
+        tr.line.material.opacity = 0.92;
+        tr.line.visible = true;
+
+        slot.trailIndex = trailIdx;
+      }
+
+      // 初始化巨觀粒子與螢光閃爍池
+      function initMacroPools() {
+        const pGeo = new THREE.SphereGeometry(0.22, 8, 8);
+        const pMat = new THREE.MeshBasicMaterial({ color: 0xfde047 });
+
+        for (let i = 0; i < MAX_MACRO_PARTICLES; i++) {
+          const g = new THREE.Group();
+          g.add(new THREE.Mesh(pGeo, pMat));
+          const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+            map: texGoldGlow,
+            transparent: true,
+            opacity: 0.9,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+          }));
+          sp.scale.set(1.4, 1.4, 1);
+          g.add(sp);
+          g.visible = false;
+          macroGroup.add(g);
+
+          macroParticles.push({
+            active: false,
+            scattered: false,
+            mesh: g,
+            pos: new THREE.Vector3(),
+            vel: new THREE.Vector3(),
+            scatterAngleDeg: 0,
+            azimuthRad: 0
+          });
+        }
+
+        // 螢光綠閃爍點池
+        for (let i = 0; i < MAX_FLASHES; i++) {
+          const mat = new THREE.SpriteMaterial({
+            map: texGreenGlow,
+            transparent: true,
+            opacity: 0,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+          });
+          const sp = new THREE.Sprite(mat);
+          sp.visible = false;
+          macroGroup.add(sp);
+          macroFlashes.push({
+            active: false,
+            sprite: sp,
+            age: 0,
+            duration: 0.65
+          });
+        }
+      }
+
+      function spawnMacroAlpha() {
+        let slot = null;
+        for (let i = 0; i < MAX_MACRO_PARTICLES; i++) {
+          if (!macroParticles[i].active) {
+            slot = macroParticles[i];
+            break;
+          }
+        }
+        if (!slot) return;
+
+        const speed = 26.0 * Math.sqrt(state.energyMeV / 5.5);
+        // 從準直狹縫發射細準直粒子束
+        slot.active = true;
+        slot.scattered = false;
+        slot.pos.set(PHYSICS.MACRO_EMIT_X + 2.2, (Math.random() - 0.5) * 0.45, (Math.random() - 0.5) * 0.45);
+        slot.vel.set(speed, 0, 0);
+        slot.mesh.position.copy(slot.pos);
+        slot.mesh.visible = true;
+      }
+
+      function triggerScintillationFlash(hitPos) {
+        let slot = null;
+        for (let i = 0; i < MAX_FLASHES; i++) {
+          if (!macroFlashes[i].active) {
+            slot = macroFlashes[i];
+            break;
+          }
+        }
+        if (!slot) slot = macroFlashes[0];
+
+        slot.active = true;
+        slot.age = 0;
+        slot.duration = 0.55 + Math.random() * 0.25;
+        slot.sprite.position.copy(hitPos);
+        // 稍微向圓心內縮避免 Z-fighting
+        slot.sprite.position.multiplyScalar(0.985);
+        slot.sprite.scale.set(2.8, 2.8, 1);
+        slot.sprite.material.opacity = 1.0;
+        slot.sprite.visible = true;
+      }
+
+      // 依拉塞福真實截面分佈取樣巨觀散射角（對應當前 Z 與 Ek）
+      function sampleMacroScatteringAngleDeg() {
+        if (state.atomicModel === 'thomson') {
+          return Math.random() * 0.65; // 湯姆森模型幾乎無偏轉
+        }
+        const el = getCurrentElement();
+        const d0 = calcHeadOnD0(el.Z, state.energyMeV);
+        // 與微觀模式一致的撞擊參數取樣，確保兩視角的統計分布完全對應物理規律
+        const bFm = 540.0 * Math.pow(Math.random(), 0.72);
+        const thetaRad = bFm < 1e-4 ? Math.PI : 2.0 * Math.atan(d0 / (2.0 * bFm));
+        return (thetaRad * 180) / Math.PI;
+      }
+
+      // =========================================================================
+      // 7. 統計記錄與 Canvas 散射角度長條圖渲染
+      // =========================================================================
+      let statsDirty = true;
+
+      function recordScatteringStat(angleDeg) {
+        const clamped = Math.max(0, Math.min(179.99, angleDeg));
+        state.stats.total++;
+        if (clamped < 10) state.stats.small++;
+        else if (clamped <= 90) state.stats.medium++;
+        else state.stats.back++;
+
+        const bin = Math.min(17, Math.floor(clamped / 10));
+        state.stats.bins[bin]++;
+        statsDirty = true;
+      }
+
+      function clearAllTrailsAndStats() {
+        // 清除微觀粒子與軌跡
+        for (const p of microParticles) {
+          p.active = false;
+          p.mesh.visible = false;
+          p.trailIndex = -1;
+        }
+        for (const tr of microTrails) {
+          tr.active = false;
+          tr.attached = false;
+          tr.line.visible = false;
+          tr.line.geometry.setDrawRange(0, 0);
+        }
+        // 清除巨觀粒子、閃爍與 ZnS 熱區
+        for (const mp of macroParticles) {
+          mp.active = false;
+          mp.mesh.visible = false;
+        }
+        for (const fl of macroFlashes) {
+          fl.active = false;
+          fl.sprite.visible = false;
+        }
+        resetZnSCanvas();
+
+        // 重置統計
+        state.stats.total = 0;
+        state.stats.small = 0;
+        state.stats.medium = 0;
+        state.stats.back = 0;
+        state.stats.bins.fill(0);
+        state.microscopeHits = 0;
+        state.lastMeasuredTheta = null;
+        document.getElementById('measured-theta').textContent = '--';
+        document.getElementById('val-scope-hits').textContent = '0';
+        statsDirty = true;
+        updateStatsUI();
+      }
+
+      function updateStatsUI() {
+        const s = state.stats;
+        const tot = Math.max(1, s.total);
+        const pSmall = (s.small / tot) * 100;
+        const pMed = (s.medium / tot) * 100;
+        const pBack = (s.back / tot) * 100;
+
+        document.getElementById('stat-total').textContent = s.total.toLocaleString();
+        document.getElementById('stat-small-cnt').textContent = s.small.toLocaleString();
+        document.getElementById('stat-small-pct').textContent = s.total ? pSmall.toFixed(1) + '%' : '0.0%';
+        document.getElementById('bar-small').style.width = (s.total ? pSmall : 0) + '%';
+
+        document.getElementById('stat-med-cnt').textContent = s.medium.toLocaleString();
+        document.getElementById('stat-med-pct').textContent = s.total ? pMed.toFixed(1) + '%' : '0.0%';
+        document.getElementById('bar-med').style.width = (s.total ? pMed : 0) + '%';
+
+        document.getElementById('stat-back-cnt').textContent = s.back.toLocaleString();
+        document.getElementById('stat-back-pct').textContent = s.total ? pBack.toFixed(1) + '%' : '0.0%';
+        document.getElementById('bar-back').style.width = (s.total ? pBack : 0) + '%';
+
+        document.getElementById('val-scope-hits').textContent = state.microscopeHits.toLocaleString();
+
+        drawHistogram();
+        statsDirty = false;
+      }
+
+      function drawHistogram() {
+        const canvas = document.getElementById('histogram-canvas');
+        if (!canvas) return;
+        const rect = canvas.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0) return;
+
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const w = Math.floor(rect.width * dpr);
+        const h = Math.floor(rect.height * dpr);
+        if (canvas.width !== w || canvas.height !== h) {
+          canvas.width = w;
+          canvas.height = h;
+        }
+
+        const ctx = canvas.getContext('2d');
+        ctx.save();
+        ctx.scale(dpr, dpr);
+
+        const cw = rect.width;
+        const ch = rect.height;
+        ctx.clearRect(0, 0, cw, ch);
+
+        const padL = 28, padR = 8, padT = 12, padB = 22;
+        const plotW = cw - padL - padR;
+        const plotH = ch - padT - padB;
+
+        const bins = state.stats.bins;
+        const maxVal = Math.max(1, ...bins);
+        const isLog = state.histScale === 'log';
+        const maxLog = Math.max(1, Math.log10(maxVal + 1));
+
+        // 水平參考網格線
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.16)';
+        ctx.lineWidth = 1;
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '10px "JetBrains Mono", monospace';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+
+        const gridSteps = 3;
+        for (let g = 0; g <= gridSteps; g++) {
+          const frac = g / gridSteps;
+          const y = padT + plotH * (1 - frac);
+          ctx.beginPath();
+          ctx.moveTo(padL, y);
+          ctx.lineTo(padL + plotW, y);
+          ctx.stroke();
+
+          let labelVal;
+          if (isLog) {
+            labelVal = g === 0 ? '0' : Math.round(Math.pow(10, frac * maxLog) - 1);
+          } else {
+            labelVal = Math.round(frac * maxVal);
+          }
+          ctx.fillText(labelVal > 999 ? (labelVal / 1000).toFixed(1) + 'k' : String(labelVal), padL - 4, y);
+        }
+
+        // 繪製 18 條角度分布長條
+        const barGap = 2.5;
+        const barW = (plotW - barGap * 17) / 18;
+        const tmpCol = new THREE.Color();
+
+        for (let i = 0; i < 18; i++) {
+          const val = bins[i];
+          let norm = 0;
+          if (val > 0) {
+            norm = isLog ? Math.log10(val + 1) / maxLog : val / maxVal;
+          }
+          const bh = Math.max(val > 0 ? 2 : 0, norm * plotH);
+          const x = padL + i * (barW + barGap);
+          const y = padT + plotH - bh;
+
+          const midAngle = i * 10 + 5;
+          getAngleColor(midAngle, tmpCol);
+          ctx.fillStyle = `rgb(${Math.round(tmpCol.r * 255)}, ${Math.round(tmpCol.g * 255)}, ${Math.round(tmpCol.b * 255)})`;
+
+          if (bh > 0) {
+            ctx.beginPath();
+            ctx.roundRect ? ctx.roundRect(x, y, barW, bh, [2.5, 2.5, 0, 0]) : ctx.rect(x, y, barW, bh);
+            ctx.fill();
+          }
+        }
+
+        // X 軸角度標籤
+        ctx.fillStyle = '#cbd5e1';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        const ticks = [0, 30, 60, 90, 120, 150, 180];
+        for (const deg of ticks) {
+          const x = padL + (deg / 180) * plotW;
+          ctx.fillText(deg + '°', x, padT + plotH + 5);
+        }
+
+        // 90° 背向反彈分界虛線
+        const x90 = padL + 0.5 * plotW;
+        ctx.save();
+        ctx.setLineDash([3, 3]);
+        ctx.strokeStyle = 'rgba(244, 63, 94, 0.55)';
+        ctx.beginPath();
+        ctx.moveTo(x90, padT);
+        ctx.lineTo(x90, padT + plotH);
+        ctx.stroke();
+        ctx.restore();
+
+        ctx.restore();
+      }
+
+      // =========================================================================
+      // 8. 主動畫與物理更新迴圈 (60fps)
+      // =========================================================================
+      let lastTime = 0;
+      let emitAccum = 0;
+      let statsUiTimer = 0;
+      const _dummyMat = new THREE.Matrix4();
+      const _tmpVec = new THREE.Vector3();
+      const _tmpColor = new THREE.Color();
+
+      function animate(now) {
+        requestAnimationFrame(animate);
+        if (!lastTime) lastTime = now;
+        const rawDt = Math.min(0.05, (now - lastTime) / 1000);
+        lastTime = now;
+
+        const simDt = state.isPaused ? 0 : rawDt * state.simSpeed;
+        const elapsed = now * 0.001;
+
+        // 1. 更新 3D 攝影機阻尼控制
+        controls.update();
+
+        // 2. 更新微觀場景視覺動畫（原子核微幅熱振動、電子雲與布丁電子）
+        if (state.viewMode === 'micro') {
+          if (state.atomicModel === 'rutherford') {
+            // 質子與中子微幅熱振動
+            const jitterAmp = 0.032;
+            for (let i = 0; i < protonBasePos.length; i++) {
+              const item = protonBasePos[i];
+              const p = item.pos;
+              const ph = item.phase;
+              _dummyMat.makeTranslation(
+                p.x + Math.sin(elapsed * 8.5 + ph) * jitterAmp,
+                p.y + Math.cos(elapsed * 7.8 + ph * 1.3) * jitterAmp,
+                p.z + Math.sin(elapsed * 9.2 + ph * 0.7) * jitterAmp
+              );
+              protonMesh.setMatrixAt(i, _dummyMat);
+            }
+            protonMesh.instanceMatrix.needsUpdate = true;
+
+            for (let i = 0; i < neutronBasePos.length; i++) {
+              const item = neutronBasePos[i];
+              const p = item.pos;
+              const ph = item.phase;
+              _dummyMat.makeTranslation(
+                p.x + Math.cos(elapsed * 8.1 + ph) * jitterAmp,
+                p.y + Math.sin(elapsed * 8.9 + ph * 1.1) * jitterAmp,
+                p.z + Math.cos(elapsed * 7.4 + ph * 0.9) * jitterAmp
+              );
+              neutronMesh.setMatrixAt(i, _dummyMat);
+            }
+            neutronMesh.instanceMatrix.needsUpdate = true;
+
+            // 電位光暈呼吸
+            const pulse = 1 + Math.sin(elapsed * 2.5) * 0.04;
+            const baseScale = 5.5 + getCurrentElement().visualRadius * 4.2;
+            nucleusHaloSprite.scale.set(baseScale * pulse, baseScale * pulse, 1);
+
+            // 電子雲旋轉與電子點軌道運動
+            electronCloudGroup.rotation.y += rawDt * 0.06;
+            for (const ed of electronDots) {
+              const ang = ed.phase + elapsed * ed.speed;
+              const x = Math.cos(ang) * ed.r;
+              const z = Math.sin(ang) * ed.r;
+              const y = Math.sin(ang + ed.asc) * ed.r * Math.sin(ed.incl) * 0.65;
+              ed.mesh.position.set(x, y, z);
+            }
+          } else {
+            // 湯姆森模型內部負電子微振
+            thomsonGroup.rotation.y += rawDt * 0.04;
+            for (const te of thomsonElectrons) {
+              const s = Math.sin(elapsed * te.freq + te.phase) * 0.22;
+              te.group.position.set(te.base.x + s, te.base.y + s * 0.7, te.base.z - s * 0.5);
+            }
+          }
+
+          // 物理模擬推進：微觀粒子
+          if (simDt > 0) {
+            if (state.emissionMode === 'beam') {
+              emitAccum += simDt * state.emissionRate;
+              while (emitAccum >= 1.0) {
+                spawnMicroAlpha(null, false);
+                emitAccum -= 1.0;
+              }
+            }
+            updateMicroParticles(simDt);
+          }
+          updateMicroTrails(rawDt);
+        } else {
+          // 巨觀場景：射源發光呼吸
+          if (macroSourceGlow) {
+            const p = 4.3 + Math.sin(elapsed * 4.5) * 0.45;
+            macroSourceGlow.scale.set(p, p, 1);
+          }
+          if (simDt > 0) {
+            emitAccum += simDt * state.emissionRate;
+            while (emitAccum >= 1.0) {
+              spawnMacroAlpha();
+              emitAccum -= 1.0;
+            }
+            updateMacroParticles(simDt);
+          }
+          updateMacroFlashes(rawDt);
+        }
+
+        // 定期刷新統計 UI（約每 120ms，維持極致流暢）
+        statsUiTimer += rawDt;
+        if (statsDirty && statsUiTimer >= 0.12) {
+          updateStatsUI();
+          statsUiTimer = 0;
+        }
+
+        renderer.render(scene, camera);
+      }
+
+      function updateMicroParticles(dt) {
+        const boundSq = PHYSICS.MICRO_BOUND_R * PHYSICS.MICRO_BOUND_R;
+        for (let i = 0; i < MAX_MICRO_PARTICLES; i++) {
+          const p = microParticles[i];
+          if (!p.active) continue;
+
+          integrateRK4Adaptive(p.pos, p.vel, dt);
+          p.mesh.position.copy(p.pos);
+          p.mesh.rotation.x += dt * 4.2;
+          p.mesh.rotation.y += dt * 3.5;
+
+          // 計算當前偏轉角（相對於入射方向 +X）
+          const vLen = p.vel.length();
+          const cosTheta = vLen > 1e-6 ? Math.max(-1, Math.min(1, p.vel.x / vLen)) : 1;
+          const angleDeg = (Math.acos(cosTheta) * 180) / Math.PI;
+
+          // 更新發光軌跡點與顏色
+          if (p.trailIndex >= 0) {
+            const tr = microTrails[p.trailIndex];
+            p.sampleTimer += dt;
+            if (p.sampleTimer >= 0.012 && tr.pointCount < TRAIL_MAX_PTS) {
+              p.sampleTimer = 0;
+              const idx = tr.pointCount * 3;
+              tr.positions[idx] = p.pos.x;
+              tr.positions[idx + 1] = p.pos.y;
+              tr.positions[idx + 2] = p.pos.z;
+              tr.pointCount++;
+            }
+            // 即時根據當前偏轉角平滑更新整條軌跡顏色與尾端漸隱
+            getAngleColor(angleDeg, tr.baseColor);
+            for (let k = 0; k < tr.pointCount; k++) {
+              const fade = 0.28 + 0.72 * (k / Math.max(1, tr.pointCount - 1));
+              tr.colors[k * 3] = tr.baseColor.r * fade;
+              tr.colors[k * 3 + 1] = tr.baseColor.g * fade;
+              tr.colors[k * 3 + 2] = tr.baseColor.b * fade;
+            }
+            tr.line.geometry.setDrawRange(0, tr.pointCount);
+            tr.line.geometry.attributes.position.needsUpdate = true;
+            tr.line.geometry.attributes.color.needsUpdate = true;
+          }
+
+          // 離開邊界時紀錄最終散射角並回收粒子
+          const rSq = p.pos.lengthSq();
+          if (rSq > boundSq) {
+            if (!p.counted) {
+              p.counted = true;
+              recordScatteringStat(angleDeg);
+              if (p.isSingleShot) {
+                state.lastMeasuredTheta = angleDeg;
+                document.getElementById('measured-theta').textContent = angleDeg.toFixed(1) + '°';
+              }
+            }
+            if (p.trailIndex >= 0) {
+              microTrails[p.trailIndex].attached = false;
+            }
+            p.active = false;
+            p.mesh.visible = false;
+            p.trailIndex = -1;
+          }
+        }
+      }
+
+      function updateMicroTrails(dt) {
+        for (let i = 0; i < MAX_TRAILS; i++) {
+          const tr = microTrails[i];
+          if (!tr.active || tr.attached) continue;
+          tr.ageAfterDetach += dt;
+          const life = 1.0 - tr.ageAfterDetach / tr.maxFadeAge;
+          if (life <= 0) {
+            tr.active = false;
+            tr.line.visible = false;
+            tr.line.geometry.setDrawRange(0, 0);
+          } else {
+            tr.line.material.opacity = 0.9 * life;
+          }
+        }
+      }
+
+      function updateMacroParticles(dt) {
+        const R = PHYSICS.MACRO_SCREEN_RADIUS;
+        for (let i = 0; i < MAX_MACRO_PARTICLES; i++) {
+          const mp = macroParticles[i];
+          if (!mp.active) continue;
+
+          const prevX = mp.pos.x;
+          mp.pos.addScaledVector(mp.vel, dt);
+
+          // 穿過中央金箔（x = 0）時依拉塞福散射角度機率分布偏轉
+          if (!mp.scattered && prevX < 0 && mp.pos.x >= 0) {
+            mp.scattered = true;
+            const thetaDeg = sampleMacroScatteringAngleDeg();
+            const thetaRad = (thetaDeg * Math.PI) / 180;
+            // 在水平面附近的方位角分布（主要集中於螢幕高度內）
+            const phi = (Math.random() < 0.5 ? 0 : Math.PI) + (Math.random() - 0.5) * 0.42;
+            const speed = mp.vel.length();
+
+            const vx = Math.cos(thetaRad) * speed;
+            const radial = Math.sin(thetaRad) * speed;
+            // 稍微壓低 Y 分量使多數擊中環形螢幕壁面
+            const vy = Math.sin(phi) * radial * 0.22 + (Math.random() - 0.5) * 2.2;
+            const vz = Math.cos(phi) * radial * (Math.random() < 0.5 ? 1 : -1);
+
+            mp.vel.set(vx, vy, vz);
+            mp.scatterAngleDeg = thetaDeg;
+            mp.pos.x = 0.05;
+          }
+
+          mp.mesh.position.copy(mp.pos);
+
+          // 檢查是否擊中環形 ZnS 螢光屏
+          const horizR = Math.hypot(mp.pos.x, mp.pos.z);
+          if (mp.scattered && horizR >= R) {
+            // 計算精準碰撞點於圓柱面上
+            const scale = R / horizR;
+            _tmpVec.set(mp.pos.x * scale, Math.max(-PHYSICS.MACRO_SCREEN_HEIGHT * 0.46, Math.min(PHYSICS.MACRO_SCREEN_HEIGHT * 0.46, mp.pos.y)), mp.pos.z * scale);
+
+            // 若不在入射窄口缺口內，產生螢光綠閃爍與餘暉
+            const hitAngleFromNegX = Math.atan2(Math.abs(_tmpVec.z), -_tmpVec.x);
+            if (hitAngleFromNegX > 0.14) {
+              triggerScintillationFlash(_tmpVec);
+              paintZnSScintillation(_tmpVec);
+            }
+
+            // 檢查是否落在顯微鏡觀察視野內 (±8°)
+            const scopeRad = (state.microscopeAngleDeg * Math.PI) / 180;
+            const scopeDirX = Math.cos(scopeRad);
+            const scopeDirZ = -Math.sin(scopeRad);
+            const hitDirX = _tmpVec.x / R;
+            const hitDirZ = _tmpVec.z / R;
+            const dot = scopeDirX * hitDirX + scopeDirZ * hitDirZ;
+            const diffDeg = (Math.acos(Math.max(-1, Math.min(1, dot))) * 180) / Math.PI;
+            if (diffDeg <= 8.0) {
+              state.microscopeHits++;
+            }
+
+            recordScatteringStat(mp.scatterAngleDeg);
+            mp.active = false;
+            mp.mesh.visible = false;
+          } else if (mp.pos.length() > 38) {
+            mp.active = false;
+            mp.mesh.visible = false;
+          }
+        }
+      }
+
+      function updateMacroFlashes(dt) {
+        for (let i = 0; i < MAX_FLASHES; i++) {
+          const fl = macroFlashes[i];
+          if (!fl.active) continue;
+          fl.age += dt;
+          const t = fl.age / fl.duration;
+          if (t >= 1) {
+            fl.active = false;
+            fl.sprite.visible = false;
+          } else {
+            // 閃爍快速亮起後優雅指數衰減
+            const alpha = Math.pow(1 - t, 1.7);
+            const s = 1.6 + 2.2 * Math.sin(Math.min(1, t * 2.5) * Math.PI * 0.5) * (1 - t * 0.4);
+            fl.sprite.scale.set(s, s, 1);
+            fl.sprite.material.opacity = alpha;
+          }
+        }
+      }
+
+      // =========================================================================
+      // 9. UI 狀態同步與互動綁定
+      // =========================================================================
+      let toastTimer = null;
+      function showToast(msg) {
+        const box = document.getElementById('toast-box');
+        document.getElementById('toast-text').textContent = msg;
+        box.classList.remove('toast-hide');
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => box.classList.add('toast-hide'), 2400);
+      }
+
+      function resetCameraToDefault() {
+        if (state.viewMode === 'micro') {
+          if (state.emissionMode === 'single') {
+            controls.flyTo(new THREE.Vector3(0, 2, 54), new THREE.Vector3(0, 2, 0));
+          } else {
+            controls.flyTo(new THREE.Vector3(4, 14, 56), new THREE.Vector3(0, 0, 0));
+          }
+        } else {
+          controls.flyTo(new THREE.Vector3(6, 30, 44), new THREE.Vector3(-2, -1, 0));
+        }
+      }
+
+      function updateModelVisuals() {
+        const isRuth = state.atomicModel === 'rutherford';
+        if (rutherfordGroup) rutherfordGroup.visible = isRuth;
+        if (thomsonGroup) thomsonGroup.visible = !isRuth;
+
+        document.getElementById('btn-model-rutherford').className =
+          'seg-btn rounded-xl px-3 py-1.5 text-xs sm:text-sm font-medium border border-transparent cursor-pointer ' +
+          (isRuth ? 'active-ruby' : 'text-slate-300 hover:text-white');
+        document.getElementById('btn-model-thomson').className =
+          'seg-btn rounded-xl px-3 py-1.5 text-xs sm:text-sm font-medium border border-transparent cursor-pointer ' +
+          (!isRuth ? 'active-cyan' : 'text-slate-300 hover:text-white');
+
+        document.getElementById('model-info-title').textContent = isRuth
+          ? '拉塞福核式模型（1911）'
+          : '湯姆森葡萄乾布丁模型（1904）';
+        document.getElementById('model-info-desc').textContent = isRuth
+          ? '原子幾乎全為空曠空間，全部正電荷與絕大部分質量集中於極微小的原子核。當 α 粒子以極小撞擊參數 b 靠近核心時，強烈庫侖斥力使其大幅偏轉甚至 180° 反彈。'
+          : '正電荷均勻分布於整個原子球體，負電子如葡萄乾般鑲嵌其中。依高斯定律，球內電場與半徑 r 成正比且強度遠低於原子核，因此幾乎所有 α 粒子皆直線穿透（偏轉 < 1°）。';
+
+        updateSingleAimingGuides();
+      }
+
+      function updateViewModeUI() {
+        const isMicro = state.viewMode === 'micro';
+        microGroup.visible = isMicro;
+        macroGroup.visible = !isMicro;
+
+        document.getElementById('btn-view-micro').className =
+          'seg-btn rounded-xl px-3 py-1.5 text-xs sm:text-sm font-medium border border-transparent flex items-center gap-1.5 cursor-pointer ' +
+          (isMicro ? 'active-gold' : 'text-slate-300 hover:text-white');
+        document.getElementById('btn-view-macro').className =
+          'seg-btn rounded-xl px-3 py-1.5 text-xs sm:text-sm font-medium border border-transparent flex items-center gap-1.5 cursor-pointer ' +
+          (!isMicro ? 'active-emerald' : 'text-slate-300 hover:text-white');
+
+        document.getElementById('section-micro-mode').classList.toggle('hidden', !isMicro);
+        document.getElementById('section-macro-controls').classList.toggle('hidden', isMicro);
+        document.getElementById('wrap-rate-slider').classList.toggle('hidden', isMicro && state.emissionMode === 'single');
+        document.getElementById('single-theory-card').classList.toggle('hidden', !(isMicro && state.emissionMode === 'single'));
+
+        const scaleNote = document.getElementById('scale-note-text');
+        const scaleDot = document.getElementById('scale-dot');
+        if (isMicro) {
+          scaleDot.className = 'w-2 h-2 rounded-full bg-amber-400 shrink-0';
+          scaleNote.textContent = '比例尺說明：為利觀察已將原子核大幅放大，實際原子核直徑僅約原子的十萬分之一 (10⁻⁵)';
+        } else {
+          scaleDot.className = 'w-2 h-2 rounded-full bg-emerald-400 shrink-0';
+          scaleNote.textContent = '1909 實驗裝置：鉛盒內釙-210 射出 α 粒子穿過極薄金箔，擊中 360° 硫化鋅 (ZnS) 螢光屏產生綠光閃爍';
+        }
+
+        updateSingleAimingGuides();
+        resetCameraToDefault();
+      }
+
+      function updateEmissionModeUI() {
+        const isSingle = state.emissionMode === 'single';
+        document.getElementById('btn-mode-beam').className =
+          'seg-btn rounded-lg py-1.5 text-xs font-semibold border border-transparent cursor-pointer ' +
+          (!isSingle ? 'active-gold' : 'text-slate-300 hover:text-white');
+        document.getElementById('btn-mode-single').className =
+          'seg-btn rounded-lg py-1.5 text-xs font-semibold border border-transparent cursor-pointer ' +
+          (isSingle ? 'active-cyan' : 'text-slate-300 hover:text-white');
+
+        document.getElementById('section-single-controls').classList.toggle('hidden', !isSingle);
+        document.getElementById('wrap-rate-slider').classList.toggle('hidden', state.viewMode === 'micro' && isSingle);
+        document.getElementById('single-theory-card').classList.toggle('hidden', !(state.viewMode === 'micro' && isSingle));
+        document.getElementById('badge-mode-hint').textContent = isSingle ? '精準軌跡分析' : '統計觀察';
+
+        updateSingleAimingGuides();
+        if (isSingle) {
+          controls.flyTo(new THREE.Vector3(0, 2, 54), new THREE.Vector3(0, 2, 0));
+        }
+      }
+
+      function updateTheoryCard() {
+        const el = getCurrentElement();
+        const res = calcAnalyticalScattering(state.impactParamFm, el.Z, state.energyMeV, state.atomicModel);
+        const isRuth = state.atomicModel === 'rutherford';
+
+        document.getElementById('formula-rutherford').classList.toggle('hidden', !isRuth);
+        document.getElementById('formula-thomson').classList.toggle('hidden', isRuth);
+        document.getElementById('theory-model-tag').textContent = isRuth ? '雙曲線軌跡' : '近似直線穿透';
+
+        document.getElementById('theory-theta').textContent = res.thetaDeg < 0.1 && !isRuth
+          ? '< 0.1°'
+          : res.thetaDeg.toFixed(1) + '°';
+        document.getElementById('theory-rmin').textContent = res.rMinFm.toFixed(1) + ' fm';
+        document.getElementById('theory-d0').textContent = res.d0.toFixed(1) + ' fm';
+      }
+
+      function bindUIEvents() {
+        // 視角切換
+        document.getElementById('btn-view-micro').addEventListener('click', () => {
+          if (state.viewMode === 'micro') return;
+          state.viewMode = 'micro';
+          updateViewModeUI();
+          showToast('已切換至【微觀原子視角】');
+        });
+        document.getElementById('btn-view-macro').addEventListener('click', () => {
+          if (state.viewMode === 'macro') return;
+          state.viewMode = 'macro';
+          updateViewModeUI();
+          showToast('已切換至【巨觀 1909 實驗裝置視角】');
+        });
+
+        // 原子模型對照切換
+        document.getElementById('btn-model-rutherford').addEventListener('click', () => {
+          if (state.atomicModel === 'rutherford') return;
+          state.atomicModel = 'rutherford';
+          clearAllTrailsAndStats();
+          updateModelVisuals();
+          showToast('已切換為【拉塞福核式模型 1911】，已重置統計以利對照');
+        });
+        document.getElementById('btn-model-thomson').addEventListener('click', () => {
+          if (state.atomicModel === 'thomson') return;
+          state.atomicModel = 'thomson';
+          clearAllTrailsAndStats();
+          updateModelVisuals();
+          showToast('已切換為【湯姆森葡萄乾布丁模型 1904】，觀察近乎無偏轉現象');
+        });
+
+        // 重置視角
+        document.getElementById('btn-reset-cam').addEventListener('click', () => {
+          resetCameraToDefault();
+          showToast('已重置 3D 觀察視角');
+        });
+
+        // 一鍵摺疊 / 展開控制面板（教室全螢幕投影）
+        document.getElementById('btn-toggle-panels').addEventListener('click', togglePanels);
+
+        // 暫停 / 繼續
+        document.getElementById('btn-play-pause').addEventListener('click', togglePlayPause);
+
+        // 清除軌跡與統計
+        document.getElementById('btn-clear-all').addEventListener('click', () => {
+          clearAllTrailsAndStats();
+          showToast('已清除所有軌跡、螢光熱區與統計資料');
+        });
+
+        // 發射模式切換（微觀）
+        document.getElementById('btn-mode-beam').addEventListener('click', () => {
+          state.emissionMode = 'beam';
+          updateEmissionModeUI();
+        });
+        document.getElementById('btn-mode-single').addEventListener('click', () => {
+          state.emissionMode = 'single';
+          // 清除舊粒子避免干擾單顆瞄準
+          for (const p of microParticles) { p.active = false; p.mesh.visible = false; }
+          updateEmissionModeUI();
+          showToast('單顆精準瞄準模式：調整撞擊參數 b 並點擊發射');
+        });
+
+        // 撞擊參數 b 滑桿與捷徑
+        const sliderB = document.getElementById('slider-b');
+        sliderB.addEventListener('input', (e) => {
+          state.impactParamFm = parseFloat(e.target.value);
+          document.getElementById('val-b').textContent = state.impactParamFm.toFixed(1);
+          updateSingleAimingGuides();
+        });
+
+        document.querySelectorAll('.preset-b-btn').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const preset = btn.dataset.presetB;
+            let bVal = 0;
+            if (preset === '90deg') {
+              const el = getCurrentElement();
+              bVal = Math.min(220, Math.round(calcHeadOnD0(el.Z, state.energyMeV) * 0.5 * 2) / 2);
+            } else {
+              bVal = parseFloat(preset);
+            }
+            state.impactParamFm = bVal;
+            sliderB.value = bVal;
+            document.getElementById('val-b').textContent = bVal.toFixed(1);
+            updateSingleAimingGuides();
+          });
+        });
+
+        // 發射單顆 α 粒子
+        document.getElementById('btn-fire-single').addEventListener('click', () => {
+          if (state.isPaused) togglePlayPause();
+          spawnMicroAlpha(state.impactParamFm, true);
+        });
+
+        // 預覽輔助線開關
+        document.getElementById('chk-preview-guides').addEventListener('change', (e) => {
+          state.showGuides = e.target.checked;
+          updateSingleAimingGuides();
+        });
+
+        // 巨觀觀察顯微鏡角度滑桿與捷徑
+        const sliderScope = document.getElementById('slider-scope-angle');
+        sliderScope.addEventListener('input', (e) => {
+          state.microscopeAngleDeg = parseInt(e.target.value, 10);
+          document.getElementById('val-scope-angle').textContent = state.microscopeAngleDeg;
+          state.microscopeHits = 0;
+          document.getElementById('val-scope-hits').textContent = '0';
+          updateMicroscopeTransform();
+        });
+
+        document.querySelectorAll('.scope-preset-btn').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const ang = parseInt(btn.dataset.scopeAngle, 10);
+            state.microscopeAngleDeg = ang;
+            sliderScope.value = ang;
+            document.getElementById('val-scope-angle').textContent = ang;
+            state.microscopeHits = 0;
+            document.getElementById('val-scope-hits').textContent = '0';
+            updateMicroscopeTransform();
+          });
+        });
+
+        // 靶材元素快速切換
+        document.querySelectorAll('.el-btn').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const key = btn.dataset.element;
+            state.elementKey = key;
+            const el = ELEMENTS[key];
+            document.getElementById('val-element-label').textContent = `${el.name} ${el.symbol} (Z = ${el.Z})`;
+
+            document.querySelectorAll('.el-btn').forEach((b) => {
+              const active = b.dataset.element === key;
+              b.className = 'el-btn rounded-xl py-2 px-1 text-center border transition cursor-pointer ' +
+                (active ? 'seg-btn active-gold border-amber-400/70' : 'border-slate-600/60 bg-slate-800/70 hover:bg-slate-700/80');
+            });
+
+            updateElementVisuals();
+            updateSingleAimingGuides();
+            showToast(`已更換靶材為【${el.name} ${el.symbol} (Z=${el.Z})】`);
+          });
+        });
+
+        // 動能滑桿
+        document.getElementById('slider-energy').addEventListener('input', (e) => {
+          state.energyMeV = parseFloat(e.target.value);
+          document.getElementById('val-energy').textContent = state.energyMeV.toFixed(1);
+          updateSingleAimingGuides();
+        });
+
+        // 發射頻率滑桿
+        document.getElementById('slider-rate').addEventListener('input', (e) => {
+          state.emissionRate = parseInt(e.target.value, 10);
+          document.getElementById('val-rate').textContent = state.emissionRate;
+        });
+
+        // 模擬速度滑桿
+        document.getElementById('slider-speed').addEventListener('input', (e) => {
+          state.simSpeed = parseFloat(e.target.value);
+          document.getElementById('val-speed').textContent = state.simSpeed.toFixed(1);
+        });
+
+        // 長條圖線性 / 對數刻度切換
+        document.getElementById('btn-scale-linear').addEventListener('click', () => {
+          state.histScale = 'linear';
+          document.getElementById('btn-scale-linear').className = 'seg-btn active-cyan rounded-md px-2 py-0.5 text-[11px] font-medium border border-transparent cursor-pointer';
+          document.getElementById('btn-scale-log').className = 'seg-btn rounded-md px-2 py-0.5 text-[11px] font-medium border border-transparent text-slate-400 hover:text-white cursor-pointer';
+          drawHistogram();
+        });
+        document.getElementById('btn-scale-log').addEventListener('click', () => {
+          state.histScale = 'log';
+          document.getElementById('btn-scale-log').className = 'seg-btn active-cyan rounded-md px-2 py-0.5 text-[11px] font-medium border border-transparent cursor-pointer';
+          document.getElementById('btn-scale-linear').className = 'seg-btn rounded-md px-2 py-0.5 text-[11px] font-medium border border-transparent text-slate-400 hover:text-white cursor-pointer';
+          drawHistogram();
+        });
+
+        // 鍵盤快速鍵（方便課堂大屏簡報操控）
+        window.addEventListener('keydown', (e) => {
+          if (e.target.tagName === 'INPUT') return;
+          if (e.code === 'Space') {
+            e.preventDefault();
+            togglePlayPause();
+          } else if (e.key === 'r' || e.key === 'R') {
+            resetCameraToDefault();
+          } else if (e.key === 'f' || e.key === 'F') {
+            togglePanels();
+          } else if (e.key === 'Enter' && state.viewMode === 'micro' && state.emissionMode === 'single') {
+            if (state.isPaused) togglePlayPause();
+            spawnMicroAlpha(state.impactParamFm, true);
+          }
+        });
+
+        // 視窗縮放自適應
+        window.addEventListener('resize', onWindowResize);
+      }
+
+      function togglePanels() {
+        state.panelsVisible = !state.panelsVisible;
+        document.getElementById('left-panel').classList.toggle('panel-hidden-left', !state.panelsVisible);
+        document.getElementById('right-panel').classList.toggle('panel-hidden-right', !state.panelsVisible);
+        document.getElementById('label-toggle-panels').textContent = state.panelsVisible ? '隱藏面板' : '顯示面板';
+      }
+
+      function togglePlayPause() {
+        state.isPaused = !state.isPaused;
+        document.getElementById('icon-pause').classList.toggle('hidden', state.isPaused);
+        document.getElementById('icon-play').classList.toggle('hidden', !state.isPaused);
+        document.getElementById('label-play-pause').textContent = state.isPaused ? '繼續模擬' : '暫停模擬';
+      }
+
+      function onWindowResize() {
+        const container = document.getElementById('canvas-container');
+        if (!container || !renderer || !camera) return;
+        const w = container.clientWidth;
+        const h = container.clientHeight;
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+        renderer.setSize(w, h);
+        drawHistogram();
+      }
+
+      // =========================================================================
+      // 10. 啟動點（於 window.onload 後安全啟動）
+      // =========================================================================
+      window.onload = function () {
+        try {
+          // 行動裝置窄螢幕預設先收合面板，讓 3D 畫面完整呈現
+          if (window.innerWidth < 768) {
+            state.panelsVisible = false;
+            document.getElementById('left-panel').classList.add('panel-hidden-left');
+            document.getElementById('right-panel').classList.add('panel-hidden-right');
+            document.getElementById('label-toggle-panels').textContent = '顯示面板';
+          }
+
+          initThree();
+          bindUIEvents();
+          updateStatsUI();
+          requestAnimationFrame(animate);
+        } catch (err) {
+          console.error('3D 模擬初始化發生錯誤：', err);
+          showToast('WebGL 初始化失敗，請確認瀏覽器支援硬體加速');
+        }
+      };
+    })();
+  </script>
+</body>
+</html>

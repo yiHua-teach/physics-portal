@@ -172,7 +172,7 @@ function resizeAndCenterPng(srcPng, targetW, targetH) {
             const w11 = wx * wy;
 
             const di = ((offsetY + dy) * targetW + (offsetX + dx)) * 4;
-            out[di]     = Math.round(srcData[i00] * w00 + srcData[i10] * w10 + srcData[i01] * w01 + srcData[i11] * w11);
+            out[di] = Math.round(srcData[i00] * w00 + srcData[i10] * w10 + srcData[i01] * w01 + srcData[i11] * w11);
             out[di + 1] = Math.round(srcData[i00 + 1] * w00 + srcData[i10 + 1] * w10 + srcData[i01 + 1] * w01 + srcData[i11 + 1] * w11);
             out[di + 2] = Math.round(srcData[i00 + 2] * w00 + srcData[i10 + 2] * w10 + srcData[i01 + 2] * w01 + srcData[i11 + 2] * w11);
             out[di + 3] = 255;
@@ -250,12 +250,16 @@ async function findPrimaryVisualRegion(page) {
                 const overlaySelectors = [
                     '#controls-sidebar',
                     'aside.glass-panel',
+                    '#left-panel',
+                    '#right-panel',
+                    '#bottom-scale-badge',
                     'header',
                     '.floating-controls',
                     '#hud-panel',
                     '#toolbar',
                     '.toolbar',
-                    '.glass-panel'
+                    '.glass-panel',
+                    '.lab-panel'
                 ];
                 overlaySelectors.forEach(sel => {
                     document.querySelectorAll(sel).forEach(el => {
@@ -356,7 +360,7 @@ async function createGifForHtml(browser, pageUrl, htmlPath, gifPath) {
             await page.waitForFunction(
                 () => document.getElementById('standbyOverlay')?.classList.contains('hidden'),
                 { timeout: 25000 }
-            ).catch(() => {});
+            ).catch(() => { });
             await new Promise(r => setTimeout(r, 800));
         } else {
             await new Promise(r => setTimeout(r, 350));
@@ -407,7 +411,7 @@ async function createGifForHtml(browser, pageUrl, htmlPath, gifPath) {
         const elapsed = ((Date.now() - startTs) / 1000).toFixed(1);
         console.log(`✅ 完成置中 GIF: ${path.basename(gifPath)} (${Math.round(gifBuffer.length / 1024)} KB, ${elapsed}s)`);
     } finally {
-        await page.close().catch(() => {});
+        await page.close().catch(() => { });
     }
 }
 
@@ -462,7 +466,7 @@ async function processAllFiles() {
             }
         }
     } finally {
-        if (browser) await browser.close().catch(() => {});
+        if (browser) await browser.close().catch(() => { });
         server.close();
     }
 
