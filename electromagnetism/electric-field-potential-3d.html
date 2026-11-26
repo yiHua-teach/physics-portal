@@ -1,0 +1,2544 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>電力線與電位 2D/3D 互動教學實驗室</title>
+  <meta name="description" content="即時同步 2D 電場／等位線平面與 3D 電位山峰山谷地形：可拖曳場源電荷 Q、點擊釋放測試電荷 q（比較純慣性與微阻尼軌跡），並使用 2D↔3D 連動物理探針即時量測電位與場強。" />
+  <meta name="portal-tags" content="電磁學, 電力線, 電位地形, 等位線, 3D視覺" />
+  <meta name="portal-badge" content="2D/3D 雙視角" />
+  <meta name="portal-featured" content="true" />
+
+  <!-- 字體：Inter + 思源黑體繁體 (Noto Sans TC) 確保大螢幕與投影機清晰易讀 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Three.js 與 OrbitControls -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+  <style>
+    :root {
+      color-scheme: dark;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background-color: #0b1120;
+      color: #e2e8f0;
+      font-family: 'Inter', 'Noto Sans TC', system-ui, -apple-system, sans-serif;
+      overflow-x: hidden;
+    }
+
+    /* 畫布防觸控捲動干擾 */
+    .interactive-canvas {
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* 自訂滑桿樣式 */
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      background: rgba(51, 65, 85, 0.85);
+      height: 6px;
+      border-radius: 999px;
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #38bdf8;
+      border: 2px solid #0f172a;
+      cursor: pointer;
+      box-shadow: 0 0 8px rgba(56, 189, 248, 0.7);
+      transition: transform 0.12s ease;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #38bdf8;
+      border: 2px solid #0f172a;
+      cursor: pointer;
+      box-shadow: 0 0 8px rgba(56, 189, 248, 0.7);
+    }
+
+    /* 玻璃擬態面板 */
+    .glass-panel {
+      background: rgba(15, 23, 42, 0.82);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+    }
+
+    /* 隱藏捲動條但可捲動 */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    /* 輕量吐司訊息動畫 */
+    @keyframes fadeSlideUp {
+      from { opacity: 0; transform: translate(-50%, 10px); }
+      to { opacity: 1; transform: translate(-50%, 0); }
+    }
+    .toast-anim {
+      animation: fadeSlideUp 0.22s ease-out forwards;
+    }
+  </style>
+</head>
+<body class="flex flex-col min-h-screen lg:h-screen lg:overflow-hidden bg-[#0b1120] text-slate-100">
+
+  <!-- ================= 頂部導覽與視角切換列 ================= -->
+  <header class="shrink-0 z-30 border-b border-slate-800/90 bg-slate-950/90 backdrop-blur-md px-3 sm:px-5 py-2.5">
+    <div class="flex flex-wrap items-center justify-between gap-2.5">
+      <!-- 標題區塊 -->
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-rose-500 via-amber-400 to-sky-400 p-[1.5px] shadow-lg shadow-sky-500/20 shrink-0">
+          <div class="w-full h-full rounded-[10px] bg-slate-950 flex items-center justify-center">
+            <svg class="w-5 h-5 text-sky-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="7" cy="12" r="3" class="text-rose-400" stroke="currentColor" />
+              <circle cx="17" cy="12" r="3" class="text-sky-400" stroke="currentColor" />
+              <path d="M10 12h4M7 9c2.5-3.5 7.5-3.5 10 0M7 15c2.5 3.5 7.5-3.5 10 0" stroke-linecap="round" />
+            </svg>
+          </div>
+        </div>
+        <div>
+          <h1 class="text-sm sm:text-base lg:text-lg font-bold tracking-wide text-white leading-tight">
+            電力線與電位 2D/3D 互動教學實驗室
+          </h1>
+          <p class="text-[11px] sm:text-xs text-slate-400 hidden sm:block">
+            即時同步 2D 電場／等位線平面與 3D 電位山峰山谷地形
+          </p>
+        </div>
+      </div>
+
+      <!-- 視角切換按鈕群組 -->
+      <div class="flex items-center bg-slate-900/90 border border-slate-700/70 rounded-xl p-1 gap-1" role="group" aria-label="版面視角切換">
+        <button id="btnViewSplit" class="view-tab px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all bg-sky-500/20 text-sky-300 border border-sky-400/40 shadow-sm">
+          雙視角對照 (2D+3D)
+        </button>
+        <button id="btnView2D" class="view-tab px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all text-slate-400 hover:text-slate-100 border border-transparent">
+          純 2D 平面
+        </button>
+        <button id="btnView3D" class="view-tab px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all text-slate-400 hover:text-slate-100 border border-transparent">
+          純 3D 地形
+        </button>
+      </div>
+
+      <!-- 教學重點與快捷操作 -->
+      <div class="flex items-center gap-2">
+        <button id="btnOpenTips" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs sm:text-sm font-medium bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-400/35 transition-all shadow-sm">
+          <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+          <span>教學重點</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= 主工作區：2D 平面 + 3D 地形 ================= -->
+  <main id="workspaceGrid" class="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-2 gap-2.5 p-2.5 overflow-hidden">
+
+    <!-- 左側／上方：2D 電場與等位線平面 -->
+    <section id="panel2D" class="relative rounded-2xl overflow-hidden border border-slate-700/70 bg-slate-950 shadow-2xl min-h-[380px] lg:min-h-0 flex flex-col">
+      <!-- 頂部標籤與操作提示 -->
+      <div class="pointer-events-none absolute top-2.5 left-2.5 right-2.5 z-10 flex flex-wrap items-start justify-between gap-2">
+        <div class="glass-panel rounded-xl px-3 py-1.5 flex items-center gap-2 shadow-lg">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]"></span>
+          <span class="text-xs sm:text-sm font-semibold text-white">2D 電場與等位線平面</span>
+        </div>
+
+        <div class="glass-panel rounded-xl px-3 py-1.5 text-[11px] sm:text-xs text-slate-200 shadow-lg">
+          <span class="text-sky-300 font-medium">拖曳電荷 Q 移動</span>
+          <span class="mx-1.5 text-slate-500">｜</span>
+          <span class="text-amber-300 font-medium">點擊空白處放置測試電荷 q</span>
+        </div>
+      </div>
+
+      <!-- 選取場源電荷 Q 時顯示的快速編輯浮動列 -->
+      <div id="selectedChargeBar" class="hidden absolute top-14 left-2.5 z-20 glass-panel rounded-xl px-3 py-2 shadow-xl border-sky-400/40 flex flex-wrap items-center gap-2.5 max-w-[92%]">
+        <div class="flex items-center gap-1.5">
+          <span id="selChargeDot" class="w-3 h-3 rounded-full bg-rose-500"></span>
+          <span class="text-xs font-semibold text-slate-100">已選取場源：</span>
+          <span id="selChargeVal" class="text-xs font-bold font-mono px-1.5 py-0.5 rounded bg-slate-800 text-rose-300">+2.0 Q</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-[11px] text-slate-400">-5</span>
+          <input id="sliderSelQ" type="range" min="-5" max="5" step="0.5" value="2" class="w-24 sm:w-32" />
+          <span class="text-[11px] text-slate-400">+5</span>
+        </div>
+        <button id="btnFlipSelQ" class="px-2 py-1 rounded-lg text-[11px] font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600/60 transition">
+          正負反轉
+        </button>
+        <button id="btnDeleteSelQ" class="px-2 py-1 rounded-lg text-[11px] font-medium bg-rose-500/20 hover:bg-rose-500/35 text-rose-300 border border-rose-400/40 transition">
+          刪除此電荷
+        </button>
+        <button id="btnCloseSelBar" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition" title="關閉編輯列">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M18 6L6 18M6 6l12 12" stroke-linecap="round" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- 2D Canvas 容器 -->
+      <div id="canvas2DWrap" class="relative flex-1 w-full h-full">
+        <canvas id="canvas2D" class="interactive-canvas cursor-crosshair"></canvas>
+      </div>
+
+      <!-- 左下角：即時物理探針讀數 (與 3D 探針連動) -->
+      <div id="probeHud" class="pointer-events-none absolute bottom-2.5 left-2.5 z-10 glass-panel rounded-xl px-3 py-2 text-[11px] sm:text-xs font-mono shadow-lg transition-opacity duration-200">
+        <div class="flex items-center gap-2 text-slate-400 mb-0.5">
+          <span class="w-2 h-2 rounded-full bg-amber-300"></span>
+          <span class="font-sans font-semibold text-slate-200">即時物理探針 (2D ↔ 3D 連動)</span>
+        </div>
+        <div id="probeReadout" class="grid grid-cols-3 gap-x-3 gap-y-0.5 text-slate-300">
+          <span>位置: <b class="text-white" id="valPos">移動游標探測</b></span>
+          <span>電位 V: <b class="text-amber-300" id="valPot">--</b></span>
+          <span>場強 |E|: <b class="text-sky-300" id="valField">--</b></span>
+        </div>
+      </div>
+
+      <!-- 右下角：活躍測試電荷計數 -->
+      <div class="pointer-events-none absolute bottom-2.5 right-2.5 z-10 glass-panel rounded-xl px-2.5 py-1.5 text-[11px] sm:text-xs text-slate-300 flex items-center gap-2">
+        <span>場源 Q: <b id="countSourceQ" class="text-white font-mono">2</b></span>
+        <span class="text-slate-600">|</span>
+        <span>測試電荷 q: <b id="countTestQ" class="text-emerald-300 font-mono">0</b></span>
+      </div>
+    </section>
+
+    <!-- 右側／下方：3D 電位地形（山峰與山谷） -->
+    <section id="panel3D" class="relative rounded-2xl overflow-hidden border border-slate-700/70 bg-slate-950 shadow-2xl min-h-[380px] lg:min-h-0 flex flex-col">
+      <!-- 頂部標籤與相機視角快捷鍵 -->
+      <div class="pointer-events-none absolute top-2.5 left-2.5 right-2.5 z-10 flex flex-wrap items-start justify-between gap-2">
+        <div class="glass-panel rounded-xl px-3 py-1.5 flex items-center gap-2 shadow-lg">
+          <span class="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-[0_0_8px_#fbbf24]"></span>
+          <span class="text-xs sm:text-sm font-semibold text-white">3D 電位地形（山峰與山谷對照）</span>
+        </div>
+
+        <div class="pointer-events-auto glass-panel rounded-xl p-1 flex items-center gap-1 shadow-lg">
+          <button id="camIso" class="cam-btn px-2.5 py-1 rounded-lg text-[11px] sm:text-xs font-medium bg-sky-500/25 text-sky-200 border border-sky-400/40 transition">
+            斜角立體
+          </button>
+          <button id="camSide" class="cam-btn px-2.5 py-1 rounded-lg text-[11px] sm:text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800/80 border border-transparent transition">
+            側面看山谷
+          </button>
+          <button id="camTop" class="cam-btn px-2.5 py-1 rounded-lg text-[11px] sm:text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800/80 border border-transparent transition">
+            正俯視對齊
+          </button>
+        </div>
+      </div>
+
+      <!-- 3D Three.js 容器 -->
+      <div id="canvas3DWrap" class="relative flex-1 w-full h-full">
+        <canvas id="canvas3D" class="interactive-canvas cursor-grab active:cursor-grabbing"></canvas>
+      </div>
+
+      <!-- 左下角：色階圖例 -->
+      <div class="pointer-events-none absolute bottom-2.5 left-2.5 z-10 glass-panel rounded-xl px-3 py-2 text-[11px] sm:text-xs shadow-lg">
+        <div class="flex items-center gap-2 mb-1">
+          <span class="text-sky-300 font-semibold">山谷 (-V)</span>
+          <div class="w-24 sm:w-32 h-2.5 rounded-full border border-slate-600/80" style="background: linear-gradient(90deg, #1d4ed8 0%, #0ea5e9 25%, #334155 50%, #f59e0b 75%, #ef4444 100%);"></div>
+          <span class="text-rose-300 font-semibold">山峰 (+V)</span>
+        </div>
+        <div class="text-[10px] sm:text-[11px] text-slate-400 flex items-center justify-between gap-2">
+          <span>白線＝V=0 零電位海平面</span>
+          <span class="text-slate-500">｜</span>
+          <span>拖曳旋轉・滾輪縮放</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ================= 底部課堂控制面板 ================= -->
+  <footer class="shrink-0 z-20 border-t border-slate-800/90 bg-slate-950/95 backdrop-blur-md px-3 sm:px-4 py-2.5">
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-2.5">
+
+      <!-- 區塊 1：經典情境 Presets -->
+      <div class="rounded-xl bg-slate-900/75 border border-slate-800 p-2.5 flex flex-col justify-between gap-2">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-slate-300 tracking-wider">經典教學情境</span>
+          <span class="text-[11px] text-slate-500">一鍵切換</span>
+        </div>
+        <div class="flex flex-wrap gap-1.5">
+          <button data-preset="dipole" class="preset-btn px-2.5 py-1.5 rounded-lg text-xs font-medium bg-sky-500/20 text-sky-200 border border-sky-400/45 transition">
+            電偶極 (+Q,-Q)
+          </button>
+          <button data-preset="single" class="preset-btn px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-800/90 hover:bg-slate-700 text-slate-300 border border-slate-700/80 transition">
+            單一正電荷
+          </button>
+          <button data-preset="twinPos" class="preset-btn px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-800/90 hover:bg-slate-700 text-slate-300 border border-slate-700/80 transition">
+            等量正電荷 (鞍點)
+          </button>
+          <button data-preset="asym" class="preset-btn px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-800/90 hover:bg-slate-700 text-slate-300 border border-slate-700/80 transition">
+            不等量 (+3Q,-Q)
+          </button>
+          <button data-preset="quad" class="preset-btn px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-800/90 hover:bg-slate-700 text-slate-300 border border-slate-700/80 transition">
+            四極電場
+          </button>
+        </div>
+      </div>
+
+      <!-- 區塊 2：場源電荷 Q 管理 -->
+      <div class="rounded-xl bg-slate-900/75 border border-slate-800 p-2.5 flex flex-col justify-between gap-2">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-slate-300 tracking-wider">場源電荷 Q 管理</span>
+          <span class="text-[11px] text-slate-500">點選畫布電荷可調電量</span>
+        </div>
+        <div class="flex flex-wrap items-center gap-1.5">
+          <button id="btnAddPosQ" class="flex-1 min-w-[92px] py-1.5 px-2.5 rounded-lg text-xs font-semibold bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border border-rose-400/45 transition flex items-center justify-center gap-1">
+            <span>＋ 加入 +Q</span>
+          </button>
+          <button id="btnAddNegQ" class="flex-1 min-w-[92px] py-1.5 px-2.5 rounded-lg text-xs font-semibold bg-sky-500/20 hover:bg-sky-500/30 text-sky-200 border border-sky-400/45 transition flex items-center justify-center gap-1">
+            <span>－ 加入 -Q</span>
+          </button>
+          <button id="btnClearQ" class="py-1.5 px-2.5 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">
+            清空 Q
+          </button>
+        </div>
+      </div>
+
+      <!-- 區塊 3：測試電荷 q 參數與釋放 -->
+      <div class="rounded-xl bg-slate-900/75 border border-slate-800 p-2.5 flex flex-col justify-between gap-2">
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-xs font-bold text-slate-300 tracking-wider">測試電荷 q 控制</span>
+          <div class="flex items-center gap-1 bg-slate-950/80 p-0.5 rounded-lg border border-slate-700/80">
+            <button id="btnSignPos" class="px-2 py-0.5 rounded-md text-[11px] font-bold bg-amber-500/25 text-amber-200 border border-amber-400/50 transition">+q (順坡滾下)</button>
+            <button id="btnSignNeg" class="px-2 py-0.5 rounded-md text-[11px] font-bold text-slate-400 hover:text-slate-200 border border-transparent transition">-q (逆坡爬升)</button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5 items-center">
+          <label class="flex flex-col gap-1">
+            <div class="flex justify-between text-[11px]">
+              <span class="text-slate-400">電量 |q|</span>
+              <span id="lblTestQ" class="font-mono font-semibold text-amber-300">+0.20</span>
+            </div>
+            <input id="sliderTestQ" type="range" min="0.05" max="1.0" step="0.05" value="0.20" />
+          </label>
+          <label class="flex flex-col gap-1">
+            <div class="flex justify-between text-[11px]">
+              <span class="text-slate-400">質量 m</span>
+              <span id="lblTestM" class="font-mono font-semibold text-emerald-300">0.20</span>
+            </div>
+            <input id="sliderTestM" type="range" min="0.05" max="1.0" step="0.05" value="0.20" />
+          </label>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-1.5">
+          <button id="btnDampingMode" class="px-2 py-1 rounded-lg text-[11px] font-medium bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-200 border border-indigo-400/40 transition" title="切換慣性與阻尼模式">
+            模式：純慣性 (無阻尼)
+          </button>
+          <button id="btnRingRelease" class="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-200 border border-emerald-400/40 transition">
+            環狀釋放
+          </button>
+          <button id="btnPauseSim" class="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
+            暫停
+          </button>
+          <button id="btnClearTest" class="px-2 py-1 rounded-lg text-[11px] font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">
+            清除 q
+          </button>
+        </div>
+      </div>
+
+      <!-- 區塊 4：視覺化圖層開關 -->
+      <div class="rounded-xl bg-slate-900/75 border border-slate-800 p-2.5 flex flex-col justify-between gap-2">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-slate-300 tracking-wider">視覺化圖層顯示</span>
+          <span class="text-[11px] text-slate-500">即時開關</span>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-2 gap-1.5 text-xs">
+          <label class="flex items-center gap-1.5 cursor-pointer select-none px-2 py-1 rounded-lg bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60">
+            <input id="chkFieldLines" type="checkbox" checked class="accent-sky-400 w-3.5 h-3.5 rounded" />
+            <span class="text-slate-200">電力線</span>
+          </label>
+          <label class="flex items-center gap-1.5 cursor-pointer select-none px-2 py-1 rounded-lg bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60">
+            <input id="chkEquipotential" type="checkbox" checked class="accent-amber-400 w-3.5 h-3.5 rounded" />
+            <span class="text-slate-200">2D 等位線</span>
+          </label>
+          <label class="flex items-center gap-1.5 cursor-pointer select-none px-2 py-1 rounded-lg bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60">
+            <input id="chkHeatmap" type="checkbox" checked class="accent-rose-400 w-3.5 h-3.5 rounded" />
+            <span class="text-slate-200">電位色階底圖</span>
+          </label>
+          <label class="flex items-center gap-1.5 cursor-pointer select-none px-2 py-1 rounded-lg bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60">
+            <input id="chk3DContours" type="checkbox" checked class="accent-cyan-400 w-3.5 h-3.5 rounded" />
+            <span class="text-slate-200">3D 等高線</span>
+          </label>
+          <label class="flex items-center gap-1.5 cursor-pointer select-none px-2 py-1 rounded-lg bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60">
+            <input id="chkVectorGrid" type="checkbox" class="accent-indigo-400 w-3.5 h-3.5 rounded" />
+            <span class="text-slate-200">場強箭頭網格</span>
+          </label>
+          <label class="flex items-center gap-1.5 cursor-pointer select-none px-2 py-1 rounded-lg bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60">
+            <input id="chkParticleVec" type="checkbox" checked class="accent-emerald-400 w-3.5 h-3.5 rounded" />
+            <span class="text-slate-200">受力／速度向量</span>
+          </label>
+        </div>
+      </div>
+
+    </div>
+  </footer>
+
+  <!-- ================= 教學重點互動視窗 (Modal) ================= -->
+  <div id="tipsModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-sm">
+    <div class="w-full max-w-2xl rounded-2xl bg-slate-900 border border-slate-700 shadow-2xl overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-4 border-b border-slate-800 bg-slate-950/60">
+        <div class="flex items-center gap-2.5">
+          <span class="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-300 flex items-center justify-center border border-amber-400/30">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </span>
+          <h2 class="text-base sm:text-lg font-bold text-white">課堂教學重點：看懂電力線與 3D 電位地形</h2>
+        </div>
+        <button id="btnCloseTips" class="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 6L6 18M6 6l12 12" stroke-linecap="round" />
+          </svg>
+        </button>
+      </div>
+
+      <div class="p-5 space-y-3.5 text-sm text-slate-300 max-h-[72vh] overflow-y-auto">
+        <div class="p-3.5 rounded-xl bg-slate-800/60 border border-slate-700/70">
+          <h3 class="font-bold text-rose-300 mb-1">1. 正電荷是「山峰」，負電荷是「山谷」</h3>
+          <p class="leading-relaxed">
+            空間中任一點的電位 <span class="font-mono text-white">V = Σ kQ / r</span> 可以直接對應成地形高度：正電荷 <span class="text-rose-300 font-semibold">+Q</span> 會把電位撐高形成火山般的山峰，負電荷 <span class="text-sky-300 font-semibold">-Q</span> 則會把電位拉低形成漏斗狀的山谷，無窮遠處對應 <span class="text-white font-semibold">V = 0</span> 的海平面。
+          </p>
+        </div>
+
+        <div class="p-3.5 rounded-xl bg-slate-800/60 border border-slate-700/70">
+          <h3 class="font-bold text-amber-300 mb-1">2. 等位線就是「地形等高線」</h3>
+          <p class="leading-relaxed">
+            將 3D 視角切換到「<span class="text-sky-300 font-semibold">正俯視對齊</span>」，就能發現 2D 的等位線與 3D 地形上的等高線完全重疊！等位線越密集，代表地形坡度越陡峭，也就是該處的<span class="text-white font-semibold">電場強度 |E| 越大</span>。
+          </p>
+        </div>
+
+        <div class="p-3.5 rounded-xl bg-slate-800/60 border border-slate-700/70">
+          <h3 class="font-bold text-sky-300 mb-1">3. 電力線永遠垂直等位線，指向電位下降方向 (E = -∇V)</h3>
+          <p class="leading-relaxed">
+            電場是電位的負梯度（最陡下坡方向）。因此電力線必然垂直穿過每一條等位線，從高電位的山峰（+Q）出發，流向低電位的山谷（-Q）。試著移動滑鼠，透過 2D↔3D 連動探針觀察坡度與場強箭頭的關係。
+          </p>
+        </div>
+
+        <div class="p-3.5 rounded-xl bg-slate-800/60 border border-slate-700/70">
+          <h3 class="font-bold text-emerald-300 mb-1">4. 正測試電荷順坡滾下、負測試電荷逆坡爬升</h3>
+          <p class="leading-relaxed">
+            點擊空白處放置測試電荷 <span class="font-mono text-amber-300">+q</span>，就像把彈珠放在電位地形上，它會受電力 <span class="font-mono text-white">F = qE</span> 順坡滾落進負電荷山谷；若切換為 <span class="font-mono text-sky-300">-q</span>，它反而會「逆坡爬升」衝向正電荷山頂！切換「<span class="text-indigo-300 font-semibold">純慣性 vs. 微阻尼</span>」更可對照為何慣性會讓粒子偏離彎曲電力線。
+          </p>
+        </div>
+      </div>
+
+      <div class="px-5 py-3 border-t border-slate-800 bg-slate-950/60 flex justify-end">
+        <button id="btnTipsConfirm" class="px-4 py-2 rounded-xl text-sm font-semibold bg-sky-500 hover:bg-sky-400 text-slate-950 transition">
+          開始互動探索
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 輕量吐司通知 -->
+  <div id="toastBox" class="hidden fixed bottom-24 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-xl bg-slate-900/95 border border-sky-400/40 text-sky-200 text-xs sm:text-sm font-medium shadow-xl pointer-events-none"></div>
+
+  <!-- ================= 主程式邏輯 ================= -->
+  <script>
+    (function () {
+      'use strict';
+
+      // =========================================================================
+      // 1. 物理常數與共用座標系統 (2D 與 3D 100% 同步)
+      //    物理平面範圍：x ∈ [-5, 5], y ∈ [-5, 5]
+      //    3D 對應關係：X = x, Y = terrainHeight(V), Z = -y
+      //    (正俯視時 +x 朝右、+y 朝上，與 2D 畫面完全一致無鏡像)
+      // =========================================================================
+      const DOMAIN_HALF = 5.0;          // 物理平面半寬 [-5, 5]
+      const K_COULOMB = 1.2;            // 庫侖比例常數
+      const SOFTENING = 0.28;           // 軟化參數 ε，避免奇異點並形成平滑山峰與山谷
+      const SOFTENING_SQ = SOFTENING * SOFTENING;
+      const CONTOUR_STEP = 0.30;        // 等位線／3D 等高線間距 ΔV
+      const MAX_CONTOUR_LEVEL = 12;     // 最大等位線層數 (±3.6 V)
+      const CAPTURE_RADIUS = 0.30;      // 測試電荷被場源電荷吸收消失的半徑
+
+      // 3D 地形高度對映參數（[-3.2, 3.2] 內嚴格線性，超高處以 tanh 平滑收頂）
+      const V_LINEAR = 3.2;
+      const V_CEIL = 4.6;
+      const HEIGHT_SCALE = 0.78;
+
+      // 2D 離散網格解析度（供等位線 Marching Squares 與電位底圖使用）
+      const GRID_N = 84;
+      const potentialGrid = new Float32Array((GRID_N + 1) * (GRID_N + 1));
+
+      // =========================================================================
+      // 2. 應用程式全域狀態
+      // =========================================================================
+      const state = {
+        charges: [],          // 場源電荷陣列: { id, x, y, q }
+        testParticles: [],    // 測試電荷陣列: { id, x, y, vx, vy, q, m, trail, threeObj }
+        ripples: [],          // 吸收特效波紋: { x, y, r, maxR, alpha, color }
+        nextId: 1,
+        selectedChargeId: null,
+        draggedChargeId: null,
+        hoverPos: null,       // { x, y } 物理座標
+
+        // 測試電荷發射預設參數
+        testChargeMag: 0.20,
+        testChargeSign: 1,    // +1 或 -1
+        testMass: 0.20,
+        dampedMode: false,    // false = 純慣性(無阻尼), true = 微阻尼(貼近電力線)
+        paused: false,
+
+        // 視覺化圖層開關
+        showFieldLines: true,
+        showEquipotential: true,
+        showHeatmap: true,
+        show3DContours: true,
+        showVectorGrid: false,
+        showParticleVec: true,
+
+        // 視角模式: 'split' | '2d' | '3d'
+        viewMode: 'split',
+
+        // 標記場源是否變動，需要重新計算 2D 網格、電力線與 3D 地形
+        fieldDirty: true,
+        cachedFieldLines: []  // 預先算好的電力線段資料，避免每幀重算
+      };
+
+      // =========================================================================
+      // 3. 核心物理計算函式 (V, E, 高度對映, 色階對映)
+      // =========================================================================
+
+      /**
+       * 計算物理座標 (x, y) 的電位 V 與電場向量 (Ex, Ey)
+       * V = Σ k * Q_i / sqrt(r^2 + ε^2)
+       * E = -∇V = Σ k * Q_i * (r - r_i) / (r^2 + ε^2)^(3/2)
+       */
+      function evaluateFieldAndPotential(x, y) {
+        let V = 0;
+        let Ex = 0;
+        let Ey = 0;
+        const charges = state.charges;
+        for (let i = 0; i < charges.length; i++) {
+          const c = charges[i];
+          const dx = x - c.x;
+          const dy = y - c.y;
+          const r2 = dx * dx + dy * dy + SOFTENING_SQ;
+          const invR = 1.0 / Math.sqrt(r2);
+          const kq = K_COULOMB * c.q;
+          V += kq * invR;
+          const invR3 = invR / r2;
+          Ex += kq * dx * invR3;
+          Ey += kq * dy * invR3;
+        }
+        return { V, Ex, Ey };
+      }
+
+      /** 僅計算電位 V(x, y)（供高速網格掃描） */
+      function evaluatePotential(x, y) {
+        let V = 0;
+        const charges = state.charges;
+        for (let i = 0; i < charges.length; i++) {
+          const c = charges[i];
+          const dx = x - c.x;
+          const dy = y - c.y;
+          V += (K_COULOMB * c.q) / Math.sqrt(dx * dx + dy * dy + SOFTENING_SQ);
+        }
+        return V;
+      }
+
+      /** 僅計算電場 E(x, y)（供 RK4 積分高速呼叫） */
+      function evaluateField(x, y) {
+        let Ex = 0;
+        let Ey = 0;
+        const charges = state.charges;
+        for (let i = 0; i < charges.length; i++) {
+          const c = charges[i];
+          const dx = x - c.x;
+          const dy = y - c.y;
+          const r2 = dx * dx + dy * dy + SOFTENING_SQ;
+          const invR3 = 1.0 / (r2 * Math.sqrt(r2));
+          const kq = K_COULOMB * c.q;
+          Ex += kq * dx * invR3;
+          Ey += kq * dy * invR3;
+        }
+        return { Ex, Ey };
+      }
+
+      /**
+       * 將電位 V 平滑對應到 3D 地形高度 Y 及其導數 dY/dV（用於精確解析法向量）
+       */
+      function potentialToHeightAndDeriv(V) {
+        const absV = Math.abs(V);
+        if (absV <= V_LINEAR) {
+          return { h: V * HEIGHT_SCALE, dh: HEIGHT_SCALE };
+        }
+        const span = V_CEIL - V_LINEAR;
+        const excess = absV - V_LINEAR;
+        const t = Math.tanh(excess / span);
+        const compressed = V_LINEAR + span * t;
+        const sech = 1.0 / Math.cosh(excess / span);
+        return {
+          h: Math.sign(V) * compressed * HEIGHT_SCALE,
+          dh: HEIGHT_SCALE * sech * sech
+        };
+      }
+
+      function potentialToHeight(V) {
+        return potentialToHeightAndDeriv(V).h;
+      }
+
+      /**
+       * 2D 與 3D 共用色階對映 (回傳 [r, g, b], 0~255)
+       * 深藍山谷 -> 青藍 -> 零電位冷灰藍 -> 琥珀金 -> 珊瑚紅山峰
+       */
+      function potentialToRGB(V) {
+        const norm = Math.max(-1, Math.min(1, V / 3.0));
+        let r, g, b;
+        if (norm >= 0) {
+          // 0 -> 0.5: slate (#1e293b) -> amber (#f59e0b)
+          // 0.5 -> 1: amber (#f59e0b) -> crimson-rose (#ef4444)
+          if (norm < 0.5) {
+            const t = norm * 2.0;
+            r = 30 + (245 - 30) * t;
+            g = 41 + (158 - 41) * t;
+            b = 59 + (11 - 59) * t;
+          } else {
+            const t = (norm - 0.5) * 2.0;
+            r = 245 + (244 - 245) * t;
+            g = 158 + (63 - 158) * t;
+            b = 11 + (94 - 11) * t;
+          }
+        } else {
+          const an = -norm;
+          // 0 -> 0.5: slate (#1e293b) -> sky-cyan (#0ea5e9)
+          // 0.5 -> 1: sky-cyan (#0ea5e9) -> deep sapphire (#1d4ed8)
+          if (an < 0.5) {
+            const t = an * 2.0;
+            r = 30 + (14 - 30) * t;
+            g = 41 + (165 - 41) * t;
+            b = 59 + (233 - 59) * t;
+          } else {
+            const t = (an - 0.5) * 2.0;
+            r = 14 + (37 - 14) * t;
+            g = 165 + (99 - 165) * t;
+            b = 233 + (235 - 233) * t;
+          }
+        }
+        return [r | 0, g | 0, b | 0];
+      }
+
+      // =========================================================================
+      // 4. 2D 電力線 (RK4) 與等位線 (Marching Squares) 演算法
+      // =========================================================================
+
+      /** 更新 2D 電位離散網格與預繪電位色階底圖 */
+      const heatmapOffscreen = document.createElement('canvas');
+      heatmapOffscreen.width = GRID_N;
+      heatmapOffscreen.height = GRID_N;
+      const heatmapCtx = heatmapOffscreen.getContext('2d');
+      const heatmapImgData = heatmapCtx.createImageData(GRID_N, GRID_N);
+
+      function recomputePotentialGrid() {
+        const step = (2 * DOMAIN_HALF) / GRID_N;
+        for (let j = 0; j <= GRID_N; j++) {
+          const y = DOMAIN_HALF - j * step; // j=0 對應上方 y=+5
+          const rowOff = j * (GRID_N + 1);
+          for (let i = 0; i <= GRID_N; i++) {
+            const x = -DOMAIN_HALF + i * step;
+            potentialGrid[rowOff + i] = evaluatePotential(x, y);
+          }
+        }
+
+        // 同步更新色階底圖像素資料
+        const data = heatmapImgData.data;
+        for (let j = 0; j < GRID_N; j++) {
+          for (let i = 0; i < GRID_N; i++) {
+            const vCenter = 0.25 * (
+              potentialGrid[j * (GRID_N + 1) + i] +
+              potentialGrid[j * (GRID_N + 1) + i + 1] +
+              potentialGrid[(j + 1) * (GRID_N + 1) + i] +
+              potentialGrid[(j + 1) * (GRID_N + 1) + i + 1]
+            );
+            const [r, g, b] = potentialToRGB(vCenter);
+            const idx = (j * GRID_N + i) * 4;
+            data[idx] = r;
+            data[idx + 1] = g;
+            data[idx + 2] = b;
+            data[idx + 3] = 112; // 優雅的半透明色階，不蓋過電力線與等位線
+          }
+        }
+        heatmapCtx.putImageData(heatmapImgData, 0, 0);
+      }
+
+      /**
+       * 使用 4 階 Runge-Kutta (RK4) 追蹤單條電力線
+       * @param {number} startX 起始 x
+       * @param {number} startY 起始 y
+       * @param {number} dir +1 沿電場方向，-1 逆電場方向
+       * @param {number} startChargeId 起始場源 ID
+       */
+      function traceFieldLine(startX, startY, dir, startChargeId) {
+        const pts = [{ x: startX, y: startY }];
+        let x = startX;
+        let y = startY;
+        const ds = 0.06;
+        const maxSteps = 440;
+        const boundLimit = DOMAIN_HALF + 0.9;
+        const stopRadiusSq = 0.23 * 0.23;
+
+        let endChargeId = null;
+        let endAngle = 0;
+
+        function unitE(px, py) {
+          const { Ex, Ey } = evaluateField(px, py);
+          const mag = Math.hypot(Ex, Ey);
+          if (mag < 1e-4) return null;
+          return { ux: (Ex / mag) * dir, uy: (Ey / mag) * dir };
+        }
+
+        for (let s = 0; s < maxSteps; s++) {
+          const k1 = unitE(x, y);
+          if (!k1) break;
+          const k2 = unitE(x + 0.5 * ds * k1.ux, y + 0.5 * ds * k1.uy);
+          if (!k2) break;
+          const k3 = unitE(x + 0.5 * ds * k2.ux, y + 0.5 * ds * k2.uy);
+          if (!k3) break;
+          const k4 = unitE(x + ds * k3.ux, y + ds * k3.uy);
+          if (!k4) break;
+
+          const nx = x + (ds / 6) * (k1.ux + 2 * k2.ux + 2 * k3.ux + k4.ux);
+          const ny = y + (ds / 6) * (k1.uy + 2 * k2.uy + 2 * k3.uy + k4.uy);
+
+          x = nx;
+          y = ny;
+          pts.push({ x, y });
+
+          // 檢查是否抵達任一場源電荷
+          let hit = false;
+          for (let i = 0; i < state.charges.length; i++) {
+            const c = state.charges[i];
+            if (c.id === startChargeId && s < 6) continue;
+            const dx = x - c.x;
+            const dy = y - c.y;
+            if (dx * dx + dy * dy < stopRadiusSq) {
+              endChargeId = c.id;
+              endAngle = Math.atan2(dy, dx);
+              pts.push({ x: c.x, y: c.y }); // 乾淨接入圓心（繪製時圓形會覆蓋中心）
+              hit = true;
+              break;
+            }
+          }
+          if (hit) break;
+
+          if (Math.abs(x) > boundLimit || Math.abs(y) > boundLimit) break;
+        }
+
+        // 若是逆向追蹤（從負電荷出發），將點陣列反轉，使所有線段一律依「高電位 → 低電位」排列
+        if (dir < 0) {
+          pts.reverse();
+        }
+        return { pts, endChargeId, endAngle };
+      }
+
+      /** 重新計算所有場源的電力線集合（支援全正、全負、不等量混和） */
+      function recomputeFieldLines() {
+        const lines = [];
+        const charges = state.charges;
+        if (charges.length === 0) {
+          state.cachedFieldLines = lines;
+          return;
+        }
+
+        // 記錄負電荷已接收到的入線角度，避免重疊與補齊多餘負電荷的入線
+        const incomingAnglesByNegId = new Map();
+        charges.forEach(c => {
+          if (c.q < 0) incomingAnglesByNegId.set(c.id, []);
+        });
+
+        const seedR = 0.24;
+
+        // 第一階段：由所有正電荷出發，正向追蹤電力線
+        for (let i = 0; i < charges.length; i++) {
+          const c = charges[i];
+          if (c.q <= 0) continue;
+          const nLines = Math.max(6, Math.min(28, Math.round(Math.abs(c.q) * 8)));
+          const angleOffset = (i * 0.37) % (2 * Math.PI);
+          for (let k = 0; k < nLines; k++) {
+            const ang = angleOffset + (k / nLines) * Math.PI * 2;
+            const sx = c.x + seedR * Math.cos(ang);
+            const sy = c.y + seedR * Math.sin(ang);
+            const res = traceFieldLine(sx, sy, +1, c.id);
+            if (res.pts.length > 3) {
+              lines.push(res.pts);
+              if (res.endChargeId !== null && incomingAnglesByNegId.has(res.endChargeId)) {
+                incomingAnglesByNegId.get(res.endChargeId).push(res.endAngle);
+              }
+            }
+          }
+        }
+
+        // 第二階段：檢查所有負電荷，在沒有相鄰入線的角度補齊逆向追蹤線（確保孤立負電荷與不等量負電荷有完整電力線）
+        for (let i = 0; i < charges.length; i++) {
+          const c = charges[i];
+          if (c.q >= 0) continue;
+          const nDesired = Math.max(6, Math.min(28, Math.round(Math.abs(c.q) * 8)));
+          const existing = incomingAnglesByNegId.get(c.id) || [];
+          const minAngGap = (Math.PI * 2) / nDesired * 0.62;
+
+          for (let k = 0; k < nDesired; k++) {
+            const ang = (k / nDesired) * Math.PI * 2 + 0.13;
+            // 檢查該角度附近是否已有正向線進入
+            let occupied = false;
+            for (let m = 0; m < existing.length; m++) {
+              let diff = Math.abs(ang - existing[m]) % (Math.PI * 2);
+              if (diff > Math.PI) diff = Math.PI * 2 - diff;
+              if (diff < minAngGap) {
+                occupied = true;
+                break;
+              }
+            }
+            if (occupied) continue;
+
+            const sx = c.x + seedR * Math.cos(ang);
+            const sy = c.y + seedR * Math.sin(ang);
+            const res = traceFieldLine(sx, sy, -1, c.id);
+            // 若逆向追蹤撞回正電荷且該正電荷線條已密集，則跳過；若是來自無窮遠則必定保留
+            if (res.pts.length > 3 && res.endChargeId === null) {
+              lines.push(res.pts);
+            }
+          }
+        }
+
+        state.cachedFieldLines = lines;
+      }
+
+      // =========================================================================
+      // 5. 2D Canvas 渲染系統 (支援高 DPI 與動態縮放)
+      // =========================================================================
+      const canvas2D = document.getElementById('canvas2D');
+      const ctx2D = canvas2D.getContext('2d');
+      const canvas2DWrap = document.getElementById('canvas2DWrap');
+
+      const view2D = {
+        width: 500,
+        height: 500,
+        size: 500,     // 正方形物理繪圖區邊長
+        offsetX: 0,    // 物理區左上角 X
+        offsetY: 0,    // 物理區左上角 Y
+        dpr: 1
+      };
+
+      function resize2DCanvas() {
+        const rect = canvas2DWrap.getBoundingClientRect();
+        if (rect.width < 10 || rect.height < 10) return;
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        canvas2D.width = Math.round(rect.width * dpr);
+        canvas2D.height = Math.round(rect.height * dpr);
+        view2D.width = rect.width;
+        view2D.height = rect.height;
+        view2D.dpr = dpr;
+
+        // 讓 [-5, 5]x[-5, 5] 保持 1:1 等比例居中顯示
+        const side = Math.min(rect.width, rect.height) * 0.94;
+        view2D.size = side;
+        view2D.offsetX = (rect.width - side) * 0.5;
+        view2D.offsetY = (rect.height - side) * 0.5;
+      }
+
+      function physToScreen(x, y) {
+        const u = (x + DOMAIN_HALF) / (2 * DOMAIN_HALF);
+        const v = (DOMAIN_HALF - y) / (2 * DOMAIN_HALF);
+        return {
+          sx: view2D.offsetX + u * view2D.size,
+          sy: view2D.offsetY + v * view2D.size
+        };
+      }
+
+      function screenToPhys(sx, sy) {
+        const u = (sx - view2D.offsetX) / view2D.size;
+        const v = (sy - view2D.offsetY) / view2D.size;
+        return {
+          x: u * 2 * DOMAIN_HALF - DOMAIN_HALF,
+          y: DOMAIN_HALF - v * 2 * DOMAIN_HALF
+        };
+      }
+
+      /** 使用 Marching Squares 繪製高精細 2D 等位線 */
+      function drawEquipotentialLines2D(ctx) {
+        if (state.charges.length === 0) return;
+
+        const cellSize = view2D.size / GRID_N;
+        const ox = view2D.offsetX;
+        const oy = view2D.offsetY;
+
+        for (let lvl = -MAX_CONTOUR_LEVEL; lvl <= MAX_CONTOUR_LEVEL; lvl++) {
+          const iso = lvl * CONTOUR_STEP;
+
+          ctx.beginPath();
+          if (lvl === 0) {
+            ctx.strokeStyle = 'rgba(248, 250, 252, 0.85)';
+            ctx.lineWidth = 1.8;
+            ctx.setLineDash([6, 4]);
+          } else if (lvl > 0) {
+            const intensity = Math.min(1, 0.35 + (lvl / MAX_CONTOUR_LEVEL) * 0.65);
+            ctx.strokeStyle = `rgba(251, 146, 60, ${intensity.toFixed(2)})`;
+            ctx.lineWidth = lvl % 2 === 0 ? 1.45 : 1.05;
+            ctx.setLineDash([]);
+          } else {
+            const intensity = Math.min(1, 0.35 + (-lvl / MAX_CONTOUR_LEVEL) * 0.65);
+            ctx.strokeStyle = `rgba(56, 189, 248, ${intensity.toFixed(2)})`;
+            ctx.lineWidth = lvl % 2 === 0 ? 1.45 : 1.05;
+            ctx.setLineDash([]);
+          }
+
+          for (let j = 0; j < GRID_N; j++) {
+            const row0 = j * (GRID_N + 1);
+            const row1 = (j + 1) * (GRID_N + 1);
+            const py0 = oy + j * cellSize;
+            const py1 = py0 + cellSize;
+
+            for (let i = 0; i < GRID_N; i++) {
+              const v0 = potentialGrid[row0 + i];       // 左上
+              const v1 = potentialGrid[row0 + i + 1];   // 右上
+              const v2 = potentialGrid[row1 + i + 1];   // 右下
+              const v3 = potentialGrid[row1 + i];       // 左下
+
+              let idx = 0;
+              if (v0 >= iso) idx |= 8;
+              if (v1 >= iso) idx |= 4;
+              if (v2 >= iso) idx |= 2;
+              if (v3 >= iso) idx |= 1;
+              if (idx === 0 || idx === 15) continue;
+
+              const px0 = ox + i * cellSize;
+              const px1 = px0 + cellSize;
+
+              // 邊線線性內插點
+              const topX = px0 + cellSize * ((iso - v0) / (v1 - v0 || 1e-9));
+              const rightY = py0 + cellSize * ((iso - v1) / (v2 - v1 || 1e-9));
+              const bottomX = px0 + cellSize * ((iso - v3) / (v2 - v3 || 1e-9));
+              const leftY = py0 + cellSize * ((iso - v0) / (v3 - v0 || 1e-9));
+
+              // Marching Squares 16 種拓撲分案
+              switch (idx) {
+                case 1: case 14:
+                  ctx.moveTo(px0, leftY); ctx.lineTo(bottomX, py1); break;
+                case 2: case 13:
+                  ctx.moveTo(bottomX, py1); ctx.lineTo(px1, rightY); break;
+                case 3: case 12:
+                  ctx.moveTo(px0, leftY); ctx.lineTo(px1, rightY); break;
+                case 4: case 11:
+                  ctx.moveTo(topX, py0); ctx.lineTo(px1, rightY); break;
+                case 5: {
+                  const center = 0.25 * (v0 + v1 + v2 + v3);
+                  if (center >= iso) {
+                    ctx.moveTo(px0, leftY); ctx.lineTo(topX, py0);
+                    ctx.moveTo(bottomX, py1); ctx.lineTo(px1, rightY);
+                  } else {
+                    ctx.moveTo(px0, leftY); ctx.lineTo(bottomX, py1);
+                    ctx.moveTo(topX, py0); ctx.lineTo(px1, rightY);
+                  }
+                  break;
+                }
+                case 6: case 9:
+                  ctx.moveTo(topX, py0); ctx.lineTo(bottomX, py1); break;
+                case 7: case 8:
+                  ctx.moveTo(px0, leftY); ctx.lineTo(topX, py0); break;
+                case 10: {
+                  const center = 0.25 * (v0 + v1 + v2 + v3);
+                  if (center >= iso) {
+                    ctx.moveTo(px0, leftY); ctx.lineTo(bottomX, py1);
+                    ctx.moveTo(topX, py0); ctx.lineTo(px1, rightY);
+                  } else {
+                    ctx.moveTo(px0, leftY); ctx.lineTo(topX, py0);
+                    ctx.moveTo(bottomX, py1); ctx.lineTo(px1, rightY);
+                  }
+                  break;
+                }
+              }
+            }
+          }
+          ctx.stroke();
+        }
+        ctx.setLineDash([]);
+      }
+
+      /** 繪製 2D 電力線與方向箭頭 */
+      function drawFieldLines2D(ctx) {
+        const lines = state.cachedFieldLines;
+        if (lines.length === 0) return;
+
+        ctx.save();
+        ctx.strokeStyle = 'rgba(226, 232, 240, 0.78)';
+        ctx.lineWidth = 1.5;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        const arrows = [];
+
+        ctx.beginPath();
+        for (let i = 0; i < lines.length; i++) {
+          const pts = lines[i];
+          if (pts.length < 2) continue;
+
+          const p0 = physToScreen(pts[0].x, pts[0].y);
+          ctx.moveTo(p0.sx, p0.sy);
+
+          let arcAccum = 35; // 螢幕像素累積距離，用於均勻配置箭頭
+          let prev = p0;
+
+          for (let k = 1; k < pts.length; k++) {
+            const p = physToScreen(pts[k].x, pts[k].y);
+            ctx.lineTo(p.sx, p.sy);
+
+            const dx = p.sx - prev.sx;
+            const dy = p.sy - prev.sy;
+            const segLen = Math.hypot(dx, dy);
+            arcAccum += segLen;
+
+            // 每隔約 74px 放一個方向箭頭，避開最開頭與結尾電荷處
+            if (arcAccum >= 74 && k > 4 && k < pts.length - 4) {
+              arcAccum = 0;
+              arrows.push({ x: p.sx, y: p.sy, ang: Math.atan2(dy, dx) });
+            }
+            prev = p;
+          }
+        }
+        ctx.stroke();
+
+        // 繪製電力線方向箭頭（指向高電位 → 低電位）
+        ctx.fillStyle = '#f8fafc';
+        const headLen = 7.2;
+        for (let i = 0; i < arrows.length; i++) {
+          const a = arrows[i];
+          ctx.save();
+          ctx.translate(a.x, a.y);
+          ctx.rotate(a.ang);
+          ctx.beginPath();
+          ctx.moveTo(headLen * 0.6, 0);
+          ctx.lineTo(-headLen * 0.55, -headLen * 0.44);
+          ctx.lineTo(-headLen * 0.25, 0);
+          ctx.lineTo(-headLen * 0.55, headLen * 0.44);
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
+        }
+        ctx.restore();
+      }
+
+      /** 繪製選配的場強向量網格 */
+      function drawVectorGrid2D(ctx) {
+        if (state.charges.length === 0) return;
+        const N = 15;
+        const step = (2 * DOMAIN_HALF) / (N + 1);
+        ctx.save();
+        ctx.lineCap = 'round';
+
+        for (let j = 1; j <= N; j++) {
+          const y = DOMAIN_HALF - j * step;
+          for (let i = 1; i <= N; i++) {
+            const x = -DOMAIN_HALF + i * step;
+
+            // 避開場源電荷內部
+            let tooClose = false;
+            for (let c = 0; c < state.charges.length; c++) {
+              const ch = state.charges[c];
+              if (Math.hypot(x - ch.x, y - ch.y) < 0.48) { tooClose = true; break; }
+            }
+            if (tooClose) continue;
+
+            const { Ex, Ey } = evaluateField(x, y);
+            const mag = Math.hypot(Ex, Ey);
+            if (mag < 1e-3) continue;
+
+            const logStrength = Math.min(1, Math.log1p(mag * 1.4) / 2.2);
+            const lenPx = (8 + logStrength * 14) * (view2D.size / 520);
+            const p = physToScreen(x, y);
+            const ang = Math.atan2(-Ey, Ex); // 螢幕 Y 軸向下
+
+            const alpha = 0.28 + logStrength * 0.55;
+            ctx.strokeStyle = `rgba(129, 140, 248, ${alpha.toFixed(2)})`;
+            ctx.fillStyle = `rgba(165, 180, 252, ${alpha.toFixed(2)})`;
+            ctx.lineWidth = 1.4;
+
+            const x2 = p.sx + Math.cos(ang) * lenPx;
+            const y2 = p.sy + Math.sin(ang) * lenPx;
+
+            ctx.beginPath();
+            ctx.moveTo(p.sx - Math.cos(ang) * lenPx * 0.35, p.sy - Math.sin(ang) * lenPx * 0.35);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+
+            // 小箭頭
+            ctx.beginPath();
+            ctx.moveTo(x2, y2);
+            ctx.lineTo(x2 - Math.cos(ang - 0.55) * 4.5, y2 - Math.sin(ang - 0.55) * 4.5);
+            ctx.lineTo(x2 - Math.cos(ang + 0.55) * 4.5, y2 - Math.sin(ang + 0.55) * 4.5);
+            ctx.closePath();
+            ctx.fill();
+          }
+        }
+        ctx.restore();
+      }
+
+      /** 繪製 2D 畫面主流程 */
+      function render2D() {
+        const ctx = ctx2D;
+        const dpr = view2D.dpr;
+        ctx.save();
+        ctx.scale(dpr, dpr);
+
+        // 背景清空
+        ctx.fillStyle = '#070d19';
+        ctx.fillRect(0, 0, view2D.width, view2D.height);
+
+        const ox = view2D.offsetX;
+        const oy = view2D.offsetY;
+        const size = view2D.size;
+
+        // 裁切至物理平面區域
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(ox, oy, size, size);
+        ctx.clip();
+
+        // 1. 物理平面底色與電位色階底圖
+        ctx.fillStyle = '#0c1526';
+        ctx.fillRect(ox, oy, size, size);
+
+        if (state.showHeatmap && state.charges.length > 0) {
+          ctx.imageSmoothingEnabled = true;
+          ctx.drawImage(heatmapOffscreen, ox, oy, size, size);
+        }
+
+        // 2. 細緻物理座標格線 (每 1 單位)
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.11)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (let k = -4; k <= 4; k++) {
+          const p = physToScreen(k, k);
+          ctx.moveTo(p.sx, oy);
+          ctx.lineTo(p.sx, oy + size);
+          ctx.moveTo(ox, p.sy);
+          ctx.lineTo(ox + size, p.sy);
+        }
+        ctx.stroke();
+
+        // 主座標軸 (x=0, y=0)
+        const origin = physToScreen(0, 0);
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.25)';
+        ctx.beginPath();
+        ctx.moveTo(origin.sx, oy);
+        ctx.lineTo(origin.sx, oy + size);
+        ctx.moveTo(ox, origin.sy);
+        ctx.lineTo(ox + size, origin.sy);
+        ctx.stroke();
+
+        // 3. 等位線
+        if (state.showEquipotential) {
+          drawEquipotentialLines2D(ctx);
+        }
+
+        // 4. 選配場強網格
+        if (state.showVectorGrid) {
+          drawVectorGrid2D(ctx);
+        }
+
+        // 5. 電力線
+        if (state.showFieldLines) {
+          drawFieldLines2D(ctx);
+        }
+
+        // 6. 吸收波紋特效
+        for (let i = 0; i < state.ripples.length; i++) {
+          const rp = state.ripples[i];
+          const p = physToScreen(rp.x, rp.y);
+          const radPx = (rp.r / (2 * DOMAIN_HALF)) * size;
+          ctx.beginPath();
+          ctx.arc(p.sx, p.sy, radPx, 0, Math.PI * 2);
+          ctx.strokeStyle = rp.color.replace('ALPHA', rp.alpha.toFixed(2));
+          ctx.lineWidth = 2.5;
+          ctx.stroke();
+        }
+
+        // 7. 測試電荷 q 與軌跡、向量
+        for (let i = 0; i < state.testParticles.length; i++) {
+          const tp = state.testParticles[i];
+          const isPos = tp.q > 0;
+          const mainColor = isPos ? '#fbbf24' : '#38bdf8';
+
+          // 繪製漸淡尾跡
+          if (tp.trail.length > 1) {
+            ctx.lineCap = 'round';
+            for (let k = 1; k < tp.trail.length; k++) {
+              const tAlpha = (k / tp.trail.length) * 0.85;
+              const p1 = physToScreen(tp.trail[k - 1].x, tp.trail[k - 1].y);
+              const p2 = physToScreen(tp.trail[k].x, tp.trail[k].y);
+              ctx.beginPath();
+              ctx.moveTo(p1.sx, p1.sy);
+              ctx.lineTo(p2.sx, p2.sy);
+              ctx.strokeStyle = isPos
+                ? `rgba(251, 191, 36, ${tAlpha.toFixed(2)})`
+                : `rgba(56, 189, 248, ${tAlpha.toFixed(2)})`;
+              ctx.lineWidth = 1.2 + (k / tp.trail.length) * 2.4;
+              ctx.stroke();
+            }
+          }
+
+          const pt = physToScreen(tp.x, tp.y);
+
+          // 選配：受力向量 F (琥珀) 與速度向量 v (翠綠)
+          if (state.showParticleVec) {
+            // 速度向量 v
+            const vMag = Math.hypot(tp.vx, tp.vy);
+            if (vMag > 0.08) {
+              const vLen = Math.min(36, vMag * 7.5);
+              const vAng = Math.atan2(-tp.vy, tp.vx);
+              drawSmallVector2D(ctx, pt.sx, pt.sy, vAng, vLen, '#34d399');
+            }
+            // 電力向量 F = qE
+            const { Ex, Ey } = evaluateField(tp.x, tp.y);
+            const Fx = tp.q * Ex;
+            const Fy = tp.q * Ey;
+            const fMag = Math.hypot(Fx, Fy);
+            if (fMag > 0.02) {
+              const fLen = Math.min(38, Math.log1p(fMag * 3.5) * 16);
+              const fAng = Math.atan2(-Fy, Fx);
+              drawSmallVector2D(ctx, pt.sx, pt.sy, fAng, fLen, '#f472b6');
+            }
+          }
+
+          // 測試電荷發光本體
+          const glow = ctx.createRadialGradient(pt.sx, pt.sy, 1, pt.sx, pt.sy, 13);
+          glow.addColorStop(0, mainColor);
+          glow.addColorStop(0.5, isPos ? 'rgba(251,191,36,0.45)' : 'rgba(56,189,248,0.45)');
+          glow.addColorStop(1, 'rgba(0,0,0,0)');
+          ctx.fillStyle = glow;
+          ctx.beginPath();
+          ctx.arc(pt.sx, pt.sy, 13, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.arc(pt.sx, pt.sy, 4.6, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.strokeStyle = mainColor;
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+
+        // 8. 場源電荷 Q
+        for (let i = 0; i < state.charges.length; i++) {
+          const c = state.charges[i];
+          const p = physToScreen(c.x, c.y);
+          const isPos = c.q > 0;
+          const isSelected = c.id === state.selectedChargeId;
+          const radius = Math.max(14, Math.min(24, 13 + Math.abs(c.q) * 2.2));
+
+          // 選取外圈光暈
+          if (isSelected) {
+            ctx.beginPath();
+            ctx.arc(p.sx, p.sy, radius + 6, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(250, 204, 21, 0.9)';
+            ctx.lineWidth = 2.2;
+            ctx.setLineDash([4, 3]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+          }
+
+          // 發光外環
+          const g = ctx.createRadialGradient(p.sx, p.sy, radius * 0.2, p.sx, p.sy, radius * 1.9);
+          g.addColorStop(0, isPos ? 'rgba(244, 63, 94, 0.55)' : 'rgba(14, 165, 233, 0.55)');
+          g.addColorStop(1, 'rgba(0, 0, 0, 0)');
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.arc(p.sx, p.sy, radius * 1.9, 0, Math.PI * 2);
+          ctx.fill();
+
+          // 球體漸層
+          const ball = ctx.createRadialGradient(
+            p.sx - radius * 0.3, p.sy - radius * 0.3, radius * 0.1,
+            p.sx, p.sy, radius
+          );
+          if (isPos) {
+            ball.addColorStop(0, '#fda4af');
+            ball.addColorStop(0.45, '#f43f5e');
+            ball.addColorStop(1, '#9f1239');
+          } else {
+            ball.addColorStop(0, '#7dd3fc');
+            ball.addColorStop(0.45, '#0284c7');
+            ball.addColorStop(1, '#1e3a8a');
+          }
+
+          ctx.fillStyle = ball;
+          ctx.beginPath();
+          ctx.arc(p.sx, p.sy, radius, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+          ctx.lineWidth = 1.6;
+          ctx.stroke();
+
+          // 電荷量文字 (+2, -1 等)
+          ctx.fillStyle = '#ffffff';
+          ctx.font = `700 ${radius > 18 ? 13 : 11}px Inter, sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          const qStr = (c.q > 0 ? '+' : '') + (Number.isInteger(c.q) ? c.q : c.q.toFixed(1));
+          ctx.fillText(qStr, p.sx, p.sy + 0.5);
+        }
+
+        // 9. 即時懸停探針十字與局部電場箭頭
+        if (state.hoverPos && state.draggedChargeId === null) {
+          const hp = state.hoverPos;
+          if (Math.abs(hp.x) <= DOMAIN_HALF && Math.abs(hp.y) <= DOMAIN_HALF) {
+            const sp = physToScreen(hp.x, hp.y);
+            ctx.save();
+            ctx.strokeStyle = 'rgba(253, 224, 71, 0.75)';
+            ctx.lineWidth = 1.3;
+            ctx.beginPath();
+            ctx.arc(sp.sx, sp.sy, 7, 0, Math.PI * 2);
+            ctx.moveTo(sp.sx - 12, sp.sy); ctx.lineTo(sp.sx - 4, sp.sy);
+            ctx.moveTo(sp.sx + 4, sp.sy); ctx.lineTo(sp.sx + 12, sp.sy);
+            ctx.moveTo(sp.sx, sp.sy - 12); ctx.lineTo(sp.sx, sp.sy - 4);
+            ctx.moveTo(sp.sx, sp.sy + 4); ctx.lineTo(sp.sx, sp.sy + 12);
+            ctx.stroke();
+
+            // 探針處即時電場方向箭頭
+            const { Ex, Ey } = evaluateField(hp.x, hp.y);
+            const eMag = Math.hypot(Ex, Ey);
+            if (eMag > 0.01) {
+              const eLen = Math.min(44, 14 + Math.log1p(eMag * 2) * 14);
+              const eAng = Math.atan2(-Ey, Ex);
+              drawSmallVector2D(ctx, sp.sx, sp.sy, eAng, eLen, '#fde047');
+            }
+            ctx.restore();
+          }
+        }
+
+        ctx.restore(); // 結束裁切
+
+        // 物理區邊框
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.35)';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(ox, oy, size, size);
+
+        // 圖例小提示（若開啟向量）
+        if (state.showParticleVec && state.testParticles.length > 0) {
+          ctx.font = '600 11px "Noto Sans TC", sans-serif';
+          ctx.textAlign = 'right';
+          ctx.fillStyle = '#34d399';
+          ctx.fillText('● 速度 v', ox + size - 8, oy + 18);
+          ctx.fillStyle = '#f472b6';
+          ctx.fillText('● 電力 F', ox + size - 68, oy + 18);
+        }
+
+        ctx.restore();
+      }
+
+      function drawSmallVector2D(ctx, x, y, angle, length, color) {
+        const x2 = x + Math.cos(angle) * length;
+        const y2 = y + Math.sin(angle) * length;
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.fillStyle = color;
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+
+        const hl = 6.5;
+        ctx.beginPath();
+        ctx.moveTo(x2, y2);
+        ctx.lineTo(x2 - Math.cos(angle - 0.5) * hl, y2 - Math.sin(angle - 0.5) * hl);
+        ctx.lineTo(x2 - Math.cos(angle + 0.5) * hl, y2 - Math.sin(angle + 0.5) * hl);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // =========================================================================
+      // 6. Three.js 3D 電位地形系統 (山峰、山谷、3D 等高線、連動探針、滾動測試球)
+      // =========================================================================
+      const canvas3D = document.getElementById('canvas3D');
+      const canvas3DWrap = document.getElementById('canvas3DWrap');
+
+      let renderer3D, scene3D, camera3D, controls3D;
+      let terrainMesh, terrainGeo, terrainMat;
+      let sourceMarkersGroup, testParticlesGroup;
+      let probeGroup3D, probeStem3D, probeOrb3D, probeHalo3D;
+
+      const TERRAIN_SEG = 96; // 96x96 高解析度動態地形網格
+      const MAX_TRAIL_POINTS = 72;
+
+      // 相機平順過渡動畫狀態
+      const camAnim = {
+        active: false,
+        startPos: new THREE.Vector3(),
+        endPos: new THREE.Vector3(),
+        startTarget: new THREE.Vector3(),
+        endTarget: new THREE.Vector3(),
+        progress: 0
+      };
+
+      /** 建立文字標籤材質（供 3D 場源 +Q / -Q 標記使用） */
+      function createChargeSpriteTexture(text, isPos) {
+        const c = document.createElement('canvas');
+        c.width = 128;
+        c.height = 128;
+        const g = c.getContext('2d');
+        g.clearRect(0, 0, 128, 128);
+
+        g.beginPath();
+        g.arc(64, 64, 48, 0, Math.PI * 2);
+        g.fillStyle = isPos ? '#e11d48' : '#0284c7';
+        g.fill();
+        g.lineWidth = 6;
+        g.strokeStyle = '#ffffff';
+        g.stroke();
+
+        g.fillStyle = '#ffffff';
+        g.font = 'bold 46px Inter, sans-serif';
+        g.textAlign = 'center';
+        g.textBaseline = 'middle';
+        g.fillText(text, 64, 66);
+
+        const tex = new THREE.CanvasTexture(c);
+        tex.needsUpdate = true;
+        return tex;
+      }
+
+      /** 初始化 Three.js 3D 場景 */
+      function init3DScene() {
+        try {
+          renderer3D = new THREE.WebGLRenderer({
+            canvas: canvas3D,
+            antialias: true,
+            alpha: false,
+            powerPreference: 'high-performance'
+          });
+          renderer3D.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+          renderer3D.setClearColor(0x070d19, 1);
+
+          scene3D = new THREE.Scene();
+          scene3D.fog = new THREE.FogExp2(0x070d19, 0.018);
+
+          camera3D = new THREE.PerspectiveCamera(44, 1, 0.1, 120);
+          camera3D.position.set(0, 10.5, 12.2);
+
+          // OrbitControls（含安全降級防護）
+          if (typeof THREE.OrbitControls === 'function') {
+            controls3D = new THREE.OrbitControls(camera3D, canvas3D);
+            controls3D.enableDamping = true;
+            controls3D.dampingFactor = 0.075;
+            controls3D.minDistance = 5.5;
+            controls3D.maxDistance = 30;
+            controls3D.maxPolarAngle = Math.PI * 0.85;
+            controls3D.target.set(0, 0, 0);
+            controls3D.update();
+          } else {
+            // 極簡降級旋轉控制，確保即使 CDN 異常仍可操作
+            controls3D = createFallbackControls(camera3D, canvas3D);
+          }
+
+          // 基礎光源（供 3D 球體與柱體使用）
+          const ambient = new THREE.AmbientLight(0xcbd5e1, 0.75);
+          scene3D.add(ambient);
+
+          const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
+          dirLight.position.set(8, 16, 10);
+          scene3D.add(dirLight);
+
+          const rimLight = new THREE.DirectionalLight(0x38bdf8, 0.45);
+          rimLight.position.set(-10, -8, -10);
+          scene3D.add(rimLight);
+
+          // 1. 建立 V = 0 零電位參考海平面（半透明網格面 + 外框）
+          const seaPlaneGeo = new THREE.PlaneGeometry(DOMAIN_HALF * 2, DOMAIN_HALF * 2);
+          seaPlaneGeo.rotateX(-Math.PI / 2);
+          const seaPlaneMat = new THREE.MeshBasicMaterial({
+            color: 0x38bdf8,
+            transparent: true,
+            opacity: 0.055,
+            side: THREE.DoubleSide,
+            depthWrite: false
+          });
+          const seaPlane = new THREE.Mesh(seaPlaneGeo, seaPlaneMat);
+          scene3D.add(seaPlane);
+
+          const gridHelper = new THREE.GridHelper(DOMAIN_HALF * 2, 10, 0x475569, 0x1e293b);
+          gridHelper.position.y = 0.004;
+          scene3D.add(gridHelper);
+
+          // 2. 建立高解析度可變形 3D 電位地形網格 + 自訂反鋸齒等高線著色器
+          terrainGeo = new THREE.PlaneGeometry(DOMAIN_HALF * 2, DOMAIN_HALF * 2, TERRAIN_SEG, TERRAIN_SEG);
+          terrainGeo.rotateX(-Math.PI / 2);
+
+          const vCount = terrainGeo.attributes.position.count;
+          const potAttr = new Float32Array(vCount);
+          terrainGeo.setAttribute('aPotential', new THREE.BufferAttribute(potAttr, 1));
+
+          terrainMat = new THREE.ShaderMaterial({
+            extensions: { derivatives: true },
+            side: THREE.DoubleSide,
+            transparent: true,
+            uniforms: {
+              uContourStep: { value: CONTOUR_STEP },
+              uShowContours: { value: 1.0 },
+              uLightDir: { value: new THREE.Vector3(0.45, 0.82, 0.36).normalize() }
+            },
+            vertexShader: `
+              attribute float aPotential;
+              varying float vPotential;
+              varying vec3 vNormalW;
+              varying vec3 vViewPos;
+
+              void main() {
+                vPotential = aPotential;
+                vNormalW = normalize(normalMatrix * normal);
+                vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+                vViewPos = -mvPosition.xyz;
+                gl_Position = projectionMatrix * mvPosition;
+              }
+            `,
+            fragmentShader: `
+              uniform float uContourStep;
+              uniform float uShowContours;
+              uniform vec3 uLightDir;
+
+              varying float vPotential;
+              varying vec3 vNormalW;
+              varying vec3 vViewPos;
+
+              // 與 2D 完全一致的電位色階函式
+              vec3 potentialColor(float v) {
+                float norm = clamp(v / 3.0, -1.0, 1.0);
+                vec3 cSlate   = vec3(0.118, 0.161, 0.231); // #1e293b
+                vec3 cAmber   = vec3(0.961, 0.620, 0.043); // #f59e0b
+                vec3 cCrimson = vec3(0.957, 0.247, 0.369); // #f43f5e
+                vec3 cCyan    = vec3(0.055, 0.647, 0.914); // #0ea5e9
+                vec3 cDeep    = vec3(0.145, 0.388, 0.922); // #2563eb
+
+                if (norm >= 0.0) {
+                  if (norm < 0.5) return mix(cSlate, cAmber, norm * 2.0);
+                  return mix(cAmber, cCrimson, (norm - 0.5) * 2.0);
+                } else {
+                  float an = -norm;
+                  if (an < 0.5) return mix(cSlate, cCyan, an * 2.0);
+                  return mix(cCyan, cDeep, (an - 0.5) * 2.0);
+                }
+              }
+
+              void main() {
+                vec3 N = normalize(vNormalW);
+                if (!gl_FrontFacing) N = -N;
+                vec3 V = normalize(vViewPos);
+                vec3 L = normalize(uLightDir);
+                vec3 H = normalize(L + V);
+
+                // 基礎地形色 + 柔順立體光影
+                vec3 baseCol = potentialColor(vPotential);
+                float diff = max(dot(N, L), 0.0);
+                float hemi = 0.5 + 0.5 * N.y;
+                float spec = pow(max(dot(N, H), 0.0), 36.0) * 0.22;
+                float rim  = pow(1.0 - max(dot(N, V), 0.0), 3.0) * 0.18;
+
+                vec3 col = baseCol * (0.42 + 0.58 * diff + 0.18 * hemi) + vec3(spec) + vec3(0.35, 0.65, 1.0) * rim;
+
+                // 反鋸齒 3D 等位線（等高線），精確對齊 2D ΔV 間距
+                if (uShowContours > 0.5) {
+                  float scaled = vPotential / uContourStep;
+                  float fw = max(fwidth(scaled), 0.0002);
+                  float distToLine = abs(fract(scaled - 0.5) - 0.5);
+                  // 在超陡峭峰頂淡出過密線條以防閃爍
+                  float densityFade = smoothstep(0.55, 0.18, fw);
+                  float lineMask = (1.0 - smoothstep(0.0, 1.45 * fw, distToLine)) * densityFade;
+
+                  vec3 lineCol = vPotential > 0.0 ? vec3(1.0, 0.90, 0.72) : vec3(0.75, 0.95, 1.0);
+                  col = mix(col, lineCol, lineMask * 0.68);
+
+                  // 特別標亮 V = 0 等位線（零電位海平面交線）
+                  float zeroFw = max(fwidth(vPotential), 0.0002);
+                  float zeroMask = 1.0 - smoothstep(0.0, 2.2 * zeroFw, abs(vPotential));
+                  col = mix(col, vec3(1.0, 1.0, 1.0), zeroMask * 0.92);
+                }
+
+                gl_FragColor = vec4(col, 0.92);
+              }
+            `
+          });
+
+          terrainMesh = new THREE.Mesh(terrainGeo, terrainMat);
+          scene3D.add(terrainMesh);
+
+          // 3. 場源電荷 3D 標記群組
+          sourceMarkersGroup = new THREE.Group();
+          scene3D.add(sourceMarkersGroup);
+
+          // 4. 測試電荷 3D 球體與尾跡群組
+          testParticlesGroup = new THREE.Group();
+          scene3D.add(testParticlesGroup);
+
+          // 5. 2D ↔ 3D 即時連動探針 (發光垂直針 + 地形表面光球 + 水平光環)
+          probeGroup3D = new THREE.Group();
+          probeGroup3D.visible = false;
+
+          const stemGeo = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(0, 0, 0),
+            new THREE.Vector3(0, 1, 0)
+          ]);
+          const stemMat = new THREE.LineBasicMaterial({ color: 0xfde047, transparent: true, opacity: 0.9 });
+          probeStem3D = new THREE.Line(stemGeo, stemMat);
+          probeGroup3D.add(probeStem3D);
+
+          const orbGeo = new THREE.SphereGeometry(0.16, 18, 18);
+          const orbMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
+          probeOrb3D = new THREE.Mesh(orbGeo, orbMat);
+          probeGroup3D.add(probeOrb3D);
+
+          const haloGeo = new THREE.RingGeometry(0.22, 0.32, 28);
+          haloGeo.rotateX(-Math.PI / 2);
+          const haloMat = new THREE.MeshBasicMaterial({ color: 0xfde047, side: THREE.DoubleSide, transparent: true, opacity: 0.85 });
+          probeHalo3D = new THREE.Mesh(haloGeo, haloMat);
+          probeGroup3D.add(probeHalo3D);
+
+          scene3D.add(probeGroup3D);
+        } catch (err) {
+          console.error('3D 場景初始化失敗:', err);
+          showToast('WebGL 3D 地形初始化異常，請確認瀏覽器已啟用硬體加速。');
+        }
+      }
+
+      /** OrbitControls 降級控制器（僅在外部 CDN 未載入時啟用） */
+      function createFallbackControls(camera, dom) {
+        let isDown = false, px = 0, py = 0;
+        let theta = 0, phi = 0.82, radius = 15.8;
+        const target = new THREE.Vector3(0, 0, 0);
+
+        function apply() {
+          camera.position.set(
+            target.x + radius * Math.sin(phi) * Math.sin(theta),
+            target.y + radius * Math.cos(phi),
+            target.z + radius * Math.sin(phi) * Math.cos(theta)
+          );
+          camera.lookAt(target);
+        }
+        dom.addEventListener('pointerdown', e => { isDown = true; px = e.clientX; py = e.clientY; });
+        window.addEventListener('pointerup', () => { isDown = false; });
+        window.addEventListener('pointermove', e => {
+          if (!isDown) return;
+          theta -= (e.clientX - px) * 0.007;
+          phi = Math.max(0.08, Math.min(Math.PI * 0.85, phi - (e.clientY - py) * 0.007));
+          px = e.clientX; py = e.clientY;
+          apply();
+        });
+        dom.addEventListener('wheel', e => {
+          e.preventDefault();
+          radius = Math.max(6, Math.min(28, radius + e.deltaY * 0.01));
+          apply();
+        }, { passive: false });
+        apply();
+        return { target, update: () => {} };
+      }
+
+      /** 依據最新場源電荷即時更新 3D 電位地形網格與精確解析法向量 */
+      function update3DTerrain() {
+        if (!terrainGeo) return;
+        const pos = terrainGeo.attributes.position;
+        const norm = terrainGeo.attributes.normal;
+        const pot = terrainGeo.attributes.aPotential;
+        const count = pos.count;
+
+        for (let i = 0; i < count; i++) {
+          const x = pos.getX(i);
+          const z = pos.getZ(i);
+          const physY = -z; // 3D Z 對應 -y
+
+          const { V, Ex, Ey } = evaluateFieldAndPotential(x, physY);
+          const { h, dh } = potentialToHeightAndDeriv(V);
+
+          pos.setY(i, h);
+          pot.setX(i, V);
+
+          // 解析表面法向量：n = normalize(dh * Ex, 1, -dh * Ey)
+          const nx = dh * Ex;
+          const ny = 1.0;
+          const nz = -dh * Ey;
+          const invLen = 1.0 / Math.hypot(nx, ny, nz);
+          norm.setXYZ(i, nx * invLen, ny * invLen, nz * invLen);
+        }
+
+        pos.needsUpdate = true;
+        norm.needsUpdate = true;
+        pot.needsUpdate = true;
+
+        update3DSourceMarkers();
+      }
+
+      /** 更新 3D 場源電荷垂直標記桿與標籤 */
+      function update3DSourceMarkers() {
+        if (!sourceMarkersGroup) return;
+        while (sourceMarkersGroup.children.length > 0) {
+          const child = sourceMarkersGroup.children[0];
+          sourceMarkersGroup.remove(child);
+          if (child.geometry) child.geometry.dispose();
+          if (child.material) {
+            if (child.material.map) child.material.map.dispose();
+            child.material.dispose();
+          }
+        }
+
+        for (let i = 0; i < state.charges.length; i++) {
+          const c = state.charges[i];
+          const isPos = c.q > 0;
+          const V = evaluatePotential(c.x, c.y);
+          const h = potentialToHeight(V);
+          const z = -c.y;
+
+          // 垂直參考柱（連接海平面 V=0 與山峰/谷底）
+          const stemLen = Math.max(0.25, Math.abs(h));
+          const cylGeo = new THREE.CylinderGeometry(0.045, 0.045, stemLen, 10);
+          const cylMat = new THREE.MeshBasicMaterial({
+            color: isPos ? 0xfb7185 : 0x38bdf8,
+            transparent: true,
+            opacity: 0.72
+          });
+          const cyl = new THREE.Mesh(cylGeo, cylMat);
+          cyl.position.set(c.x, h * 0.5, z);
+          sourceMarkersGroup.add(cyl);
+
+          // 懸浮標籤精靈 (+2, -1 等)
+          const qText = (c.q > 0 ? '+' : '') + (Number.isInteger(c.q) ? c.q : c.q.toFixed(1));
+          const spriteMat = new THREE.SpriteMaterial({
+            map: createChargeSpriteTexture(qText, isPos),
+            transparent: true
+          });
+          const sprite = new THREE.Sprite(spriteMat);
+          const labelY = isPos ? h + 0.65 : h - 0.65;
+          sprite.position.set(c.x, labelY, z);
+          sprite.scale.set(0.75, 0.75, 1);
+          sourceMarkersGroup.add(sprite);
+        }
+      }
+
+      /** 為每顆測試電荷配置 3D 球體與尾跡線段 */
+      function create3DTestParticleObject(isPos) {
+        if (!testParticlesGroup) return null;
+        const color = isPos ? 0xfbbf24 : 0x38bdf8;
+        const group = new THREE.Group();
+
+        const sphereGeo = new THREE.SphereGeometry(0.16, 16, 16);
+        const sphereMat = new THREE.MeshStandardMaterial({
+          color: 0xffffff,
+          emissive: color,
+          emissiveIntensity: 0.85,
+          roughness: 0.25
+        });
+        const sphere = new THREE.Mesh(sphereGeo, sphereMat);
+        group.add(sphere);
+
+        const trailPositions = new Float32Array(MAX_TRAIL_POINTS * 3);
+        const trailGeo = new THREE.BufferGeometry();
+        trailGeo.setAttribute('position', new THREE.BufferAttribute(trailPositions, 3));
+        trailGeo.setDrawRange(0, 0);
+        const trailMat = new THREE.LineBasicMaterial({
+          color: color,
+          transparent: true,
+          opacity: 0.92
+        });
+        const trailLine = new THREE.Line(trailGeo, trailMat);
+        trailLine.frustumCulled = false;
+        group.add(trailLine);
+
+        testParticlesGroup.add(group);
+        return { group, sphere, trailLine, trailGeo, trailPositions };
+      }
+
+      /** 釋放移除的測試電荷 3D 資源 */
+      function dispose3DTestParticleObject(obj) {
+        if (!obj || !testParticlesGroup) return;
+        testParticlesGroup.remove(obj.group);
+        obj.sphere.geometry.dispose();
+        obj.sphere.material.dispose();
+        obj.trailGeo.dispose();
+        obj.trailLine.material.dispose();
+      }
+
+      /** 更新所有活躍測試電荷在 3D 電位山谷表面上的位置與軌跡 */
+      function sync3DTestParticles() {
+        if (!testParticlesGroup) return;
+        const surfOffset = 0.17;
+        for (let i = 0; i < state.testParticles.length; i++) {
+          const tp = state.testParticles[i];
+          if (!tp.threeObj) continue;
+
+          const V = evaluatePotential(tp.x, tp.y);
+          const h = potentialToHeight(V);
+          tp.threeObj.sphere.position.set(tp.x, h + surfOffset, -tp.y);
+
+          const tr = tp.trail;
+          const posArr = tp.threeObj.trailPositions;
+          const count = Math.min(tr.length, MAX_TRAIL_POINTS);
+          for (let k = 0; k < count; k++) {
+            const pt = tr[k];
+            const ptH = potentialToHeight(evaluatePotential(pt.x, pt.y));
+            posArr[k * 3] = pt.x;
+            posArr[k * 3 + 1] = ptH + surfOffset * 0.65;
+            posArr[k * 3 + 2] = -pt.y;
+          }
+          tp.threeObj.trailGeo.attributes.position.needsUpdate = true;
+          tp.threeObj.trailGeo.setDrawRange(0, count);
+        }
+      }
+
+      /** 更新 3D 即時懸停探針 */
+      function sync3DProbe() {
+        if (!probeGroup3D) return;
+        const hp = state.hoverPos;
+        if (!hp || Math.abs(hp.x) > DOMAIN_HALF || Math.abs(hp.y) > DOMAIN_HALF) {
+          probeGroup3D.visible = false;
+          return;
+        }
+        const V = evaluatePotential(hp.x, hp.y);
+        const h = potentialToHeight(V);
+        const z = -hp.y;
+
+        probeGroup3D.visible = true;
+        probeOrb3D.position.set(hp.x, h + 0.08, z);
+        probeHalo3D.position.set(hp.x, h + 0.06, z);
+
+        const stemPos = probeStem3D.geometry.attributes.position;
+        stemPos.setXYZ(0, hp.x, 0, z);
+        stemPos.setXYZ(1, hp.x, h + 0.08, z);
+        stemPos.needsUpdate = true;
+      }
+
+      /** 平滑切換 3D 相機視角預設 */
+      function setCameraPreset(presetName) {
+        if (!camera3D || !controls3D) return;
+        camAnim.startPos.copy(camera3D.position);
+        camAnim.startTarget.copy(controls3D.target);
+        camAnim.endTarget.set(0, 0, 0);
+
+        if (presetName === 'iso') {
+          camAnim.endPos.set(0, 10.5, 12.2);
+        } else if (presetName === 'side') {
+          camAnim.endPos.set(0, 3.6, 15.2);
+        } else if (presetName === 'top') {
+          // 正俯視：z 微偏移 0.01 避免萬向節鎖死，確保 +x 向右、-z(+y) 向上完全對齊 2D
+          camAnim.endPos.set(0, 15.6, 0.02);
+        }
+        camAnim.progress = 0;
+        camAnim.active = true;
+
+        // 更新按鈕樣式
+        document.querySelectorAll('.cam-btn').forEach(btn => {
+          btn.classList.remove('bg-sky-500/25', 'text-sky-200', 'border-sky-400/40');
+          btn.classList.add('text-slate-300', 'border-transparent');
+        });
+        const mapId = { iso: 'camIso', side: 'camSide', top: 'camTop' }[presetName];
+        const activeBtn = document.getElementById(mapId);
+        if (activeBtn) {
+          activeBtn.classList.add('bg-sky-500/25', 'text-sky-200', 'border-sky-400/40');
+          activeBtn.classList.remove('text-slate-300', 'border-transparent');
+        }
+      }
+
+      function resize3DCanvas() {
+        if (!renderer3D || !camera3D) return;
+        const rect = canvas3DWrap.getBoundingClientRect();
+        if (rect.width < 10 || rect.height < 10) return;
+        renderer3D.setSize(rect.width, rect.height, false);
+        camera3D.aspect = rect.width / rect.height;
+        camera3D.updateProjectionMatrix();
+      }
+
+      // =========================================================================
+      // 7. 測試電荷動力學模擬 (RK4 + 子步進，支援純慣性／微阻尼與自動消失)
+      // =========================================================================
+
+      /** 在物理座標 (x, y) 放置一顆測試電荷 q */
+      function spawnTestParticle(x, y) {
+        // 避免直接放在場源電荷內部
+        for (let i = 0; i < state.charges.length; i++) {
+          const c = state.charges[i];
+          if (Math.hypot(x - c.x, y - c.y) < CAPTURE_RADIUS + 0.06) {
+            showToast('請點擊空白處放置測試電荷 q（避開場源電荷中心）');
+            return;
+          }
+        }
+        if (Math.abs(x) > DOMAIN_HALF || Math.abs(y) > DOMAIN_HALF) return;
+
+        // 上限控管避免課堂大量點擊拖慢效能
+        if (state.testParticles.length >= 60) {
+          const oldest = state.testParticles.shift();
+          dispose3DTestParticleObject(oldest.threeObj);
+        }
+
+        const qVal = state.testChargeSign * state.testChargeMag;
+        const tp = {
+          id: state.nextId++,
+          x,
+          y,
+          vx: 0,
+          vy: 0,
+          q: qVal,
+          m: state.testMass,
+          trail: [{ x, y }],
+          trailTimer: 0,
+          threeObj: create3DTestParticleObject(qVal > 0)
+        };
+        state.testParticles.push(tp);
+        updateCountersUI();
+      }
+
+      /** 環狀釋放 12 顆測試電荷 */
+      function releaseRingOfParticles() {
+        // 若有選取場源則環繞該場源釋放，否則環繞中央釋放
+        let cx = 0, cy = 0, radius = 2.2;
+        const sel = state.charges.find(c => c.id === state.selectedChargeId);
+        if (sel) {
+          cx = sel.x;
+          cy = sel.y;
+          radius = 0.95;
+        } else if (state.charges.length === 1) {
+          cx = state.charges[0].x;
+          cy = state.charges[0].y;
+          radius = 1.65;
+        }
+
+        const count = 12;
+        for (let i = 0; i < count; i++) {
+          const ang = (i / count) * Math.PI * 2 + 0.15;
+          const px = cx + radius * Math.cos(ang);
+          const py = cy + radius * Math.sin(ang);
+          if (Math.abs(px) < DOMAIN_HALF - 0.15 && Math.abs(py) < DOMAIN_HALF - 0.15) {
+            spawnTestParticle(px, py);
+          }
+        }
+      }
+
+      /** 推進測試電荷物理模擬一步 (dt 秒) */
+      function stepTestParticles(dt) {
+        // 更新吸收波紋特效（即使暫停也保持平滑結束）
+        for (let i = state.ripples.length - 1; i >= 0; i--) {
+          const rp = state.ripples[i];
+          rp.r += dt * 1.45;
+          rp.alpha -= dt * 2.1;
+          if (rp.alpha <= 0) state.ripples.splice(i, 1);
+        }
+
+        if (state.paused || state.testParticles.length === 0) return;
+
+        const subSteps = 4;
+        const h = dt / subSteps;
+        const damping = state.dampedMode ? 3.2 : 0.0;
+        const maxSpeed = 14.0;
+
+        for (let i = state.testParticles.length - 1; i >= 0; i--) {
+          const tp = state.testParticles[i];
+          const qOverM = tp.q / tp.m;
+          let removed = false;
+
+          function accel(px, py, pvx, pvy) {
+            const { Ex, Ey } = evaluateField(px, py);
+            return {
+              ax: qOverM * Ex - damping * pvx,
+              ay: qOverM * Ey - damping * pvy
+            };
+          }
+
+          for (let s = 0; s < subSteps; s++) {
+            // 4 階 Runge-Kutta 積分位置與速度
+            const a1 = accel(tp.x, tp.y, tp.vx, tp.vy);
+            const k1x = tp.vx, k1y = tp.vy;
+
+            const vx2 = tp.vx + 0.5 * h * a1.ax;
+            const vy2 = tp.vy + 0.5 * h * a1.ay;
+            const a2 = accel(tp.x + 0.5 * h * k1x, tp.y + 0.5 * h * k1y, vx2, vy2);
+            const k2x = vx2, k2y = vy2;
+
+            const vx3 = tp.vx + 0.5 * h * a2.ax;
+            const vy3 = tp.vy + 0.5 * h * a2.ay;
+            const a3 = accel(tp.x + 0.5 * h * k2x, tp.y + 0.5 * h * k2y, vx3, vy3);
+            const k3x = vx3, k3y = vy3;
+
+            const vx4 = tp.vx + h * a3.ax;
+            const vy4 = tp.vy + h * a3.ay;
+            const a4 = accel(tp.x + h * k3x, tp.y + h * k3y, vx4, vy4);
+            const k4x = vx4, k4y = vy4;
+
+            tp.x += (h / 6) * (k1x + 2 * k2x + 2 * k3x + k4x);
+            tp.y += (h / 6) * (k1y + 2 * k2y + 2 * k3y + k4y);
+            tp.vx += (h / 6) * (a1.ax + 2 * a2.ax + 2 * a3.ax + a4.ax);
+            tp.vy += (h / 6) * (a1.ay + 2 * a2.ay + 2 * a3.ay + a4.ay);
+
+            // 速度上限保護防止極端加速飛穿
+            const spd = Math.hypot(tp.vx, tp.vy);
+            if (spd > maxSpeed) {
+              const scale = maxSpeed / spd;
+              tp.vx *= scale;
+              tp.vy *= scale;
+            }
+
+            // 規則 1：抵達任一場源電荷處 -> 觸發吸收波紋並消失
+            for (let cIdx = 0; cIdx < state.charges.length; cIdx++) {
+              const c = state.charges[cIdx];
+              if (Math.hypot(tp.x - c.x, tp.y - c.y) < CAPTURE_RADIUS) {
+                state.ripples.push({
+                  x: c.x,
+                  y: c.y,
+                  r: 0.18,
+                  alpha: 0.95,
+                  color: tp.q > 0 ? 'rgba(251, 191, 36, ALPHA)' : 'rgba(56, 189, 248, ALPHA)'
+                });
+                removed = true;
+                break;
+              }
+            }
+            if (removed) break;
+
+            // 規則 2：離開 2D 物理平面（螢幕外）-> 消失
+            if (Math.abs(tp.x) > DOMAIN_HALF + 0.06 || Math.abs(tp.y) > DOMAIN_HALF + 0.06) {
+              removed = true;
+              break;
+            }
+          }
+
+          if (removed) {
+            dispose3DTestParticleObject(tp.threeObj);
+            state.testParticles.splice(i, 1);
+            updateCountersUI();
+            continue;
+          }
+
+          // 紀錄尾跡點
+          const lastPt = tp.trail[tp.trail.length - 1];
+          if (!lastPt || Math.hypot(tp.x - lastPt.x, tp.y - lastPt.y) > 0.045) {
+            tp.trail.push({ x: tp.x, y: tp.y });
+            if (tp.trail.length > MAX_TRAIL_POINTS) {
+              tp.trail.shift();
+            }
+          }
+        }
+      }
+
+      // =========================================================================
+      // 8. 場源電荷管理與經典情境預設
+      // =========================================================================
+
+      function clearAllTestParticles() {
+        for (let i = 0; i < state.testParticles.length; i++) {
+          dispose3DTestParticleObject(state.testParticles[i].threeObj);
+        }
+        state.testParticles = [];
+        updateCountersUI();
+      }
+
+      function addSourceCharge(q, x, y) {
+        if (state.charges.length >= 10) {
+          showToast('為保持畫面清晰，最多可同時放置 10 個場源電荷。');
+          return null;
+        }
+        // 若未指定座標，尋找不重疊的合適位置
+        let px = x, py = y;
+        if (px === undefined || py === undefined) {
+          for (let attempt = 0; attempt < 24; attempt++) {
+            const tx = (Math.random() - 0.5) * 5.2;
+            const ty = (Math.random() - 0.5) * 5.2;
+            const clash = state.charges.some(c => Math.hypot(c.x - tx, c.y - ty) < 1.1);
+            if (!clash) { px = tx; py = ty; break; }
+          }
+          if (px === undefined) { px = 0; py = 0; }
+        }
+        const charge = { id: state.nextId++, x: px, y: py, q };
+        state.charges.push(charge);
+        state.fieldDirty = true;
+        updateCountersUI();
+        return charge;
+      }
+
+      function loadPreset(presetKey) {
+        state.charges = [];
+        state.selectedChargeId = null;
+        clearAllTestParticles();
+        hideSelectedChargeBar();
+
+        if (presetKey === 'dipole') {
+          addSourceCharge(+2, -2.0, 0);
+          addSourceCharge(-2, +2.0, 0);
+        } else if (presetKey === 'single') {
+          addSourceCharge(+2.5, 0, 0);
+        } else if (presetKey === 'twinPos') {
+          addSourceCharge(+2, -2.0, 0);
+          addSourceCharge(+2, +2.0, 0);
+        } else if (presetKey === 'asym') {
+          addSourceCharge(+3, -1.8, 0);
+          addSourceCharge(-1, +2.1, 0);
+        } else if (presetKey === 'quad') {
+          addSourceCharge(+2, -1.9, +1.9);
+          addSourceCharge(-2, +1.9, +1.9);
+          addSourceCharge(-2, -1.9, -1.9);
+          addSourceCharge(+2, +1.9, -1.9);
+        }
+
+        // 高亮對應情境按鈕
+        document.querySelectorAll('.preset-btn').forEach(btn => {
+          const active = btn.dataset.preset === presetKey;
+          btn.classList.toggle('bg-sky-500/20', active);
+          btn.classList.toggle('text-sky-200', active);
+          btn.classList.toggle('border-sky-400/45', active);
+          btn.classList.toggle('bg-slate-800/90', !active);
+          btn.classList.toggle('text-slate-300', !active);
+          btn.classList.toggle('border-slate-700/80', !active);
+        });
+
+        state.fieldDirty = true;
+        updateCountersUI();
+      }
+
+      // =========================================================================
+      // 9. 2D 畫布指標互動（滑鼠與觸控統一處理：拖曳 Q、點擊放 q、即時探針）
+      // =========================================================================
+
+      function getCanvasLocalCoords(e) {
+        const rect = canvas2D.getBoundingClientRect();
+        return {
+          sx: e.clientX - rect.left,
+          sy: e.clientY - rect.top
+        };
+      }
+
+      function hitTestSourceCharge(sx, sy) {
+        let best = null;
+        let bestDist = 28; // 寬裕的觸控點擊半徑
+        for (let i = 0; i < state.charges.length; i++) {
+          const c = state.charges[i];
+          const p = physToScreen(c.x, c.y);
+          const d = Math.hypot(sx - p.sx, sy - p.sy);
+          if (d < bestDist) {
+            bestDist = d;
+            best = c;
+          }
+        }
+        return best;
+      }
+
+      canvas2D.addEventListener('pointerdown', (e) => {
+        if (e.button !== 0 && e.pointerType === 'mouse') return;
+        const { sx, sy } = getCanvasLocalCoords(e);
+        const hit = hitTestSourceCharge(sx, sy);
+
+        if (hit) {
+          state.draggedChargeId = hit.id;
+          state.selectedChargeId = hit.id;
+          showSelectedChargeBar(hit);
+          canvas2D.setPointerCapture(e.pointerId);
+          canvas2D.style.cursor = 'grabbing';
+        } else {
+          // 點擊空白處直接放置測試電荷 q
+          const phys = screenToPhys(sx, sy);
+          if (Math.abs(phys.x) <= DOMAIN_HALF && Math.abs(phys.y) <= DOMAIN_HALF) {
+            spawnTestParticle(phys.x, phys.y);
+          }
+        }
+      });
+
+      canvas2D.addEventListener('pointermove', (e) => {
+        const { sx, sy } = getCanvasLocalCoords(e);
+        const phys = screenToPhys(sx, sy);
+
+        if (state.draggedChargeId !== null) {
+          const c = state.charges.find(ch => ch.id === state.draggedChargeId);
+          if (c) {
+            c.x = Math.max(-DOMAIN_HALF + 0.3, Math.min(DOMAIN_HALF - 0.3, phys.x));
+            c.y = Math.max(-DOMAIN_HALF + 0.3, Math.min(DOMAIN_HALF - 0.3, phys.y));
+            state.fieldDirty = true;
+          }
+          state.hoverPos = null;
+          updateProbeHUD();
+          return;
+        }
+
+        // 更新即時探針位置與滑鼠游標提示
+        if (Math.abs(phys.x) <= DOMAIN_HALF && Math.abs(phys.y) <= DOMAIN_HALF) {
+          state.hoverPos = phys;
+          const overCharge = hitTestSourceCharge(sx, sy);
+          canvas2D.style.cursor = overCharge ? 'grab' : 'crosshair';
+        } else {
+          state.hoverPos = null;
+          canvas2D.style.cursor = 'default';
+        }
+        updateProbeHUD();
+      });
+
+      function endDrag(e) {
+        if (state.draggedChargeId !== null) {
+          state.draggedChargeId = null;
+          canvas2D.style.cursor = 'crosshair';
+          try { canvas2D.releasePointerCapture(e.pointerId); } catch (_) {}
+        }
+      }
+      canvas2D.addEventListener('pointerup', endDrag);
+      canvas2D.addEventListener('pointercancel', endDrag);
+      canvas2D.addEventListener('pointerleave', () => {
+        if (state.draggedChargeId === null) {
+          state.hoverPos = null;
+          updateProbeHUD();
+        }
+      });
+
+      // =========================================================================
+      // 10. UI 狀態同步與控制事件綁定
+      // =========================================================================
+      const elValPos = document.getElementById('valPos');
+      const elValPot = document.getElementById('valPot');
+      const elValField = document.getElementById('valField');
+      const elCountSourceQ = document.getElementById('countSourceQ');
+      const elCountTestQ = document.getElementById('countTestQ');
+
+      function updateProbeHUD() {
+        const hp = state.hoverPos;
+        if (!hp) {
+          elValPos.textContent = '移動游標探測';
+          elValPot.textContent = '--';
+          elValField.textContent = '--';
+          return;
+        }
+        const { V, Ex, Ey } = evaluateFieldAndPotential(hp.x, hp.y);
+        const eMag = Math.hypot(Ex, Ey);
+        elValPos.textContent = `(${hp.x.toFixed(1)}, ${hp.y.toFixed(1)})`;
+        elValPot.textContent = `${V >= 0 ? '+' : ''}${V.toFixed(2)} V`;
+        elValPot.className = V >= 0 ? 'text-amber-300 font-bold' : 'text-sky-300 font-bold';
+        elValField.textContent = `${eMag.toFixed(2)}`;
+      }
+
+      function updateCountersUI() {
+        elCountSourceQ.textContent = state.charges.length;
+        elCountTestQ.textContent = state.testParticles.length;
+      }
+
+      // 選取場源電荷編輯列
+      const selectedChargeBar = document.getElementById('selectedChargeBar');
+      const selChargeDot = document.getElementById('selChargeDot');
+      const selChargeVal = document.getElementById('selChargeVal');
+      const sliderSelQ = document.getElementById('sliderSelQ');
+
+      function showSelectedChargeBar(charge) {
+        if (!charge) return;
+        selectedChargeBar.classList.remove('hidden');
+        sliderSelQ.value = charge.q;
+        refreshSelectedChargeBarText(charge);
+      }
+
+      function refreshSelectedChargeBarText(charge) {
+        const isPos = charge.q > 0;
+        selChargeDot.className = `w-3 h-3 rounded-full ${isPos ? 'bg-rose-500 shadow-[0_0_8px_#f43f5e]' : 'bg-sky-500 shadow-[0_0_8px_#0ea5e9]'}`;
+        selChargeVal.textContent = `${isPos ? '+' : ''}${charge.q.toFixed(1)} Q`;
+        selChargeVal.className = `text-xs font-bold font-mono px-1.5 py-0.5 rounded bg-slate-800 ${isPos ? 'text-rose-300' : 'text-sky-300'}`;
+      }
+
+      function hideSelectedChargeBar() {
+        selectedChargeBar.classList.add('hidden');
+        state.selectedChargeId = null;
+      }
+
+      sliderSelQ.addEventListener('input', () => {
+        const c = state.charges.find(ch => ch.id === state.selectedChargeId);
+        if (!c) return;
+        let val = parseFloat(sliderSelQ.value);
+        // 避免變成 0，自動跳過 0
+        if (Math.abs(val) < 0.25) {
+          val = c.q > 0 ? -0.5 : 0.5;
+          sliderSelQ.value = val;
+        }
+        c.q = val;
+        refreshSelectedChargeBarText(c);
+        state.fieldDirty = true;
+      });
+
+      document.getElementById('btnFlipSelQ').addEventListener('click', () => {
+        const c = state.charges.find(ch => ch.id === state.selectedChargeId);
+        if (!c) return;
+        c.q = -c.q;
+        sliderSelQ.value = c.q;
+        refreshSelectedChargeBarText(c);
+        state.fieldDirty = true;
+      });
+
+      document.getElementById('btnDeleteSelQ').addEventListener('click', () => {
+        const idx = state.charges.findIndex(ch => ch.id === state.selectedChargeId);
+        if (idx >= 0) {
+          state.charges.splice(idx, 1);
+          state.fieldDirty = true;
+          hideSelectedChargeBar();
+          updateCountersUI();
+        }
+      });
+
+      document.getElementById('btnCloseSelBar').addEventListener('click', hideSelectedChargeBar);
+
+      // 視角模式切換 (雙視角 / 純 2D / 純 3D)
+      const workspaceGrid = document.getElementById('workspaceGrid');
+      const panel2D = document.getElementById('panel2D');
+      const panel3D = document.getElementById('panel3D');
+
+      function setViewMode(mode) {
+        state.viewMode = mode;
+        const map = { split: 'btnViewSplit', '2d': 'btnView2D', '3d': 'btnView3D' };
+        document.querySelectorAll('.view-tab').forEach(btn => {
+          const active = btn.id === map[mode];
+          btn.classList.toggle('bg-sky-500/20', active);
+          btn.classList.toggle('text-sky-300', active);
+          btn.classList.toggle('border-sky-400/40', active);
+          btn.classList.toggle('text-slate-400', !active);
+          btn.classList.toggle('border-transparent', !active);
+        });
+
+        if (mode === 'split') {
+          workspaceGrid.className = 'flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-2 gap-2.5 p-2.5 overflow-hidden';
+          panel2D.classList.remove('hidden');
+          panel3D.classList.remove('hidden');
+        } else if (mode === '2d') {
+          workspaceGrid.className = 'flex-1 min-h-0 grid grid-cols-1 gap-2.5 p-2.5 overflow-hidden';
+          panel2D.classList.remove('hidden');
+          panel3D.classList.add('hidden');
+        } else if (mode === '3d') {
+          workspaceGrid.className = 'flex-1 min-h-0 grid grid-cols-1 gap-2.5 p-2.5 overflow-hidden';
+          panel2D.classList.add('hidden');
+          panel3D.classList.remove('hidden');
+        }
+
+        // 等版面回流後重設兩個 Canvas 尺寸
+        requestAnimationFrame(() => {
+          resize2DCanvas();
+          resize3DCanvas();
+        });
+      }
+
+      document.getElementById('btnViewSplit').addEventListener('click', () => setViewMode('split'));
+      document.getElementById('btnView2D').addEventListener('click', () => setViewMode('2d'));
+      document.getElementById('btnView3D').addEventListener('click', () => setViewMode('3d'));
+
+      // 3D 相機快捷視角
+      document.getElementById('camIso').addEventListener('click', () => setCameraPreset('iso'));
+      document.getElementById('camSide').addEventListener('click', () => setCameraPreset('side'));
+      document.getElementById('camTop').addEventListener('click', () => setCameraPreset('top'));
+
+      // 經典情境按鈕
+      document.querySelectorAll('.preset-btn').forEach(btn => {
+        btn.addEventListener('click', () => loadPreset(btn.dataset.preset));
+      });
+
+      // 場源電荷按鈕
+      document.getElementById('btnAddPosQ').addEventListener('click', () => {
+        const c = addSourceCharge(+2);
+        if (c) { state.selectedChargeId = c.id; showSelectedChargeBar(c); }
+      });
+      document.getElementById('btnAddNegQ').addEventListener('click', () => {
+        const c = addSourceCharge(-2);
+        if (c) { state.selectedChargeId = c.id; showSelectedChargeBar(c); }
+      });
+      document.getElementById('btnClearQ').addEventListener('click', () => {
+        state.charges = [];
+        hideSelectedChargeBar();
+        state.fieldDirty = true;
+        updateCountersUI();
+      });
+
+      // 測試電荷參數與控制
+      const btnSignPos = document.getElementById('btnSignPos');
+      const btnSignNeg = document.getElementById('btnSignNeg');
+      const sliderTestQ = document.getElementById('sliderTestQ');
+      const sliderTestM = document.getElementById('sliderTestM');
+      const lblTestQ = document.getElementById('lblTestQ');
+      const lblTestM = document.getElementById('lblTestM');
+
+      function refreshTestParamLabels() {
+        const signedQ = state.testChargeSign * state.testChargeMag;
+        lblTestQ.textContent = `${signedQ > 0 ? '+' : ''}${signedQ.toFixed(2)}`;
+        lblTestQ.className = `font-mono font-semibold ${signedQ > 0 ? 'text-amber-300' : 'text-sky-300'}`;
+        lblTestM.textContent = state.testMass.toFixed(2);
+      }
+
+      btnSignPos.addEventListener('click', () => {
+        state.testChargeSign = +1;
+        btnSignPos.className = 'px-2 py-0.5 rounded-md text-[11px] font-bold bg-amber-500/25 text-amber-200 border border-amber-400/50 transition';
+        btnSignNeg.className = 'px-2 py-0.5 rounded-md text-[11px] font-bold text-slate-400 hover:text-slate-200 border border-transparent transition';
+        refreshTestParamLabels();
+      });
+
+      btnSignNeg.addEventListener('click', () => {
+        state.testChargeSign = -1;
+        btnSignNeg.className = 'px-2 py-0.5 rounded-md text-[11px] font-bold bg-sky-500/25 text-sky-200 border border-sky-400/50 transition';
+        btnSignPos.className = 'px-2 py-0.5 rounded-md text-[11px] font-bold text-slate-400 hover:text-slate-200 border border-transparent transition';
+        refreshTestParamLabels();
+      });
+
+      sliderTestQ.addEventListener('input', () => {
+        state.testChargeMag = parseFloat(sliderTestQ.value);
+        refreshTestParamLabels();
+      });
+      sliderTestM.addEventListener('input', () => {
+        state.testMass = parseFloat(sliderTestM.value);
+        refreshTestParamLabels();
+      });
+
+      const btnDampingMode = document.getElementById('btnDampingMode');
+      btnDampingMode.addEventListener('click', () => {
+        state.dampedMode = !state.dampedMode;
+        if (state.dampedMode) {
+          btnDampingMode.textContent = '模式：微阻尼 (貼近電力線)';
+          btnDampingMode.className = 'px-2 py-1 rounded-lg text-[11px] font-medium bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-400/45 transition';
+          showToast('已切換為微阻尼模式：測試電荷將貼近電力線落入山谷');
+        } else {
+          btnDampingMode.textContent = '模式：純慣性 (無阻尼)';
+          btnDampingMode.className = 'px-2 py-1 rounded-lg text-[11px] font-medium bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-200 border border-indigo-400/40 transition';
+          showToast('已切換為純慣性模式：呈現 F=qE 真實牛頓力學軌跡');
+        }
+      });
+
+      document.getElementById('btnRingRelease').addEventListener('click', releaseRingOfParticles);
+
+      const btnPauseSim = document.getElementById('btnPauseSim');
+      btnPauseSim.addEventListener('click', () => {
+        state.paused = !state.paused;
+        btnPauseSim.textContent = state.paused ? '繼續' : '暫停';
+        btnPauseSim.classList.toggle('bg-amber-500/25', state.paused);
+        btnPauseSim.classList.toggle('text-amber-200', state.paused);
+        btnPauseSim.classList.toggle('border-amber-400/45', state.paused);
+      });
+
+      document.getElementById('btnClearTest').addEventListener('click', clearAllTestParticles);
+
+      // 視覺化圖層 Checkboxes
+      document.getElementById('chkFieldLines').addEventListener('change', e => { state.showFieldLines = e.target.checked; });
+      document.getElementById('chkEquipotential').addEventListener('change', e => { state.showEquipotential = e.target.checked; });
+      document.getElementById('chkHeatmap').addEventListener('change', e => { state.showHeatmap = e.target.checked; });
+      document.getElementById('chk3DContours').addEventListener('change', e => {
+        state.show3DContours = e.target.checked;
+        if (terrainMat) terrainMat.uniforms.uShowContours.value = state.show3DContours ? 1.0 : 0.0;
+      });
+      document.getElementById('chkVectorGrid').addEventListener('change', e => { state.showVectorGrid = e.target.checked; });
+      document.getElementById('chkParticleVec').addEventListener('change', e => { state.showParticleVec = e.target.checked; });
+
+      // 教學重點 Modal
+      const tipsModal = document.getElementById('tipsModal');
+      document.getElementById('btnOpenTips').addEventListener('click', () => tipsModal.classList.remove('hidden'));
+      document.getElementById('btnCloseTips').addEventListener('click', () => tipsModal.classList.add('hidden'));
+      document.getElementById('btnTipsConfirm').addEventListener('click', () => tipsModal.classList.add('hidden'));
+      tipsModal.addEventListener('click', (e) => {
+        if (e.target === tipsModal) tipsModal.classList.add('hidden');
+      });
+
+      // 吐司通知函式（完全取代 alert）
+      let toastTimer = null;
+      const toastBox = document.getElementById('toastBox');
+      function showToast(msg) {
+        toastBox.textContent = msg;
+        toastBox.classList.remove('hidden', 'toast-anim');
+        void toastBox.offsetWidth;
+        toastBox.classList.add('toast-anim');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+          toastBox.classList.add('hidden');
+        }, 2600);
+      }
+
+      // =========================================================================
+      // 11. 主動畫迴圈與響應式調整
+      // =========================================================================
+      let lastTime = performance.now();
+
+      function animate(now) {
+        requestAnimationFrame(animate);
+        const dt = Math.min(0.033, Math.max(0.001, (now - lastTime) / 1000));
+        lastTime = now;
+
+        // 若場源有變動，即時重算 2D 電位網格、電力線與 3D 地形
+        if (state.fieldDirty) {
+          recomputePotentialGrid();
+          recomputeFieldLines();
+          update3DTerrain();
+          updateProbeHUD();
+          state.fieldDirty = false;
+        }
+
+        // 推進測試電荷物理運動
+        stepTestParticles(dt);
+
+        // 渲染 2D 畫面
+        if (state.viewMode !== '3d') {
+          render2D();
+        }
+
+        // 渲染 3D 地形畫面
+        if (state.viewMode !== '2d' && renderer3D) {
+          // 處理相機預設平順過渡動畫
+          if (camAnim.active) {
+            camAnim.progress = Math.min(1, camAnim.progress + dt * 2.6);
+            const ease = 1 - Math.pow(1 - camAnim.progress, 3);
+            camera3D.position.lerpVectors(camAnim.startPos, camAnim.endPos, ease);
+            if (controls3D && controls3D.target) {
+              controls3D.target.lerpVectors(camAnim.startTarget, camAnim.endTarget, ease);
+            }
+            if (camAnim.progress >= 1) camAnim.active = false;
+          }
+
+          if (controls3D && controls3D.update) controls3D.update();
+          sync3DTestParticles();
+          sync3DProbe();
+          renderer3D.render(scene3D, camera3D);
+        }
+      }
+
+      // 監聽視窗與容器縮放
+      window.addEventListener('resize', () => {
+        resize2DCanvas();
+        resize3DCanvas();
+      });
+
+      // 頁面載入完成後啟動所有系統
+      window.onload = function () {
+        init3DScene();
+        resize2DCanvas();
+        resize3DCanvas();
+        loadPreset('dipole'); // 預設載入「電偶極 (+Q, -Q)」呈現山峰與山谷對照
+        refreshTestParamLabels();
+        lastTime = performance.now();
+        requestAnimationFrame(animate);
+      };
+    })();
+  </script>
+</body>
+</html>
