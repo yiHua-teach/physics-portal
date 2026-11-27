@@ -1,0 +1,8 @@
+.git
+.env
+.vercel
+node_modules
+gas
+make-gifs.js
+auto-label-gemini.js
+package-lock.json

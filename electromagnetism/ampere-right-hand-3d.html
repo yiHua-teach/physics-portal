@@ -1,0 +1,3074 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>安培右手定律 3D 體感互動實驗室</title>
+  <meta name="description" content="教室大屏 × 手機陀螺儀 3D 體感互動實驗室：支援安培右手定則（載流長直導線、螺線管、圓形線圈）與右手開掌定則（F = IL × B），含 QR Code 連線、單機模擬器與自動判題。" />
+  <meta name="portal-tags" content="電磁學, 安培右手定則, 右手開掌定則, 磁場, 手機體感, 3D視覺" />
+  <meta name="portal-badge" content="3D 體感 × 手機連動" />
+  <meta name="portal-featured" content="true" />
+
+  <!-- Google Fonts: Noto Sans TC & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Three.js r128 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <!-- PeerJS 1.5.4 (WebRTC DataChannel) -->
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+
+  <!-- QRCode.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Noto Sans TC"', 'Inter', 'system-ui', 'sans-serif'],
+          },
+          colors: {
+            classroom: '#f4f7fb',
+            vecI: '#ef4444',
+            vecB: '#2563eb',
+            vecF: '#16a34a',
+          },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background-color: #f4f7fb;
+      color: #0f172a;
+      font-family: 'Noto Sans TC', 'Inter', system-ui, sans-serif;
+      overflow-x: hidden;
+    }
+
+    /* 自訂滑桿樣式 */
+    input[type="range"].phys-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      height: 8px;
+      border-radius: 999px;
+      background: #e2e8f0;
+      outline: none;
+    }
+    input[type="range"].phys-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #3b82f6;
+      border: 3px solid #ffffff;
+      box-shadow: 0 2px 6px rgba(59, 130, 246, 0.45);
+      cursor: pointer;
+    }
+
+    /* 鎖定環形進度動畫 */
+    .lock-ring-circle {
+      transition: stroke-dashoffset 0.06s linear;
+      transform: rotate(-90deg);
+      transform-origin: 50% 50%;
+    }
+
+    /* 慶祝卡片彈出動畫 */
+    @keyframes popIn {
+      0% { opacity: 0; transform: scale(0.84) translateY(16px); }
+      70% { opacity: 1; transform: scale(1.03) translateY(-2px); }
+      100% { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .animate-pop-in {
+      animation: popIn 0.38s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    /* 柔和脈動提示 */
+    @keyframes gentlePulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.78; transform: scale(1.04); }
+    }
+    .animate-gentle-pulse {
+      animation: gentlePulse 2s ease-in-out infinite;
+    }
+
+    /* 3D Canvas 觸控防捲動 */
+    #three-canvas-wrap {
+      touch-action: none;
+      user-select: none;
+    }
+
+    /* QRCode 置中修正 */
+    #qrcode-container img,
+    #qrcode-container canvas {
+      margin: 0 auto !important;
+      border-radius: 10px;
+    }
+
+    /* 細緻捲軸 */
+    .thin-scroll::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .thin-scroll::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 999px;
+    }
+    .thin-scroll::-webkit-scrollbar-track {
+      background: transparent;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-[#f4f7fb] text-slate-900 antialiased">
+
+  <!-- 全域 Toast 提示訊息（取代 alert） -->
+  <div id="toast-box" class="fixed top-4 left-1/2 -translate-x-1/2 z-[100] pointer-events-none opacity-0 transition-all duration-300">
+    <div id="toast-inner" class="px-5 py-3 rounded-2xl bg-slate-900/92 text-white font-semibold text-sm sm:text-base shadow-xl backdrop-blur flex items-center gap-2.5">
+      <span id="toast-icon">ℹ️</span>
+      <span id="toast-text">提示訊息</span>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- 介面 A：教室大屏端 (Screen Role)                                        -->
+  <!-- ===================================================================== -->
+  <div id="screen-view" class="hidden min-h-screen flex flex-col">
+
+    <!-- 頂部導覽列 -->
+    <header class="bg-white/95 backdrop-blur border-b border-slate-200 sticky top-0 z-30 shadow-xs">
+      <div class="max-w-[1680px] mx-auto px-3 sm:px-5 py-2.5 flex flex-wrap items-center justify-between gap-3">
+
+        <!-- 品牌與標題 -->
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center text-2xl shadow-md shadow-blue-500/20">
+            🧲
+          </div>
+          <div>
+            <h1 class="text-lg sm:text-xl lg:text-2xl font-black tracking-tight text-slate-900 leading-tight">
+              安培右手定律 <span class="text-blue-600">3D 體感互動實驗室</span>
+            </h1>
+            <p class="text-xs sm:text-sm text-slate-500 font-medium">
+              教室大屏 × 手機陀螺儀即時連動教學系統
+            </p>
+          </div>
+        </div>
+
+        <!-- 雙物理模式切換器 -->
+        <div class="flex items-center bg-slate-100 p-1.5 rounded-2xl border border-slate-200 shadow-inner">
+          <button id="btn-mode-grip" onclick="switchMode('grip')"
+            class="px-4 sm:px-5 py-2 rounded-xl font-bold text-sm sm:text-base transition-all flex items-center gap-2 bg-blue-600 text-white shadow-sm">
+            <span class="text-lg">👍</span>
+            <span>安培右手定則（握拳）</span>
+          </button>
+          <button id="btn-mode-palm" onclick="switchMode('palm')"
+            class="px-4 sm:px-5 py-2 rounded-xl font-bold text-sm sm:text-base transition-all flex items-center gap-2 text-slate-600 hover:text-slate-900">
+            <span class="text-lg">👋</span>
+            <span>右手開掌定則（受力）</span>
+          </button>
+        </div>
+
+        <!-- 右側工具列：計分、連線狀態、音效 -->
+        <div class="flex items-center gap-2 sm:gap-3">
+          <!-- 計分與連勝 -->
+          <div class="flex items-center gap-2 bg-amber-50 border border-amber-200 px-3.5 py-1.5 rounded-2xl">
+            <span class="text-base">🏆</span>
+            <div class="text-xs sm:text-sm font-bold text-amber-900">
+              得分 <span id="score-val" class="text-base sm:text-lg text-amber-600">0</span>
+              <span class="mx-1 text-amber-300">|</span>
+              連勝 <span id="streak-val" class="text-base sm:text-lg text-orange-600">0</span> 🔥
+            </div>
+          </div>
+
+          <!-- 手機連線狀態膠囊 -->
+          <button onclick="openQrModal()" id="conn-pill"
+            class="flex items-center gap-2 px-3.5 py-2 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 transition shadow-xs font-bold text-xs sm:text-sm">
+            <span id="conn-dot" class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
+            <span id="conn-label" class="text-slate-700">等待手機掃碼</span>
+            <span class="px-2 py-0.5 rounded-lg bg-blue-50 text-blue-700 font-mono text-xs" id="header-room-code">AMP-0000</span>
+          </button>
+
+          <!-- 音效開關 -->
+          <button id="btn-mute" onclick="toggleMute()" title="切換音效"
+            class="w-10 h-10 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center text-lg shadow-xs transition">
+            🔊
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- 主要三欄教學工作區 -->
+    <main class="flex-1 max-w-[1680px] w-full mx-auto p-3 sm:p-4 lg:p-5 grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+
+      <!-- =============================================================== -->
+      <!-- 左欄 (3 cols)：當前題目任務卡 + QR Code 手機配對區                  -->
+      <!-- =============================================================== -->
+      <section class="lg:col-span-3 flex flex-col gap-4">
+
+        <!-- 題目卡片 -->
+        <div class="bg-white rounded-3xl border border-slate-200 shadow-sm p-4 sm:p-5 flex flex-col gap-3.5">
+          <div class="flex items-center justify-between">
+            <span id="q-category-badge" class="px-3 py-1 rounded-xl text-xs font-bold bg-blue-50 text-blue-700 border border-blue-100">
+              載流長直導線
+            </span>
+            <span id="q-counter" class="text-sm font-extrabold text-slate-400">第 1 / 10 題</span>
+          </div>
+
+          <h2 id="q-title" class="text-xl sm:text-2xl font-black text-slate-900 leading-snug">
+            載流長直導線：電流向上
+          </h2>
+
+          <!-- 題目已知條件色塊 -->
+          <div id="q-given-boxes" class="grid grid-cols-1 gap-2">
+            <!-- 動態產生已知條件卡片 -->
+          </div>
+
+          <p id="q-prompt" class="text-sm sm:text-base text-slate-600 leading-relaxed font-medium bg-slate-50 p-3.5 rounded-2xl border border-slate-100">
+            請用右手握住手機比出 👍，讓大拇指指向電流方向。
+          </p>
+
+          <!-- 題目切換按鈕 -->
+          <div class="grid grid-cols-3 gap-2 pt-1">
+            <button onclick="prevQuestion()" class="py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm transition">
+              ← 上一題
+            </button>
+            <button onclick="randomQuestion()" class="py-2.5 px-3 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-sm transition">
+              🎲 隨機出題
+            </button>
+            <button onclick="nextQuestion()" class="py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-sm transition">
+              下一題 →
+            </button>
+          </div>
+        </div>
+
+        <!-- QR Code 手機體感配對卡片 -->
+        <div class="bg-white rounded-3xl border border-slate-200 shadow-sm p-4 sm:p-5 flex flex-col gap-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="text-xl">📱</span>
+              <h3 class="font-extrabold text-slate-900 text-base">手機掃碼體感連線</h3>
+            </div>
+            <button onclick="openQrModal()" class="text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 px-2.5 py-1 rounded-lg">
+              放大 QR 🔍
+            </button>
+          </div>
+
+          <!-- 非正式 HTTPS 網址提示（自動偵測顯示） -->
+          <div id="non-http-warning" class="hidden rounded-2xl bg-amber-50 border border-amber-200 p-3 text-xs text-amber-900 leading-relaxed font-medium">
+            <div class="font-bold text-amber-800 mb-0.5">💡 預覽／本機環境提醒</div>
+            部署至 <b>GitHub Pages / Vercel / Netlify（HTTPS）</b>後，學生手機即可直接掃碼並啟用陀螺儀；目前可直接使用右側「單機體感模擬器」進行完整演示！
+          </div>
+
+          <div class="flex items-center gap-3.5">
+            <div class="bg-white p-2 rounded-2xl border-2 border-slate-100 shadow-xs shrink-0">
+              <div id="qrcode-container" class="w-[116px] h-[116px] flex items-center justify-center"></div>
+            </div>
+            <div class="flex-1 min-w-0 flex flex-col gap-1.5">
+              <div class="text-xs text-slate-500 font-semibold">房間代碼</div>
+              <div id="room-code-display" class="font-mono text-xl font-black text-blue-700 tracking-wider">AMP-0000</div>
+              <div id="peer-status-detail" class="text-xs font-semibold text-slate-500 leading-snug">
+                正在建立 WebRTC 通道...
+              </div>
+              <div class="flex flex-wrap gap-1.5 pt-1">
+                <button onclick="copyPhoneUrl()" class="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition">
+                  📋 複製手機網址
+                </button>
+                <button onclick="regenerateRoom()" class="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition">
+                  🔄 換房間碼
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 握持方式迷你提醒 -->
+          <div id="screen-hold-tip" class="rounded-2xl bg-blue-50/70 border border-blue-100 px-3.5 py-2.5 text-xs text-blue-900 font-medium leading-relaxed">
+            👍 <b>握法提示：</b>右手握住手機、螢幕面向自己，大拇指朝向手機頂端，轉動手腕即可同步大屏！
+          </div>
+        </div>
+      </section>
+
+      <!-- =============================================================== -->
+      <!-- 中欄 (6 cols)：3D 互動主舞台 (Three.js + HUD 鎖定圈 + 答對特效)     -->
+      <!-- =============================================================== -->
+      <section class="lg:col-span-6 flex flex-col">
+        <div class="relative bg-white rounded-3xl border border-slate-200 shadow-md overflow-hidden flex-1 min-h-[440px] sm:min-h-[540px] lg:min-h-[640px] flex flex-col">
+
+          <!-- 3D 舞台頂部懸浮條 -->
+          <div class="absolute top-3 left-3 right-3 z-10 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
+            <!-- 空間方向圖例 -->
+            <div class="pointer-events-auto flex items-center gap-2 bg-white/90 backdrop-blur px-3.5 py-2 rounded-2xl border border-slate-200/80 shadow-xs text-xs sm:text-sm font-bold text-slate-700">
+              <span class="text-slate-400">黑板空間：</span>
+              <span>↑上</span>
+              <span>→右</span>
+              <span class="text-indigo-700">⊗射入</span>
+              <span class="text-emerald-700">⊙射出</span>
+            </div>
+
+            <!-- 畫布互動模式切換 & 視角重置 -->
+            <div class="pointer-events-auto flex items-center gap-1.5 bg-white/90 backdrop-blur p-1 rounded-2xl border border-slate-200/80 shadow-xs">
+              <button id="btn-drag-hand" onclick="setCanvasDragMode('hand')"
+                class="px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-600 text-white transition">
+                ✋ 拖曳轉手勢
+              </button>
+              <button id="btn-drag-cam" onclick="setCanvasDragMode('camera')"
+                class="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition">
+                🎥 轉視角
+              </button>
+              <button onclick="resetCameraView()" title="重置攝影機視角"
+                class="px-2.5 py-1.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition">
+                ↺ 正面
+              </button>
+            </div>
+          </div>
+
+          <!-- Three.js 主畫布容器 -->
+          <div id="three-canvas-wrap" class="relative flex-1 w-full h-full cursor-grab active:cursor-grabbing">
+            <!-- Three.js renderer canvas 會插入於此 -->
+            <!-- 紙花慶祝 Canvas -->
+            <canvas id="confetti-canvas" class="absolute inset-0 w-full h-full pointer-events-none z-20"></canvas>
+          </div>
+
+          <!-- 中央鎖定環形進度 HUD（當對準目標進入 0.6s 維持期時出現） -->
+          <div id="lock-hud" class="hidden absolute bottom-5 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
+            <div class="bg-white/95 backdrop-blur px-5 py-3 rounded-3xl border-2 border-emerald-400 shadow-lg flex items-center gap-3.5">
+              <div class="relative w-12 h-12">
+                <svg class="w-12 h-12" viewBox="0 0 48 48">
+                  <circle cx="24" cy="24" r="20" fill="none" stroke="#e2e8f0" stroke-width="5"></circle>
+                  <circle id="lock-ring-progress" class="lock-ring-circle" cx="24" cy="24" r="20" fill="none"
+                    stroke="#10b981" stroke-width="5" stroke-linecap="round"
+                    stroke-dasharray="125.66" stroke-dashoffset="125.66"></circle>
+                </svg>
+                <span id="lock-emoji" class="absolute inset-0 flex items-center justify-center text-lg">🎯</span>
+              </div>
+              <div>
+                <div class="text-sm font-black text-emerald-700">方向對準中！請保持穩定</div>
+                <div id="lock-pct-text" class="text-xs font-bold text-slate-500">鎖定進度 0%</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 底部三色向量圖例列 -->
+          <div id="vector-legend-bar" class="bg-slate-50/95 border-t border-slate-200 px-4 py-2.5 flex flex-wrap items-center justify-center gap-4 text-xs sm:text-sm font-bold">
+            <!-- 動態依據模式更新圖例 -->
+          </div>
+
+          <!-- 答對慶祝遮罩卡片 -->
+          <div id="correct-overlay" class="hidden absolute inset-0 z-30 bg-slate-900/25 backdrop-blur-[2px] flex items-center justify-center p-4">
+            <div class="animate-pop-in bg-white rounded-3xl border-2 border-emerald-400 shadow-2xl max-w-lg w-full p-6 sm:p-7 text-center">
+              <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-emerald-100 text-4xl mb-3 shadow-inner">
+                🎉
+              </div>
+              <div class="text-3xl sm:text-4xl font-black text-emerald-600 tracking-tight mb-1">
+                正確！太棒了！
+              </div>
+              <div id="correct-answer-summary" class="text-base sm:text-lg font-extrabold text-slate-800 mb-3">
+                磁場方向已完全掌握
+              </div>
+              <div id="correct-explanation" class="text-left bg-emerald-50/80 border border-emerald-200 rounded-2xl p-4 text-sm sm:text-base text-slate-700 leading-relaxed font-medium mb-5">
+                物理詳解說明...
+              </div>
+              <div class="flex flex-wrap items-center justify-center gap-3">
+                <button onclick="dismissCorrectOverlay()" class="px-5 py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-base transition">
+                  🔍 觀察 3D 模型
+                </button>
+                <button onclick="nextQuestion()" class="px-7 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-base shadow-lg shadow-emerald-600/25 transition">
+                  挑戰下一題 →
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =============================================================== -->
+      <!-- 右欄 (3 cols)：即時對準判定儀表 + 單機體感模擬器                     -->
+      <!-- =============================================================== -->
+      <section class="lg:col-span-3 flex flex-col gap-4">
+
+        <!-- 即時姿態判定燈號卡 -->
+        <div class="bg-white rounded-3xl border border-slate-200 shadow-sm p-4 sm:p-5 flex flex-col gap-3">
+          <div class="flex items-center justify-between">
+            <h3 class="font-extrabold text-slate-900 text-base flex items-center gap-2">
+              <span>🎯</span> 即時角度判讀
+            </h3>
+            <span id="input-source-badge" class="px-2.5 py-1 rounded-xl text-xs font-bold bg-slate-100 text-slate-600">
+              🖥️ 單機模擬中
+            </span>
+          </div>
+
+          <!-- 模式一判讀燈號（大拇指方向） -->
+          <div id="status-panel-grip" class="flex flex-col gap-2.5">
+            <div id="grip-indicator-card" class="rounded-2xl border-2 border-slate-200 bg-slate-50 p-3.5 transition-all">
+              <div class="flex items-center justify-between mb-1">
+                <span class="font-extrabold text-sm text-slate-800 flex items-center gap-1.5">
+                  <span class="w-3 h-3 rounded-full bg-red-500 inline-block"></span>
+                  👍 大拇指指向目標
+                </span>
+                <span id="grip-status-tag" class="px-2.5 py-0.5 rounded-lg text-xs font-black bg-slate-200 text-slate-600">
+                  調整中
+                </span>
+              </div>
+              <div class="flex items-baseline justify-between mt-1.5">
+                <span class="text-xs text-slate-500 font-semibold">與目標夾角誤差</span>
+                <span id="grip-angle-val" class="font-mono text-2xl font-black text-slate-800">--°</span>
+              </div>
+              <div class="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden mt-2">
+                <div id="grip-angle-bar" class="h-full bg-blue-500 rounded-full transition-all duration-75" style="width: 0%"></div>
+              </div>
+              <div class="text-[11px] text-slate-500 mt-1.5 font-medium">
+                小於 25° 並維持 0.6 秒即判定正確（不限繞拇指軸自轉）
+              </div>
+            </div>
+          </div>
+
+          <!-- 模式二判讀燈號（三正交向量獨立狀態燈） -->
+          <div id="status-panel-palm" class="hidden flex flex-col gap-2">
+            <!-- 大拇指 I -->
+            <div id="palm-ind-I" class="rounded-2xl border-2 border-slate-200 bg-slate-50 px-3.5 py-2.5 transition-all">
+              <div class="flex items-center justify-between">
+                <span class="font-extrabold text-sm text-red-700 flex items-center gap-2">
+                  <span id="palm-dot-I" class="w-3 h-3 rounded-full bg-slate-300"></span>
+                  大拇指 I（電流）
+                </span>
+                <span id="palm-val-I" class="font-mono text-sm font-black text-slate-600">--°</span>
+              </div>
+              <div id="palm-hint-I" class="text-xs text-slate-500 mt-0.5 font-medium">目標：向右 →</div>
+            </div>
+
+            <!-- 四指 B -->
+            <div id="palm-ind-B" class="rounded-2xl border-2 border-slate-200 bg-slate-50 px-3.5 py-2.5 transition-all">
+              <div class="flex items-center justify-between">
+                <span class="font-extrabold text-sm text-blue-700 flex items-center gap-2">
+                  <span id="palm-dot-B" class="w-3 h-3 rounded-full bg-slate-300"></span>
+                  四指 B（磁場）
+                </span>
+                <span id="palm-val-B" class="font-mono text-sm font-black text-slate-600">--°</span>
+              </div>
+              <div id="palm-hint-B" class="text-xs text-slate-500 mt-0.5 font-medium">目標：射入黑板 ⊗</div>
+            </div>
+
+            <!-- 掌心 F -->
+            <div id="palm-ind-F" class="rounded-2xl border-2 border-slate-200 bg-slate-50 px-3.5 py-2.5 transition-all">
+              <div class="flex items-center justify-between">
+                <span class="font-extrabold text-sm text-emerald-700 flex items-center gap-2">
+                  <span id="palm-dot-F" class="w-3 h-3 rounded-full bg-slate-300"></span>
+                  掌心 F（受力）
+                </span>
+                <span id="palm-val-F" class="font-mono text-sm font-black text-slate-600">--°</span>
+              </div>
+              <div id="palm-hint-F" class="text-xs text-slate-500 mt-0.5 font-medium">對準 I 與 B 後自動揭曉</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 單機體感模擬器卡片 -->
+        <div class="bg-white rounded-3xl border border-slate-200 shadow-sm p-4 sm:p-5 flex flex-col gap-3 flex-1">
+          <div class="flex items-center justify-between">
+            <h3 class="font-extrabold text-slate-900 text-base flex items-center gap-2">
+              <span>🎮</span> 單機體感模擬器
+            </h3>
+            <button onclick="resetSimOrientation()" class="text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-xl transition">
+              ↺ 姿勢歸零
+            </button>
+          </div>
+          <p class="text-xs text-slate-500 font-medium -mt-1">
+            免手機也能拖曳 3D 畫面、拉動滑桿或點選快速姿勢進行教學展示。
+          </p>
+
+          <!-- 三軸滑桿 -->
+          <div class="flex flex-col gap-2.5 bg-slate-50 p-3 rounded-2xl border border-slate-100">
+            <div>
+              <div class="flex justify-between text-xs font-bold text-slate-700 mb-1">
+                <span>俯仰 Pitch（X 軸前後傾）</span>
+                <span id="sim-pitch-val" class="font-mono text-blue-600">0°</span>
+              </div>
+              <input id="sim-pitch" type="range" min="-180" max="180" value="0" class="phys-slider w-full" oninput="onSimSliderChange()" />
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs font-bold text-slate-700 mb-1">
+                <span>偏航 Yaw（Y 軸左右轉）</span>
+                <span id="sim-yaw-val" class="font-mono text-blue-600">0°</span>
+              </div>
+              <input id="sim-yaw" type="range" min="-180" max="180" value="0" class="phys-slider w-full" oninput="onSimSliderChange()" />
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs font-bold text-slate-700 mb-1">
+                <span>翻滾 Roll（Z 軸側傾）</span>
+                <span id="sim-roll-val" class="font-mono text-blue-600">0°</span>
+              </div>
+              <input id="sim-roll" type="range" min="-180" max="180" value="0" class="phys-slider w-full" oninput="onSimSliderChange()" />
+            </div>
+          </div>
+
+          <!-- 快速姿勢按鈕 -->
+          <div>
+            <div class="text-xs font-bold text-slate-500 mb-2">快速姿勢預設</div>
+            <div id="quick-presets-grid" class="grid grid-cols-3 gap-1.5">
+              <!-- 依模式動態生成 -->
+            </div>
+          </div>
+
+          <!-- 教師一鍵示範解答 -->
+          <button onclick="demoCorrectPose()"
+            class="mt-auto w-full py-2.5 px-4 rounded-2xl bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 font-extrabold text-sm transition flex items-center justify-center gap-2">
+            <span>✨</span> 教師示範：自動轉至正確姿勢
+          </button>
+        </div>
+      </section>
+    </main>
+
+    <!-- 放大 QR Code 彈窗（方便後排學生掃碼） -->
+    <div id="qr-modal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4" onclick="closeQrModal(event)">
+      <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 sm:p-8 text-center animate-pop-in" onclick="event.stopPropagation()">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-xl font-black text-slate-900">📱 手機掃碼連線大屏</h3>
+          <button onclick="closeQrModal()" class="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold">✕</button>
+        </div>
+        <div class="bg-slate-50 p-5 rounded-3xl border border-slate-200 inline-block mb-4">
+          <div id="qrcode-modal-container" class="w-[240px] h-[240px] flex items-center justify-center"></div>
+        </div>
+        <div class="text-sm text-slate-500 font-semibold mb-1">教室房間代碼</div>
+        <div id="modal-room-code" class="font-mono text-3xl font-black text-blue-600 tracking-widest mb-4">AMP-0000</div>
+        <div id="modal-non-http-note" class="hidden mb-4 text-xs text-left bg-amber-50 border border-amber-200 text-amber-900 p-3 rounded-2xl">
+          ⚠️ 偵測到目前為預覽/本機網址，請將本單一 HTML 檔部署至 <b>GitHub Pages / Vercel / Netlify (HTTPS)</b>，手機掃碼後即可啟動陀螺儀連線。
+        </div>
+        <div class="flex gap-2.5 justify-center">
+          <button onclick="copyPhoneUrl()" class="flex-1 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm transition">
+            📋 複製手機連線網址
+          </button>
+          <button onclick="closeQrModal()" class="px-5 py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm transition">
+            關閉
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- 介面 B：學生手機體感控制器端 (Phone Role)                                -->
+  <!-- ===================================================================== -->
+  <div id="phone-view" class="hidden min-h-screen flex flex-col bg-[#f4f7fb] pb-6">
+
+    <!-- 手機頂部狀態列 -->
+    <header class="bg-white border-b border-slate-200 px-4 py-3 sticky top-0 z-20 flex items-center justify-between shadow-xs">
+      <div class="flex items-center gap-2">
+        <span id="phone-mode-icon" class="text-2xl">👍</span>
+        <div>
+          <div id="phone-mode-name" class="font-black text-slate-900 text-base leading-tight">安培右手定則</div>
+          <div class="text-xs font-semibold text-slate-500">房間 <span id="phone-room-label" class="font-mono text-blue-600 font-bold">----</span></div>
+        </div>
+      </div>
+      <div id="phone-conn-badge" class="px-3 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-extrabold flex items-center gap-1.5">
+        <span id="phone-conn-dot" class="w-2 h-2 rounded-full bg-amber-500"></span>
+        <span id="phone-conn-text">未連線</span>
+      </div>
+    </header>
+
+    <main class="flex-1 max-w-md w-full mx-auto px-4 pt-4 flex flex-col gap-4">
+
+      <!-- 啟動體感 & 連線卡片（未啟動前優先顯示） -->
+      <div id="phone-start-card" class="bg-white rounded-3xl border border-slate-200 shadow-md p-5 text-center flex flex-col gap-4">
+        <div class="w-16 h-16 mx-auto rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-4xl">
+          📱
+        </div>
+        <div>
+          <h2 class="text-xl font-black text-slate-900 mb-1">準備好進行 3D 體感實驗了嗎？</h2>
+          <p class="text-sm text-slate-500 font-medium leading-relaxed">
+            點擊下方按鈕將請求手機陀螺儀權限並即時連線至教室大屏。
+          </p>
+        </div>
+
+        <!-- 若房間碼未帶入或想手動修改 -->
+        <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 flex items-center gap-2">
+          <label for="phone-room-input" class="text-xs font-bold text-slate-500 shrink-0">房間碼</label>
+          <input id="phone-room-input" type="text" placeholder="例如 AMP-4829"
+            class="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-2 font-mono font-black text-center text-blue-700 uppercase tracking-wider focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+
+        <button id="btn-phone-activate" onclick="activatePhoneController()"
+          class="w-full py-4 px-5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 active:scale-[0.98] text-white font-black text-lg shadow-lg shadow-blue-600/30 transition flex items-center justify-center gap-2">
+          <span>🚀</span> 啟動體感並連線大屏
+        </button>
+
+        <div id="phone-sensor-note" class="text-xs text-slate-400 font-medium">
+          支援 iOS Safari（需 HTTPS）與 Android 瀏覽器
+        </div>
+      </div>
+
+      <!-- 連線後的主控制區 -->
+      <div id="phone-active-panel" class="hidden flex flex-col gap-4">
+
+        <!-- 當前大屏題目同步顯示 -->
+        <div class="bg-white rounded-3xl border border-slate-200 shadow-sm p-4">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs font-bold text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-lg">大屏目前題目</span>
+            <span id="phone-sensor-status" class="text-xs font-bold text-emerald-600">📡 陀螺儀運作中</span>
+          </div>
+          <div id="phone-q-title" class="text-lg font-black text-slate-900 mt-1">等待大屏同步題目...</div>
+          <div id="phone-q-sub" class="text-sm text-slate-600 font-medium mt-0.5">請依照握持圖示轉動手機</div>
+        </div>
+
+        <!-- 關鍵：面對大屏・一鍵歸零校準按鈕 -->
+        <div class="bg-gradient-to-br from-blue-600 to-indigo-600 rounded-3xl p-4 text-white shadow-lg shadow-blue-600/20">
+          <button onclick="calibratePhoneYaw()"
+            class="w-full py-4 px-4 rounded-2xl bg-white text-blue-700 hover:bg-blue-50 active:scale-[0.98] font-black text-lg shadow-md transition flex items-center justify-center gap-2">
+            <span>🧭</span> 面對大屏・一鍵歸零校準
+          </button>
+          <p id="phone-cal-guide" class="text-xs text-blue-100 font-medium text-center mt-2.5 leading-relaxed">
+            身體正面面向教室大屏，手機直立、螢幕朝向自己，按下上方按鈕即可精準對齊方向！
+          </p>
+        </div>
+
+        <!-- 握持方式 SVG 圖解卡片 -->
+        <div class="bg-white rounded-3xl border border-slate-200 shadow-sm p-4">
+          <div class="text-sm font-black text-slate-800 mb-2 flex items-center gap-1.5">
+            <span>✋</span> 正確握持方式
+          </div>
+
+          <!-- 模式一握持圖解 -->
+          <div id="phone-guide-grip" class="flex items-center gap-3.5 bg-slate-50 rounded-2xl p-3 border border-slate-100">
+            <svg class="w-20 h-20 shrink-0" viewBox="0 0 100 100" fill="none">
+              <rect x="28" y="20" width="44" height="68" rx="9" fill="#1e293b" />
+              <rect x="32" y="26" width="36" height="54" rx="4" fill="#e0f2fe" />
+              <!-- 大拇指朝上箭頭 -->
+              <path d="M50 18 L50 4 M42 11 L50 3 L58 11" stroke="#ef4444" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+              <!-- 四指環繞示意 -->
+              <path d="M22 52 C14 52 14 66 26 66" stroke="#2563eb" stroke-width="3.5" stroke-linecap="round"/>
+              <path d="M78 52 C86 52 86 66 74 66" stroke="#2563eb" stroke-width="3.5" stroke-linecap="round"/>
+              <text x="50" y="57" text-anchor="middle" font-size="22">👍</text>
+            </svg>
+            <div class="text-xs text-slate-700 leading-relaxed font-medium">
+              <div class="font-black text-slate-900 text-sm mb-0.5">右手握手機比 👍</div>
+              螢幕面向自己，<b class="text-red-600">大拇指朝手機頂端</b>，四指自然握住機身。轉動手機時大屏 👍 會即時跟隨！
+            </div>
+          </div>
+
+          <!-- 模式二握持圖解 -->
+          <div id="phone-guide-palm" class="hidden flex items-center gap-3.5 bg-slate-50 rounded-2xl p-3 border border-slate-100">
+            <svg class="w-20 h-20 shrink-0" viewBox="0 0 100 100" fill="none">
+              <!-- 手掌示意 -->
+              <rect x="26" y="24" width="42" height="60" rx="8" fill="#1e293b" />
+              <rect x="30" y="30" width="34" height="46" rx="4" fill="#dcfce7" />
+              <!-- +Y 四指 B (藍) -->
+              <path d="M47 22 L47 6 M40 13 L47 5 L54 13" stroke="#2563eb" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+              <!-- +X 大拇指 I (紅) -->
+              <path d="M70 54 L92 54 M85 47 L93 54 L85 61" stroke="#ef4444" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+              <!-- +Z 掌心 F (綠) -->
+              <circle cx="47" cy="54" r="10" fill="#16a34a" fill-opacity="0.2" stroke="#16a34a" stroke-width="2.5"/>
+              <circle cx="47" cy="54" r="3.5" fill="#16a34a"/>
+            </svg>
+            <div class="text-xs text-slate-700 leading-relaxed font-medium">
+              <div class="font-black text-slate-900 text-sm mb-0.5">手機平放右手掌心 👋</div>
+              <span class="text-red-600 font-bold">手機右側＝大拇指 I</span><br/>
+              <span class="text-blue-600 font-bold">手機頂端＝四指 B</span><br/>
+              <span class="text-emerald-600 font-bold">螢幕朝向＝掌心 F</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 手機端觸控微調備援開關 -->
+        <div class="bg-white rounded-3xl border border-slate-200 shadow-sm p-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="font-extrabold text-slate-900 text-sm">🕹️ 手機觸控微調備援</div>
+              <div class="text-xs text-slate-500">若無陀螺儀或感測器受限時可開啟</div>
+            </div>
+            <button id="btn-toggle-fallback" onclick="togglePhoneFallback()"
+              class="w-14 h-8 rounded-full bg-slate-200 p-1 transition-colors flex items-center">
+              <span id="fallback-knob" class="w-6 h-6 rounded-full bg-white shadow transition-transform"></span>
+            </button>
+          </div>
+
+          <!-- 備援滑桿區 -->
+          <div id="phone-fallback-controls" class="hidden mt-4 pt-3 border-t border-slate-100 flex flex-col gap-3">
+            <div>
+              <div class="flex justify-between text-xs font-bold text-slate-700 mb-1">
+                <span>俯仰 Pitch (X)</span>
+                <span id="pf-pitch-val" class="font-mono text-blue-600">0°</span>
+              </div>
+              <input id="pf-pitch" type="range" min="-180" max="180" value="0" class="phys-slider w-full" oninput="onPhoneFallbackInput()" />
+            </div>
+            <div>
+              <div class="flex justify-between text-xs font-bold text-slate-700 mb-1">
+                <span>偏航 Yaw (Y)</span>
+                <span id="pf-yaw-val" class="font-mono text-blue-600">0°</span>
+              </div>
+              <input id="pf-yaw" type="range" min="-180" max="180" value="0" class="phys-slider w-full" oninput="onPhoneFallbackInput()" />
+            </div>
+            <div>
+              <div class="flex justify-between text-xs font-bold text-slate-700 mb-1">
+                <span>翻滾 Roll (Z)</span>
+                <span id="pf-roll-val" class="font-mono text-blue-600">0°</span>
+              </div>
+              <input id="pf-roll" type="range" min="-180" max="180" value="0" class="phys-slider w-full" oninput="onPhoneFallbackInput()" />
+            </div>
+            <button onclick="resetPhoneFallback()" class="py-2 rounded-xl bg-slate-100 text-slate-700 font-bold text-xs">
+              ↺ 滑桿歸零
+            </button>
+          </div>
+        </div>
+
+        <!-- 手機端下一題控制鈕 -->
+        <button onclick="sendPhoneNextQuestion()"
+          class="w-full py-3.5 rounded-2xl bg-slate-800 hover:bg-slate-900 active:scale-[0.98] text-white font-extrabold text-base shadow transition">
+          跳至下一題 →
+        </button>
+      </div>
+    </main>
+
+    <!-- 手機答對全螢幕慶祝彈窗 -->
+    <div id="phone-correct-banner" class="hidden fixed inset-0 z-50 bg-emerald-600/95 backdrop-blur flex flex-col items-center justify-center p-6 text-center text-white">
+      <div class="text-7xl mb-4 animate-bounce">🎉</div>
+      <div class="text-4xl font-black tracking-tight mb-2">答對了！</div>
+      <div id="phone-correct-msg" class="text-lg font-bold text-emerald-100 mb-6 max-w-xs leading-relaxed">
+        太厲害了，大屏已顯示物理詳解！
+      </div>
+      <button onclick="phoneConfirmNext()"
+        class="w-full max-w-xs py-4 rounded-2xl bg-white text-emerald-700 font-black text-xl shadow-xl active:scale-95 transition mb-3">
+        挑戰下一題 →
+      </button>
+      <button onclick="hidePhoneCorrectBanner()"
+        class="px-6 py-2.5 rounded-xl bg-emerald-700/80 text-emerald-50 font-bold text-sm">
+        留在這一題
+      </button>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- 核心邏輯腳本（物理題庫、Three.js 3D 建模、WebRTC、陀螺儀校準與音效）       -->
+  <!-- ===================================================================== -->
+  <script>
+    'use strict';
+
+    // =========================================================================
+    // 1. 空間方向常數與完整物理題庫
+    //    Three.js 世界座標系（右手系）：
+    //    +X: 向右 → | -X: 向左 ← | +Y: 向上 ↑ | -Y: 向下 ↓
+    //    +Z: 射出黑板 ⊙ (朝向學生) | -Z: 射入黑板 ⊗ (深入黑板)
+    // =========================================================================
+    const DIRS = {
+      UP:    { vec: [0, 1, 0],  label: '向上 ↑',       short: '↑ 上' },
+      DOWN:  { vec: [0, -1, 0], label: '向下 ↓',       short: '↓ 下' },
+      RIGHT: { vec: [1, 0, 0],  label: '向右 →',       short: '→ 右' },
+      LEFT:  { vec: [-1, 0, 0], label: '向左 ←',       short: '← 左' },
+      OUT:   { vec: [0, 0, 1],  label: '射出黑板 ⊙',   short: '⊙ 射出' },
+      IN:    { vec: [0, 0, -1], label: '射入黑板 ⊗',   short: '⊗ 射入' },
+    };
+
+    // 模式一題庫：安培右手定則（👍 握拳手勢）
+    const GRIP_QUESTIONS = [
+      {
+        id: 'g1',
+        scenario: 'wire',
+        category: '載流長直導線',
+        title: '長直導線：電流向上 ↑',
+        given: [
+          { tag: '電流 I', dir: DIRS.UP, color: 'red' },
+          { tag: '觀察目標', text: '大拇指指向 I，四指環繞即磁場 B', color: 'blue' }
+        ],
+        prompt: '長直導線中有向上的電流 I，請握住手機比出 👍，讓大拇指朝向「上方 ↑」。',
+        targetThumb: DIRS.UP.vec,
+        answerSummary: '大拇指向上 ↑（電流 I）→ 俯視磁場呈逆時針環繞',
+        explanation: '依據安培右手定則，右手大拇指指向電流方向（向上 ↑），四指自然捲曲的方向即為磁場方向：導線右側磁場射入黑板（⊗），左側射出黑板（⊙）。'
+      },
+      {
+        id: 'g2',
+        scenario: 'wire',
+        category: '載流長直導線',
+        title: '長直導線：電流向下 ↓',
+        given: [
+          { tag: '電流 I', dir: DIRS.DOWN, color: 'red' },
+          { tag: '觀察目標', text: '大拇指指向 I，四指環繞即磁場 B', color: 'blue' }
+        ],
+        prompt: '長直導線中的電流改為向下流動，請轉動右手 👍 讓大拇指朝向「下方 ↓」。',
+        targetThumb: DIRS.DOWN.vec,
+        answerSummary: '大拇指向下 ↓（電流 I）→ 俯視磁場呈順時針環繞',
+        explanation: '右手大拇指朝下（電流 I），四指由上俯視呈順時針方向環繞：導線右側磁場射出黑板（⊙），左側射入黑板（⊗）。'
+      },
+      {
+        id: 'g3',
+        scenario: 'wire',
+        category: '載流長直導線',
+        title: '長直導線：電流向右 →',
+        given: [
+          { tag: '電流 I', dir: DIRS.RIGHT, color: 'red' },
+          { tag: '觀察目標', text: '大拇指指向 I，判斷導線上下方磁場', color: 'blue' }
+        ],
+        prompt: '水平導線電流由左向右流動，請將右手 👍 大拇指指向「右方 →」。',
+        targetThumb: DIRS.RIGHT.vec,
+        answerSummary: '大拇指向右 → → 導線上方磁場射出 ⊙、下方射入 ⊗',
+        explanation: '大拇指向右指著電流 I，四指在導線上方從紙面穿出（⊙），在導線下方鑽入黑板（⊗）。'
+      },
+      {
+        id: 'g4',
+        scenario: 'wire',
+        category: '載流長直導線',
+        title: '長直導線：電流向左 ←',
+        given: [
+          { tag: '電流 I', dir: DIRS.LEFT, color: 'red' },
+          { tag: '觀察目標', text: '大拇指指向 I，判斷導線上下方磁場', color: 'blue' }
+        ],
+        prompt: '水平導線電流改為向左流動，請將右手 👍 大拇指指向「左方 ←」。',
+        targetThumb: DIRS.LEFT.vec,
+        answerSummary: '大拇指向左 ← → 導線上方磁場射入 ⊗、下方射出 ⊙',
+        explanation: '大拇指向左（電流 I），四指環繞方向使導線上方磁場射入黑板（⊗），下方磁場射出黑板（⊙）。'
+      },
+      {
+        id: 'g5',
+        scenario: 'wire',
+        category: '載流長直導線',
+        title: '垂直黑板導線：電流射入 ⊗',
+        given: [
+          { tag: '電流 I', dir: DIRS.IN, color: 'red' },
+          { tag: '觀察目標', text: '大拇指指進黑板 ⊗，四指即磁力線方向', color: 'blue' }
+        ],
+        prompt: '導線垂直於黑板，電流「射入黑板 ⊗」，請將右手 👍 大拇指直接指向前方大屏！',
+        targetThumb: DIRS.IN.vec,
+        answerSummary: '大拇指射入黑板 ⊗ → 磁力線呈順時針同心圓',
+        explanation: '將右手大拇指垂直指向黑板內（⊗），面對黑板觀察，四指彎曲方向為「順時針」，故周圍磁力線為順時針同心圓。'
+      },
+      {
+        id: 'g6',
+        scenario: 'wire',
+        category: '載流長直導線',
+        title: '垂直黑板導線：電流射出 ⊙',
+        given: [
+          { tag: '電流 I', dir: DIRS.OUT, color: 'red' },
+          { tag: '觀察目標', text: '大拇指指向自己 ⊙，四指即磁力線方向', color: 'blue' }
+        ],
+        prompt: '導線電流垂直「射出黑板 ⊙」朝向自己，請將右手 👍 大拇指指向自己胸口！',
+        targetThumb: DIRS.OUT.vec,
+        answerSummary: '大拇指射出黑板 ⊙ → 磁力線呈逆時針同心圓',
+        explanation: '右手大拇指垂直射出黑板指向自己（⊙），面對黑板觀察四指彎曲方向為「逆時針」，故磁力線為逆時針同心圓。'
+      },
+      {
+        id: 'g7',
+        scenario: 'solenoid',
+        category: '螺線管／電磁鐵',
+        title: '水平螺線管：正面電流向下 ↓',
+        given: [
+          { tag: '線圈電流 I', text: '靠近你的正面導線電流向下 ↓', color: 'red' },
+          { tag: '求內部磁場', text: '四指順電流握住，大拇指＝N 極方向', color: 'blue' }
+        ],
+        prompt: '水平螺線管正面電流「由上往下 ↓」流過，請用四指順著電流方向，大拇指將指向 N 極方向！',
+        targetThumb: DIRS.RIGHT.vec,
+        answerSummary: '內部磁場向右 →（螺線管右端為 N 極、左端為 S 極）',
+        explanation: '螺線管適用安培右手定則：四指順著正面往下的線圈電流環繞，大拇指自然指向右方（→），代表內部磁場向右、右端為 N 極！'
+      },
+      {
+        id: 'g8',
+        scenario: 'solenoid',
+        category: '螺線管／電磁鐵',
+        title: '水平螺線管：正面電流向上 ↑',
+        given: [
+          { tag: '線圈電流 I', text: '靠近你的正面導線電流向上 ↑', color: 'red' },
+          { tag: '求內部磁場', text: '四指順電流握住，大拇指＝N 極方向', color: 'blue' }
+        ],
+        prompt: '水平螺線管正面電流「由下往上 ↑」流過，請用四指順著電流方向，找出大拇指（N 極）指向！',
+        targetThumb: DIRS.LEFT.vec,
+        answerSummary: '內部磁場向左 ←（螺線管左端為 N 極、右端為 S 極）',
+        explanation: '四指順著正面往上的線圈電流環繞，大拇指指向左方（←），因此螺線管內部磁場向左、左端為 N 極。'
+      },
+      {
+        id: 'g9',
+        scenario: 'coil',
+        category: '圓形載流線圈',
+        title: '圓形線圈：逆時針電流 ↺',
+        given: [
+          { tag: '線圈電流 I', text: '面對黑板呈「逆時針 ↺」流動', color: 'red' },
+          { tag: '求圓心磁場', text: '四指逆時針彎曲，大拇指＝磁場 B', color: 'blue' }
+        ],
+        prompt: '黑板平面上的圓形線圈通以逆時針電流，請找出圓心處的磁場 B 方向！',
+        targetThumb: DIRS.OUT.vec,
+        answerSummary: '圓心磁場垂直射出黑板 ⊙（朝向自己）',
+        explanation: '右手四指沿著逆時針電流方向彎曲，大拇指垂直射出黑板（⊙）指向自己，此面相當於 N 極。'
+      },
+      {
+        id: 'g10',
+        scenario: 'coil',
+        category: '圓形載流線圈',
+        title: '圓形線圈：順時針電流 ↻',
+        given: [
+          { tag: '線圈電流 I', text: '面對黑板呈「順時針 ↻」流動', color: 'red' },
+          { tag: '求圓心磁場', text: '四指順時針彎曲，大拇指＝磁場 B', color: 'blue' }
+        ],
+        prompt: '黑板平面上的圓形線圈改通順時針電流，請找出圓心處的磁場 B 方向！',
+        targetThumb: DIRS.IN.vec,
+        answerSummary: '圓心磁場垂直射入黑板 ⊗（指進黑板）',
+        explanation: '右手四指沿著順時針電流方向彎曲，大拇指垂直射入黑板（⊗），此面相當於 S 極。'
+      }
+    ];
+
+    // 模式二題庫：安培右手開掌定則（👋 開掌手勢，F = I L × B）
+    // 每個題目皆經過向量外積嚴格驗證：targetF = targetI × targetB
+    const PALM_QUESTIONS = [
+      {
+        id: 'p1',
+        category: '開掌定則・基礎正交',
+        title: '電流向右 →，磁場射入 ⊗',
+        dirI: DIRS.RIGHT,
+        dirB: DIRS.IN,
+        dirF: DIRS.UP,
+        prompt: '手機平放右手掌心 👋：讓大拇指（I）向右、四指（B）指向黑板內（⊗），看看掌心（F）朝向哪裡！',
+        answerSummary: '磁力 F 方向：向上 ↑（大拇指 → × 四指 ⊗ ＝ 掌心 ↑）',
+        explanation: '依安培右手開掌定則：右手大拇指指向電流方向（右 →），四指指向磁場方向（射入黑板 ⊗），掌心自然朝「上 ↑」，導線受到向上的磁力！'
+      },
+      {
+        id: 'p2',
+        category: '開掌定則・基礎正交',
+        title: '電流向上 ↑，磁場向右 →',
+        dirI: DIRS.UP,
+        dirB: DIRS.RIGHT,
+        dirF: DIRS.IN,
+        prompt: '讓右手大拇指（I）指向上方 ↑、四指（B）指向右方 →，找出掌心推力（F）的方向！',
+        answerSummary: '磁力 F 方向：射入黑板 ⊗（大拇指 ↑ × 四指 → ＝ 掌心 ⊗）',
+        explanation: '右手大拇指朝上（電流 I），四指朝右（磁場 B），掌心正對黑板內側，故導線受力方向為「射入黑板 ⊗」。'
+      },
+      {
+        id: 'p3',
+        category: '開掌定則・進階空間',
+        title: '電流射出 ⊙，磁場向下 ↓',
+        dirI: DIRS.OUT,
+        dirB: DIRS.DOWN,
+        dirF: DIRS.RIGHT,
+        prompt: '電流垂直射出黑板朝向自己（⊙），磁場向下（↓），請翻轉手腕對準大拇指與四指！',
+        answerSummary: '磁力 F 方向：向右 →（大拇指 ⊙ × 四指 ↓ ＝ 掌心 →）',
+        explanation: '右手大拇指指向自己（⊙），四指垂直朝下（↓），掌心朝向右側，因此導線受到「向右 →」的磁力。'
+      },
+      {
+        id: 'p4',
+        category: '開掌定則・標準正面',
+        title: '電流向右 →，磁場向上 ↑',
+        dirI: DIRS.RIGHT,
+        dirB: DIRS.UP,
+        dirF: DIRS.OUT,
+        prompt: '右手大拇指（I）向右 →，四指（B）向上 ↑，觀察掌心（F）受力方向！',
+        answerSummary: '磁力 F 方向：射出黑板 ⊙（大拇指 → × 四指 ↑ ＝ 掌心 ⊙）',
+        explanation: '右手大拇指朝右、四指朝上時，掌心正對著自己，代表導線受到「垂直射出黑板 ⊙」的磁力。'
+      },
+      {
+        id: 'p5',
+        category: '開掌定則・反向對照',
+        title: '電流向左 ←，磁場射入 ⊗',
+        dirI: DIRS.LEFT,
+        dirB: DIRS.IN,
+        dirF: DIRS.DOWN,
+        prompt: '磁場依然射入黑板（⊗），但電流改為向左（←），導線受力方向會如何改變？',
+        answerSummary: '磁力 F 方向：向下 ↓（大拇指 ← × 四指 ⊗ ＝ 掌心 ↓）',
+        explanation: '當電流方向反轉為向左（←）而磁場維持射入（⊗）時，右手大拇指朝左、四指指向黑板內，掌心朝下（↓），受力方向也隨之反轉！'
+      },
+      {
+        id: 'p6',
+        category: '開掌定則・垂直導線',
+        title: '電流向上 ↑，磁場射入 ⊗',
+        dirI: DIRS.UP,
+        dirB: DIRS.IN,
+        dirF: DIRS.LEFT,
+        prompt: '垂直導線電流向上（↑），置於射入黑板（⊗）的均勻磁場中，請擺出右手開掌姿勢！',
+        answerSummary: '磁力 F 方向：向左 ←（大拇指 ↑ × 四指 ⊗ ＝ 掌心 ←）',
+        explanation: '右手大拇指向上（I）、四指指向黑板內（B），掌心明確指向左方，導線將受到「向左 ←」的磁力。'
+      },
+      {
+        id: 'p7',
+        category: '開掌定則・垂直導線',
+        title: '電流向下 ↓，磁場向右 →',
+        dirI: DIRS.DOWN,
+        dirB: DIRS.RIGHT,
+        dirF: DIRS.OUT,
+        prompt: '電流向下（↓）且磁場向右（→），請轉動手腕讓大拇指朝下、四指朝右！',
+        answerSummary: '磁力 F 方向：射出黑板 ⊙（大拇指 ↓ × 四指 → ＝ 掌心 ⊙）',
+        explanation: '右手大拇指朝下（↓），四指伸向右方（→），此時掌心朝向自己，故導線受力方向為「射出黑板 ⊙」。'
+      },
+      {
+        id: 'p8',
+        category: '開掌定則・空間挑戰',
+        title: '電流射入 ⊗，磁場向上 ↑',
+        dirI: DIRS.IN,
+        dirB: DIRS.UP,
+        dirF: DIRS.RIGHT,
+        prompt: '電流射入黑板（⊗），磁場垂直向上（↑），請擺出正確的右手開掌方位！',
+        answerSummary: '磁力 F 方向：向右 →（大拇指 ⊗ × 四指 ↑ ＝ 掌心 →）',
+        explanation: '右手大拇指指進黑板（⊗），四指朝上（↑），掌心推向右側，因此磁力方向為「向右 →」。'
+      },
+      {
+        id: 'p9',
+        category: '開掌定則・空間挑戰',
+        title: '電流向右 →，磁場射出 ⊙',
+        dirI: DIRS.RIGHT,
+        dirB: DIRS.OUT,
+        dirF: DIRS.DOWN,
+        prompt: '電流向右（→），磁場垂直射出黑板朝向自己（⊙），請找出掌心磁力方向！',
+        answerSummary: '磁力 F 方向：向下 ↓（大拇指 → × 四指 ⊙ ＝ 掌心 ↓）',
+        explanation: '右手大拇指朝右（→），四指指向自己（⊙），掌心自然朝下，導線受到「向下 ↓」的磁力。'
+      }
+    ];
+
+    // =========================================================================
+    // 2. 全域應用程式狀態
+    // =========================================================================
+    const APP = {
+      role: 'screen',            // 'screen' | 'phone'
+      mode: 'grip',              // 'grip' (模式一 👍) | 'palm' (模式二 👋)
+      questionIdx: { grip: 0, palm: 0 },
+      solvedCurrent: false,
+      score: 0,
+      streak: 0,
+      muted: false,
+
+      // 姿態四元數（大屏端目標與平滑插值）
+      targetQuat: new THREE.Quaternion(),
+      displayQuat: new THREE.Quaternion(),
+      inputSource: 'sim',        // 'sim' | 'phone'
+      dragMode: 'hand',          // 'hand' | 'camera'
+
+      // 判題保持計時器
+      holdTime: 0,
+      holdTargetSec: 0.6,
+      lastFrameTime: 0,
+
+      // WebRTC / PeerJS
+      roomCode: '',
+      peer: null,
+      conn: null,
+      phoneConnected: false,
+
+      // 手機感測器狀態
+      phoneActivated: false,
+      phoneFallback: false,
+      yawOffsetRad: 0,
+      latestRawQuat: new THREE.Quaternion(),
+      lastSendMs: 0,
+      sensorReceived: false,
+    };
+
+    // =========================================================================
+    // 3. Web Audio API 合成音效模組（無外部音檔依賴）
+    // =========================================================================
+    let audioCtx = null;
+
+    function ensureAudioCtx() {
+      if (APP.muted) return null;
+      try {
+        if (!audioCtx) {
+          const Ctx = window.AudioContext || window.webkitAudioContext;
+          if (Ctx) audioCtx = new Ctx();
+        }
+        if (audioCtx && audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+        return audioCtx;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    // 清脆上升和弦（答對音效）
+    function playCorrectSound() {
+      const ctx = ensureAudioCtx();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+      const notes = [523.25, 659.25, 783.99, 1046.5]; // C5 E5 G5 C6
+      notes.forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, now + i * 0.075);
+        gain.gain.setValueAtTime(0.001, now + i * 0.075);
+        gain.gain.exponentialRampToValueAtTime(0.18, now + i * 0.075 + 0.025);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.075 + 0.42);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + i * 0.075);
+        osc.stop(now + i * 0.075 + 0.45);
+      });
+    }
+
+    // 輕柔互動點擊音效
+    function playClickSound(freq = 440) {
+      const ctx = ensureAudioCtx();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now);
+      gain.gain.setValueAtTime(0.07, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.1);
+    }
+
+    function toggleMute() {
+      APP.muted = !APP.muted;
+      document.getElementById('btn-mute').textContent = APP.muted ? '🔇' : '🔊';
+      showToast(APP.muted ? '已靜音' : '已開啟音效', APP.muted ? '🔇' : '🔊');
+    }
+
+    // =========================================================================
+    // 4. Toast 通知與剪貼簿工具（不用 alert）
+    // =========================================================================
+    let toastTimer = null;
+    function showToast(msg, icon = 'ℹ️') {
+      const box = document.getElementById('toast-box');
+      const txt = document.getElementById('toast-text');
+      const icn = document.getElementById('toast-icon');
+      txt.textContent = msg;
+      icn.textContent = icon;
+      box.classList.remove('opacity-0', '-translate-y-2');
+      box.classList.add('opacity-100', 'translate-y-0');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        box.classList.remove('opacity-100', 'translate-y-0');
+        box.classList.add('opacity-0', '-translate-y-2');
+      }, 2800);
+    }
+
+    // 使用 execCommand('copy') 兼容 iframe 環境
+    function copyTextFallback(text) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      let ok = false;
+      try {
+        ok = document.execCommand('copy');
+      } catch (e) {
+        ok = false;
+      }
+      document.body.removeChild(ta);
+      return ok;
+    }
+
+    // =========================================================================
+    // 5. Three.js 3D 場景建構（教室明亮風格 + 精緻右手模型 + 物理情境道具）
+    // =========================================================================
+    let scene, camera, renderer;
+    let handRootGroup;         // 隨手機/模擬器旋轉的手勢根群組
+    let gripHandGroup;         // 模式一：3D 👍 握拳右手模型
+    let palmHandGroup;         // 模式二：3D 👋 開掌右手模型
+    let scenarioGroup;         // 題目物理場景群組（導線、螺線管、均勻磁場、受力箭頭）
+    let animatedParticles = [];// 電流/磁場粒子動畫陣列
+    let palmForceArrowObj = null;
+    let palmWireMeshObj = null;
+    let gripSolenoidBGroup = null;
+    let gripWireRingsGroup = null;
+    let gripThumbArrowMesh = null;
+    let gripCurlArrowsGroup = null;
+    let gripThumbLabelSprite = null;
+    let gripCurlLabelSprite = null;
+
+    // 攝影機軌道參數
+    let camSpherical = { theta: 0.14, phi: 1.42, radius: 7.4 };
+
+    // 建立文字標籤 Sprite（純 Canvas 繪製，無外部圖片）
+    function makeTextSprite(text, bgColor = '#1e293b', textColor = '#ffffff', scale = 0.85, fontSize = 44) {
+      const c = document.createElement('canvas');
+      c.width = 256;
+      c.height = 112;
+      const ctx = c.getContext('2d');
+
+      // 圓角膠囊底色
+      ctx.fillStyle = bgColor;
+      const r = 34;
+      ctx.beginPath();
+      ctx.moveTo(r + 12, 16);
+      ctx.lineTo(244 - r, 16);
+      ctx.quadraticCurveTo(244, 16, 244, 16 + r);
+      ctx.lineTo(244, 96 - r);
+      ctx.quadraticCurveTo(244, 96, 244 - r, 96);
+      ctx.lineTo(r + 12, 96);
+      ctx.quadraticCurveTo(12, 96, 12, 96 - r);
+      ctx.lineTo(12, 16 + r);
+      ctx.quadraticCurveTo(12, 16, r + 12, 16);
+      ctx.closePath();
+      ctx.fill();
+
+      // 白色外框提升辨識度
+      ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+      ctx.lineWidth = 5;
+      ctx.stroke();
+
+      // 文字
+      ctx.fillStyle = textColor;
+      ctx.font = `900 ${fontSize}px "Noto Sans TC", sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, 128, 58);
+
+      const tex = new THREE.CanvasTexture(c);
+      tex.needsUpdate = true;
+      const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
+      const sp = new THREE.Sprite(mat);
+      sp.scale.set(scale * 2.1, scale * 0.92, 1);
+      sp.renderOrder = 20;
+      return sp;
+    }
+
+    // 建立精緻 3D 實心箭頭（圓柱軸 + 圓錐頭）
+    function createSolidArrow(length, colorHex, shaftRadius = 0.08, headLength = 0.34, headRadius = 0.2) {
+      const group = new THREE.Group();
+      const mat = new THREE.MeshStandardMaterial({
+        color: colorHex,
+        roughness: 0.3,
+        metalness: 0.1,
+        emissive: colorHex,
+        emissiveIntensity: 0.16,
+      });
+      const shaftLen = Math.max(0.05, length - headLength);
+      const shaft = new THREE.Mesh(new THREE.CylinderGeometry(shaftRadius, shaftRadius, shaftLen, 20), mat);
+      shaft.position.y = shaftLen / 2;
+      group.add(shaft);
+
+      const head = new THREE.Mesh(new THREE.ConeGeometry(headRadius, headLength, 24), mat);
+      head.position.y = shaftLen + headLength / 2;
+      group.add(head);
+
+      group.userData.mat = mat;
+      return group;
+    }
+
+    // 建立圓弧彎曲箭頭（用於 👍 四指環繞方向，沿 +Y 軸逆時針繞行：+Z -> +X -> -Z -> -X）
+    function createCurvedRingArrow(radius, arcRad, startAngle, colorHex, tubeRadius = 0.065) {
+      const group = new THREE.Group();
+      const mat = new THREE.MeshStandardMaterial({
+        color: colorHex,
+        roughness: 0.28,
+        metalness: 0.12,
+        emissive: colorHex,
+        emissiveIntensity: 0.18,
+      });
+
+      // 自訂平滑弧線：角度 t 增加時，從 +Z(0) -> +X(pi/2) -> -Z(pi) -> -X(3pi/2)
+      // 驗證：x = R sin(t), z = R cos(t)
+      // t=0: (0,0,R) +Z; t=pi/2: (R,0,0) +X; t=pi: (0,0,-R) -Z!
+      // 由 +Y 上方俯視即為「逆時針」，100% 符合右手定則！
+      const pts = [];
+      const segs = 28;
+      for (let i = 0; i <= segs; i++) {
+        const t = startAngle + (arcRad * i) / segs;
+        pts.push(new THREE.Vector3(Math.sin(t) * radius, 0, Math.cos(t) * radius));
+      }
+      const curve = new THREE.CatmullRomCurve3(pts);
+      const tubeGeo = new THREE.TubeGeometry(curve, 32, tubeRadius, 12, false);
+      const tube = new THREE.Mesh(tubeGeo, mat);
+      group.add(tube);
+
+      // 箭頭圓錐（對準切線方向）
+      const endT = startAngle + arcRad;
+      const tipPos = new THREE.Vector3(Math.sin(endT) * radius, 0, Math.cos(endT) * radius);
+      const tangent = new THREE.Vector3(Math.cos(endT), 0, -Math.sin(endT)).normalize();
+      const cone = new THREE.Mesh(new THREE.ConeGeometry(tubeRadius * 2.7, tubeRadius * 5.2, 20), mat);
+      cone.position.copy(tipPos);
+      cone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), tangent);
+      group.add(cone);
+
+      group.userData.mat = mat;
+      return group;
+    }
+
+    // 皮膚與袖口材質
+    function createHandMaterials() {
+      return {
+        skin: new THREE.MeshStandardMaterial({ color: 0xf4c29f, roughness: 0.52, metalness: 0.04 }),
+        palmSkin: new THREE.MeshStandardMaterial({ color: 0xf8d2b6, roughness: 0.58, metalness: 0.02 }),
+        nail: new THREE.MeshStandardMaterial({ color: 0xffe9dc, roughness: 0.3, metalness: 0.05 }),
+        cuff: new THREE.MeshStandardMaterial({ color: 0x3b82f6, roughness: 0.45, metalness: 0.08 }),
+        cuffTrim: new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4, metalness: 0.05 }),
+      };
+    }
+
+    // =========================================================================
+    // 3D 模型一：👍 立體右手握拳模型（局部 +Y ＝ 大拇指，四指沿 +Y 右手逆時針捲曲）
+    // =========================================================================
+    function createThumbsUpHand() {
+      const group = new THREE.Group();
+      const m = createHandMaterials();
+
+      // 手腕與藍色袖口（下方 -Y）
+      const wrist = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.46, 0.72, 24), m.skin);
+      wrist.position.set(0.18, -1.25, -0.05);
+      wrist.rotation.z = 0.08;
+      group.add(wrist);
+
+      const cuff = new THREE.Mesh(new THREE.CylinderGeometry(0.49, 0.53, 0.42, 24), m.cuff);
+      cuff.position.set(0.21, -1.62, -0.05);
+      cuff.rotation.z = 0.08;
+      group.add(cuff);
+
+      const trim = new THREE.Mesh(new THREE.TorusGeometry(0.49, 0.045, 12, 28), m.cuffTrim);
+      trim.position.set(0.19, -1.42, -0.05);
+      trim.rotation.x = Math.PI / 2;
+      group.add(trim);
+
+      // 手掌主體（略偏向 +X / -Z，包覆握持空間）
+      const palm = new THREE.Mesh(new THREE.BoxGeometry(0.95, 1.38, 0.72), m.skin);
+      palm.position.set(0.16, -0.18, -0.12);
+      // 用球體柔和化掌部邊緣
+      const palmRound = new THREE.Mesh(new THREE.SphereGeometry(0.66, 24, 20), m.skin);
+      palmRound.scale.set(0.95, 1.12, 0.78);
+      palmRound.position.set(0.15, -0.18, -0.12);
+      group.add(palmRound);
+
+      // 大魚際（拇指根部厚實肌群，位於 +X/+Z 側）
+      const thenar = new THREE.Mesh(new THREE.SphereGeometry(0.44, 20, 18), m.palmSkin);
+      thenar.scale.set(0.85, 1.15, 0.9);
+      thenar.position.set(0.32, 0.15, 0.25);
+      group.add(thenar);
+
+      // 明顯豎起的大拇指（嚴格指向 +Y！）
+      const thumbBase = new THREE.Mesh(new THREE.CylinderGeometry(0.21, 0.25, 0.78, 20), m.skin);
+      thumbBase.position.set(0.16, 0.78, 0.16);
+      group.add(thumbBase);
+
+      const thumbJoint = new THREE.Mesh(new THREE.SphereGeometry(0.215, 18, 16), m.skin);
+      thumbJoint.position.set(0.16, 1.16, 0.16);
+      group.add(thumbJoint);
+
+      const thumbTip = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.205, 0.62, 20), m.skin);
+      thumbTip.position.set(0.16, 1.46, 0.16);
+      group.add(thumbTip);
+
+      const thumbCap = new THREE.Mesh(new THREE.SphereGeometry(0.18, 18, 16), m.skin);
+      thumbCap.position.set(0.16, 1.77, 0.16);
+      group.add(thumbCap);
+
+      // 拇指指甲（面向外側，增加立體辨識度）
+      const thumbNail = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.24, 0.06), m.nail);
+      thumbNail.position.set(0.28, 1.62, 0.16);
+      thumbNail.rotation.y = Math.PI / 2;
+      group.add(thumbNail);
+
+      // 四根捲曲手指（從 +X 經 -Z 到 -X 再捲回 +Z，指尖朝向 +X/+Z 展現標準右手握拳）
+      const fingerYs = [0.34, 0.0, -0.34, -0.66];
+      const fingerRadii = [0.165, 0.17, 0.16, 0.14];
+
+      fingerYs.forEach((fy, idx) => {
+        const r = fingerRadii[idx];
+        const fGroup = new THREE.Group();
+        fGroup.position.y = fy;
+
+        // 沿著右手捲曲路徑：從掌背(+X, -Z) -> 左側(-X) -> 正面指節(+Z)
+        const arcPts = [
+          new THREE.Vector3(0.55, 0, -0.35),
+          new THREE.Vector3(0.05, 0, -0.64),
+          new THREE.Vector3(-0.56, 0, -0.32),
+          new THREE.Vector3(-0.58, 0, 0.26),
+          new THREE.Vector3(-0.14, 0, 0.56),
+          new THREE.Vector3(0.18, 0, 0.36),
+        ];
+        const fCurve = new THREE.CatmullRomCurve3(arcPts);
+        const fTube = new THREE.Mesh(new THREE.TubeGeometry(fCurve, 26, r, 14, false), m.skin);
+        fGroup.add(fTube);
+
+        // 指尖圓頭
+        const tipSphere = new THREE.Mesh(new THREE.SphereGeometry(r * 0.96, 14, 12), m.skin);
+        tipSphere.position.copy(arcPts[arcPts.length - 1]);
+        fGroup.add(tipSphere);
+
+        // 指節突起（讓正面能清楚看出四根手指）
+        const knuckle = new THREE.Mesh(new THREE.SphereGeometry(r * 1.08, 12, 12), m.skin);
+        knuckle.position.set(-0.56, 0, 0.02);
+        fGroup.add(knuckle);
+
+        // 指甲細節
+        const nail = new THREE.Mesh(new THREE.BoxGeometry(0.16, r * 1.05, 0.05), m.nail);
+        nail.position.set(-0.14, 0, 0.56 + r * 0.72);
+        fGroup.add(nail);
+
+        group.add(fGroup);
+      });
+
+      // 大拇指主方向箭頭（沿 +Y）
+      gripThumbArrowMesh = createSolidArrow(1.55, 0xef4444, 0.095, 0.42, 0.24);
+      gripThumbArrowMesh.position.set(0.16, 1.88, 0.16);
+      group.add(gripThumbArrowMesh);
+
+      gripThumbLabelSprite = makeTextSprite('👍 I 電流', '#ef4444', '#ffffff', 0.62, 40);
+      gripThumbLabelSprite.position.set(0.16, 3.68, 0.16);
+      group.add(gripThumbLabelSprite);
+
+      // 四指環繞方向藍色弧形雙箭頭（逆時針繞 +Y）
+      gripCurlArrowsGroup = new THREE.Group();
+      const arc1 = createCurvedRingArrow(1.25, Math.PI * 0.78, -0.35, 0x2563eb, 0.068);
+      arc1.position.y = 0.08;
+      const arc2 = createCurvedRingArrow(1.25, Math.PI * 0.78, Math.PI - 0.35, 0x2563eb, 0.068);
+      arc2.position.y = -0.26;
+      gripCurlArrowsGroup.add(arc1, arc2);
+      group.add(gripCurlArrowsGroup);
+
+      gripCurlLabelSprite = makeTextSprite('B 磁場環繞', '#2563eb', '#ffffff', 0.56, 36);
+      gripCurlLabelSprite.position.set(-1.55, -0.08, 0.65);
+      group.add(gripCurlLabelSprite);
+
+      // 浮動 👍 標記（提示當前模式）
+      const badge = makeTextSprite('👍', '#ffffff', '#0f172a', 0.48, 56);
+      badge.position.set(1.1, 1.7, 0.4);
+      group.add(badge);
+
+      return group;
+    }
+
+    // =========================================================================
+    // 3D 模型二：👋 立體右手開掌模型
+    // 精準座標系：
+    //   +X (右側) = 大拇指 (電流 I，紅)
+    //   +Y (上方) = 併攏四指 (磁場 B，藍)
+    //   +Z (正面) = 掌心法向量 (磁力 F，綠)
+    // 驗證：(+X) × (+Y) = (+Z)，完美符合右手開掌定則！
+    // =========================================================================
+    function createOpenPalmHand() {
+      const group = new THREE.Group();
+      const m = createHandMaterials();
+
+      // 手腕與藍色袖口（下方 -Y）
+      const wrist = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.44, 0.72, 24), m.skin);
+      wrist.position.set(0, -1.48, 0);
+      group.add(wrist);
+
+      const cuff = new THREE.Mesh(new THREE.CylinderGeometry(0.48, 0.52, 0.42, 24), m.cuff);
+      cuff.position.set(0, -1.86, 0);
+      group.add(cuff);
+
+      const trim = new THREE.Mesh(new THREE.TorusGeometry(0.48, 0.045, 12, 28), m.cuffTrim);
+      trim.position.set(0, -1.66, 0);
+      trim.rotation.x = Math.PI / 2;
+      group.add(trim);
+
+      // 扁平圓潤手掌（位於 XY 平面，+Z 為掌心，-Z 為手背）
+      const palmCore = new THREE.Mesh(new THREE.BoxGeometry(1.36, 1.32, 0.32), m.skin);
+      palmCore.position.set(0, -0.45, 0);
+      group.add(palmCore);
+
+      // 掌心嫩膚面（+Z 面稍微亮色並加掌紋提示，方便區分掌心與手背）
+      const palmPad = new THREE.Mesh(new THREE.BoxGeometry(1.16, 1.08, 0.08), m.palmSkin);
+      palmPad.position.set(0, -0.45, 0.16);
+      group.add(palmPad);
+
+      // 手掌左右圓邊
+      const sideL = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 1.32, 16), m.skin);
+      sideL.position.set(-0.68, -0.45, 0);
+      const sideR = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 1.32, 16), m.skin);
+      sideR.position.set(0.68, -0.45, 0);
+      group.add(sideL, sideR);
+
+      // 掌心圓點裝飾（F 箭頭起點）
+      const palmCenterRing = new THREE.Mesh(
+        new THREE.TorusGeometry(0.24, 0.035, 12, 24),
+        new THREE.MeshStandardMaterial({ color: 0x16a34a, emissive: 0x16a34a, emissiveIntensity: 0.25 })
+      );
+      palmCenterRing.position.set(0, -0.36, 0.21);
+      group.add(palmCenterRing);
+
+      // 四根伸直併攏手指（沿 +Y 方向）：
+      // 右手掌心面向 +Z 時，食指在右(+x)，小指在左(-x)！
+      const fingersSpec = [
+        { name: 'index',  x:  0.48, len: 1.36, r: 0.135 },
+        { name: 'middle', x:  0.16, len: 1.50, r: 0.140 },
+        { name: 'ring',   x: -0.16, len: 1.38, r: 0.132 },
+        { name: 'pinky',  x: -0.47, len: 1.12, r: 0.118 },
+      ];
+
+      fingersSpec.forEach((f) => {
+        const cyl = new THREE.Mesh(new THREE.CylinderGeometry(f.r * 0.88, f.r, f.len, 18), m.skin);
+        cyl.position.set(f.x, 0.2 + f.len / 2, 0);
+        group.add(cyl);
+
+        const tip = new THREE.Mesh(new THREE.SphereGeometry(f.r * 0.88, 16, 14), m.skin);
+        tip.position.set(f.x, 0.2 + f.len, 0);
+        group.add(tip);
+
+        const knuckle = new THREE.Mesh(new THREE.SphereGeometry(f.r * 1.05, 14, 12), m.skin);
+        knuckle.position.set(f.x, 0.2, -0.04);
+        group.add(knuckle);
+
+        // 指甲在手背面 (-Z)
+        const nail = new THREE.Mesh(new THREE.BoxGeometry(f.r * 1.1, 0.22, 0.04), m.nail);
+        nail.position.set(f.x, 0.2 + f.len - 0.14, -f.r * 0.86);
+        group.add(nail);
+      });
+
+      // 右手大拇指（垂直張開指向 +X 右側！）
+      const thumbWeb = new THREE.Mesh(new THREE.SphereGeometry(0.28, 18, 16), m.palmSkin);
+      thumbWeb.position.set(0.68, -0.58, 0.06);
+      group.add(thumbWeb);
+
+      const thumbCyl = new THREE.Mesh(new THREE.CylinderGeometry(0.145, 0.175, 1.12, 18), m.skin);
+      thumbCyl.rotation.z = -Math.PI / 2; // 指向 +X
+      thumbCyl.position.set(1.22, -0.46, 0.04);
+      group.add(thumbCyl);
+
+      const thumbTip = new THREE.Mesh(new THREE.SphereGeometry(0.145, 16, 14), m.skin);
+      thumbTip.position.set(1.78, -0.46, 0.04);
+      group.add(thumbTip);
+
+      // 拇指指甲（在 -Z 手背側）
+      const thumbNail = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.15, 0.04), m.nail);
+      thumbNail.position.set(1.66, -0.46, -0.1);
+      group.add(thumbNail);
+
+      // === 三色正交向量箭頭 ===
+      // 1. 紅色大拇指箭頭：+X (電流 I)
+      const arrowI = createSolidArrow(1.45, 0xef4444, 0.085, 0.36, 0.21);
+      arrowI.rotation.z = -Math.PI / 2;
+      arrowI.position.set(1.85, -0.46, 0.04);
+      group.add(arrowI);
+
+      const labelI = makeTextSprite('I 電流', '#ef4444', '#ffffff', 0.56, 40);
+      labelI.position.set(3.52, -0.46, 0.04);
+      group.add(labelI);
+
+      // 2. 藍色四指箭頭：+Y (磁場 B)
+      const arrowB = createSolidArrow(1.45, 0x2563eb, 0.085, 0.36, 0.21);
+      arrowB.position.set(0.08, 1.76, 0);
+      group.add(arrowB);
+
+      const labelB = makeTextSprite('B 磁場', '#2563eb', '#ffffff', 0.56, 40);
+      labelB.position.set(0.08, 3.44, 0);
+      group.add(labelB);
+
+      // 3. 綠色掌心箭頭：+Z (磁力 F)
+      const arrowF = createSolidArrow(1.65, 0x16a34a, 0.095, 0.4, 0.24);
+      arrowF.rotation.x = Math.PI / 2;
+      arrowF.position.set(0, -0.36, 0.25);
+      group.add(arrowF);
+
+      const labelF = makeTextSprite('F 磁力', '#16a34a', '#ffffff', 0.58, 40);
+      labelF.position.set(0, -0.36, 2.22);
+      group.add(labelF);
+
+      return group;
+    }
+
+    // 建立背景空間參考軸（微淡輔助線與六方向標誌）
+    function createWorldReferenceGuides() {
+      const g = new THREE.Group();
+
+      // 柔和地面網格，增加 3D 空間景深感
+      const grid = new THREE.GridHelper(12, 12, 0xcbd5e1, 0xe2e8f0);
+      grid.position.y = -3.1;
+      grid.material.transparent = true;
+      grid.material.opacity = 0.65;
+      g.add(grid);
+
+      // 微透明正交中心虛線軸
+      const axisMat = new THREE.LineBasicMaterial({ color: 0x94a3b8, transparent: true, opacity: 0.32 });
+      const makeLine = (a, b) => {
+        const geo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(...a), new THREE.Vector3(...b)]);
+        return new THREE.Line(geo, axisMat);
+      };
+      g.add(makeLine([-3.8, 0, 0], [3.8, 0, 0]));
+      g.add(makeLine([0, -2.9, 0], [0, 3.4, 0]));
+      g.add(makeLine([0, 0, -3.5], [0, 0, 3.5]));
+
+      // 淡雅方向標示
+      const sUp = makeTextSprite('↑ 上', 'rgba(71,85,105,0.75)', '#ffffff', 0.38, 36);
+      sUp.position.set(0, 3.55, 0);
+      const sRight = makeTextSprite('→ 右', 'rgba(71,85,105,0.75)', '#ffffff', 0.38, 36);
+      sRight.position.set(4.15, 0, 0);
+      const sIn = makeTextSprite('⊗ 射入', 'rgba(79,70,229,0.75)', '#ffffff', 0.38, 34);
+      sIn.position.set(0, 0.3, -3.65);
+      const sOut = makeTextSprite('⊙ 射出', 'rgba(5,150,105,0.75)', '#ffffff', 0.38, 34);
+      sOut.position.set(0, -0.35, 3.65);
+
+      g.add(sUp, sRight, sIn, sOut);
+      return g;
+    }
+
+    // 初始化 Three.js 場景
+    function initThreeScene() {
+      const wrap = document.getElementById('three-canvas-wrap');
+      const w = wrap.clientWidth || 640;
+      const h = wrap.clientHeight || 520;
+
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0xeef4fc);
+
+      camera = new THREE.PerspectiveCamera(42, w / h, 0.1, 100);
+      updateCameraFromSpherical();
+
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.setSize(w, h);
+      renderer.outputEncoding = THREE.sRGBEncoding;
+      wrap.insertBefore(renderer.domElement, wrap.firstChild);
+
+      // 明亮柔和三點式攝影棚燈光
+      const hemi = new THREE.HemisphereLight(0xffffff, 0xcbd5e1, 0.92);
+      scene.add(hemi);
+
+      const dirKey = new THREE.DirectionalLight(0xfffbeb, 0.85);
+      dirKey.position.set(4.5, 7, 6.5);
+      scene.add(dirKey);
+
+      const dirFill = new THREE.DirectionalLight(0xdbeafe, 0.45);
+      dirFill.position.set(-5, -2, 4);
+      scene.add(dirFill);
+
+      const dirBack = new THREE.DirectionalLight(0xffffff, 0.35);
+      dirBack.position.set(0, 4, -6);
+      scene.add(dirBack);
+
+      // 空間參考輔助
+      scene.add(createWorldReferenceGuides());
+
+      // 物理情境道具群組（位於手勢後方/周圍）
+      scenarioGroup = new THREE.Group();
+      scene.add(scenarioGroup);
+
+      // 手勢模型根群組
+      handRootGroup = new THREE.Group();
+      scene.add(handRootGroup);
+
+      gripHandGroup = createThumbsUpHand();
+      palmHandGroup = createOpenPalmHand();
+      palmHandGroup.visible = false;
+
+      handRootGroup.add(gripHandGroup);
+      handRootGroup.add(palmHandGroup);
+
+      // 響應式畫布縮放
+      const ro = new ResizeObserver(() => resizeThreeCanvas());
+      ro.observe(wrap);
+      window.addEventListener('resize', resizeThreeCanvas);
+
+      // 綁定滑鼠與觸控拖曳事件（支援直接拖曳轉動 3D 手勢或攝影機）
+      setupCanvasPointerControls(wrap);
+    }
+
+    function resizeThreeCanvas() {
+      if (!renderer || !camera) return;
+      const wrap = document.getElementById('three-canvas-wrap');
+      const w = wrap.clientWidth;
+      const h = wrap.clientHeight;
+      if (w < 10 || h < 10) return;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+
+      // 同步紙花畫布尺寸
+      const cc = document.getElementById('confetti-canvas');
+      if (cc) {
+        cc.width = w;
+        cc.height = h;
+      }
+    }
+
+    function updateCameraFromSpherical() {
+      const { theta, phi, radius } = camSpherical;
+      camera.position.set(
+        radius * Math.sin(phi) * Math.sin(theta),
+        radius * Math.cos(phi),
+        radius * Math.sin(phi) * Math.cos(theta)
+      );
+      camera.lookAt(0, 0, 0);
+    }
+
+    function resetCameraView() {
+      camSpherical = { theta: 0.14, phi: 1.42, radius: 7.4 };
+      updateCameraFromSpherical();
+      playClickSound(520);
+    }
+
+    function setCanvasDragMode(mode) {
+      APP.dragMode = mode;
+      const bHand = document.getElementById('btn-drag-hand');
+      const bCam = document.getElementById('btn-drag-cam');
+      if (mode === 'hand') {
+        bHand.className = 'px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-600 text-white transition';
+        bCam.className = 'px-3 py-1.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition';
+      } else {
+        bCam.className = 'px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-600 text-white transition';
+        bHand.className = 'px-3 py-1.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition';
+      }
+      playClickSound(480);
+    }
+
+    // 畫布滑鼠／單指拖曳互動
+    function setupCanvasPointerControls(el) {
+      let dragging = false;
+      let lastX = 0, lastY = 0;
+
+      const onDown = (x, y) => {
+        dragging = true;
+        lastX = x;
+        lastY = y;
+      };
+      const onMove = (x, y) => {
+        if (!dragging) return;
+        const dx = x - lastX;
+        const dy = y - lastY;
+        lastX = x;
+        lastY = y;
+
+        if (APP.dragMode === 'camera') {
+          camSpherical.theta -= dx * 0.008;
+          camSpherical.phi = Math.max(0.25, Math.min(Math.PI - 0.25, camSpherical.phi - dy * 0.008));
+          updateCameraFromSpherical();
+        } else {
+          // 直接繞世界 Y 軸與 X 軸旋轉 3D 手勢，超直覺！
+          APP.inputSource = 'sim';
+          updateInputSourceBadge();
+          const qY = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), dx * 0.011);
+          const qX = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), dy * 0.011);
+          APP.targetQuat.premultiply(qY).premultiply(qX).normalize();
+          syncSlidersFromQuat(APP.targetQuat);
+        }
+      };
+      const onUp = () => { dragging = false; };
+
+      el.addEventListener('mousedown', (e) => onDown(e.clientX, e.clientY));
+      window.addEventListener('mousemove', (e) => onMove(e.clientX, e.clientY));
+      window.addEventListener('mouseup', onUp);
+
+      el.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 1) onDown(e.touches[0].clientX, e.touches[0].clientY);
+      }, { passive: true });
+      el.addEventListener('touchmove', (e) => {
+        if (e.touches.length === 1) onMove(e.touches[0].clientX, e.touches[0].clientY);
+      }, { passive: true });
+      el.addEventListener('touchend', onUp);
+    }
+
+    // =========================================================================
+    // 6. 根據當前題目繪製對應 3D 物理背景（導線、螺線管、線圈、均勻磁場）
+    // =========================================================================
+    function clearScenarioGroup() {
+      while (scenarioGroup.children.length > 0) {
+        const obj = scenarioGroup.children[0];
+        scenarioGroup.remove(obj);
+      }
+      animatedParticles = [];
+      palmForceArrowObj = null;
+      palmWireMeshObj = null;
+      gripSolenoidBGroup = null;
+      gripWireRingsGroup = null;
+    }
+
+    // 更新模式一手勢上的箭頭配色（直導線 vs 螺線管/線圈語意區分）
+    function updateGripHandSemantics(scenario) {
+      if (!gripThumbArrowMesh || !gripCurlArrowsGroup) return;
+      const isWire = (scenario === 'wire');
+      const thumbHex = isWire ? 0xef4444 : 0x2563eb; // 直導線：大拇指=I紅；螺線管：大拇指=B藍
+      const curlHex  = isWire ? 0x2563eb : 0xef4444; // 直導線：四指=B藍；螺線管：四指=I紅
+
+      gripThumbArrowMesh.userData.mat.color.setHex(thumbHex);
+      gripThumbArrowMesh.userData.mat.emissive.setHex(thumbHex);
+      gripCurlArrowsGroup.children.forEach((arc) => {
+        arc.userData.mat.color.setHex(curlHex);
+        arc.userData.mat.emissive.setHex(curlHex);
+      });
+
+      // 重建文字標籤
+      gripHandGroup.remove(gripThumbLabelSprite);
+      gripHandGroup.remove(gripCurlLabelSprite);
+      gripThumbLabelSprite = makeTextSprite(
+        isWire ? '👍 I 電流' : '👍 B 磁場(N)',
+        isWire ? '#ef4444' : '#2563eb',
+        '#ffffff', 0.62, 38
+      );
+      gripThumbLabelSprite.position.set(0.16, 3.68, 0.16);
+      gripHandGroup.add(gripThumbLabelSprite);
+
+      gripCurlLabelSprite = makeTextSprite(
+        isWire ? 'B 磁場環繞' : 'I 線圈電流',
+        isWire ? '#2563eb' : '#ef4444',
+        '#ffffff', 0.56, 36
+      );
+      gripCurlLabelSprite.position.set(-1.55, -0.08, 0.65);
+      gripHandGroup.add(gripCurlLabelSprite);
+    }
+
+    function buildQuestionScenario() {
+      clearScenarioGroup();
+      const q = getCurrentQuestion();
+
+      if (APP.mode === 'grip') {
+        updateGripHandSemantics(q.scenario);
+        const dirVec = new THREE.Vector3(...q.targetThumb).normalize();
+        const alignQuat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dirVec);
+
+        if (q.scenario === 'wire') {
+          // 1) 載流長直銅導線（置於手勢後方或貫穿中心形成半透明立體感）
+          const wireHolder = new THREE.Group();
+          wireHolder.quaternion.copy(alignQuat);
+
+          const wireMat = new THREE.MeshStandardMaterial({
+            color: 0xd97706, roughness: 0.3, metalness: 0.6, transparent: true, opacity: 0.55
+          });
+          const wire = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 6.2, 20), wireMat);
+          wireHolder.add(wire);
+
+          // 流動紅色電流粒子（沿 +Y 方向移動）
+          const pMat = new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0xef4444, emissiveIntensity: 0.45 });
+          for (let i = 0; i < 6; i++) {
+            const cone = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.36, 16), pMat);
+            const t = -2.8 + i * 1.1;
+            cone.position.y = t;
+            wireHolder.add(cone);
+            animatedParticles.push({ mesh: cone, type: 'linearY', min: -3.0, max: 3.0, speed: 1.65 });
+          }
+
+          // 同心圓磁場環（未答對前淡色，答對後亮起！）
+          gripWireRingsGroup = new THREE.Group();
+          [2.15, 2.75].forEach((rad, rIdx) => {
+            const arcA = createCurvedRingArrow(rad, Math.PI * 0.82, 0.1 + rIdx * 0.6, 0x2563eb, 0.045);
+            const arcB = createCurvedRingArrow(rad, Math.PI * 0.82, Math.PI + 0.1 + rIdx * 0.6, 0x2563eb, 0.045);
+            arcA.userData.mat.transparent = true;
+            arcA.userData.mat.opacity = 0.25;
+            arcB.userData.mat.transparent = true;
+            arcB.userData.mat.opacity = 0.25;
+            gripWireRingsGroup.add(arcA, arcB);
+          });
+          wireHolder.add(gripWireRingsGroup);
+          scenarioGroup.add(wireHolder);
+
+        } else if (q.scenario === 'solenoid') {
+          // 2) 水平螺旋螺線管（沿目標軸 dirVec，線圈右手繞行方向即電流方向）
+          const solHolder = new THREE.Group();
+          solHolder.quaternion.copy(alignQuat);
+
+          // 半透明空心圓筒骨架
+          const core = new THREE.Mesh(
+            new THREE.CylinderGeometry(1.65, 1.65, 3.6, 28, 1, true),
+            new THREE.MeshStandardMaterial({ color: 0x94a3b8, transparent: true, opacity: 0.14, side: THREE.DoubleSide })
+          );
+          solHolder.add(core);
+
+          // 螺旋導線（沿 +Y 軸，右手螺旋：x = R sin(t), z = R cos(t)）
+          const turns = 5.5;
+          const helixPts = [];
+          for (let i = 0; i <= 140; i++) {
+            const frac = i / 140;
+            const ang = frac * turns * Math.PI * 2;
+            const y = -1.75 + frac * 3.5;
+            helixPts.push(new THREE.Vector3(Math.sin(ang) * 1.72, y, Math.cos(ang) * 1.72));
+          }
+          const helixCurve = new THREE.CatmullRomCurve3(helixPts);
+          const coilMat = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.35, metalness: 0.65, transparent: true, opacity: 0.72 });
+          solHolder.add(new THREE.Mesh(new THREE.TubeGeometry(helixCurve, 150, 0.075, 10, false), coilMat));
+
+          // 沿螺線管流動的紅色電流箭頭粒子
+          const pMat = new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0xef4444, emissiveIntensity: 0.5 });
+          for (let i = 0; i < 8; i++) {
+            const bead = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.34, 14), pMat);
+            solHolder.add(bead);
+            animatedParticles.push({ mesh: bead, type: 'curve', curve: helixCurve, u: i / 8, speed: 0.14 });
+          }
+
+          // 內部磁場大箭頭 + N/S 標記（答對後完整亮起）
+          gripSolenoidBGroup = new THREE.Group();
+          const bArrow = createSolidArrow(4.4, 0x2563eb, 0.11, 0.48, 0.28);
+          bArrow.position.y = -2.1;
+          gripSolenoidBGroup.add(bArrow);
+          const nBadge = makeTextSprite('N 極', '#ef4444', '#ffffff', 0.65, 42);
+          nBadge.position.set(0, 2.75, 0);
+          const sBadge = makeTextSprite('S 極', '#3b82f6', '#ffffff', 0.65, 42);
+          sBadge.position.set(0, -2.55, 0);
+          gripSolenoidBGroup.add(nBadge, sBadge);
+          gripSolenoidBGroup.visible = false;
+          solHolder.add(gripSolenoidBGroup);
+
+          scenarioGroup.add(solHolder);
+
+        } else if (q.scenario === 'coil') {
+          // 3) 圓形單匝載流線圈（垂直於目標軸 dirVec）
+          const coilHolder = new THREE.Group();
+          coilHolder.quaternion.copy(alignQuat);
+
+          const R = 2.35;
+          const pts = [];
+          for (let i = 0; i <= 64; i++) {
+            const t = (i / 64) * Math.PI * 2;
+            pts.push(new THREE.Vector3(Math.sin(t) * R, 0, Math.cos(t) * R));
+          }
+          const circleCurve = new THREE.CatmullRomCurve3(pts, true);
+          const coilMat = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.3, metalness: 0.65, transparent: true, opacity: 0.78 });
+          coilHolder.add(new THREE.Mesh(new THREE.TubeGeometry(circleCurve, 72, 0.09, 12, true), coilMat));
+
+          const pMat = new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0xef4444, emissiveIntensity: 0.5 });
+          for (let i = 0; i < 6; i++) {
+            const bead = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.4, 14), pMat);
+            coilHolder.add(bead);
+            animatedParticles.push({ mesh: bead, type: 'curve', curve: circleCurve, u: i / 6, speed: 0.22 });
+          }
+
+          gripSolenoidBGroup = new THREE.Group();
+          const bArrow = createSolidArrow(3.2, 0x2563eb, 0.11, 0.46, 0.26);
+          bArrow.position.y = -1.4;
+          gripSolenoidBGroup.add(bArrow);
+          gripSolenoidBGroup.visible = false;
+          coilHolder.add(gripSolenoidBGroup);
+
+          scenarioGroup.add(coilHolder);
+        }
+
+      } else {
+        // 模式二（👋 開掌定則）：3D 載流導線 (I) + 均勻磁場陣列 (B) + 隱藏受力大箭頭 (F)
+        const vI = new THREE.Vector3(...q.dirI.vec).normalize();
+        const vB = new THREE.Vector3(...q.dirB.vec).normalize();
+        const vF = new THREE.Vector3(...q.dirF.vec).normalize();
+
+        // 1) 載流銅導線（沿 vI 方向，略置於後方避免完全遮擋手部）
+        const wireGroup = new THREE.Group();
+        wireGroup.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), vI);
+        const wMat = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.3, metalness: 0.6, transparent: true, opacity: 0.68 });
+        palmWireMeshObj = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 5.8, 18), wMat);
+        wireGroup.add(palmWireMeshObj);
+
+        const pMat = new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0xef4444, emissiveIntensity: 0.5 });
+        for (let i = 0; i < 5; i++) {
+          const cone = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.38, 14), pMat);
+          cone.position.y = -2.4 + i * 1.2;
+          wireGroup.add(cone);
+          animatedParticles.push({ mesh: cone, type: 'linearY', min: -2.8, max: 2.8, speed: 1.55 });
+        }
+        scenarioGroup.add(wireGroup);
+
+        // 2) 均勻磁場陣列（藍色半透明箭頭網格，沿 vB 方向）
+        const bGroup = new THREE.Group();
+        const bQuat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), vB);
+        const coords = [-2.5, 0, 2.5];
+        coords.forEach((a) => {
+          coords.forEach((b) => {
+            if (a === 0 && b === 0) return; // 中央留空給 3D 手勢
+            const arr = createSolidArrow(1.35, 0x2563eb, 0.045, 0.24, 0.12);
+            arr.userData.mat.transparent = true;
+            arr.userData.mat.opacity = 0.42;
+            arr.quaternion.copy(bQuat);
+
+            // 將 (a, b) 鋪設於垂直於 vB 的平面上
+            const pos = new THREE.Vector3(a, b, 0);
+            if (Math.abs(vB.y) > 0.9) pos.set(a, -0.6, b * 0.85);
+            else if (Math.abs(vB.x) > 0.9) pos.set(-0.6, a, b * 0.85);
+            else pos.set(a, b, -1.6);
+
+            arr.position.copy(pos);
+            bGroup.add(arr);
+          });
+        });
+        scenarioGroup.add(bGroup);
+
+        // 3) 磁力大箭頭 F（答對瞬間亮起並呈現受力效果！）
+        palmForceArrowObj = new THREE.Group();
+        const fArr = createSolidArrow(2.8, 0x16a34a, 0.14, 0.55, 0.34);
+        fArr.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), vF);
+        palmForceArrowObj.add(fArr);
+
+        const fSprite = makeTextSprite(`F 磁力 ${q.dirF.short}`, '#16a34a', '#ffffff', 0.72, 40);
+        fSprite.position.copy(vF).multiplyScalar(3.25);
+        palmForceArrowObj.add(fSprite);
+        palmForceArrowObj.visible = false;
+        scenarioGroup.add(palmForceArrowObj);
+      }
+    }
+
+    // =========================================================================
+    // 7. 題目管理、介面更新與模式切換
+    // =========================================================================
+    function getQuestionList() {
+      return APP.mode === 'grip' ? GRIP_QUESTIONS : PALM_QUESTIONS;
+    }
+
+    function getCurrentQuestion() {
+      const list = getQuestionList();
+      const idx = APP.questionIdx[APP.mode] % list.length;
+      return list[idx];
+    }
+
+    function switchMode(newMode) {
+      if (APP.mode === newMode && document.getElementById('q-title').textContent !== '') return;
+      APP.mode = newMode;
+      APP.solvedCurrent = false;
+      APP.holdTime = 0;
+
+      // 更新頂部按鈕樣式
+      const bGrip = document.getElementById('btn-mode-grip');
+      const bPalm = document.getElementById('btn-mode-palm');
+      if (newMode === 'grip') {
+        bGrip.className = 'px-4 sm:px-5 py-2 rounded-xl font-bold text-sm sm:text-base transition-all flex items-center gap-2 bg-blue-600 text-white shadow-sm';
+        bPalm.className = 'px-4 sm:px-5 py-2 rounded-xl font-bold text-sm sm:text-base transition-all flex items-center gap-2 text-slate-600 hover:text-slate-900';
+        document.getElementById('status-panel-grip').classList.remove('hidden');
+        document.getElementById('status-panel-palm').classList.add('hidden');
+        document.getElementById('screen-hold-tip').innerHTML =
+          '👍 <b>握法提示：</b>右手握住手機、螢幕面向自己，大拇指朝向手機頂端，轉動手腕即可同步大屏！';
+      } else {
+        bPalm.className = 'px-4 sm:px-5 py-2 rounded-xl font-bold text-sm sm:text-base transition-all flex items-center gap-2 bg-blue-600 text-white shadow-sm';
+        bGrip.className = 'px-4 sm:px-5 py-2 rounded-xl font-bold text-sm sm:text-base transition-all flex items-center gap-2 text-slate-600 hover:text-slate-900';
+        document.getElementById('status-panel-grip').classList.add('hidden');
+        document.getElementById('status-panel-palm').classList.remove('hidden');
+        document.getElementById('screen-hold-tip').innerHTML =
+          '👋 <b>握法提示：</b>右手張開平放手機於掌心，螢幕朝向掌心同面、頂端順四指(B)、右側順大拇指(I)！';
+      }
+
+      // 切換 3D 手勢模型顯示
+      if (gripHandGroup && palmHandGroup) {
+        gripHandGroup.visible = (newMode === 'grip');
+        palmHandGroup.visible = (newMode === 'palm');
+      }
+
+      renderQuickPresets();
+      loadCurrentQuestion();
+      playClickSound(560);
+    }
+
+    function loadCurrentQuestion() {
+      const list = getQuestionList();
+      const idx = APP.questionIdx[APP.mode];
+      const q = list[idx];
+      APP.solvedCurrent = false;
+      APP.holdTime = 0;
+
+      // 隱藏答對卡片與鎖定進度條
+      document.getElementById('correct-overlay').classList.add('hidden');
+      document.getElementById('lock-hud').classList.add('hidden');
+
+      // 更新左側題目卡片
+      document.getElementById('q-category-badge').textContent = q.category;
+      document.getElementById('q-counter').textContent = `第 ${idx + 1} / ${list.length} 題`;
+      document.getElementById('q-title').textContent = q.title;
+      document.getElementById('q-prompt').textContent = q.prompt;
+
+      // 產生已知條件色塊
+      const givenWrap = document.getElementById('q-given-boxes');
+      givenWrap.innerHTML = '';
+
+      if (APP.mode === 'grip') {
+        q.given.forEach((item) => {
+          const isRed = item.color === 'red';
+          const div = document.createElement('div');
+          div.className = `rounded-2xl px-3.5 py-2.5 border flex items-center justify-between ${
+            isRed ? 'bg-red-50/80 border-red-200 text-red-900' : 'bg-blue-50/80 border-blue-200 text-blue-900'
+          }`;
+          div.innerHTML = `
+            <span class="text-xs font-extrabold uppercase tracking-wide">${item.tag}</span>
+            <span class="text-sm font-black">${item.dir ? item.dir.label : item.text}</span>
+          `;
+          givenWrap.appendChild(div);
+        });
+
+        // 底部圖例
+        const isWire = q.scenario === 'wire';
+        document.getElementById('vector-legend-bar').innerHTML = isWire
+          ? `<span class="flex items-center gap-1.5 text-red-600"><span class="w-3 h-3 rounded-full bg-red-500"></span>大拇指＝電流 I</span>
+             <span class="flex items-center gap-1.5 text-blue-600"><span class="w-3 h-3 rounded-full bg-blue-600"></span>四指環繞＝磁場 B</span>`
+          : `<span class="flex items-center gap-1.5 text-red-600"><span class="w-3 h-3 rounded-full bg-red-500"></span>四指環繞＝線圈電流 I</span>
+             <span class="flex items-center gap-1.5 text-blue-600"><span class="w-3 h-3 rounded-full bg-blue-600"></span>大拇指＝內部磁場 B（N 極）</span>`;
+      } else {
+        givenWrap.innerHTML = `
+          <div class="rounded-2xl px-3.5 py-2.5 border bg-red-50/80 border-red-200 text-red-900 flex items-center justify-between">
+            <span class="text-xs font-extrabold">🔴 大拇指・電流 I</span>
+            <span class="text-base font-black">${q.dirI.label}</span>
+          </div>
+          <div class="rounded-2xl px-3.5 py-2.5 border bg-blue-50/80 border-blue-200 text-blue-900 flex items-center justify-between">
+            <span class="text-xs font-extrabold">🔵 四指・磁場 B</span>
+            <span class="text-base font-black">${q.dirB.label}</span>
+          </div>
+          <div class="rounded-2xl px-3.5 py-2.5 border bg-emerald-50/80 border-emerald-200 text-emerald-900 flex items-center justify-between">
+            <span class="text-xs font-extrabold">🟢 掌心・磁力 F</span>
+            <span id="q-palm-f-mystery" class="text-base font-black">？請用掌心找出方向</span>
+          </div>
+        `;
+
+        document.getElementById('palm-hint-I').textContent = `目標：${q.dirI.label}`;
+        document.getElementById('palm-hint-B').textContent = `目標：${q.dirB.label}`;
+        document.getElementById('palm-hint-F').textContent = '對準大拇指與四指後自動揭曉';
+
+        document.getElementById('vector-legend-bar').innerHTML = `
+          <span class="flex items-center gap-1.5 text-red-600"><span class="w-3 h-3 rounded-full bg-red-500"></span>大拇指＝電流 I</span>
+          <span class="flex items-center gap-1.5 text-blue-600"><span class="w-3 h-3 rounded-full bg-blue-600"></span>四指＝磁場 B</span>
+          <span class="flex items-center gap-1.5 text-emerald-600"><span class="w-3 h-3 rounded-full bg-emerald-600"></span>掌心＝受力 F</span>
+        `;
+      }
+
+      // 重建 3D 題目場景
+      buildQuestionScenario();
+
+      // 若使用單機模擬器，輕微偏轉初始姿態避免剛好一進題就直接答對
+      if (APP.inputSource === 'sim') {
+        nudgeSimAwayFromAnswer();
+      }
+
+      // 同步目前模式與題目給已連線的手機
+      sendStateToPhone();
+    }
+
+    function prevQuestion() {
+      const len = getQuestionList().length;
+      APP.questionIdx[APP.mode] = (APP.questionIdx[APP.mode] - 1 + len) % len;
+      loadCurrentQuestion();
+      playClickSound(440);
+    }
+
+    function nextQuestion() {
+      const len = getQuestionList().length;
+      APP.questionIdx[APP.mode] = (APP.questionIdx[APP.mode] + 1) % len;
+      loadCurrentQuestion();
+      playClickSound(520);
+    }
+
+    function randomQuestion() {
+      const len = getQuestionList().length;
+      let next = Math.floor(Math.random() * len);
+      if (next === APP.questionIdx[APP.mode]) next = (next + 1) % len;
+      APP.questionIdx[APP.mode] = next;
+      loadCurrentQuestion();
+      playClickSound(600);
+    }
+
+    function dismissCorrectOverlay() {
+      document.getElementById('correct-overlay').classList.add('hidden');
+    }
+
+    // =========================================================================
+    // 8. 單機體感模擬器（滑桿 + 快速姿勢 + 教師一鍵示範）
+    // =========================================================================
+    function renderQuickPresets() {
+      const grid = document.getElementById('quick-presets-grid');
+      grid.innerHTML = '';
+
+      if (APP.mode === 'grip') {
+        const presets = [
+          { label: '↑ 向上', p: 0,   y: 0,  r: 0 },
+          { label: '↓ 向下', p: 0,   y: 0,  r: 180 },
+          { label: '→ 向右', p: 0,   y: 0,  r: -90 },
+          { label: '← 向左', p: 0,   y: 0,  r: 90 },
+          { label: '⊗ 射入', p: -90, y: 0,  r: 0 },
+          { label: '⊙ 射出', p: 90,  y: 0,  r: 0 },
+        ];
+        presets.forEach((pr) => {
+          const btn = document.createElement('button');
+          btn.className = 'py-2 px-2 rounded-xl bg-slate-100 hover:bg-blue-50 hover:text-blue-700 border border-slate-200 text-xs font-extrabold text-slate-700 transition';
+          btn.textContent = pr.label;
+          btn.onclick = () => setSimEuler(pr.p, pr.y, pr.r);
+          grid.appendChild(btn);
+        });
+      } else {
+        const presets = [
+          { label: 'I→ B↑',  p: 0,   y: 0,   r: 0 },
+          { label: 'I→ B⊗',  p: -90, y: 0,   r: 0 },
+          { label: 'I↑ B→',  p: 0,   y: 180, r: 90 },
+          { label: 'I← B⊗',  p: -90, y: 180, r: 180 },
+          { label: 'I↑ B⊗',  p: -90, y: -90, r: 0 },
+          { label: 'I⊙ B↓',  p: 0,   y: 90,  r: 180 },
+        ];
+        presets.forEach((pr) => {
+          const btn = document.createElement('button');
+          btn.className = 'py-2 px-2 rounded-xl bg-slate-100 hover:bg-blue-50 hover:text-blue-700 border border-slate-200 text-xs font-extrabold text-slate-700 transition';
+          btn.textContent = pr.label;
+          btn.onclick = () => setSimEuler(pr.p, pr.y, pr.r);
+          grid.appendChild(btn);
+        });
+      }
+    }
+
+    function setSimEuler(pitchDeg, yawDeg, rollDeg) {
+      APP.inputSource = 'sim';
+      updateInputSourceBadge();
+      document.getElementById('sim-pitch').value = pitchDeg;
+      document.getElementById('sim-yaw').value = yawDeg;
+      document.getElementById('sim-roll').value = rollDeg;
+      onSimSliderChange();
+      playClickSound(460);
+    }
+
+    function onSimSliderChange() {
+      APP.inputSource = 'sim';
+      updateInputSourceBadge();
+      const p = Number(document.getElementById('sim-pitch').value);
+      const y = Number(document.getElementById('sim-yaw').value);
+      const r = Number(document.getElementById('sim-roll').value);
+      document.getElementById('sim-pitch-val').textContent = `${p}°`;
+      document.getElementById('sim-yaw-val').textContent = `${y}°`;
+      document.getElementById('sim-roll-val').textContent = `${r}°`;
+
+      const euler = new THREE.Euler(
+        THREE.MathUtils.degToRad(p),
+        THREE.MathUtils.degToRad(y),
+        THREE.MathUtils.degToRad(r),
+        'YXZ'
+      );
+      APP.targetQuat.setFromEuler(euler);
+    }
+
+    function syncSlidersFromQuat(q) {
+      const e = new THREE.Euler().setFromQuaternion(q, 'YXZ');
+      const p = Math.round(THREE.MathUtils.radToDeg(e.x));
+      const y = Math.round(THREE.MathUtils.radToDeg(e.y));
+      const r = Math.round(THREE.MathUtils.radToDeg(e.z));
+      document.getElementById('sim-pitch').value = p;
+      document.getElementById('sim-yaw').value = y;
+      document.getElementById('sim-roll').value = r;
+      document.getElementById('sim-pitch-val').textContent = `${p}°`;
+      document.getElementById('sim-yaw-val').textContent = `${y}°`;
+      document.getElementById('sim-roll-val').textContent = `${r}°`;
+    }
+
+    function resetSimOrientation() {
+      setSimEuler(0, 0, 0);
+    }
+
+    // 切新題時如果模擬器正好落在解答角度內，自動稍微斜擺，避免瞬間自動過關
+    function nudgeSimAwayFromAnswer() {
+      const q = getCurrentQuestion();
+      if (APP.mode === 'grip') {
+        const curThumb = new THREE.Vector3(0, 1, 0).applyQuaternion(APP.targetQuat);
+        const tgt = new THREE.Vector3(...q.targetThumb);
+        if (THREE.MathUtils.radToDeg(curThumb.angleTo(tgt)) < 35) {
+          setSimEuler(28, 32, -40);
+        }
+      } else {
+        const curI = new THREE.Vector3(1, 0, 0).applyQuaternion(APP.targetQuat);
+        const curB = new THREE.Vector3(0, 1, 0).applyQuaternion(APP.targetQuat);
+        const tgtI = new THREE.Vector3(...q.dirI.vec);
+        const tgtB = new THREE.Vector3(...q.dirB.vec);
+        if (THREE.MathUtils.radToDeg(curI.angleTo(tgtI)) < 35 && THREE.MathUtils.radToDeg(curB.angleTo(tgtB)) < 35) {
+          setSimEuler(35, -30, 35);
+        }
+      }
+    }
+
+    // 教師示範：精準計算出目標四元數並平滑旋轉到位
+    function demoCorrectPose() {
+      APP.inputSource = 'sim';
+      updateInputSourceBadge();
+      const q = getCurrentQuestion();
+
+      if (APP.mode === 'grip') {
+        const target = new THREE.Vector3(...q.targetThumb).normalize();
+        const quat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), target);
+        APP.targetQuat.copy(quat);
+      } else {
+        // 用三正交基底矩陣 [I, B, F] 直接組出唯一精準旋轉矩陣！
+        const vI = new THREE.Vector3(...q.dirI.vec).normalize();
+        const vB = new THREE.Vector3(...q.dirB.vec).normalize();
+        const vF = new THREE.Vector3(...q.dirF.vec).normalize();
+        const rotMat = new THREE.Matrix4().makeBasis(vI, vB, vF);
+        APP.targetQuat.setFromRotationMatrix(rotMat);
+      }
+      syncSlidersFromQuat(APP.targetQuat);
+      showToast('正在示範正確手勢方位...', '✨');
+      playClickSound(660);
+    }
+
+    function updateInputSourceBadge() {
+      const badge = document.getElementById('input-source-badge');
+      if (APP.inputSource === 'phone' && APP.phoneConnected) {
+        badge.className = 'px-2.5 py-1 rounded-xl text-xs font-bold bg-emerald-100 text-emerald-800';
+        badge.textContent = '📱 手機體感連動中';
+      } else {
+        badge.className = 'px-2.5 py-1 rounded-xl text-xs font-bold bg-slate-100 text-slate-600';
+        badge.textContent = '🖥️ 單機模擬中';
+      }
+    }
+
+    // =========================================================================
+    // 9. 即時物理角度判讀與 0.6 秒鎖定判題機制
+    // =========================================================================
+    function evaluatePose(dt) {
+      const q = getCurrentQuestion();
+      let isAligned = false;
+
+      if (APP.mode === 'grip') {
+        // 計算當前大拇指 (+Y) 向量與目標大拇指向量的夾角
+        const curThumb = new THREE.Vector3(0, 1, 0).applyQuaternion(APP.displayQuat).normalize();
+        const tgtThumb = new THREE.Vector3(...q.targetThumb).normalize();
+        const angleDeg = THREE.MathUtils.radToDeg(curThumb.angleTo(tgtThumb));
+
+        isAligned = angleDeg < 25;
+
+        // 更新右側儀表 UI
+        document.getElementById('grip-angle-val').textContent = `${Math.round(angleDeg)}°`;
+        const pct = Math.max(0, Math.min(100, Math.round((1 - angleDeg / 120) * 100)));
+        const bar = document.getElementById('grip-angle-bar');
+        bar.style.width = `${pct}%`;
+
+        const card = document.getElementById('grip-indicator-card');
+        const tag = document.getElementById('grip-status-tag');
+        if (isAligned) {
+          card.className = 'rounded-2xl border-2 border-emerald-400 bg-emerald-50 p-3.5 transition-all';
+          tag.className = 'px-2.5 py-0.5 rounded-lg text-xs font-black bg-emerald-500 text-white';
+          tag.textContent = '✅ 已對準';
+          bar.className = 'h-full bg-emerald-500 rounded-full transition-all duration-75';
+        } else if (angleDeg < 50) {
+          card.className = 'rounded-2xl border-2 border-amber-300 bg-amber-50/70 p-3.5 transition-all';
+          tag.className = 'px-2.5 py-0.5 rounded-lg text-xs font-black bg-amber-400 text-white';
+          tag.textContent = '接近中';
+          bar.className = 'h-full bg-amber-400 rounded-full transition-all duration-75';
+        } else {
+          card.className = 'rounded-2xl border-2 border-slate-200 bg-slate-50 p-3.5 transition-all';
+          tag.className = 'px-2.5 py-0.5 rounded-lg text-xs font-black bg-slate-200 text-slate-600';
+          tag.textContent = '調整中';
+          bar.className = 'h-full bg-blue-500 rounded-full transition-all duration-75';
+        }
+
+      } else {
+        // 模式二：分別檢查大拇指 I (+X)、四指 B (+Y)、掌心 F (+Z)
+        const curI = new THREE.Vector3(1, 0, 0).applyQuaternion(APP.displayQuat).normalize();
+        const curB = new THREE.Vector3(0, 1, 0).applyQuaternion(APP.displayQuat).normalize();
+        const curF = new THREE.Vector3(0, 0, 1).applyQuaternion(APP.displayQuat).normalize();
+
+        const angI = THREE.MathUtils.radToDeg(curI.angleTo(new THREE.Vector3(...q.dirI.vec).normalize()));
+        const angB = THREE.MathUtils.radToDeg(curB.angleTo(new THREE.Vector3(...q.dirB.vec).normalize()));
+        const angF = THREE.MathUtils.radToDeg(curF.angleTo(new THREE.Vector3(...q.dirF.vec).normalize()));
+
+        const okI = angI < 28;
+        const okB = angB < 28;
+        const okF = angF < 32;
+        isAligned = okI && okB;
+
+        updatePalmLight('I', angI, okI);
+        updatePalmLight('B', angB, okB);
+        updatePalmLight('F', angF, okF && isAligned);
+      }
+
+      // 若本題已答對，不再重複觸發
+      if (APP.solvedCurrent) {
+        document.getElementById('lock-hud').classList.add('hidden');
+        return;
+      }
+
+      // 0.6 秒穩定鎖定計時
+      if (isAligned) {
+        APP.holdTime = Math.min(APP.holdTargetSec, APP.holdTime + dt);
+      } else {
+        APP.holdTime = Math.max(0, APP.holdTime - dt * 2.2);
+      }
+
+      const lockHud = document.getElementById('lock-hud');
+      if (APP.holdTime > 0.02) {
+        lockHud.classList.remove('hidden');
+        const ratio = Math.min(1, APP.holdTime / APP.holdTargetSec);
+        const circ = 2 * Math.PI * 20; // 125.66
+        document.getElementById('lock-ring-progress').style.strokeDashoffset = (circ * (1 - ratio)).toFixed(2);
+        document.getElementById('lock-pct-text').textContent = `鎖定進度 ${Math.round(ratio * 100)}%`;
+
+        if (APP.holdTime >= APP.holdTargetSec) {
+          triggerQuestionCorrect();
+        }
+      } else {
+        lockHud.classList.add('hidden');
+      }
+    }
+
+    function updatePalmLight(axisKey, angleDeg, isOk) {
+      const box = document.getElementById(`palm-ind-${axisKey}`);
+      const dot = document.getElementById(`palm-dot-${axisKey}`);
+      const val = document.getElementById(`palm-val-${axisKey}`);
+
+      if (isOk) {
+        box.className = 'rounded-2xl border-2 border-emerald-400 bg-emerald-50 px-3.5 py-2.5 transition-all';
+        dot.className = 'w-3 h-3 rounded-full bg-emerald-500 shadow-xs';
+        val.className = 'font-mono text-sm font-black text-emerald-700';
+        val.textContent = `✅ ${Math.round(angleDeg)}°`;
+      } else if (angleDeg < 55) {
+        box.className = 'rounded-2xl border-2 border-amber-300 bg-amber-50/60 px-3.5 py-2.5 transition-all';
+        dot.className = 'w-3 h-3 rounded-full bg-amber-400';
+        val.className = 'font-mono text-sm font-black text-amber-700';
+        val.textContent = `偏離 ${Math.round(angleDeg)}°`;
+      } else {
+        box.className = 'rounded-2xl border-2 border-slate-200 bg-slate-50 px-3.5 py-2.5 transition-all';
+        dot.className = 'w-3 h-3 rounded-full bg-slate-300';
+        val.className = 'font-mono text-sm font-black text-slate-500';
+        val.textContent = `偏離 ${Math.round(angleDeg)}°`;
+      }
+    }
+
+    // 觸發答對慶祝與 3D 物理視覺亮起
+    function triggerQuestionCorrect() {
+      APP.solvedCurrent = true;
+      APP.score += 100;
+      APP.streak += 1;
+      document.getElementById('score-val').textContent = APP.score;
+      document.getElementById('streak-val').textContent = APP.streak;
+      document.getElementById('lock-hud').classList.add('hidden');
+
+      const q = getCurrentQuestion();
+
+      // 3D 場景解答高亮特效
+      if (APP.mode === 'grip') {
+        if (gripWireRingsGroup) {
+          gripWireRingsGroup.children.forEach((arc) => {
+            arc.userData.mat.opacity = 0.92;
+            arc.userData.mat.emissiveIntensity = 0.45;
+          });
+        }
+        if (gripSolenoidBGroup) {
+          gripSolenoidBGroup.visible = true;
+        }
+      } else {
+        if (palmForceArrowObj) {
+          palmForceArrowObj.visible = true;
+        }
+        const mysteryEl = document.getElementById('q-palm-f-mystery');
+        if (mysteryEl) mysteryEl.textContent = `✅ ${q.dirF.label}`;
+        document.getElementById('palm-hint-F').textContent = `解答：${q.dirF.label}`;
+      }
+
+      // 顯示大屏答對慶祝卡片
+      document.getElementById('correct-answer-summary').textContent = q.answerSummary;
+      document.getElementById('correct-explanation').textContent = q.explanation;
+      document.getElementById('correct-overlay').classList.remove('hidden');
+
+      // 音效 + 紙花
+      playCorrectSound();
+      launchConfetti();
+
+      // 通知手機端震動與綠色慶祝特效
+      if (APP.conn && APP.conn.open) {
+        try {
+          APP.conn.send({
+            type: 'correct',
+            summary: q.answerSummary,
+            streak: APP.streak,
+          });
+        } catch (e) {}
+      }
+    }
+
+    // =========================================================================
+    // 10. 彩色紙花慶祝特效（Canvas 粒子）
+    // =========================================================================
+    let confettiItems = [];
+    function launchConfetti() {
+      const cc = document.getElementById('confetti-canvas');
+      if (!cc) return;
+      const w = cc.width || 640;
+      const h = cc.height || 500;
+      const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+      confettiItems = [];
+      for (let i = 0; i < 85; i++) {
+        confettiItems.push({
+          x: w * 0.5 + (Math.random() - 0.5) * 160,
+          y: h * 0.42 + (Math.random() - 0.5) * 80,
+          vx: (Math.random() - 0.5) * 12,
+          vy: -Math.random() * 11 - 3,
+          size: Math.random() * 8 + 5,
+          rot: Math.random() * Math.PI * 2,
+          vrot: (Math.random() - 0.5) * 0.25,
+          color: colors[i % colors.length],
+          life: 1.0,
+        });
+      }
+    }
+
+    function updateConfetti() {
+      const cc = document.getElementById('confetti-canvas');
+      if (!cc || confettiItems.length === 0) return;
+      const ctx = cc.getContext('2d');
+      ctx.clearRect(0, 0, cc.width, cc.height);
+
+      for (let i = confettiItems.length - 1; i >= 0; i--) {
+        const p = confettiItems[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.28;
+        p.vx *= 0.985;
+        p.rot += p.vrot;
+        p.life -= 0.011;
+
+        if (p.life <= 0 || p.y > cc.height + 30) {
+          confettiItems.splice(i, 1);
+          continue;
+        }
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, p.life);
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rot);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(-p.size / 2, -p.size * 0.35, p.size, p.size * 0.7);
+        ctx.restore();
+      }
+    }
+
+    // =========================================================================
+    // 11. 主 60fps 動畫迴圈
+    // =========================================================================
+    function animate(nowMs) {
+      requestAnimationFrame(animate);
+      const dt = APP.lastFrameTime ? Math.min(0.05, (nowMs - APP.lastFrameTime) / 1000) : 0.016;
+      APP.lastFrameTime = nowMs;
+
+      if (APP.role !== 'screen' || !renderer) return;
+
+      // 平滑四元數插值（Slerp），讓手機 30fps 傳輸與模擬器都如絲般滑順
+      APP.displayQuat.slerp(APP.targetQuat, Math.min(1, dt * 14));
+      handRootGroup.quaternion.copy(APP.displayQuat);
+
+      // 電流粒子動畫
+      animatedParticles.forEach((item) => {
+        if (item.type === 'linearY') {
+          item.mesh.position.y += item.speed * dt;
+          if (item.mesh.position.y > item.max) item.mesh.position.y = item.min;
+        } else if (item.type === 'curve') {
+          item.u = (item.u + item.speed * dt) % 1;
+          const pos = item.curve.getPointAt(item.u);
+          const tan = item.curve.getTangentAt(item.u).normalize();
+          item.mesh.position.copy(pos);
+          item.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), tan);
+        }
+      });
+
+      // 模式二答對時：導線受力微幅偏移脈動
+      if (APP.mode === 'palm' && APP.solvedCurrent && palmWireMeshObj && palmForceArrowObj) {
+        const pulse = Math.sin(nowMs * 0.008) * 0.06 + 1;
+        palmForceArrowObj.scale.setScalar(pulse);
+      }
+
+      // 即時角度判讀
+      evaluatePose(dt);
+
+      // 渲染 3D 與紙花
+      renderer.render(scene, camera);
+      updateConfetti();
+    }
+
+    // =========================================================================
+    // 12. 教室大屏端：房間碼、QR Code 與 PeerJS WebRTC 連線
+    // =========================================================================
+    function generateRoomCode() {
+      const num = Math.floor(1000 + Math.random() * 9000);
+      return `AMP-${num}`;
+    }
+
+    function isNonStandardHost() {
+      const proto = window.location.protocol;
+      return proto === 'blob:' || proto === 'file:' || proto === 'about:' || proto === 'data:' || !window.location.host;
+    }
+
+    function getPhoneConnectUrl() {
+      if (isNonStandardHost()) {
+        return `https://your-domain.github.io/ampere_right_hand_3d.html?role=phone&room=${APP.roomCode}`;
+      }
+      const base = `${window.location.origin}${window.location.pathname}`;
+      return `${base}?role=phone&room=${APP.roomCode}`;
+    }
+
+    function renderQrCodes() {
+      const url = getPhoneConnectUrl();
+      const nonStd = isNonStandardHost();
+
+      document.getElementById('room-code-display').textContent = APP.roomCode;
+      document.getElementById('header-room-code').textContent = APP.roomCode;
+      document.getElementById('modal-room-code').textContent = APP.roomCode;
+
+      document.getElementById('non-http-warning').classList.toggle('hidden', !nonStd);
+      document.getElementById('modal-non-http-note').classList.toggle('hidden', !nonStd);
+
+      // 小 QR
+      const c1 = document.getElementById('qrcode-container');
+      c1.innerHTML = '';
+      if (typeof QRCode !== 'undefined') {
+        new QRCode(c1, {
+          text: url,
+          width: 112,
+          height: 112,
+          colorDark: '#0f172a',
+          colorLight: '#ffffff',
+          correctLevel: QRCode.CorrectLevel.M,
+        });
+      }
+
+      // 放大彈窗 QR
+      const c2 = document.getElementById('qrcode-modal-container');
+      c2.innerHTML = '';
+      if (typeof QRCode !== 'undefined') {
+        new QRCode(c2, {
+          text: url,
+          width: 232,
+          height: 232,
+          colorDark: '#0f172a',
+          colorLight: '#ffffff',
+          correctLevel: QRCode.CorrectLevel.M,
+        });
+      }
+    }
+
+    function initScreenPeer() {
+      if (APP.peer) {
+        try { APP.peer.destroy(); } catch (e) {}
+      }
+      APP.phoneConnected = false;
+      updateScreenConnUI('waiting', '正在建立 WebRTC 房間...');
+
+      if (typeof Peer === 'undefined') {
+        updateScreenConnUI('offline', '離線模式（請使用單機模擬器）');
+        return;
+      }
+
+      try {
+        const peerId = `ampere-lab-${APP.roomCode}`;
+        const peer = new Peer(peerId, { debug: 0 });
+        APP.peer = peer;
+
+        peer.on('open', () => {
+          updateScreenConnUI('ready', '等待學生手機掃描 QR Code 連線...');
+        });
+
+        peer.on('connection', (conn) => {
+          // 接受最新手機連線
+          if (APP.conn && APP.conn.open) {
+            try { APP.conn.close(); } catch (e) {}
+          }
+          APP.conn = conn;
+
+          conn.on('open', () => {
+            APP.phoneConnected = true;
+            APP.inputSource = 'phone';
+            updateInputSourceBadge();
+            updateScreenConnUI('connected', '學生手機已連線！轉動手機即可同步');
+            showToast('學生手機已連線大屏！', '📱');
+            playClickSound(680);
+            closeQrModal();
+            sendStateToPhone();
+          });
+
+          conn.on('data', (msg) => {
+            if (!msg || typeof msg !== 'object') return;
+            if (msg.type === 'quat' && Array.isArray(msg.q) && msg.q.length === 4) {
+              APP.inputSource = 'phone';
+              updateInputSourceBadge();
+              APP.targetQuat.set(msg.q[0], msg.q[1], msg.q[2], msg.q[3]).normalize();
+            } else if (msg.type === 'next_question') {
+              nextQuestion();
+            } else if (msg.type === 'calibrated') {
+              showToast('手機已完成面對大屏歸零校準！', '🧭');
+              playClickSound(620);
+            }
+          });
+
+          conn.on('close', () => {
+            APP.phoneConnected = false;
+            APP.inputSource = 'sim';
+            updateInputSourceBadge();
+            updateScreenConnUI('ready', '手機已斷線，等待重新連線...');
+            showToast('手機連線已中斷', '⚠️');
+          });
+        });
+
+        peer.on('error', (err) => {
+          console.warn('PeerJS Screen Error:', err);
+          if (err.type === 'unavailable-id') {
+            APP.roomCode = generateRoomCode();
+            renderQrCodes();
+            initScreenPeer();
+          } else {
+            updateScreenConnUI('offline', '連線伺服器暫不可用（單機模擬器可正常使用）');
+          }
+        });
+      } catch (e) {
+        updateScreenConnUI('offline', '本環境不支援 WebRTC（單機模擬器可正常使用）');
+      }
+    }
+
+    function updateScreenConnUI(state, detailText) {
+      const dot = document.getElementById('conn-dot');
+      const label = document.getElementById('conn-label');
+      const detail = document.getElementById('peer-status-detail');
+      detail.textContent = detailText;
+
+      if (state === 'connected') {
+        dot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500';
+        label.textContent = '手機已連線';
+      } else if (state === 'ready' || state === 'waiting') {
+        dot.className = 'w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse';
+        label.textContent = '等待手機掃碼';
+      } else {
+        dot.className = 'w-2.5 h-2.5 rounded-full bg-slate-400';
+        label.textContent = '單機展示模式';
+      }
+    }
+
+    function sendStateToPhone() {
+      if (!APP.conn || !APP.conn.open) return;
+      const q = getCurrentQuestion();
+      try {
+        APP.conn.send({
+          type: 'state',
+          mode: APP.mode,
+          title: q.title,
+          prompt: q.prompt,
+        });
+      } catch (e) {}
+    }
+
+    function regenerateRoom() {
+      APP.roomCode = generateRoomCode();
+      renderQrCodes();
+      initScreenPeer();
+      showToast(`已產生新房間代碼 ${APP.roomCode}`, '🔄');
+    }
+
+    function copyPhoneUrl() {
+      const url = getPhoneConnectUrl();
+      const ok = copyTextFallback(url);
+      if (ok) {
+        showToast('已複製手機連線網址！', '📋');
+      } else {
+        showToast(`房間代碼：${APP.roomCode}`, 'ℹ️');
+      }
+    }
+
+    function openQrModal() {
+      document.getElementById('qr-modal').classList.remove('hidden');
+    }
+
+    function closeQrModal() {
+      document.getElementById('qr-modal').classList.add('hidden');
+    }
+
+    // =========================================================================
+    // 13. 學生手機端：陀螺儀四元數換算、無漂移一鍵歸零校準、震動回饋
+    // =========================================================================
+    const Q_ENU_TO_3D = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
+    const AXIS_X = new THREE.Vector3(1, 0, 0);
+    const AXIS_Y = new THREE.Vector3(0, 1, 0);
+    const AXIS_Z = new THREE.Vector3(0, 0, 1);
+
+    function initPhoneView(roomFromUrl) {
+      APP.roomCode = (roomFromUrl || '').toUpperCase().trim();
+      document.getElementById('phone-room-input').value = APP.roomCode;
+      document.getElementById('phone-room-label').textContent = APP.roomCode || '未輸入';
+    }
+
+    async function activatePhoneController() {
+      const inputCode = document.getElementById('phone-room-input').value.trim().toUpperCase();
+      if (!inputCode) {
+        showToast('請先輸入大屏上的房間代碼（例如 AMP-4829）', '⚠️');
+        return;
+      }
+      APP.roomCode = inputCode;
+      document.getElementById('phone-room-label').textContent = APP.roomCode;
+
+      // 1. 請求 iOS 13+ 陀螺儀權限（必須在按鈕點擊事件內呼叫）
+      let sensorGranted = true;
+      try {
+        if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+          const res = await DeviceOrientationEvent.requestPermission();
+          if (res !== 'granted') {
+            sensorGranted = false;
+            showToast('未取得陀螺儀權限，已為您開啟觸控備援模式', '🕹️');
+          }
+        }
+      } catch (err) {
+        console.warn('DeviceOrientation permission error:', err);
+        sensorGranted = false;
+      }
+
+      // 2. 啟動感測器監聽
+      if (sensorGranted && 'DeviceOrientationEvent' in window) {
+        window.addEventListener('deviceorientation', handleDeviceOrientation, true);
+        // 若 2.2 秒後仍未收到任何角度事件（例如無陀螺儀或非 HTTPS），自動提示可開備援
+        setTimeout(() => {
+          if (!APP.sensorReceived && !APP.phoneFallback) {
+            document.getElementById('phone-sensor-status').textContent = '⚠️ 未偵測到陀螺儀（可開下方備援）';
+            document.getElementById('phone-sensor-status').className = 'text-xs font-bold text-amber-600';
+          }
+        }, 2200);
+      } else {
+        document.getElementById('phone-sensor-status').textContent = '🕹️ 使用觸控備援中';
+        if (!APP.phoneFallback) togglePhoneFallback();
+      }
+
+      // 3. 切換到操作介面並連線大屏 PeerJS
+      APP.phoneActivated = true;
+      document.getElementById('phone-start-card').classList.add('hidden');
+      document.getElementById('phone-active-panel').classList.remove('hidden');
+
+      connectPhoneToScreen();
+    }
+
+    function connectPhoneToScreen() {
+      setPhoneConnStatus('connecting', '連線中...');
+      if (typeof Peer === 'undefined') {
+        setPhoneConnStatus('error', '無法載入連線模組');
+        return;
+      }
+
+      try {
+        const peer = new Peer({ debug: 0 });
+        APP.peer = peer;
+
+        peer.on('open', () => {
+          const targetId = `ampere-lab-${APP.roomCode}`;
+          const conn = peer.connect(targetId, { reliable: false });
+          APP.conn = conn;
+
+          conn.on('open', () => {
+            APP.phoneConnected = true;
+            setPhoneConnStatus('connected', '已連線大屏');
+            showToast('成功連線教室大屏！請先按「一鍵歸零校準」', '🎉');
+            if (navigator.vibrate) navigator.vibrate(80);
+          });
+
+          conn.on('data', (msg) => {
+            if (!msg || typeof msg !== 'object') return;
+            if (msg.type === 'state') {
+              applyPhoneModeUI(msg.mode, msg.title, msg.prompt);
+            } else if (msg.type === 'correct') {
+              onPhoneReceiveCorrect(msg.summary);
+            }
+          });
+
+          conn.on('close', () => {
+            APP.phoneConnected = false;
+            setPhoneConnStatus('error', '連線已中斷');
+            showToast('與大屏的連線已中斷', '⚠️');
+          });
+        });
+
+        peer.on('error', (err) => {
+          console.warn('Phone Peer Error:', err);
+          setPhoneConnStatus('error', '找不到房間，請確認代碼');
+          showToast('無法連線至大屏，請確認房間代碼是否正確', '⚠️');
+        });
+      } catch (e) {
+        setPhoneConnStatus('error', '連線失敗');
+      }
+    }
+
+    function setPhoneConnStatus(type, text) {
+      const badge = document.getElementById('phone-conn-badge');
+      const dot = document.getElementById('phone-conn-dot');
+      const label = document.getElementById('phone-conn-text');
+      label.textContent = text;
+      if (type === 'connected') {
+        badge.className = 'px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-extrabold flex items-center gap-1.5';
+        dot.className = 'w-2 h-2 rounded-full bg-emerald-500';
+      } else if (type === 'connecting') {
+        badge.className = 'px-3 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-extrabold flex items-center gap-1.5';
+        dot.className = 'w-2 h-2 rounded-full bg-amber-500 animate-pulse';
+      } else {
+        badge.className = 'px-3 py-1.5 rounded-full bg-red-50 border border-red-200 text-red-800 text-xs font-extrabold flex items-center gap-1.5';
+        dot.className = 'w-2 h-2 rounded-full bg-red-500';
+      }
+    }
+
+    function applyPhoneModeUI(mode, title, prompt) {
+      APP.mode = mode;
+      document.getElementById('phone-mode-icon').textContent = mode === 'grip' ? '👍' : '👋';
+      document.getElementById('phone-mode-name').textContent = mode === 'grip' ? '安培右手定則（握拳）' : '右手開掌定則（受力）';
+      document.getElementById('phone-q-title').textContent = title || '請觀察大屏題目';
+      document.getElementById('phone-q-sub').textContent = prompt || '';
+
+      document.getElementById('phone-guide-grip').classList.toggle('hidden', mode !== 'grip');
+      document.getElementById('phone-guide-palm').classList.toggle('hidden', mode !== 'palm');
+
+      document.getElementById('phone-cal-guide').textContent = mode === 'grip'
+        ? '身體面向大屏，手機直立螢幕朝向自己，按下「一鍵歸零」即可鎖定大屏方向！'
+        : '身體面向大屏，手機直立朝向自己（或平放掌心且四指指著大屏），按下「一鍵歸零」即可精準對齊！';
+    }
+
+    // 精準 W3C Z-X'-Y'' 陀螺儀四元數換算（並補償螢幕方向）
+    function handleDeviceOrientation(ev) {
+      if (ev.alpha === null || ev.beta === null || ev.gamma === null) return;
+      APP.sensorReceived = true;
+      if (APP.phoneFallback) return;
+
+      const alpha = THREE.MathUtils.degToRad(ev.alpha);
+      const beta  = THREE.MathUtils.degToRad(ev.beta);
+      const gamma = THREE.MathUtils.degToRad(ev.gamma);
+      const screenAngle = (window.screen && window.screen.orientation && typeof window.screen.orientation.angle === 'number')
+        ? window.screen.orientation.angle
+        : (typeof window.orientation === 'number' ? window.orientation : 0);
+      const orient = THREE.MathUtils.degToRad(screenAngle);
+
+      // qRaw = R_x(-90°) * R_z(alpha) * R_x(beta) * R_y(gamma) * R_z(-orient)
+      const qA = new THREE.Quaternion().setFromAxisAngle(AXIS_Z, alpha);
+      const qB = new THREE.Quaternion().setFromAxisAngle(AXIS_X, beta);
+      const qG = new THREE.Quaternion().setFromAxisAngle(AXIS_Y, gamma);
+      const qS = new THREE.Quaternion().setFromAxisAngle(AXIS_Z, -orient);
+
+      const qRaw = new THREE.Quaternion()
+        .copy(Q_ENU_TO_3D)
+        .multiply(qA)
+        .multiply(qB)
+        .multiply(qG)
+        .multiply(qS)
+        .normalize();
+
+      APP.latestRawQuat.copy(qRaw);
+
+      // 套用教室面向大屏水平方位角偏移（僅繞世界垂直 Y 軸旋轉，重力絕對不漂移！）
+      const qYawFix = new THREE.Quaternion().setFromAxisAngle(AXIS_Y, APP.yawOffsetRad);
+      const qFinal = new THREE.Quaternion().multiplyQuaternions(qYawFix, qRaw).normalize();
+
+      sendQuatThrottled(qFinal);
+    }
+
+    // 關鍵：面對大屏・一鍵歸零校準（同時支援直立螢幕朝向自己 OR 平放四指朝向大屏！）
+    function calibratePhoneYaw() {
+      if (APP.phoneFallback) {
+        resetPhoneFallback();
+        showToast('觸控備援姿態已歸零！', '🧭');
+        return;
+      }
+
+      const qRaw = APP.latestRawQuat;
+      const zVec = new THREE.Vector3(0, 0, 1).applyQuaternion(qRaw); // 螢幕法向量
+      const yVec = new THREE.Vector3(0, 1, 0).applyQuaternion(qRaw); // 手機頂端向量
+
+      // 若手機處於直立/傾斜狀態（螢幕水平分量明顯），將螢幕朝向對齊 +Z（朝向自己）
+      if (Math.hypot(zVec.x, zVec.z) > 0.35) {
+        APP.yawOffsetRad = -Math.atan2(zVec.x, zVec.z);
+      } else {
+        // 若手機平放掌心（螢幕朝天或朝地），將手機頂端（四指）對齊 -Z（指向大屏）
+        APP.yawOffsetRad = -Math.atan2(-yVec.x, -yVec.z);
+      }
+
+      if (navigator.vibrate) navigator.vibrate(50);
+      showToast('方向歸零校準完成！', '🧭');
+
+      if (APP.conn && APP.conn.open) {
+        try { APP.conn.send({ type: 'calibrated' }); } catch (e) {}
+      }
+    }
+
+    // 約 30fps 節流傳送四元數至大屏
+    function sendQuatThrottled(quat) {
+      const now = performance.now();
+      if (now - APP.lastSendMs < 33) return;
+      APP.lastSendMs = now;
+      if (APP.conn && APP.conn.open) {
+        try {
+          APP.conn.send({
+            type: 'quat',
+            q: [
+              Number(quat.x.toFixed(4)),
+              Number(quat.y.toFixed(4)),
+              Number(quat.z.toFixed(4)),
+              Number(quat.w.toFixed(4)),
+            ],
+          });
+        } catch (e) {}
+      }
+    }
+
+    // 手機端觸控備援模式
+    function togglePhoneFallback() {
+      APP.phoneFallback = !APP.phoneFallback;
+      const btn = document.getElementById('btn-toggle-fallback');
+      const knob = document.getElementById('fallback-knob');
+      const panel = document.getElementById('phone-fallback-controls');
+
+      if (APP.phoneFallback) {
+        btn.className = 'w-14 h-8 rounded-full bg-blue-600 p-1 transition-colors flex items-center';
+        knob.style.transform = 'translateX(24px)';
+        panel.classList.remove('hidden');
+        document.getElementById('phone-sensor-status').textContent = '🕹️ 觸控微調備援中';
+        document.getElementById('phone-sensor-status').className = 'text-xs font-bold text-indigo-600';
+        onPhoneFallbackInput();
+      } else {
+        btn.className = 'w-14 h-8 rounded-full bg-slate-200 p-1 transition-colors flex items-center';
+        knob.style.transform = 'translateX(0px)';
+        panel.classList.add('hidden');
+        document.getElementById('phone-sensor-status').textContent = '📡 陀螺儀運作中';
+        document.getElementById('phone-sensor-status').className = 'text-xs font-bold text-emerald-600';
+      }
+    }
+
+    function onPhoneFallbackInput() {
+      const p = Number(document.getElementById('pf-pitch').value);
+      const y = Number(document.getElementById('pf-yaw').value);
+      const r = Number(document.getElementById('pf-roll').value);
+      document.getElementById('pf-pitch-val').textContent = `${p}°`;
+      document.getElementById('pf-yaw-val').textContent = `${y}°`;
+      document.getElementById('pf-roll-val').textContent = `${r}°`;
+
+      const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(
+        THREE.MathUtils.degToRad(p),
+        THREE.MathUtils.degToRad(y),
+        THREE.MathUtils.degToRad(r),
+        'YXZ'
+      ));
+      sendQuatThrottled(q);
+    }
+
+    function resetPhoneFallback() {
+      document.getElementById('pf-pitch').value = 0;
+      document.getElementById('pf-yaw').value = 0;
+      document.getElementById('pf-roll').value = 0;
+      onPhoneFallbackInput();
+    }
+
+    function onPhoneReceiveCorrect(summary) {
+      if (navigator.vibrate) navigator.vibrate([120, 60, 200]);
+      document.getElementById('phone-correct-msg').textContent = summary || '太棒了，方向完全正確！';
+      document.getElementById('phone-correct-banner').classList.remove('hidden');
+      playCorrectSound();
+    }
+
+    function hidePhoneCorrectBanner() {
+      document.getElementById('phone-correct-banner').classList.add('hidden');
+    }
+
+    function sendPhoneNextQuestion() {
+      if (APP.conn && APP.conn.open) {
+        try {
+          APP.conn.send({ type: 'next_question' });
+          if (navigator.vibrate) navigator.vibrate(35);
+          showToast('已通知大屏切換至下一題', '➡️');
+        } catch (e) {}
+      } else {
+        showToast('尚未連線至大屏', '⚠️');
+      }
+    }
+
+    function phoneConfirmNext() {
+      hidePhoneCorrectBanner();
+      sendPhoneNextQuestion();
+    }
+
+    // =========================================================================
+    // 14. 應用程式進入點（window.onload）
+    // =========================================================================
+    window.onload = function () {
+      const params = new URLSearchParams(window.location.search);
+      const role = params.get('role');
+      const room = params.get('room');
+
+      if (role === 'phone') {
+        APP.role = 'phone';
+        document.getElementById('phone-view').classList.remove('hidden');
+        initPhoneView(room);
+      } else {
+        APP.role = 'screen';
+        document.getElementById('screen-view').classList.remove('hidden');
+
+        // 初始化房間碼與 QR Code
+        APP.roomCode = room ? room.toUpperCase() : generateRoomCode();
+        renderQrCodes();
+
+        // 初始化 Three.js 3D 場景
+        initThreeScene();
+
+        // 載入預設模式（模式一：安培右手定則）
+        switchMode('grip');
+
+        // 建立 WebRTC PeerJS 通道
+        initScreenPeer();
+
+        // 啟動 60fps 渲染與判題迴圈
+        requestAnimationFrame(animate);
+      }
+    };
+  </script>
+</body>
+</html>

@@ -386,6 +386,13 @@ async function createGifForHtml(browser, pageUrl, htmlPath, gifPath) {
                 thomsonPreset.click();
                 return 'thomson';
             }
+
+            const ampereCamBtn = document.getElementById('btn-drag-cam');
+            if (ampereCamBtn && document.getElementById('three-canvas-wrap')) {
+                if (typeof window.demoCorrectPose === 'function') window.demoCorrectPose();
+                ampereCamBtn.click();
+                return 'ampere';
+            }
             return '';
         });
 
@@ -399,6 +406,15 @@ async function createGifForHtml(browser, pageUrl, htmlPath, gifPath) {
             await new Promise(r => setTimeout(r, 900));
         } else if (clickedAction === 'rearrange') {
             await new Promise(r => setTimeout(r, 250));
+        } else if (clickedAction === 'ampere') {
+            await new Promise(r => setTimeout(r, 950));
+            await page.evaluate(() => {
+                if (typeof window.dismissCorrectOverlay === 'function') window.dismissCorrectOverlay();
+                const co = document.getElementById('correct-overlay');
+                if (co) co.style.display = 'none';
+                const lh = document.getElementById('lock-hud');
+                if (lh) lh.style.display = 'none';
+            });
         } else {
             await new Promise(r => setTimeout(r, 350));
         }
@@ -420,7 +436,7 @@ async function createGifForHtml(browser, pageUrl, htmlPath, gifPath) {
         const dx = Math.min(110, mouseBox.width * 0.22);
         const dy = Math.min(60, mouseBox.height * 0.16);
 
-        if (clickedAction === 'thomson') {
+        if (clickedAction === 'thomson' || clickedAction === 'ampere') {
             await page.mouse.move(cx - dx * 0.45, cy);
             await page.mouse.down();
             await page.mouse.move(cx + dx * 0.45, cy + dy * 0.3, { steps: 8 });
