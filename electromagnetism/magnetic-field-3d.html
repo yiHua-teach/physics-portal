@@ -1,0 +1,3017 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>3D 磁場與 2D 橫切面物理互動模擬</title>
+  <meta name="description" content="基於 Biot-Savart 定律即時計算 3D 磁力線與任意 2D 橫切面（穿入 × / 穿出 · / 切面箭頭）：支援條形磁鐵、長直導線、圓形導線、螺線管，並可自由畫線切面與拖曳迷你磁針探測。" />
+  <meta name="portal-tags" content="電磁學, 磁場, 安培右手定則, 螺線管, 橫切面, 3D視覺" />
+  <meta name="portal-badge" content="3D 磁場與切面" />
+  <meta name="portal-featured" content="true" />
+
+  <!-- 載入繁體中文與英數高清晰字體 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- 載入 Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Noto Sans TC"', 'Inter', 'system-ui', 'sans-serif'],
+          },
+        },
+      },
+    };
+  </script>
+
+  <!-- 透過 jsdelivr importmap 載入 Three.js 0.160.0 與 OrbitControls -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #f8fafc;
+      color: #0f172a;
+      font-family: 'Noto Sans TC', 'Inter', system-ui, sans-serif;
+    }
+
+    /* 3D 與 2D 畫布自適應 */
+    canvas {
+      display: block;
+    }
+
+    /* 客製化滑桿樣式（適合觸控螢幕操作） */
+    input[type="range"].lab-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      height: 8px;
+      border-radius: 999px;
+      background: #cbd5e1;
+      outline: none;
+    }
+    input[type="range"].lab-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #0284c7;
+      border: 3px solid #ffffff;
+      box-shadow: 0 2px 6px rgba(15, 23, 42, 0.25);
+      cursor: pointer;
+      transition: transform 0.12s ease;
+    }
+    input[type="range"].lab-slider::-webkit-slider-thumb:hover {
+      transform: scale(1.12);
+    }
+
+    /* 分隔條樣式 */
+    .splitter-bar {
+      transition: background-color 0.15s ease;
+      touch-action: none;
+    }
+    .splitter-bar:hover,
+    .splitter-bar.dragging {
+      background-color: #bae6fd;
+    }
+    .splitter-bar:hover .splitter-pill,
+    .splitter-bar.dragging .splitter-pill {
+      background-color: #0284c7;
+    }
+
+    /* 畫線游標 */
+    .cursor-crosshair-slice {
+      cursor: crosshair !important;
+    }
+
+    /* 隱藏捲軸但保留橫向捲動（行動裝置頂部工具列） */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="flex flex-col h-screen w-screen bg-[#f8fafc] text-slate-900 select-none overflow-hidden">
+
+  <!-- ==================== 頂部主工具列 ==================== -->
+  <header class="shrink-0 bg-white border-b border-slate-200 shadow-sm z-30 px-2.5 sm:px-4 py-2">
+    <div class="flex flex-wrap lg:flex-nowrap items-center justify-between gap-2">
+      <!-- 左側：標題與圖示 -->
+      <div class="flex items-center gap-2.5 shrink-0">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-500 to-indigo-600 text-white flex items-center justify-center shadow-sm">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 4v7a6 6 0 0 0 12 0V4" />
+            <line x1="6" y1="8" x2="9" y2="8" />
+            <line x1="15" y1="8" x2="18" y2="8" />
+            <path d="M3 16c2 3 5 5 9 5s7-2 9-5" stroke-dasharray="2.5 2.5" />
+          </svg>
+        </div>
+        <div class="leading-tight">
+          <h1 class="text-sm sm:text-base font-extrabold text-slate-900 tracking-tight">3D 磁場與 2D 橫切面模擬</h1>
+          <p class="text-[11px] text-slate-500 hidden sm:block font-medium">Biot-Savart 真實磁場・安培右手定則教學實驗室</p>
+        </div>
+      </div>
+
+      <!-- 中間：四種物理模型切換大按鈕 -->
+      <nav class="flex items-center gap-1.5 bg-slate-100 p-1 rounded-2xl border border-slate-200 overflow-x-auto no-scrollbar max-w-full" aria-label="物理模型選擇">
+        <button data-model="magnet" class="model-btn flex items-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap">
+          <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none">
+            <rect x="2" y="7" width="10" height="10" rx="2" fill="#2563eb" />
+            <rect x="12" y="7" width="10" height="10" rx="2" fill="#ef4444" />
+            <text x="5" y="14.5" fill="white" font-size="7.5" font-weight="800">S</text>
+            <text x="14.5" y="14.5" fill="white" font-size="7.5" font-weight="800">N</text>
+          </svg>
+          <span>條形磁鐵</span>
+        </button>
+
+        <button data-model="wire" class="model-btn flex items-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap">
+          <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none">
+            <line x1="12" y1="2" x2="12" y2="22" stroke="#d97706" stroke-width="3.2" stroke-linecap="round" />
+            <ellipse cx="12" cy="12" rx="8.5" ry="4" stroke="#0284c7" stroke-width="1.8" stroke-dasharray="3 2" />
+            <path d="M9.5 6.5 L12 3.5 L14.5 6.5" stroke="#ea580c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+          <span>長直導線</span>
+        </button>
+
+        <button data-model="loop" class="model-btn flex items-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap">
+          <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none">
+            <ellipse cx="12" cy="12" rx="4.5" ry="8.5" stroke="#d97706" stroke-width="2.6" />
+            <path d="M3 12h18" stroke="#0284c7" stroke-width="1.8" stroke-linecap="round" />
+            <path d="M18 9.5L21 12l-3 2.5" stroke="#0284c7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+          <span>圓形導線</span>
+        </button>
+
+        <button data-model="solenoid" class="model-btn flex items-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap">
+          <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none">
+            <path d="M4 16c0-6 2.5-9 3.5-9s2.5 3 2.5 9-1.5 2-1.5 0 2-9 3.5-9 2.5 3 2.5 9-1.5 2-1.5 0 2-9 3.5-9 3 3 3 9" stroke="#d97706" stroke-width="2.2" stroke-linecap="round" />
+            <path d="M2 12h20" stroke="#0284c7" stroke-width="1.5" stroke-dasharray="2.5 2.5" />
+          </svg>
+          <span>螺線管</span>
+        </button>
+      </nav>
+
+      <!-- 右側：反轉、暫停、分割方向按鈕 -->
+      <div class="flex items-center gap-1.5 shrink-0">
+        <button id="btn-reverse" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 active:scale-95 text-amber-800 border border-amber-200 text-xs sm:text-sm font-bold transition-all shadow-xs" title="反轉電流或磁鐵 N/S 極方向">
+          <span class="text-base leading-none">⇄</span>
+          <span id="lbl-reverse">反轉磁極</span>
+        </button>
+
+        <button id="btn-playpause" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-800 border border-slate-200 text-xs sm:text-sm font-bold transition-all" title="暫停或播放磁場與電流動畫">
+          <span id="icon-playpause">⏸</span>
+          <span id="lbl-playpause" class="hidden sm:inline">暫停</span>
+        </button>
+
+        <button id="btn-layout-toggle" class="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl bg-white hover:bg-slate-100 active:scale-95 text-slate-700 border border-slate-200 text-xs sm:text-sm font-bold transition-all" title="切換上下分割 / 左右分割版面">
+          <svg id="icon-layout" class="w-4 h-4 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2.5" />
+            <line x1="12" y1="3" x2="12" y2="21" />
+          </svg>
+          <span id="lbl-layout" class="hidden md:inline">左右分割</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==================== 主工作區：可拖曳調整分割 ==================== -->
+  <main id="workspace" class="flex-1 flex flex-col min-h-0 min-w-0 relative overflow-hidden">
+
+    <!-- ==================== 3D 場景面板 ==================== -->
+    <section id="pane-3d" class="relative min-h-[160px] min-w-[220px] bg-gradient-to-b from-[#f1f5f9] to-[#e2e8f0] overflow-hidden" style="flex: 0 0 58%;">
+      <!-- Three.js 渲染容器 -->
+      <div id="three-container" class="w-full h-full relative"></div>
+
+      <!-- 3D 畫線切面疊加層 (SVG) -->
+      <svg id="slice-draw-svg" class="absolute inset-0 w-full h-full pointer-events-none z-20" xmlns="http://www.w3.org/2000/svg"></svg>
+
+      <!-- 左上角：核心互動模式切換（旋轉 3D vs 畫線切面） -->
+      <div class="absolute top-3 left-3 z-20 flex flex-col gap-1.5 max-w-[calc(100%-24px)]">
+        <div class="inline-flex items-center bg-white/95 backdrop-blur-md p-1 rounded-2xl shadow-md border border-slate-200/90 gap-1">
+          <button id="mode-orbit" class="mode-btn flex items-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all">
+            <span>🔄</span>
+            <span>旋轉 3D 視角</span>
+          </button>
+          <button id="mode-slice" class="mode-btn flex items-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all">
+            <span>✂️</span>
+            <span>畫線建立橫切面</span>
+          </button>
+        </div>
+        <div id="mode-hint" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white/85 backdrop-blur-sm border border-slate-200/80 text-[11px] sm:text-xs font-medium text-slate-600 shadow-xs w-fit">
+          <span class="w-2 h-2 rounded-full bg-sky-500 shrink-0"></span>
+          <span id="mode-hint-text">拖曳旋轉・滾輪縮放・按住 Shift 拖曳可直接畫線切面</span>
+        </div>
+      </div>
+
+      <!-- 右上角：切面預設與 3D 顯示控制面板（可收合以節省行動裝置空間） -->
+      <div class="absolute top-3 right-3 z-20 flex flex-col items-end gap-1.5">
+        <button id="btn-toggle-3d-panel" class="md:hidden px-3 py-1.5 rounded-xl bg-white/95 backdrop-blur-md border border-slate-200 shadow-md text-xs font-bold text-slate-700 flex items-center gap-1">
+          <span>⚙️</span>
+          <span>切面與顯示</span>
+        </button>
+
+        <div id="panel-3d-controls" class="hidden md:flex flex-col gap-2.5 bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl shadow-lg p-3 w-[236px] sm:w-[252px] text-xs">
+          <!-- 快速預設切面 -->
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="font-bold text-slate-700 flex items-center gap-1">
+                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                快速預設切面
+              </span>
+              <button id="btn-reset-cam" class="text-[11px] font-semibold text-sky-600 hover:text-sky-800 hover:underline px-1">重置鏡頭</button>
+            </div>
+            <div class="grid grid-cols-3 gap-1">
+              <button data-preset="xz" class="preset-btn px-2 py-1.5 rounded-lg bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300 border border-slate-200 font-bold text-slate-700 transition-all">水平 XZ</button>
+              <button data-preset="xy" class="preset-btn px-2 py-1.5 rounded-lg bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300 border border-slate-200 font-bold text-slate-700 transition-all">正面 XY</button>
+              <button data-preset="yz" class="preset-btn px-2 py-1.5 rounded-lg bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300 border border-slate-200 font-bold text-slate-700 transition-all">側面 YZ</button>
+            </div>
+            <button id="btn-flip-slice-top" class="mt-1.5 w-full py-1.5 px-2.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 active:scale-[0.98] text-emerald-800 border border-emerald-200 font-bold flex items-center justify-center gap-1.5 transition-all">
+              <span>⇄</span>
+              <span>翻轉 2D 觀察視角 (反轉 n)</span>
+            </button>
+          </div>
+
+          <!-- 螺線管匝數滑桿（僅螺線管模式顯示） -->
+          <div id="solenoid-turns-wrap" class="hidden pt-2 border-t border-slate-200">
+            <div class="flex items-center justify-between mb-1">
+              <span class="font-bold text-slate-700">螺線管匝數 (N)</span>
+              <span id="lbl-turns" class="px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 font-extrabold text-xs">7 匝</span>
+            </div>
+            <input id="slider-turns" type="range" min="4" max="12" step="1" value="7" class="lab-slider w-full" />
+            <div class="flex justify-between text-[10px] text-slate-400 font-semibold mt-0.5">
+              <span>4 匝</span>
+              <span>8 匝</span>
+              <span>12 匝</span>
+            </div>
+          </div>
+
+          <!-- 3D 顯示開關 -->
+          <div class="pt-2 border-t border-slate-200 flex flex-col gap-1.5">
+            <span class="font-bold text-slate-700">3D 顯示項目</span>
+            <label class="flex items-center justify-between cursor-pointer py-0.5 hover:text-sky-700">
+              <span class="font-medium text-slate-700">顯示 3D 磁力線</span>
+              <input id="chk-fieldlines" type="checkbox" checked class="w-4 h-4 accent-sky-600 rounded cursor-pointer" />
+            </label>
+            <label id="row-chk-current" class="flex items-center justify-between cursor-pointer py-0.5 hover:text-amber-700">
+              <span class="font-medium text-slate-700">顯示電流流向動畫</span>
+              <input id="chk-current" type="checkbox" checked class="w-4 h-4 accent-amber-600 rounded cursor-pointer" />
+            </label>
+            <label class="flex items-center justify-between cursor-pointer py-0.5 hover:text-emerald-700">
+              <span class="font-medium text-slate-700">顯示 3D 玻璃切面</span>
+              <input id="chk-sliceplane" type="checkbox" checked class="w-4 h-4 accent-emerald-600 rounded cursor-pointer" />
+            </label>
+            <label id="row-chk-internal" class="flex items-center justify-between cursor-pointer py-0.5 hover:text-red-700">
+              <span class="font-medium text-slate-700">顯示磁鐵內部磁力線</span>
+              <input id="chk-internal" type="checkbox" checked class="w-4 h-4 accent-rose-600 rounded cursor-pointer" />
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- 左下角：迷你 3D 座標軸指示器 (X/Y/Z) -->
+      <div class="absolute bottom-3 left-3 z-10 pointer-events-none flex items-end gap-2">
+        <div class="bg-white/85 backdrop-blur-sm border border-slate-200/80 rounded-2xl p-1 shadow-sm">
+          <canvas id="axis-triad-canvas" width="76" height="76" class="w-[72px] h-[72px]"></canvas>
+        </div>
+      </div>
+
+      <!-- 底部中央：操作提示 Toast -->
+      <div id="toast-msg" class="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 z-30 px-4 py-2 rounded-full bg-slate-900/90 text-white text-xs sm:text-sm font-semibold shadow-lg opacity-0 translate-y-2 transition-all duration-300 whitespace-nowrap">
+        已建立新的 3D 橫切面
+      </div>
+
+      <!-- WebGL 錯誤備援顯示 -->
+      <div id="webgl-error" class="hidden absolute inset-0 z-40 bg-slate-50/95 flex items-center justify-center p-6 text-center">
+        <div class="max-w-md bg-white border border-rose-200 rounded-2xl p-6 shadow-md">
+          <h2 class="text-lg font-bold text-rose-600 mb-2">3D 渲染初始化失敗</h2>
+          <p class="text-sm text-slate-600">您的瀏覽器目前可能未啟用 WebGL，請確認硬體加速設定或重新整理頁面。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 可拖曳分隔條 ==================== -->
+    <div id="splitter" class="splitter-bar shrink-0 h-3 w-full bg-slate-200 border-y border-slate-300 flex items-center justify-center cursor-row-resize z-20" role="separator" aria-label="調整 3D 與 2D 視窗比例">
+      <div class="splitter-pill w-14 h-1.5 rounded-full bg-slate-400 transition-colors"></div>
+    </div>
+
+    <!-- ==================== 2D 橫切面面板 ==================== -->
+    <section id="pane-2d" class="flex-1 min-h-[180px] min-w-[260px] flex flex-col bg-white overflow-hidden relative">
+      <!-- 2D 控制標題列 -->
+      <div class="shrink-0 px-3 sm:px-4 py-2 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">
+        <!-- 左：標題與目前切面資訊 -->
+        <div class="flex items-center gap-2 min-w-0">
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 font-extrabold text-xs shrink-0">
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            2D 橫切面
+          </span>
+          <span id="lbl-slice-info" class="text-xs sm:text-sm font-bold text-slate-700 truncate">正面縱切 (XY 平面)</span>
+          <button id="btn-flip-slice-2d" class="px-2 py-1 rounded-lg bg-white hover:bg-emerald-50 border border-slate-200 hover:border-emerald-300 text-emerald-700 text-xs font-bold transition-all shrink-0" title="從切面另一側觀看">
+            ⇄ 翻轉
+          </button>
+        </div>
+
+        <!-- 右：2D 磁場表示方式切換（穿入×/穿出·、箭頭→、綜合）＋流線開關 -->
+        <div class="flex flex-wrap items-center gap-2">
+          <div class="inline-flex items-center bg-slate-200/80 p-0.5 rounded-xl border border-slate-300/70" role="group" aria-label="2D 磁場表示方式">
+            <button data-2dmode="inout" class="mode2d-btn px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap">
+              穿入 (×) / 穿出 (·)
+            </button>
+            <button data-2dmode="arrows" class="mode2d-btn px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap">
+              箭頭 (→)
+            </button>
+            <button data-2dmode="both" class="mode2d-btn px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap">
+              綜合 (×· + →)
+            </button>
+          </div>
+
+          <label class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 cursor-pointer text-xs font-bold text-slate-700 hover:bg-sky-50 hover:border-sky-300 transition-all">
+            <input id="chk-2d-streamlines" type="checkbox" checked class="w-3.5 h-3.5 accent-sky-600 rounded cursor-pointer" />
+            <span>2D 流線</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- 2D 畫布區 -->
+      <div id="canvas-2d-wrap" class="flex-1 relative min-h-0 w-full bg-[#fcfdff] overflow-hidden cursor-crosshair">
+        <canvas id="canvas-2d" class="w-full h-full block"></canvas>
+
+        <!-- 若當前切面幾乎無垂直分量時的友善提示（僅在純穿入/穿出模式出現） -->
+        <div id="badge-no-perp" class="hidden pointer-events-none absolute top-2.5 left-1/2 -translate-x-1/2 px-3.5 py-1.5 rounded-full bg-indigo-50/95 border border-indigo-200 text-indigo-800 text-xs font-bold shadow-sm whitespace-nowrap">
+          此切面的磁場幾乎完全平行於切面（建議切換「箭頭 →」或繪製斜切面觀察 × / ·）
+        </div>
+
+        <!-- 互動磁針探測浮動資訊卡 -->
+        <div id="probe-tooltip" class="hidden pointer-events-none absolute z-20 bg-white/95 backdrop-blur-md border border-slate-300/90 rounded-xl px-3 py-2 shadow-lg text-[11px] leading-snug text-slate-800 min-w-[156px]">
+          <div class="flex items-center justify-between gap-2 pb-1 mb-1 border-b border-slate-100">
+            <span class="font-extrabold text-slate-900">🧭 磁針探測點</span>
+            <span id="probe-coords" class="font-mono text-[10px] text-slate-500">(0.0, 0.0)</span>
+          </div>
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-slate-500 font-medium">平面方向</span>
+            <span id="probe-inplane" class="font-bold text-sky-700">--</span>
+          </div>
+          <div class="flex items-center justify-between gap-2 mt-0.5">
+            <span class="text-slate-500 font-medium">垂直切面</span>
+            <span id="probe-perp" class="font-bold text-indigo-700">--</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2D 底部高對比圖例列 -->
+      <footer class="shrink-0 px-3 sm:px-4 py-1.5 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-[11px] sm:text-xs font-semibold text-slate-700">
+        <div class="flex flex-wrap items-center gap-x-3.5 gap-y-1">
+          <!-- 電流圖例 -->
+          <div class="flex items-center gap-1.5">
+            <span class="text-slate-500 font-bold">電流 I：</span>
+            <span class="inline-flex items-center gap-1 text-amber-700">
+              <span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-amber-100 border-[1.8px] border-amber-600 text-[10px] font-black leading-none">·</span>
+              穿出
+            </span>
+            <span class="inline-flex items-center gap-1 text-amber-700">
+              <span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-amber-100 border-[1.8px] border-amber-600 text-[10px] font-black leading-none">×</span>
+              穿入
+            </span>
+            <span class="inline-flex items-center gap-1 text-orange-600">
+              <span class="font-black">→</span>
+              沿切面
+            </span>
+          </div>
+
+          <span class="text-slate-300 hidden sm:inline">|</span>
+
+          <!-- 磁場圖例 -->
+          <div class="flex items-center gap-1.5">
+            <span class="text-slate-500 font-bold">磁場 B：</span>
+            <span class="inline-flex items-center gap-1 text-indigo-600">
+              <span class="font-black text-sm leading-none">×</span>
+              穿入紙面
+            </span>
+            <span class="inline-flex items-center gap-1 text-sky-600">
+              <span class="font-black text-base leading-none">·</span>
+              穿出紙面
+            </span>
+            <span class="inline-flex items-center gap-1 text-sky-800">
+              <span class="font-black">→</span>
+              切面方向
+            </span>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-1.5 text-emerald-700 font-bold shrink-0">
+          <span class="px-1.5 py-0.5 rounded bg-emerald-100 text-[10px]">A</span>
+          <span class="tracking-tighter text-emerald-400">────</span>
+          <span class="px-1.5 py-0.5 rounded bg-emerald-100 text-[10px]">B</span>
+          <span class="text-slate-500 font-medium hidden md:inline">（移動滑鼠或觸碰可放置小磁針）</span>
+        </div>
+      </footer>
+    </section>
+  </main>
+
+  <!-- ==================== 核心程式邏輯 (ES Module) ==================== -->
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    // =========================================================================
+    // 1. 全域狀態與物理參數設定
+    // =========================================================================
+    const MAGNET_DIM = { L: 3.2, H: 0.96, D: 0.96 }; // 條形磁鐵尺寸 (X長, Y高, Z深)
+    const WIRE_HALF_LEN = 4.4;                      // 長直導線 3D 可視半長
+    const LOOP_RADIUS = 1.65;                       // 圓形導線半徑
+    const SOLENOID_LEN = 3.8;                       // 螺線管長度
+    const SOLENOID_RADIUS = 1.05;                   // 螺線管半徑
+
+    const state = {
+      model: 'magnet',          // 'magnet' | 'wire' | 'loop' | 'solenoid'
+      polarity: 1,              // +1 (預設) | -1 (反轉電流/磁極)
+      solenoidTurns: 7,         // 4 ~ 12 匝
+      isPlaying: true,          // 動畫播放開關
+      interactionMode: 'orbit', // 'orbit' | 'slice'
+      splitDirection: 'vertical', // 'vertical' (上下) | 'horizontal' (左右)
+      splitRatio: 0.58,         // 3D 面板比例
+
+      // 3D 顯示開關
+      showFieldLines: true,
+      showCurrentFlow: true,
+      showSlicePlane: true,
+      showInternalMagnetLines: true,
+
+      // 2D 顯示設定
+      mode2D: 'both',           // 'inout' | 'arrows' | 'both'
+      show2DStreamlines: true,
+
+      // 3D 橫切面數學定義 (右手正交基底 u, v, n，滿足 u × v = n)
+      slice: {
+        P0: new THREE.Vector3(0, 0, 0),
+        u: new THREE.Vector3(1, 0, 0),
+        v: new THREE.Vector3(0, 1, 0),
+        n: new THREE.Vector3(0, 0, 1),
+        halfU: 3.6,
+        halfV: 2.5,
+        label: '正面縱切 (XY 平面)',
+      },
+
+      // 2D 互動探測磁針狀態
+      probe: {
+        active: false,
+        canvasX: 0,
+        canvasY: 0,
+        u: 0,
+        v: 0,
+      },
+    };
+
+    // 物理線段快取（TypedArray 以達最高 Biot-Savart 運算效能）
+    const physicsData = {
+      count: 0,
+      mx: null, my: null, mz: null, // 微段中點 r'
+      dx: null, dy: null, dz: null, // 微段向量 I * dl
+      softSq: 0.015,                // 軟化常數 a^2
+      bScale: 1.0,                  // 用於 2D 顯示正規化的參考場強
+
+      // 實際銅導線幾何段落（供 2D 截面交點與平躺導線繪製，不含磁鐵等價表面電流）
+      realWireSegments: [], // [{ a: Vector3, b: Vector3 }]
+      // 用於 3D 電流粒子動畫的連續路徑
+      currentPaths: [],     // [ [Vector3, ...], ... ]
+    };
+
+    // 2D 畫布快取（僅在物理模型或切面改變時重算網格與流線，確保 hover 60FPS）
+    const cache2D = {
+      dirty: true,
+      width: 0,
+      height: 0,
+      scale: 60,
+      cx: 0,
+      cy: 0,
+      gridPoints: [],       // [{ px, py, u, v, bu, bv, bPerp, bPar, bMag }]
+      maxPerp: 0,
+      streamlines: [],      // [ [ {px, py}, ... ], ... ]
+      piercingWires: [],    // [{ u, v, dotIN }]
+      inPlaneWires: [],     // [{ ua, va, ub, vb }]
+      magnetPolys: [],      // [{ pole: 'N'|'S', pts: [{u,v},...], cu, cv, area }]
+    };
+
+    // =========================================================================
+    // 2. Biot-Savart 物理計算引擎與 RK4 磁力線積分
+    // =========================================================================
+
+    /**
+     * 根據當前模型與極性/匝數，重建 Biot-Savart 電流微段
+     * 所有座標遵守右手座標系：+X 右、+Y 上、+Z 朝向觀察者
+     */
+    function rebuildPhysicsSegments() {
+      const segA = [];
+      const segB = [];
+      const realSegs = [];
+      const paths = [];
+      const pol = state.polarity;
+
+      if (state.model === 'magnet') {
+        // 條形磁鐵：利用密集矩形等價表面電流環疊加（沿 X 軸）
+        // 當 polarity = +1：右端 (+X) 為 N 極，左端 (-X) 為 S 極
+        // 由右手定則，內部磁場指向 +X，表面電流在頂面 (+Y) 流向 +Z、底面 (-Y) 流向 -Z
+        const halfL = MAGNET_DIM.L / 2;
+        const halfH = MAGNET_DIM.H / 2;
+        const halfD = MAGNET_DIM.D / 2;
+        const numLoops = 18;
+        const perSide = 4; // 每邊細分 4 段，每環 16 段
+
+        // 單一矩形環的 4 個頂點（使右手定則軸向為 +X）
+        // 順序：(+Y,-Z) -> (+Y,+Z) -> (-Y,+Z) -> (-Y,-Z)
+        const corners = [
+          [halfH, -halfD],
+          [halfH,  halfD],
+          [-halfH, halfD],
+          [-halfH, -halfD],
+        ];
+        if (pol < 0) corners.reverse();
+
+        for (let i = 0; i < numLoops; i++) {
+          const t = (i + 0.5) / numLoops;
+          const x = -halfL + t * MAGNET_DIM.L;
+          for (let c = 0; c < 4; c++) {
+            const [y1, z1] = corners[c];
+            const [y2, z2] = corners[(c + 1) % 4];
+            for (let s = 0; s < perSide; s++) {
+              const f0 = s / perSide;
+              const f1 = (s + 1) / perSide;
+              segA.push(new THREE.Vector3(x, y1 + (y2 - y1) * f0, z1 + (z2 - z1) * f0));
+              segB.push(new THREE.Vector3(x, y1 + (y2 - y1) * f1, z1 + (z2 - z1) * f1));
+            }
+          }
+        }
+        physicsData.softSq = 0.022;
+        physicsData.bScale = 14.0;
+      } else if (state.model === 'wire') {
+        // 長直導線：垂直沿 Y 軸放置，物理長度延伸至 ±18 消除端點效應
+        // polarity = +1 時電流沿 +Y 向上
+        const totalSegs = 48;
+        const yMin = -18;
+        const yMax = 18;
+        const pathPts = [];
+
+        for (let i = 0; i < totalSegs; i++) {
+          const f0 = i / totalSegs;
+          const f1 = (i + 1) / totalSegs;
+          const ya = yMin + (yMax - yMin) * f0;
+          const yb = yMin + (yMax - yMin) * f1;
+          const pA = new THREE.Vector3(0, pol > 0 ? ya : -ya, 0);
+          const pB = new THREE.Vector3(0, pol > 0 ? yb : -yb, 0);
+          segA.push(pA);
+          segB.push(pB);
+          // 僅保留可視長度附近的段落作為 2D 導線截面（涵蓋大範圍斜切）
+          if (Math.abs(ya) <= 10 || Math.abs(yb) <= 10) {
+            realSegs.push({ a: pA, b: pB });
+          }
+        }
+        // 3D 電流流動畫路徑
+        const animSteps = 40;
+        for (let i = 0; i <= animSteps; i++) {
+          const f = i / animSteps;
+          const y = pol > 0
+            ? (-WIRE_HALF_LEN + 2 * WIRE_HALF_LEN * f)
+            : (WIRE_HALF_LEN - 2 * WIRE_HALF_LEN * f);
+          pathPts.push(new THREE.Vector3(0, y, 0));
+        }
+        paths.push(pathPts);
+        physicsData.softSq = 0.012;
+        physicsData.bScale = 1.6;
+      } else if (state.model === 'loop') {
+        // 圓形導線：立於 YZ 平面（軸線為 X 軸）
+        // θ 從 0 -> 2π：(0, R cosθ, R sinθ) 在頂端 (0,R,0) 切線為 +Z，軸心磁場指向 +X
+        const N = 64;
+        const pathPts = [];
+        for (let i = 0; i < N; i++) {
+          const th0 = (i / N) * Math.PI * 2 * pol;
+          const th1 = ((i + 1) / N) * Math.PI * 2 * pol;
+          const pA = new THREE.Vector3(0, LOOP_RADIUS * Math.cos(th0), LOOP_RADIUS * Math.sin(th0));
+          const pB = new THREE.Vector3(0, LOOP_RADIUS * Math.cos(th1), LOOP_RADIUS * Math.sin(th1));
+          segA.push(pA);
+          segB.push(pB);
+          realSegs.push({ a: pA, b: pB });
+          pathPts.push(pA.clone());
+        }
+        pathPts.push(pathPts[0].clone());
+        paths.push(pathPts);
+        physicsData.softSq = 0.015;
+        physicsData.bScale = 2.6;
+      } else if (state.model === 'solenoid') {
+        // 螺線管：軸線沿 X 軸的多匝螺旋導線
+        // 右手螺旋：x 從 -L/2 到 +L/2，θ = 2π * turns * t；當 pol = +1 時管內磁場指向 +X
+        const turns = state.solenoidTurns;
+        const segsPerTurn = 28;
+        const totalSegs = turns * segsPerTurn;
+        const halfL = SOLENOID_LEN / 2;
+        const pathPts = [];
+
+        for (let i = 0; i < totalSegs; i++) {
+          const t0 = pol > 0 ? (i / totalSegs) : (1 - i / totalSegs);
+          const t1 = pol > 0 ? ((i + 1) / totalSegs) : (1 - (i + 1) / totalSegs);
+          const x0 = -halfL + SOLENOID_LEN * t0;
+          const x1 = -halfL + SOLENOID_LEN * t1;
+          const th0 = t0 * turns * Math.PI * 2;
+          const th1 = t1 * turns * Math.PI * 2;
+
+          const pA = new THREE.Vector3(x0, SOLENOID_RADIUS * Math.cos(th0), SOLENOID_RADIUS * Math.sin(th0));
+          const pB = new THREE.Vector3(x1, SOLENOID_RADIUS * Math.cos(th1), SOLENOID_RADIUS * Math.sin(th1));
+          segA.push(pA);
+          segB.push(pB);
+          realSegs.push({ a: pA, b: pB });
+          if (i === 0) pathPts.push(pA.clone());
+          pathPts.push(pB.clone());
+        }
+        paths.push(pathPts);
+        physicsData.softSq = 0.018;
+        physicsData.bScale = 2.2 * (turns / 7) * 5.0;
+      }
+
+      // 轉換為扁平 TypedArray
+      const count = segA.length;
+      physicsData.count = count;
+      physicsData.mx = new Float32Array(count);
+      physicsData.my = new Float32Array(count);
+      physicsData.mz = new Float32Array(count);
+      physicsData.dx = new Float32Array(count);
+      physicsData.dy = new Float32Array(count);
+      physicsData.dz = new Float32Array(count);
+
+      for (let i = 0; i < count; i++) {
+        const a = segA[i];
+        const b = segB[i];
+        physicsData.mx[i] = (a.x + b.x) * 0.5;
+        physicsData.my[i] = (a.y + b.y) * 0.5;
+        physicsData.mz[i] = (a.z + b.z) * 0.5;
+        physicsData.dx[i] = b.x - a.x;
+        physicsData.dy[i] = b.y - a.y;
+        physicsData.dz[i] = b.z - a.z;
+      }
+      physicsData.realWireSegments = realSegs;
+      physicsData.currentPaths = paths;
+      cache2D.dirty = true;
+    }
+
+    /**
+     * Biot-Savart 定律計算空間任意點 (x, y, z) 的磁場向量 B(r)
+     * B(r) = Σ (dl × (r - r')) / (|r - r'|^2 + a^2)^(3/2)
+     * 回傳寫入 outObj { x, y, z } 以避免 GC 記憶體配置
+     */
+    function evalMagneticField(x, y, z, out) {
+      const n = physicsData.count;
+      const mx = physicsData.mx, my = physicsData.my, mz = physicsData.mz;
+      const dx = physicsData.dx, dy = physicsData.dy, dz = physicsData.dz;
+      const softSq = physicsData.softSq;
+
+      let bx = 0, by = 0, bz = 0;
+      for (let i = 0; i < n; i++) {
+        const rx = x - mx[i];
+        const ry = y - my[i];
+        const rz = z - mz[i];
+        const r2 = rx * rx + ry * ry + rz * rz + softSq;
+        const invR3 = 1.0 / (r2 * Math.sqrt(r2));
+
+        // dl × (r - r')
+        const dlx = dx[i], dly = dy[i], dlz = dz[i];
+        bx += (dly * rz - dlz * ry) * invR3;
+        by += (dlz * rx - dlx * rz) * invR3;
+        bz += (dlx * ry - dly * rx) * invR3;
+      }
+      out.x = bx;
+      out.y = by;
+      out.z = bz;
+      return out;
+    }
+
+    // 暫存向量避免 RK4 重複配置
+    const _k1 = { x: 0, y: 0, z: 0 };
+    const _k2 = { x: 0, y: 0, z: 0 };
+    const _k3 = { x: 0, y: 0, z: 0 };
+    const _k4 = { x: 0, y: 0, z: 0 };
+
+    /**
+     * 取得單位磁場方向（供 RK4 積分使用）
+     */
+    function evalUnitB(x, y, z, dirSign, out) {
+      evalMagneticField(x, y, z, out);
+      const len = Math.hypot(out.x, out.y, out.z);
+      if (len < 1e-7) {
+        out.x = 0; out.y = 0; out.z = 0;
+        return false;
+      }
+      const inv = dirSign / len;
+      out.x *= inv;
+      out.y *= inv;
+      out.z *= inv;
+      return true;
+    }
+
+    /**
+     * 使用四階 Runge-Kutta (RK4) 追蹤單條 3D 磁力線
+     * 若能回到種子點附近則自動閉合為平滑封閉曲線
+     */
+    function traceFieldLineRK4(seed, stepSize = 0.13, maxSteps = 160, boundRadius = 5.4) {
+      const forwardPts = [seed.clone()];
+      let closed = false;
+
+      // 正向積分 (沿 +B)
+      let px = seed.x, py = seed.y, pz = seed.z;
+      for (let i = 0; i < maxSteps; i++) {
+        if (!evalUnitB(px, py, pz, 1, _k1)) break;
+        if (!evalUnitB(px + 0.5 * stepSize * _k1.x, py + 0.5 * stepSize * _k1.y, pz + 0.5 * stepSize * _k1.z, 1, _k2)) break;
+        if (!evalUnitB(px + 0.5 * stepSize * _k2.x, py + 0.5 * stepSize * _k2.y, pz + 0.5 * stepSize * _k2.z, 1, _k3)) break;
+        if (!evalUnitB(px + stepSize * _k3.x, py + stepSize * _k3.y, pz + stepSize * _k3.z, 1, _k4)) break;
+
+        px += (stepSize / 6) * (_k1.x + 2 * _k2.x + 2 * _k3.x + _k4.x);
+        py += (stepSize / 6) * (_k1.y + 2 * _k2.y + 2 * _k3.y + _k4.y);
+        pz += (stepSize / 6) * (_k1.z + 2 * _k2.z + 2 * _k3.z + _k4.z);
+
+        const rSq = px * px + py * py + pz * pz;
+        if (rSq > boundRadius * boundRadius) break;
+
+        // 檢查是否閉合回到起點附近
+        if (i > 12) {
+          const distToStart = Math.hypot(px - seed.x, py - seed.y, pz - seed.z);
+          if (distToStart < stepSize * 1.35) {
+            forwardPts.push(seed.clone());
+            closed = true;
+            break;
+          }
+        }
+        forwardPts.push(new THREE.Vector3(px, py, pz));
+      }
+
+      if (closed) {
+        return { points: forwardPts, closed: true };
+      }
+
+      // 若未閉合，再向後積分 (-B) 並合併成完整沿 +B 方向排序的點列
+      const backwardPts = [];
+      px = seed.x; py = seed.y; pz = seed.z;
+      for (let i = 0; i < maxSteps; i++) {
+        if (!evalUnitB(px, py, pz, -1, _k1)) break;
+        if (!evalUnitB(px + 0.5 * stepSize * _k1.x, py + 0.5 * stepSize * _k1.y, pz + 0.5 * stepSize * _k1.z, -1, _k2)) break;
+        if (!evalUnitB(px + 0.5 * stepSize * _k2.x, py + 0.5 * stepSize * _k2.y, pz + 0.5 * stepSize * _k2.z, -1, _k3)) break;
+        if (!evalUnitB(px + stepSize * _k3.x, py + stepSize * _k3.y, pz + stepSize * _k3.z, -1, _k4)) break;
+
+        px += (stepSize / 6) * (_k1.x + 2 * _k2.x + 2 * _k3.x + _k4.x);
+        py += (stepSize / 6) * (_k1.y + 2 * _k2.y + 2 * _k3.y + _k4.y);
+        pz += (stepSize / 6) * (_k1.z + 2 * _k2.z + 2 * _k3.z + _k4.z);
+
+        const rSq = px * px + py * py + pz * pz;
+        if (rSq > boundRadius * boundRadius) break;
+        backwardPts.push(new THREE.Vector3(px, py, pz));
+      }
+
+      backwardPts.reverse();
+      return { points: backwardPts.concat(forwardPts), closed: false };
+    }
+
+    /**
+     * 根據各模型特性生成對稱、美觀、具代表性的 3D 磁力線種子點
+     */
+    function generateModelFieldLines() {
+      const seeds = [];
+      let stepSize = 0.13;
+      let maxSteps = 170;
+      let boundR = 5.3;
+
+      if (state.model === 'magnet') {
+        // 磁鐵內部 x = 0 截面上的多組對稱種子點，自然形成內部 S→N、外部 N→S 的連續封閉磁力線
+        seeds.push(new THREE.Vector3(0, 0, 0)); // 中心軸線
+        const ring1 = 0.19;
+        const ring2 = 0.36;
+        for (let i = 0; i < 6; i++) {
+          const a = (i / 6) * Math.PI * 2;
+          seeds.push(new THREE.Vector3(0, ring1 * Math.cos(a), ring1 * Math.sin(a)));
+        }
+        for (let i = 0; i < 8; i++) {
+          const a = (i / 8) * Math.PI * 2;
+          seeds.push(new THREE.Vector3(0, ring2 * Math.cos(a), ring2 * Math.sin(a)));
+        }
+        stepSize = 0.12;
+        maxSteps = 220;
+        boundR = 5.4;
+      } else if (state.model === 'wire') {
+        // 長直導線：多層高度、多半徑同心圓
+        const ys = [-2.5, -1.25, 0, 1.25, 2.5];
+        const rs = [0.75, 1.45, 2.25];
+        for (const y of ys) {
+          for (const r of rs) {
+            seeds.push(new THREE.Vector3(r, y, 0));
+          }
+        }
+        stepSize = 0.11;
+        maxSteps = 160;
+        boundR = 5.5;
+      } else if (state.model === 'loop') {
+        // 圓形導線：軸心線 + 線圈內側兩圈對稱種子
+        seeds.push(new THREE.Vector3(0, 0, 0));
+        const rInner = LOOP_RADIUS * 0.38;
+        const rOuter = LOOP_RADIUS * 0.72;
+        for (let i = 0; i < 6; i++) {
+          const a = (i / 6) * Math.PI * 2;
+          seeds.push(new THREE.Vector3(0, rInner * Math.cos(a), rInner * Math.sin(a)));
+        }
+        for (let i = 0; i < 8; i++) {
+          const a = (i / 8) * Math.PI * 2;
+          seeds.push(new THREE.Vector3(0, rOuter * Math.cos(a), rOuter * Math.sin(a)));
+        }
+        stepSize = 0.11;
+        maxSteps = 200;
+        boundR = 5.2;
+      } else if (state.model === 'solenoid') {
+        // 螺線管：管內 x = 0 截面之軸線與兩圈均勻種子
+        seeds.push(new THREE.Vector3(0, 0, 0));
+        const r1 = SOLENOID_RADIUS * 0.34;
+        const r2 = SOLENOID_RADIUS * 0.65;
+        for (let i = 0; i < 6; i++) {
+          const a = (i / 6) * Math.PI * 2;
+          seeds.push(new THREE.Vector3(0, r1 * Math.cos(a), r1 * Math.sin(a)));
+        }
+        for (let i = 0; i < 8; i++) {
+          const a = (i / 8) * Math.PI * 2;
+          seeds.push(new THREE.Vector3(0, r2 * Math.cos(a), r2 * Math.sin(a)));
+        }
+        stepSize = 0.12;
+        maxSteps = 240;
+        boundR = 5.5;
+      }
+
+      const lines = [];
+      for (const s of seeds) {
+        const res = traceFieldLineRK4(s, stepSize, maxSteps, boundR);
+        if (res.points.length >= 6) {
+          lines.push(res);
+        }
+      }
+      return lines;
+    }
+
+    /**
+     * 計算 3D 軸對齊長方體 (AABB) 與任意平面 (P0, n) 的精確交集凸多邊形
+     * 回傳 2D (u, v) 頂點陣列（已按逆時針角度排序）
+     */
+    function intersectBoxWithPlane(minX, maxX, minY, maxY, minZ, maxZ, P0, uAxis, vAxis, nAxis) {
+      const verts = [
+        new THREE.Vector3(minX, minY, minZ),
+        new THREE.Vector3(maxX, minY, minZ),
+        new THREE.Vector3(maxX, maxY, minZ),
+        new THREE.Vector3(minX, maxY, minZ),
+        new THREE.Vector3(minX, minY, maxZ),
+        new THREE.Vector3(maxX, minY, maxZ),
+        new THREE.Vector3(maxX, maxY, maxZ),
+        new THREE.Vector3(minX, maxY, maxZ),
+      ];
+      const edges = [
+        [0,1],[1,2],[2,3],[3,0],
+        [4,5],[5,6],[6,7],[7,4],
+        [0,4],[1,5],[2,6],[3,7],
+      ];
+
+      const dists = verts.map(v => v.clone().sub(P0).dot(nAxis));
+      const hitPts3D = [];
+
+      const pushUnique = (pt) => {
+        for (const q of hitPts3D) {
+          if (q.distanceToSquared(pt) < 1e-6) return;
+        }
+        hitPts3D.push(pt);
+      };
+
+      for (const [i, j] of edges) {
+        const d1 = dists[i];
+        const d2 = dists[j];
+        if (Math.abs(d1) < 1e-5) pushUnique(verts[i].clone());
+        if (Math.abs(d2) < 1e-5) pushUnique(verts[j].clone());
+        if ((d1 < 0 && d2 > 0) || (d1 > 0 && d2 < 0)) {
+          const t = -d1 / (d2 - d1);
+          const pt = verts[i].clone().lerp(verts[j], t);
+          pushUnique(pt);
+        }
+      }
+
+      if (hitPts3D.length < 3) return null;
+
+      // 投影至 2D (u, v)
+      const pts2D = hitPts3D.map(p => {
+        const rel = p.clone().sub(P0);
+        return { u: rel.dot(uAxis), v: rel.dot(vAxis) };
+      });
+
+      // 計算質心並依角度排序構成凸多邊形
+      let cu = 0, cv = 0;
+      for (const p of pts2D) { cu += p.u; cv += p.v; }
+      cu /= pts2D.length;
+      cv /= pts2D.length;
+
+      pts2D.sort((a, b) => Math.atan2(a.v - cv, a.u - cu) - Math.atan2(b.v - cv, b.u - cu));
+
+      // 計算多邊形面積（鞋帶公式）
+      let area = 0;
+      for (let i = 0; i < pts2D.length; i++) {
+        const p1 = pts2D[i];
+        const p2 = pts2D[(i + 1) % pts2D.length];
+        area += p1.u * p2.v - p2.u * p1.v;
+      }
+      area = Math.abs(area) * 0.5;
+      if (area < 1e-4) return null;
+
+      return { pts: pts2D, cu, cv, area };
+    }
+
+    // =========================================================================
+    // 3. Three.js 3D 場景建置與動畫
+    // =========================================================================
+    let renderer, scene, camera, controls;
+    let modelGroup, fieldLinesGroup, currentAnimGroup, sliceGroup;
+
+    // 動畫物件參照
+    let magnetHalfMeshes = [];     // 條形磁鐵 N/S 方塊（切換透明度用）
+    let magnetWireframeObj = null; // 條形磁鐵邊框線
+    let fieldArrowItems = [];      // [{ mesh, points, cumLen, totalLen, offset, isInsideCheck }]
+    let currentBeadItems = [];     // [{ mesh, points, cumLen, totalLen, offset, isCone }]
+    let fieldLineObjects = [];     // 3D 磁力線線段（切換內部顯示用）
+
+    /**
+     * 建立動態 Canvas 文字貼圖（無需外部圖片 URL）
+     */
+    function createLabelTexture(text, bgColor, textColor, borderColor = null, size = 256) {
+      const c = document.createElement('canvas');
+      c.width = size;
+      c.height = size;
+      const ctx = c.getContext('2d');
+
+      if (bgColor) {
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(0, 0, size, size);
+      } else {
+        ctx.clearRect(0, 0, size, size);
+      }
+
+      if (borderColor) {
+        ctx.strokeStyle = borderColor;
+        ctx.lineWidth = size * 0.06;
+        ctx.strokeRect(size * 0.03, size * 0.03, size * 0.94, size * 0.94);
+      }
+
+      ctx.fillStyle = textColor;
+      ctx.font = `800 ${Math.floor(size * 0.54)}px "Noto Sans TC", Inter, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, size / 2, size / 2 + size * 0.02);
+
+      const tex = new THREE.CanvasTexture(c);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.needsUpdate = true;
+      return tex;
+    }
+
+    /**
+     * 建立 3D 圓角標籤 Sprite（用於切面 A、B 與 2D 視角標記）
+     */
+    function createBadgeSprite(text, bgColor = '#059669', textColor = '#ffffff', scaleW = 0.55) {
+      const c = document.createElement('canvas');
+      c.width = 256;
+      c.height = 128;
+      const ctx = c.getContext('2d');
+      ctx.clearRect(0, 0, 256, 128);
+
+      // 圓角膠囊底色
+      const pad = 12;
+      const w = 256 - pad * 2;
+      const h = 128 - pad * 2;
+      const r = h / 2;
+      ctx.beginPath();
+      ctx.roundRect(pad, pad, w, h, r);
+      ctx.fillStyle = bgColor;
+      ctx.fill();
+      ctx.lineWidth = 6;
+      ctx.strokeStyle = '#ffffff';
+      ctx.stroke();
+
+      ctx.fillStyle = textColor;
+      ctx.font = `800 ${text.length > 2 ? 42 : 66}px "Noto Sans TC", Inter, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, 128, 66);
+
+      const tex = new THREE.CanvasTexture(c);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
+      const sprite = new THREE.Sprite(mat);
+      sprite.scale.set(scaleW, scaleW * 0.5, 1);
+      sprite.renderOrder = 20;
+      return sprite;
+    }
+
+    /**
+     * 安全清理 Three.js Group 內所有幾何與材質
+     */
+    function clearGroup(group) {
+      while (group.children.length > 0) {
+        const child = group.children[0];
+        group.remove(child);
+        child.traverse((obj) => {
+          if (obj.geometry) obj.geometry.dispose();
+          if (obj.material) {
+            if (Array.isArray(obj.material)) {
+              obj.material.forEach(m => { if (m.map) m.map.dispose(); m.dispose(); });
+            } else {
+              if (obj.material.map) obj.material.map.dispose();
+              obj.material.dispose();
+            }
+          }
+        });
+      }
+    }
+
+    /**
+     * 初始化 Three.js 場景、燈光與相機控制
+     */
+    function initThreeJS() {
+      const container = document.getElementById('three-container');
+      try {
+        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.05;
+        container.appendChild(renderer.domElement);
+      } catch (err) {
+        console.error('WebGL 初始化失敗:', err);
+        document.getElementById('webgl-error').classList.remove('hidden');
+        return false;
+      }
+
+      scene = new THREE.Scene();
+
+      // 相機設定
+      camera = new THREE.PerspectiveCamera(42, container.clientWidth / Math.max(1, container.clientHeight), 0.1, 100);
+      camera.position.set(0.6, 3.2, 8.6);
+
+      // OrbitControls 軌道控制器
+      controls = new OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.08;
+      controls.minDistance = 3.2;
+      controls.maxDistance = 18;
+      controls.target.set(0, 0, 0);
+
+      // 實驗室明亮柔光佈局
+      const hemiLight = new THREE.HemisphereLight(0xffffff, 0xcbd5e1, 1.05);
+      hemiLight.position.set(0, 10, 0);
+      scene.add(hemiLight);
+
+      const dirLight1 = new THREE.DirectionalLight(0xffffff, 1.1);
+      dirLight1.position.set(6, 10, 8);
+      scene.add(dirLight1);
+
+      const dirLight2 = new THREE.DirectionalLight(0xe0f2fe, 0.55);
+      dirLight2.position.set(-7, -4, -6);
+      scene.add(dirLight2);
+
+      // 淡雅參考地板網格（位於下方，幫助建立 3D 空間感）
+      const floorGrid = new THREE.GridHelper(12, 12, 0xcbd5e1, 0xe2e8f0);
+      floorGrid.position.y = -3.2;
+      floorGrid.material.opacity = 0.55;
+      floorGrid.material.transparent = true;
+      scene.add(floorGrid);
+
+      // 建立四個主要子群組
+      modelGroup = new THREE.Group();
+      fieldLinesGroup = new THREE.Group();
+      currentAnimGroup = new THREE.Group();
+      sliceGroup = new THREE.Group();
+      scene.add(modelGroup, fieldLinesGroup, currentAnimGroup, sliceGroup);
+
+      return true;
+    }
+
+    /**
+     * 建構當前物理模型的 3D 實體幾何
+     */
+    function rebuild3DModel() {
+      clearGroup(modelGroup);
+      clearGroup(currentAnimGroup);
+      magnetHalfMeshes = [];
+      magnetWireframeObj = null;
+      currentBeadItems = [];
+
+      const pol = state.polarity;
+
+      if (state.model === 'magnet') {
+        const halfL = MAGNET_DIM.L / 2;
+        const H = MAGNET_DIM.H;
+        const D = MAGNET_DIM.D;
+
+        const texN = createLabelTexture('N', '#ef4444', '#ffffff');
+        const texS = createLabelTexture('S', '#2563eb', '#ffffff');
+
+        const isTranslucent = state.showInternalMagnetLines;
+        const opacityVal = isTranslucent ? 0.42 : 0.96;
+
+        const makePoleMaterials = (colorHex, labelTex) => {
+          const solidMat = new THREE.MeshStandardMaterial({
+            color: colorHex,
+            roughness: 0.32,
+            metalness: 0.12,
+            transparent: true,
+            opacity: opacityVal,
+            depthWrite: !isTranslucent,
+          });
+          const labelMat = new THREE.MeshStandardMaterial({
+            map: labelTex,
+            roughness: 0.35,
+            metalness: 0.08,
+            transparent: true,
+            opacity: isTranslucent ? 0.72 : 0.98,
+            depthWrite: !isTranslucent,
+          });
+          // BoxGeometry 6 面順序：+X, -X, +Y, -Y, +Z, -Z
+          return [labelMat, labelMat, labelMat, labelMat, labelMat, labelMat];
+        };
+
+        const geoHalf = new THREE.BoxGeometry(halfL, H, D);
+
+        // 當 pol = +1：右半 (+X) 為 N 極，左半 (-X) 為 S 極
+        const rightIsN = pol > 0;
+        const rightMesh = new THREE.Mesh(
+          geoHalf,
+          makePoleMaterials(rightIsN ? 0xef4444 : 0x2563eb, rightIsN ? texN : texS)
+        );
+        rightMesh.position.x = halfL / 2;
+
+        const leftMesh = new THREE.Mesh(
+          geoHalf.clone(),
+          makePoleMaterials(rightIsN ? 0x2563eb : 0xef4444, rightIsN ? texS : texN)
+        );
+        leftMesh.position.x = -halfL / 2;
+
+        modelGroup.add(rightMesh, leftMesh);
+        magnetHalfMeshes.push(rightMesh, leftMesh);
+
+        // 高對比外框線（半透明模式時仍清楚界定磁鐵輪廓）
+        const fullBoxGeo = new THREE.BoxGeometry(MAGNET_DIM.L + 0.01, H + 0.01, D + 0.01);
+        const edgesGeo = new THREE.EdgesGeometry(fullBoxGeo);
+        magnetWireframeObj = new THREE.LineSegments(
+          edgesGeo,
+          new THREE.LineBasicMaterial({ color: 0x1e293b, transparent: true, opacity: 0.45 })
+        );
+        modelGroup.add(magnetWireframeObj);
+        fullBoxGeo.dispose();
+
+      } else if (state.model === 'wire') {
+        // 垂直金屬銅長直導線
+        const wireGeo = new THREE.CylinderGeometry(0.11, 0.11, WIRE_HALF_LEN * 2, 24);
+        const wireMat = new THREE.MeshStandardMaterial({
+          color: 0xd97706,
+          metalness: 0.65,
+          roughness: 0.25,
+        });
+        const wireMesh = new THREE.Mesh(wireGeo, wireMat);
+        modelGroup.add(wireMesh);
+
+        // 上下端點接頭飾環
+        const capGeo = new THREE.CylinderGeometry(0.18, 0.18, 0.16, 20);
+        const capMat = new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.5, roughness: 0.35 });
+        const topCap = new THREE.Mesh(capGeo, capMat);
+        topCap.position.y = WIRE_HALF_LEN;
+        const botCap = new THREE.Mesh(capGeo.clone(), capMat);
+        botCap.position.y = -WIRE_HALF_LEN;
+        modelGroup.add(topCap, botCap);
+
+        // 頂端大號立體電流指示箭頭（極易從教室後方辨認電流方向）
+        const arrowBadge = createBadgeSprite(pol > 0 ? 'I ↑' : 'I ↓', '#ea580c', '#ffffff', 0.95);
+        arrowBadge.position.set(0.62, pol > 0 ? 3.3 : -3.3, 0);
+        currentAnimGroup.add(arrowBadge);
+
+      } else if (state.model === 'loop') {
+        // YZ 平面單匝圓形銅導線
+        const torusGeo = new THREE.TorusGeometry(LOOP_RADIUS, 0.095, 20, 72);
+        const copperMat = new THREE.MeshStandardMaterial({
+          color: 0xd97706,
+          metalness: 0.65,
+          roughness: 0.24,
+        });
+        const torusMesh = new THREE.Mesh(torusGeo, copperMat);
+        torusMesh.rotation.y = Math.PI / 2; // 旋轉至 YZ 平面
+        modelGroup.add(torusMesh);
+
+        const badge = createBadgeSprite('I', '#ea580c', '#ffffff', 0.65);
+        badge.position.set(0, LOOP_RADIUS + 0.45, 0);
+        currentAnimGroup.add(badge);
+
+      } else if (state.model === 'solenoid') {
+        // 多匝螺旋銅導線
+        const pathPts = physicsData.currentPaths[0];
+        if (pathPts && pathPts.length > 2) {
+          const curve = new THREE.CatmullRomCurve3(pathPts);
+          const tubeGeo = new THREE.TubeGeometry(curve, state.solenoidTurns * 26, 0.072, 12, false);
+          const copperMat = new THREE.MeshStandardMaterial({
+            color: 0xd97706,
+            metalness: 0.65,
+            roughness: 0.25,
+          });
+          const tubeMesh = new THREE.Mesh(tubeGeo, copperMat);
+          modelGroup.add(tubeMesh);
+
+          // 淡透明中空玻璃軸管輔助（讓學生清楚分辨管內與管外）
+          const coreGeo = new THREE.CylinderGeometry(SOLENOID_RADIUS - 0.08, SOLENOID_RADIUS - 0.08, SOLENOID_LEN, 32, 1, true);
+          coreGeo.rotateZ(Math.PI / 2);
+          const coreMat = new THREE.MeshStandardMaterial({
+            color: 0x94a3b8,
+            transparent: true,
+            opacity: 0.09,
+            side: THREE.DoubleSide,
+            depthWrite: false,
+          });
+          modelGroup.add(new THREE.Mesh(coreGeo, coreMat));
+
+          // 標示等效 N / S 端
+          const badgeRight = createBadgeSprite(pol > 0 ? '等效 N' : '等效 S', pol > 0 ? '#ef4444' : '#2563eb', '#ffffff', 1.0);
+          badgeRight.position.set(SOLENOID_LEN / 2 + 0.55, SOLENOID_RADIUS + 0.35, 0);
+          modelGroup.add(badgeRight);
+
+          const badgeLeft = createBadgeSprite(pol > 0 ? '等效 S' : '等效 N', pol > 0 ? '#2563eb' : '#ef4444', '#ffffff', 1.0);
+          badgeLeft.position.set(-SOLENOID_LEN / 2 - 0.55, SOLENOID_RADIUS + 0.35, 0);
+          modelGroup.add(badgeLeft);
+        }
+      }
+
+      // 建立沿導線流動的 3D 電流動畫光點與立體箭頭
+      if (state.model !== 'magnet') {
+        buildCurrentFlowMeshes();
+      }
+      currentAnimGroup.visible = state.showCurrentFlow;
+    }
+
+    /**
+     * 在導線路徑上建立沿電流方向流動的立體圓錐箭頭與亮橘光點
+     */
+    function buildCurrentFlowMeshes() {
+      const coneGeo = new THREE.ConeGeometry(0.145, 0.34, 14);
+      const sphereGeo = new THREE.SphereGeometry(0.085, 12, 12);
+      const coneMat = new THREE.MeshStandardMaterial({
+        color: 0xf97316,
+        emissive: 0xea580c,
+        emissiveIntensity: 0.45,
+        roughness: 0.25,
+      });
+      const sphereMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
+
+      for (const pts of physicsData.currentPaths) {
+        if (pts.length < 2) continue;
+        const { cumLen, totalLen } = computeArcLengths(pts);
+        const count = state.model === 'solenoid'
+          ? Math.max(10, state.solenoidTurns * 2)
+          : (state.model === 'loop' ? 8 : 7);
+
+        for (let i = 0; i < count; i++) {
+          const isCone = (i % 2 === 0) || state.model === 'wire';
+          const mesh = new THREE.Mesh(isCone ? coneGeo : sphereGeo, isCone ? coneMat : sphereMat);
+          currentAnimGroup.add(mesh);
+          currentBeadItems.push({
+            mesh,
+            points: pts,
+            cumLen,
+            totalLen,
+            offset: i / count,
+            isCone,
+          });
+        }
+      }
+      updateCurrentBeadPositions(0);
+    }
+
+    /**
+     * 計算折線累積弧長表，用於等速沿線動畫插值
+     */
+    function computeArcLengths(points) {
+      const cumLen = new Float32Array(points.length);
+      let total = 0;
+      for (let i = 1; i < points.length; i++) {
+        total += points[i].distanceTo(points[i - 1]);
+        cumLen[i] = total;
+      }
+      return { cumLen, totalLen: total };
+    }
+
+    /**
+     * 在折線上依正規化參數 u ∈ [0, 1] 取得平滑位置與切線方向
+     */
+    function samplePolyline(points, cumLen, totalLen, u, outPos, outTan) {
+      const target = ((u % 1) + 1) % 1 * totalLen;
+      // 二分搜尋區間
+      let lo = 0, hi = cumLen.length - 1;
+      while (lo < hi - 1) {
+        const mid = (lo + hi) >> 1;
+        if (cumLen[mid] <= target) lo = mid;
+        else hi = mid;
+      }
+      const segLen = Math.max(1e-6, cumLen[hi] - cumLen[lo]);
+      const t = (target - cumLen[lo]) / segLen;
+      outPos.lerpVectors(points[lo], points[hi], t);
+      outTan.subVectors(points[hi], points[lo]).normalize();
+    }
+
+    /**
+     * 建構 3D 磁力線曲線與流動立體箭頭
+     */
+    function rebuild3DFieldLines() {
+      clearGroup(fieldLinesGroup);
+      fieldArrowItems = [];
+      fieldLineObjects = [];
+
+      const lines = generateModelFieldLines();
+
+      const externalLineMat = new THREE.LineBasicMaterial({
+        color: 0x0284c7,
+        transparent: true,
+        opacity: 0.78,
+      });
+      const internalLineMat = new THREE.LineBasicMaterial({
+        color: 0x0ea5e9,
+        transparent: true,
+        opacity: 0.92,
+      });
+
+      const arrowGeo = new THREE.ConeGeometry(0.088, 0.24, 10);
+      const arrowMat = new THREE.MeshStandardMaterial({
+        color: 0x0369a1,
+        emissive: 0x0284c7,
+        emissiveIntensity: 0.22,
+        roughness: 0.35,
+      });
+
+      const isInsideMagnet = (pt) => {
+        if (state.model !== 'magnet') return false;
+        return (
+          Math.abs(pt.x) < MAGNET_DIM.L * 0.5 + 0.02 &&
+          Math.abs(pt.y) < MAGNET_DIM.H * 0.5 + 0.02 &&
+          Math.abs(pt.z) < MAGNET_DIM.D * 0.5 + 0.02
+        );
+      };
+
+      for (const line of lines) {
+        const pts = line.points;
+        const { cumLen, totalLen } = computeArcLengths(pts);
+        if (totalLen < 0.4) continue;
+
+        if (state.model === 'magnet') {
+          // 將條形磁鐵的磁力線拆分為外部段與內部段，方便開關「顯示磁鐵內部磁力線」
+          let curPts = [];
+          let curInside = isInsideMagnet(pts[0]);
+
+          const flushSegment = () => {
+            if (curPts.length < 2) return;
+            const geo = new THREE.BufferGeometry().setFromPoints(curPts);
+            const obj = new THREE.Line(geo, curInside ? internalLineMat : externalLineMat);
+            obj.userData.isInternal = curInside;
+            obj.visible = curInside ? state.showInternalMagnetLines : true;
+            fieldLinesGroup.add(obj);
+            fieldLineObjects.push(obj);
+          };
+
+          for (let i = 0; i < pts.length; i++) {
+            const inside = isInsideMagnet(pts[i]);
+            if (inside !== curInside && curPts.length > 0) {
+              curPts.push(pts[i]);
+              flushSegment();
+              curPts = [pts[i]];
+              curInside = inside;
+            } else {
+              curPts.push(pts[i]);
+            }
+          }
+          flushSegment();
+        } else {
+          const geo = new THREE.BufferGeometry().setFromPoints(pts);
+          const obj = new THREE.Line(geo, externalLineMat);
+          fieldLinesGroup.add(obj);
+          fieldLineObjects.push(obj);
+        }
+
+        // 在每條磁力線上放置 2~3 個沿磁場方向滑行的立體圓錐箭頭
+        const numArrows = Math.max(1, Math.min(4, Math.floor(totalLen / 3.4)));
+        for (let k = 0; k < numArrows; k++) {
+          const cone = new THREE.Mesh(arrowGeo, arrowMat);
+          fieldLinesGroup.add(cone);
+          fieldArrowItems.push({
+            mesh: cone,
+            points: pts,
+            cumLen,
+            totalLen,
+            offset: (k + 0.35) / numArrows,
+          });
+        }
+      }
+
+      fieldLinesGroup.visible = state.showFieldLines;
+      updateFieldArrowPositions(0);
+    }
+
+    const _tmpPos = new THREE.Vector3();
+    const _tmpTan = new THREE.Vector3();
+    const _upAxis = new THREE.Vector3(0, 1, 0);
+
+    function updateFieldArrowPositions(phase) {
+      const checkInternal = (state.model === 'magnet' && !state.showInternalMagnetLines);
+      const halfL = MAGNET_DIM.L * 0.5 + 0.04;
+      const halfH = MAGNET_DIM.H * 0.5 + 0.04;
+      const halfD = MAGNET_DIM.D * 0.5 + 0.04;
+
+      for (const item of fieldArrowItems) {
+        const u = (item.offset + phase * 0.22) % 1;
+        samplePolyline(item.points, item.cumLen, item.totalLen, u, _tmpPos, _tmpTan);
+        item.mesh.position.copy(_tmpPos);
+        if (_tmpTan.lengthSq() > 1e-6) {
+          item.mesh.quaternion.setFromUnitVectors(_upAxis, _tmpTan);
+        }
+        if (checkInternal) {
+          const inside = Math.abs(_tmpPos.x) < halfL && Math.abs(_tmpPos.y) < halfH && Math.abs(_tmpPos.z) < halfD;
+          item.mesh.visible = !inside;
+        } else {
+          item.mesh.visible = true;
+        }
+      }
+    }
+
+    function updateCurrentBeadPositions(phase) {
+      const speed = state.model === 'solenoid' ? 0.14 : 0.28;
+      for (const item of currentBeadItems) {
+        const u = (item.offset + phase * speed) % 1;
+        samplePolyline(item.points, item.cumLen, item.totalLen, u, _tmpPos, _tmpTan);
+        item.mesh.position.copy(_tmpPos);
+        if (item.isCone && _tmpTan.lengthSq() > 1e-6) {
+          item.mesh.quaternion.setFromUnitVectors(_upAxis, _tmpTan);
+        }
+      }
+    }
+
+    /**
+     * 更新 3D 場景中的半透明翠綠色玻璃切面、格線、A/B 標記與觀察法向量箭頭
+     */
+    function rebuild3DSlicePlane() {
+      clearGroup(sliceGroup);
+      const { P0, u, v, n, halfU, halfV } = state.slice;
+
+      // 建立由 (u, v, n) 組成的旋轉基底矩陣
+      const basis = new THREE.Matrix4().makeBasis(u, v, n);
+      const quat = new THREE.Quaternion().setFromRotationMatrix(basis);
+
+      const planeRoot = new THREE.Group();
+      planeRoot.position.copy(P0);
+      planeRoot.quaternion.copy(quat);
+
+      const W = halfU * 2;
+      const H = halfV * 2;
+
+      // 半透明翠綠色玻璃面
+      const glassGeo = new THREE.PlaneGeometry(W, H);
+      const glassMat = new THREE.MeshPhysicalMaterial({
+        color: 0x10b981,
+        transparent: true,
+        opacity: 0.16,
+        roughness: 0.15,
+        metalness: 0.05,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+      });
+      const glassMesh = new THREE.Mesh(glassGeo, glassMat);
+      glassMesh.renderOrder = 5;
+      planeRoot.add(glassMesh);
+
+      // 翠綠色外框線
+      const borderPts = [
+        new THREE.Vector3(-halfU, -halfV, 0),
+        new THREE.Vector3( halfU, -halfV, 0),
+        new THREE.Vector3( halfU,  halfV, 0),
+        new THREE.Vector3(-halfU,  halfV, 0),
+        new THREE.Vector3(-halfU, -halfV, 0),
+      ];
+      const borderGeo = new THREE.BufferGeometry().setFromPoints(borderPts);
+      const borderLine = new THREE.Line(
+        borderGeo,
+        new THREE.LineBasicMaterial({ color: 0x059669, transparent: true, opacity: 0.92 })
+      );
+      planeRoot.add(borderLine);
+
+      // 切面內部輔助格線（每 1 單位一格）
+      const gridVerts = [];
+      for (let gx = -Math.floor(halfU); gx <= Math.floor(halfU); gx++) {
+        gridVerts.push(gx, -halfV, 0, gx, halfV, 0);
+      }
+      for (let gy = -Math.floor(halfV); gy <= Math.floor(halfV); gy++) {
+        gridVerts.push(-halfU, gy, 0, halfU, gy, 0);
+      }
+      const gridGeo = new THREE.BufferGeometry();
+      gridGeo.setAttribute('position', new THREE.Float32BufferAttribute(gridVerts, 3));
+      const gridLines = new THREE.LineSegments(
+        gridGeo,
+        new THREE.LineBasicMaterial({ color: 0x10b981, transparent: true, opacity: 0.26 })
+      );
+      planeRoot.add(gridLines);
+
+      // A → B 中央參考軸線（與使用者畫線對應）
+      const abGeo = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(-halfU, 0, 0.004),
+        new THREE.Vector3( halfU, 0, 0.004),
+      ]);
+      const abLine = new THREE.Line(
+        abGeo,
+        new THREE.LineBasicMaterial({ color: 0x047857, transparent: true, opacity: 0.78 })
+      );
+      planeRoot.add(abLine);
+
+      // 端點 A 與 B 的 3D 標籤
+      const spriteA = createBadgeSprite('A', '#047857', '#ffffff', 0.56);
+      spriteA.position.set(-halfU - 0.12, 0, 0.02);
+      const spriteB = createBadgeSprite('B', '#047857', '#ffffff', 0.56);
+      spriteB.position.set(halfU + 0.12, 0, 0.02);
+      planeRoot.add(spriteA, spriteB);
+
+      // 3D 法向量箭頭（指向 +n，代表 2D 觀察者「穿出紙面」的方向）
+      const arrowLen = 1.18;
+      const shaftGeo = new THREE.CylinderGeometry(0.036, 0.036, arrowLen * 0.72, 12);
+      shaftGeo.rotateX(Math.PI / 2); // 沿 +Z（即局部法向量 +n）
+      const shaftMat = new THREE.MeshStandardMaterial({
+        color: 0x059669,
+        emissive: 0x047857,
+        emissiveIntensity: 0.25,
+        roughness: 0.3,
+      });
+      const shaftMesh = new THREE.Mesh(shaftGeo, shaftMat);
+      shaftMesh.position.set(0, halfV * 0.62, arrowLen * 0.36);
+
+      const headGeo = new THREE.ConeGeometry(0.11, arrowLen * 0.32, 14);
+      headGeo.rotateX(Math.PI / 2);
+      const headMesh = new THREE.Mesh(headGeo, shaftMat);
+      headMesh.position.set(0, halfV * 0.62, arrowLen * 0.84);
+
+      planeRoot.add(shaftMesh, headMesh);
+
+      const viewSprite = createBadgeSprite('2D 視角', '#0f766e', '#ffffff', 1.15);
+      viewSprite.position.set(0, halfV * 0.62 + 0.12, arrowLen + 0.28);
+      planeRoot.add(viewSprite);
+
+      sliceGroup.add(planeRoot);
+      sliceGroup.visible = state.showSlicePlane;
+
+      cache2D.dirty = true;
+      updateSliceLabelUI();
+    }
+
+    /**
+     * 繪製左下角同步 3D 座標軸指示器 (X紅 / Y綠 / Z藍)
+     */
+    const triadCanvas = document.getElementById('axis-triad-canvas');
+    const triadCtx = triadCanvas.getContext('2d');
+    const _triadQuat = new THREE.Quaternion();
+    const _axesList = [
+      { vec: new THREE.Vector3(1, 0, 0), label: 'X', color: '#ef4444' },
+      { vec: new THREE.Vector3(0, 1, 0), label: 'Y', color: '#10b981' },
+      { vec: new THREE.Vector3(0, 0, 1), label: 'Z', color: '#2563eb' },
+    ];
+
+    function renderAxisTriad() {
+      if (!camera) return;
+      const w = triadCanvas.width;
+      const h = triadCanvas.height;
+      const cx = w / 2, cy = h / 2, r = 24;
+
+      triadCtx.clearRect(0, 0, w, h);
+      _triadQuat.copy(camera.quaternion).invert();
+
+      const projected = _axesList.map(ax => {
+        const v = ax.vec.clone().applyQuaternion(_triadQuat);
+        return { ...ax, x: v.x, y: v.y, z: v.z };
+      });
+      // 依深度排序（遠到近）
+      projected.sort((a, b) => a.z - b.z);
+
+      for (const p of projected) {
+        const ex = cx + p.x * r;
+        const ey = cy - p.y * r;
+        triadCtx.beginPath();
+        triadCtx.moveTo(cx, cy);
+        triadCtx.lineTo(ex, ey);
+        triadCtx.strokeStyle = p.color;
+        triadCtx.lineWidth = 2.4;
+        triadCtx.lineCap = 'round';
+        triadCtx.stroke();
+
+        triadCtx.fillStyle = p.color;
+        triadCtx.font = '800 11px Inter, sans-serif';
+        triadCtx.textAlign = 'center';
+        triadCtx.textBaseline = 'middle';
+        triadCtx.fillText(p.label, cx + p.x * (r + 9), cy - p.y * (r + 9));
+      }
+
+      triadCtx.beginPath();
+      triadCtx.arc(cx, cy, 3, 0, Math.PI * 2);
+      triadCtx.fillStyle = '#334155';
+      triadCtx.fill();
+    }
+
+    // =========================================================================
+    // 4. 自由畫線建立 3D 橫切面 & 預設切面邏輯
+    // =========================================================================
+    const sliceDrawSvg = document.getElementById('slice-draw-svg');
+    const threeContainer = document.getElementById('three-container');
+
+    let isDrawingSlice = false;
+    let drawStart = { x: 0, y: 0 };
+    let drawEnd = { x: 0, y: 0 };
+    let shiftPressed = false;
+
+    function updateInteractionModeUI() {
+      const isSliceMode = state.interactionMode === 'slice';
+      const btnOrbit = document.getElementById('mode-orbit');
+      const btnSlice = document.getElementById('mode-slice');
+      const hintText = document.getElementById('mode-hint-text');
+
+      if (isSliceMode) {
+        btnSlice.className = 'mode-btn flex items-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all bg-emerald-600 text-white shadow-sm';
+        btnOrbit.className = 'mode-btn flex items-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all text-slate-600 hover:bg-slate-100';
+        hintText.textContent = '在 3D 畫面上直接拖曳畫出一條線 (A → B) 建立橫切面';
+        threeContainer.classList.add('cursor-crosshair-slice');
+        if (controls) controls.enabled = false;
+      } else {
+        btnOrbit.className = 'mode-btn flex items-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all bg-sky-600 text-white shadow-sm';
+        btnSlice.className = 'mode-btn flex items-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all text-slate-600 hover:bg-slate-100';
+        hintText.textContent = '拖曳旋轉・滾輪縮放・按住 Shift 拖曳可直接畫線切面';
+        threeContainer.classList.remove('cursor-crosshair-slice');
+        if (controls) controls.enabled = !shiftPressed;
+      }
+    }
+
+    /**
+     * 在 SVG 疊加層即時繪製畫線預覽 (虛線與自動定位之端點 A → B)
+     */
+    function renderDrawPreviewSVG() {
+      if (!isDrawingSlice) {
+        sliceDrawSvg.innerHTML = '';
+        return;
+      }
+      let ax = drawStart.x, ay = drawStart.y;
+      let bx = drawEnd.x, by = drawEnd.y;
+
+      // 依相同規則決定預覽時 A 與 B 的位置（A 固定於左或上方）
+      const dx = bx - ax;
+      if (Math.abs(dx) > 10) {
+        if (bx < ax) { [ax, bx] = [bx, ax]; [ay, by] = [by, ay]; }
+      } else {
+        if (by < ay) { [ax, bx] = [bx, ax]; [ay, by] = [by, ay]; }
+      }
+
+      sliceDrawSvg.innerHTML = `
+        <line x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}" stroke="#ffffff" stroke-width="6" stroke-linecap="round" opacity="0.85" />
+        <line x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}" stroke="#059669" stroke-width="3.2" stroke-dasharray="9 6" stroke-linecap="round" />
+        <g transform="translate(${ax},${ay})">
+          <circle r="13" fill="#059669" stroke="#ffffff" stroke-width="2.5" />
+          <text text-anchor="middle" dy="4.5" fill="#ffffff" font-size="13" font-weight="800">A</text>
+        </g>
+        <g transform="translate(${bx},${by})">
+          <circle r="13" fill="#059669" stroke="#ffffff" stroke-width="2.5" />
+          <text text-anchor="middle" dy="4.5" fill="#ffffff" font-size="13" font-weight="800">B</text>
+        </g>
+      `;
+    }
+
+    /**
+     * 將螢幕起點 (x1, y1) 與終點 (x2, y2) 投影至垂直相機視線的焦平面，建立嚴格右手定則橫切面
+     */
+    function createSliceFromScreenLine(x1, y1, x2, y2) {
+      const rect = threeContainer.getBoundingClientRect();
+      if (rect.width < 10 || rect.height < 10) return;
+
+      // 轉為 NDC (-1 ~ +1，上方為 +Y)
+      let ndcX1 = (x1 / rect.width) * 2 - 1;
+      let ndcY1 = -(y1 / rect.height) * 2 + 1;
+      let ndcX2 = (x2 / rect.width) * 2 - 1;
+      let ndcY2 = -(y2 / rect.height) * 2 + 1;
+
+      // 自動交換規則：確保 A 在左側（若近乎垂直則 A 在上方，即較大的 ndcY）
+      if (Math.abs(ndcX2 - ndcX1) > 0.04) {
+        if (ndcX2 < ndcX1) {
+          [ndcX1, ndcX2] = [ndcX2, ndcX1];
+          [ndcY1, ndcY2] = [ndcY2, ndcY1];
+        }
+      } else {
+        if (ndcY2 > ndcY1) {
+          [ndcX1, ndcX2] = [ndcX2, ndcX1];
+          [ndcY1, ndcY2] = [ndcY2, ndcY1];
+        }
+      }
+
+      // 焦平面：通過 OrbitControls.target 且法向量為相機前向單位向量
+      const camForward = new THREE.Vector3();
+      camera.getWorldDirection(camForward).normalize();
+      const focalPlane = new THREE.Plane().setFromNormalAndCoplanarPoint(camForward, controls.target);
+
+      const raycaster = new THREE.Raycaster();
+      const P1 = new THREE.Vector3();
+      const P2 = new THREE.Vector3();
+
+      raycaster.setFromCamera(new THREE.Vector2(ndcX1, ndcY1), camera);
+      const hit1 = raycaster.ray.intersectPlane(focalPlane, P1);
+      raycaster.setFromCamera(new THREE.Vector2(ndcX2, ndcY2), camera);
+      const hit2 = raycaster.ray.intersectPlane(focalPlane, P2);
+
+      if (!hit1 || !hit2) return;
+      const dist = P1.distanceTo(P2);
+      if (dist < 0.15) return;
+
+      // 嚴謹右手基底定義：
+      // u = normalize(P2 - P1)  (2D 水平向右 A → B)
+      // v = camForward          (2D 垂直向上，指向螢幕內部)
+      // n = u × v               (2D 穿出紙面、朝向觀察者方向)
+      const P0 = new THREE.Vector3().addVectors(P1, P2).multiplyScalar(0.5);
+      const u = new THREE.Vector3().subVectors(P2, P1).normalize();
+      const v = camForward.clone().normalize();
+      const n = new THREE.Vector3().crossVectors(u, v).normalize();
+
+      // 確保完全正交歸一化
+      state.slice.P0.copy(P0);
+      state.slice.u.copy(u);
+      state.slice.v.copy(v);
+      state.slice.n.copy(n);
+      state.slice.halfU = Math.max(2.8, Math.min(4.4, dist * 0.62));
+      state.slice.halfV = 2.5;
+      state.slice.label = '自訂畫線切面 (A → B)';
+
+      if (!state.showSlicePlane) {
+        state.showSlicePlane = true;
+        document.getElementById('chk-sliceplane').checked = true;
+      }
+
+      rebuild3DSlicePlane();
+      render2D();
+      showToast('✂️ 已建立新的 3D 橫切面，下方 2D 視圖已同步更新');
+    }
+
+    /**
+     * 套用經典教學預設切面
+     */
+    function applyPresetSlice(preset, silent = false) {
+      state.slice.P0.set(0, 0, 0);
+      state.slice.halfU = 3.6;
+      state.slice.halfV = 2.5;
+
+      if (preset === 'xz') {
+        // 水平橫切 XZ：u = +X, v = -Z, n = u × v = +Y (從正上方俯視)
+        state.slice.u.set(1, 0, 0);
+        state.slice.v.set(0, 0, -1);
+        state.slice.n.set(0, 1, 0);
+        state.slice.label = '水平橫切 (XZ 平面・俯視)';
+      } else if (preset === 'xy') {
+        // 正面縱切 XY：u = +X, v = +Y, n = u × v = +Z (從正面觀看)
+        state.slice.u.set(1, 0, 0);
+        state.slice.v.set(0, 1, 0);
+        state.slice.n.set(0, 0, 1);
+        state.slice.label = '正面縱切 (XY 平面)';
+      } else if (preset === 'yz') {
+        // 側面切面 YZ：u = -Z, v = +Y, n = u × v = +X (從右側 +X 觀看)
+        state.slice.u.set(0, 0, -1);
+        state.slice.v.set(0, 1, 0);
+        state.slice.n.set(1, 0, 0);
+        state.slice.label = '側面切面 (YZ 平面)';
+      }
+
+      rebuild3DSlicePlane();
+      render2D();
+      if (!silent) showToast(`已切換至 ${state.slice.label}`);
+    }
+
+    /**
+     * 翻轉 2D 觀察視角：將 u 與 n 同時反向，從切面另一側觀看
+     */
+    function flip2DSliceView() {
+      state.slice.u.negate();
+      state.slice.n.negate();
+      if (state.slice.label.includes('（已翻轉）')) {
+        state.slice.label = state.slice.label.replace('（已翻轉）', '');
+      } else {
+        state.slice.label += '（已翻轉）';
+      }
+      rebuild3DSlicePlane();
+      render2D();
+      showToast('⇄ 已翻轉 2D 觀察視角（從切面另一側觀看）');
+    }
+
+    function updateSliceLabelUI() {
+      document.getElementById('lbl-slice-info').textContent = state.slice.label;
+    }
+
+    // 綁定 3D 容器滑鼠與觸控畫線事件
+    function bindSliceDrawingEvents() {
+      threeContainer.addEventListener('pointerdown', (e) => {
+        const shouldDraw = (state.interactionMode === 'slice') || (e.shiftKey && e.button === 0);
+        if (!shouldDraw) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+        if (controls) controls.enabled = false;
+
+        const rect = threeContainer.getBoundingClientRect();
+        isDrawingSlice = true;
+        drawStart.x = e.clientX - rect.left;
+        drawStart.y = e.clientY - rect.top;
+        drawEnd.x = drawStart.x;
+        drawEnd.y = drawStart.y;
+        threeContainer.setPointerCapture(e.pointerId);
+        renderDrawPreviewSVG();
+      });
+
+      threeContainer.addEventListener('pointermove', (e) => {
+        if (!isDrawingSlice) return;
+        e.preventDefault();
+        const rect = threeContainer.getBoundingClientRect();
+        drawEnd.x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+        drawEnd.y = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
+        renderDrawPreviewSVG();
+      });
+
+      const finishDraw = (e) => {
+        if (!isDrawingSlice) return;
+        isDrawingSlice = false;
+        sliceDrawSvg.innerHTML = '';
+
+        const distPx = Math.hypot(drawEnd.x - drawStart.x, drawEnd.y - drawStart.y);
+        if (distPx >= 18) {
+          createSliceFromScreenLine(drawStart.x, drawStart.y, drawEnd.x, drawEnd.y);
+        }
+        if (controls && state.interactionMode === 'orbit') {
+          controls.enabled = !shiftPressed;
+        }
+      };
+
+      threeContainer.addEventListener('pointerup', finishDraw);
+      threeContainer.addEventListener('pointercancel', finishDraw);
+
+      // 旋轉模式下按住 Shift 快捷畫線
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Shift' && !shiftPressed) {
+          shiftPressed = true;
+          if (state.interactionMode === 'orbit') {
+            threeContainer.classList.add('cursor-crosshair-slice');
+            if (controls) controls.enabled = false;
+          }
+        }
+      });
+      window.addEventListener('keyup', (e) => {
+        if (e.key === 'Shift') {
+          shiftPressed = false;
+          if (state.interactionMode === 'orbit' && !isDrawingSlice) {
+            threeContainer.classList.remove('cursor-crosshair-slice');
+            if (controls) controls.enabled = true;
+          }
+        }
+      });
+    }
+
+    // =========================================================================
+    // 5. 2D 橫切面畫布計算與高清晰繪圖引擎
+    // =========================================================================
+    const canvas2DWrap = document.getElementById('canvas-2d-wrap');
+    const canvas2D = document.getElementById('canvas-2d');
+    const ctx2D = canvas2D.getContext('2d');
+
+    const _evalB2D = { x: 0, y: 0, z: 0 };
+
+    /**
+     * 給定 2D 切面座標 (u, v)，透過 Biot-Savart 計算並投影為 (bu, bv, bPerp)
+     */
+    function evalFieldOnSlice(uVal, vVal) {
+      const { P0, u, v, n } = state.slice;
+      const rx = P0.x + uVal * u.x + vVal * v.x;
+      const ry = P0.y + uVal * u.y + vVal * v.y;
+      const rz = P0.z + uVal * u.z + vVal * v.z;
+
+      evalMagneticField(rx, ry, rz, _evalB2D);
+      const bu = _evalB2D.x * u.x + _evalB2D.y * u.y + _evalB2D.z * u.z;
+      const bv = _evalB2D.x * v.x + _evalB2D.y * v.y + _evalB2D.z * v.z;
+      const bPerp = _evalB2D.x * n.x + _evalB2D.y * n.y + _evalB2D.z * n.z;
+      const bPar = Math.hypot(bu, bv);
+      const bMag = Math.hypot(bPar, bPerp);
+      return { bu, bv, bPerp, bPar, bMag };
+    }
+
+    /**
+     * 重算 2D 切面的所有幾何交集（導線穿入/穿出、平躺導線、磁鐵截面多邊形）、場強網格與 2D 流線
+     */
+    function recompute2DCache(width, height) {
+      const { P0, u, v, n, halfU, halfV } = state.slice;
+
+      // 計算等比例縮放，確保整個 3D 玻璃切面完整容納於 2D 畫布中
+      const padX = 34;
+      const padY = 26;
+      const scale = Math.max(
+        22,
+        Math.min((width - padX * 2) / (halfU * 2), (height - padY * 2) / (halfV * 2))
+      );
+      const cx = width * 0.5;
+      const cy = height * 0.5;
+
+      cache2D.width = width;
+      cache2D.height = height;
+      cache2D.scale = scale;
+      cache2D.cx = cx;
+      cache2D.cy = cy;
+
+      // 畫布實際覆蓋的 (u, v) 範圍
+      const spanU = (width * 0.5 - 14) / scale;
+      const spanV = (height * 0.5 - 14) / scale;
+
+      // 1. 計算被切割物體的 2D 截面
+      cache2D.piercingWires = [];
+      cache2D.inPlaneWires = [];
+      cache2D.magnetPolys = [];
+
+      if (state.model === 'magnet') {
+        // 計算 N 極與 S 極兩個 3D 長方體與切面的精確交集凸多邊形
+        const halfL = MAGNET_DIM.L / 2;
+        const halfH = MAGNET_DIM.H / 2;
+        const halfD = MAGNET_DIM.D / 2;
+        const rightIsN = state.polarity > 0;
+
+        const polyRight = intersectBoxWithPlane(0, halfL, -halfH, halfH, -halfD, halfD, P0, u, v, n);
+        if (polyRight) {
+          cache2D.magnetPolys.push({ pole: rightIsN ? 'N' : 'S', ...polyRight });
+        }
+        const polyLeft = intersectBoxWithPlane(-halfL, 0, -halfH, halfH, -halfD, halfD, P0, u, v, n);
+        if (polyLeft) {
+          cache2D.magnetPolys.push({ pole: rightIsN ? 'S' : 'N', ...polyLeft });
+        }
+      } else {
+        // 導線模型：區分「平躺於切面內」與「垂直/斜向穿過切面」
+        const inPlaneTol = 0.14;
+        const relA = new THREE.Vector3();
+        const relB = new THREE.Vector3();
+        const dl = new THREE.Vector3();
+        const hitPt = new THREE.Vector3();
+
+        for (const seg of physicsData.realWireSegments) {
+          relA.subVectors(seg.a, P0);
+          relB.subVectors(seg.b, P0);
+          const da = relA.dot(n);
+          const db = relB.dot(n);
+
+          if (Math.abs(da) <= inPlaneTol && Math.abs(db) <= inPlaneTol) {
+            // 導線段平躺於切面內
+            cache2D.inPlaneWires.push({
+              ua: relA.dot(u),
+              va: relA.dot(v),
+              ub: relB.dot(u),
+              vb: relB.dot(v),
+            });
+          } else if ((da < 0 && db >= 0) || (da >= 0 && db < 0)) {
+            const denom = db - da;
+            if (Math.abs(denom) > 1e-6) {
+              const t = -da / denom;
+              hitPt.lerpVectors(seg.a, seg.b, t);
+              const relHit = hitPt.sub(P0);
+              const hu = relHit.dot(u);
+              const hv = relHit.dot(v);
+
+              // 去重（避免相鄰微段在切面邊緣重複標記）
+              let dup = false;
+              for (const prev of cache2D.piercingWires) {
+                if (Math.hypot(prev.u - hu, prev.v - hv) < 0.12) {
+                  dup = true;
+                  break;
+                }
+              }
+              if (!dup) {
+                dl.subVectors(seg.b, seg.a);
+                const dotIN = dl.dot(n);
+                cache2D.piercingWires.push({ u: hu, v: hv, dotIN });
+              }
+            }
+          }
+        }
+      }
+
+      // 2. 計算 2D 均勻網格上的磁場分量
+      const spacingPx = Math.max(30, Math.min(44, Math.min(width, height) / 7.5));
+      const cols = Math.max(7, Math.floor((width - 36) / spacingPx));
+      const rows = Math.max(5, Math.floor((height - 28) / spacingPx));
+
+      const gridPts = [];
+      let maxPerp = 0;
+
+      for (let r = 0; r < rows; r++) {
+        const py = (height - (rows - 1) * spacingPx) * 0.5 + r * spacingPx;
+        const vVal = -(py - cy) / scale; // Canvas Y 向下，故 v 向上需反轉正負號
+        for (let c = 0; c < cols; c++) {
+          const px = (width - (cols - 1) * spacingPx) * 0.5 + c * spacingPx;
+          const uVal = (px - cx) / scale;
+
+          // 略過太靠近穿過導線中心的網格點，避免箭頭與銅線符號重疊
+          let nearWire = false;
+          for (const pw of cache2D.piercingWires) {
+            if (Math.hypot(pw.u - uVal, pw.v - vVal) < 0.24) {
+              nearWire = true;
+              break;
+            }
+          }
+          if (nearWire) continue;
+
+          const f = evalFieldOnSlice(uVal, vVal);
+          if (Math.abs(f.bPerp) > maxPerp) maxPerp = Math.abs(f.bPerp);
+          gridPts.push({ px, py, u: uVal, v: vVal, ...f });
+        }
+      }
+      cache2D.gridPoints = gridPts;
+      cache2D.maxPerp = maxPerp;
+
+      // 3. 計算平滑 2D 磁場流線（使用空間佔用格避免流線重疊打結）
+      cache2D.streamlines = compute2DStreamlines(width, height, cx, cy, scale, spanU, spanV);
+      cache2D.dirty = false;
+    }
+
+    /**
+     * 追蹤平滑、均勻分佈的 2D 磁場流線（RK2 積分 + 佔用網格間距控制）
+     */
+    function compute2DStreamlines(width, height, cx, cy, scale, spanU, spanV) {
+      const cellPx = 22;
+      const gW = Math.ceil(width / cellPx) + 2;
+      const gH = Math.ceil(height / cellPx) + 2;
+      const occupied = new Uint8Array(gW * gH);
+
+      const markCell = (px, py) => {
+        const gx = Math.floor(px / cellPx);
+        const gy = Math.floor(py / cellPx);
+        if (gx >= 0 && gx < gW && gy >= 0 && gy < gH) {
+          occupied[gy * gW + gx] = 1;
+        }
+      };
+      const isOccupied = (px, py) => {
+        const gx = Math.floor(px / cellPx);
+        const gy = Math.floor(py / cellPx);
+        if (gx < 0 || gx >= gW || gy < 0 || gy >= gH) return true;
+        return occupied[gy * gW + gx] === 1;
+      };
+
+      const lines = [];
+      const ds = 0.085;
+      const maxSteps = 95;
+      const minInPlaneRatio = 0.08;
+
+      // 在切面內產生均勻候選種子點（優先靠近中心與中圈）
+      const seedStepPx = 42;
+      const seeds = [];
+      for (let py = 28; py < height - 28; py += seedStepPx) {
+        for (let px = 28; px < width - 28; px += seedStepPx) {
+          const distCenter = Math.hypot(px - cx, py - cy);
+          seeds.push({ px, py, distCenter });
+        }
+      }
+      seeds.sort((a, b) => a.distCenter - b.distCenter);
+
+      const traceDir = (startU, startV, sign, selfPoints) => {
+        const pts = [];
+        let cu = startU, cv = startV;
+        for (let s = 0; s < maxSteps; s++) {
+          const f1 = evalFieldOnSlice(cu, cv);
+          if (f1.bPar < 1e-4 || (f1.bMag > 1e-5 && f1.bPar / f1.bMag < minInPlaneRatio)) break;
+          const k1u = (f1.bu / f1.bPar) * sign;
+          const k1v = (f1.bv / f1.bPar) * sign;
+
+          const midU = cu + k1u * ds * 0.5;
+          const midV = cv + k1v * ds * 0.5;
+          const f2 = evalFieldOnSlice(midU, midV);
+          if (f2.bPar < 1e-4) break;
+          const k2u = (f2.bu / f2.bPar) * sign;
+          const k2v = (f2.bv / f2.bPar) * sign;
+
+          cu += k2u * ds;
+          cv += k2v * ds;
+
+          if (Math.abs(cu) > spanU + 0.15 || Math.abs(cv) > spanV + 0.15) break;
+
+          // 若太靠近導線中心則中止
+          let hitWire = false;
+          for (const pw of cache2D.piercingWires) {
+            if (Math.hypot(pw.u - cu, pw.v - cv) < 0.16) { hitWire = true; break; }
+          }
+          if (hitWire) break;
+
+          const px = cx + cu * scale;
+          const py = cy - cv * scale;
+
+          // 檢查是否閉合回到自身起點
+          if (s > 10 && Math.hypot(cu - startU, cv - startV) < ds * 1.4) {
+            pts.push({ px: cx + startU * scale, py: cy - startV * scale });
+            break;
+          }
+
+          // 若進入其他已存在的流線太近處（每隔幾步檢查），提早結束以保持畫面清爽
+          if (s > 4 && s % 3 === 0 && isOccupied(px, py)) {
+            break;
+          }
+          pts.push({ px, py });
+        }
+        return pts;
+      };
+
+      for (const sd of seeds) {
+        if (isOccupied(sd.px, sd.py)) continue;
+        const u0 = (sd.px - cx) / scale;
+        const v0 = -(sd.py - cy) / scale;
+
+        const f0 = evalFieldOnSlice(u0, v0);
+        if (f0.bPar < 1e-4 || (f0.bMag > 1e-5 && f0.bPar / f0.bMag < minInPlaneRatio)) continue;
+
+        const fwd = traceDir(u0, v0, 1);
+        const bwd = traceDir(u0, v0, -1);
+        bwd.reverse();
+
+        const full = bwd.concat([{ px: sd.px, py: sd.py }], fwd);
+        if (full.length >= 7) {
+          for (const pt of full) markCell(pt.px, pt.py);
+          lines.push(full);
+        }
+      }
+      return lines;
+    }
+
+    /**
+     * 軟飽和正規化函式：讓 1/r 與 1/r^3 磁場在近場與遠場都有清晰可辨的視覺大小
+     */
+    function normalizeStrength(val, refScale) {
+      const x = Math.abs(val) / (refScale * 0.22);
+      return x / (x + 1.0);
+    }
+
+    /**
+     * 繪製單一高對比箭頭
+     */
+    function drawArrow(ctx, x1, y1, x2, y2, headLen, color, lineWidth = 2) {
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const angle = Math.atan2(dy, dx);
+
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.lineWidth = lineWidth;
+      ctx.lineCap = 'round';
+
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(x2, y2);
+      ctx.lineTo(x2 - headLen * Math.cos(angle - Math.PI / 6), y2 - headLen * Math.sin(angle - Math.PI / 6));
+      ctx.lineTo(x2 - headLen * Math.cos(angle + Math.PI / 6), y2 - headLen * Math.sin(angle + Math.PI / 6));
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    /**
+     * 主 2D 橫切面渲染函式
+     */
+    function render2D() {
+      const rect = canvas2DWrap.getBoundingClientRect();
+      const width = Math.floor(rect.width);
+      const height = Math.floor(rect.height);
+      if (width < 20 || height < 20) return;
+
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      if (canvas2D.width !== Math.floor(width * dpr) || canvas2D.height !== Math.floor(height * dpr)) {
+        canvas2D.width = Math.floor(width * dpr);
+        canvas2D.height = Math.floor(height * dpr);
+        cache2D.dirty = true;
+      }
+
+      if (cache2D.dirty || cache2D.width !== width || cache2D.height !== height) {
+        recompute2DCache(width, height);
+      }
+
+      ctx2D.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx2D.clearRect(0, 0, width, height);
+
+      const { cx, cy, scale } = cache2D;
+      const { halfU, halfV } = state.slice;
+      const bRef = physicsData.bScale;
+
+      // 1. 實驗室背景微格線與對應 3D 玻璃切面的翠綠邊框
+      ctx2D.strokeStyle = '#eef2f7';
+      ctx2D.lineWidth = 1;
+      const stepPx = scale; // 1 物理單位一格
+      for (let gx = cx % stepPx; gx < width; gx += stepPx) {
+        ctx2D.beginPath(); ctx2D.moveTo(gx, 0); ctx2D.lineTo(gx, height); ctx2D.stroke();
+      }
+      for (let gy = cy % stepPx; gy < height; gy += stepPx) {
+        ctx2D.beginPath(); ctx2D.moveTo(0, gy); ctx2D.lineTo(width, gy); ctx2D.stroke();
+      }
+
+      // 3D 玻璃切面範圍框線
+      const boxX = cx - halfU * scale;
+      const boxY = cy - halfV * scale;
+      const boxW = halfU * 2 * scale;
+      const boxH = halfV * 2 * scale;
+      ctx2D.save();
+      ctx2D.strokeStyle = 'rgba(16, 185, 129, 0.38)';
+      ctx2D.lineWidth = 1.8;
+      ctx2D.setLineDash([6, 4]);
+      ctx2D.strokeRect(boxX, boxY, boxW, boxH);
+      ctx2D.restore();
+
+      // A ──────── B 水平參考基準線
+      ctx2D.save();
+      ctx2D.strokeStyle = 'rgba(16, 185, 129, 0.25)';
+      ctx2D.lineWidth = 1.5;
+      ctx2D.beginPath();
+      ctx2D.moveTo(Math.max(24, boxX), cy);
+      ctx2D.lineTo(Math.min(width - 24, boxX + boxW), cy);
+      ctx2D.stroke();
+      ctx2D.restore();
+
+      // 2. 2D 磁場流線（當處於「箭頭」或「綜合」模式且勾選流線時）
+      if (state.show2DStreamlines && (state.mode2D === 'arrows' || state.mode2D === 'both')) {
+        ctx2D.save();
+        ctx2D.strokeStyle = 'rgba(2, 132, 199, 0.28)';
+        ctx2D.fillStyle = 'rgba(2, 132, 199, 0.55)';
+        ctx2D.lineWidth = 1.6;
+        ctx2D.lineJoin = 'round';
+        ctx2D.lineCap = 'round';
+
+        for (const pts of cache2D.streamlines) {
+          ctx2D.beginPath();
+          ctx2D.moveTo(pts[0].px, pts[0].py);
+          for (let i = 1; i < pts.length; i++) {
+            ctx2D.lineTo(pts[i].px, pts[i].py);
+          }
+          ctx2D.stroke();
+
+          // 流線中段畫一個小方向箭頭
+          const midIdx = Math.floor(pts.length * 0.5);
+          if (midIdx > 0 && midIdx < pts.length - 1) {
+            const p0 = pts[midIdx - 1];
+            const p1 = pts[midIdx + 1];
+            const ang = Math.atan2(p1.py - p0.py, p1.px - p0.px);
+            const mx = pts[midIdx].px;
+            const my = pts[midIdx].py;
+            ctx2D.beginPath();
+            ctx2D.moveTo(mx + Math.cos(ang) * 4.5, my + Math.sin(ang) * 4.5);
+            ctx2D.lineTo(mx + Math.cos(ang + 2.45) * 4.5, my + Math.sin(ang + 2.45) * 4.5);
+            ctx2D.lineTo(mx + Math.cos(ang - 2.45) * 4.5, my + Math.sin(ang - 2.45) * 4.5);
+            ctx2D.closePath();
+            ctx2D.fill();
+          }
+        }
+        ctx2D.restore();
+      }
+
+      // 3. 繪製條形磁鐵 2D 精確交集多邊形 (紅 N / 藍 S)
+      for (const poly of cache2D.magnetPolys) {
+        const isN = poly.pole === 'N';
+        ctx2D.save();
+        ctx2D.beginPath();
+        poly.pts.forEach((pt, idx) => {
+          const px = cx + pt.u * scale;
+          const py = cy - pt.v * scale;
+          if (idx === 0) ctx2D.moveTo(px, py);
+          else ctx2D.lineTo(px, py);
+        });
+        ctx2D.closePath();
+
+        ctx2D.fillStyle = isN ? 'rgba(239, 68, 68, 0.22)' : 'rgba(37, 99, 235, 0.22)';
+        ctx2D.fill();
+        ctx2D.strokeStyle = isN ? '#dc2626' : '#2563eb';
+        ctx2D.lineWidth = 2.6;
+        ctx2D.stroke();
+
+        // 若截面夠大，在質心標示 N / S
+        if (poly.area * scale * scale > 360) {
+          const tx = cx + poly.cu * scale;
+          const ty = cy - poly.cv * scale;
+          ctx2D.fillStyle = isN ? '#b91c1c' : '#1d4ed8';
+          ctx2D.font = '800 20px "Noto Sans TC", Inter, sans-serif';
+          ctx2D.textAlign = 'center';
+          ctx2D.textBaseline = 'middle';
+          ctx2D.fillText(poly.pole, tx, ty);
+        }
+        ctx2D.restore();
+      }
+
+      // 4. 繪製平躺於切面內的導線段與橘色電流箭頭 (I →)
+      if (cache2D.inPlaneWires.length > 0) {
+        ctx2D.save();
+        ctx2D.strokeStyle = '#d97706';
+        ctx2D.lineWidth = 8;
+        ctx2D.lineCap = 'round';
+        for (const seg of cache2D.inPlaneWires) {
+          const x1 = cx + seg.ua * scale, y1 = cy - seg.va * scale;
+          const x2 = cx + seg.ub * scale, y2 = cy - seg.vb * scale;
+          ctx2D.beginPath();
+          ctx2D.moveTo(x1, y1);
+          ctx2D.lineTo(x2, y2);
+          ctx2D.stroke();
+        }
+        // 高亮內芯
+        ctx2D.strokeStyle = '#fbbf24';
+        ctx2D.lineWidth = 3;
+        for (const seg of cache2D.inPlaneWires) {
+          const x1 = cx + seg.ua * scale, y1 = cy - seg.va * scale;
+          const x2 = cx + seg.ub * scale, y2 = cy - seg.vb * scale;
+          ctx2D.beginPath();
+          ctx2D.moveTo(x1, y1);
+          ctx2D.lineTo(x2, y2);
+          ctx2D.stroke();
+        }
+
+        // 每隔一定距離在平躺導線上繪製清晰的橘色電流箭頭
+        let accDist = 18;
+        for (const seg of cache2D.inPlaneWires) {
+          const x1 = cx + seg.ua * scale, y1 = cy - seg.va * scale;
+          const x2 = cx + seg.ub * scale, y2 = cy - seg.vb * scale;
+          const d = Math.hypot(x2 - x1, y2 - y1);
+          accDist += d;
+          if (accDist >= 48 && d > 2) {
+            accDist = 0;
+            const mx = (x1 + x2) * 0.5;
+            const my = (y1 + y2) * 0.5;
+            const ux = (x2 - x1) / d;
+            const uy = (y2 - y1) / d;
+            drawArrow(ctx2D, mx - ux * 11, my - uy * 11, mx + ux * 13, my + uy * 13, 8, '#c2410c', 3);
+          }
+        }
+        ctx2D.restore();
+      }
+
+      // 5. 繪製 2D 網格磁場向量（穿入× / 穿出· / 平面箭頭→）
+      const showInOut = (state.mode2D === 'inout' || state.mode2D === 'both');
+      const showArrows = (state.mode2D === 'arrows' || state.mode2D === 'both');
+      const perpThreshold = bRef * 0.012;
+      const parThreshold = bRef * 0.01;
+
+      // 控制「此切面幾乎無垂直分量」提示徽章
+      const noPerpBadge = document.getElementById('badge-no-perp');
+      if (state.mode2D === 'inout' && cache2D.maxPerp < perpThreshold * 1.8) {
+        noPerpBadge.classList.remove('hidden');
+      } else {
+        noPerpBadge.classList.add('hidden');
+      }
+
+      for (const pt of cache2D.gridPoints) {
+        const { px, py, bu, bv, bPerp, bPar } = pt;
+
+        // 5A. 垂直切面分量：穿入 (× 深靛紫 #4f46e5) / 穿出 (· 亮藍 #0284c7)
+        if (showInOut) {
+          const absPerp = Math.abs(bPerp);
+          if (absPerp > perpThreshold) {
+            const s = normalizeStrength(absPerp, bRef);
+            const alpha = state.mode2D === 'both' ? (0.35 + s * 0.55) : (0.35 + s * 0.65);
+
+            if (bPerp > 0) {
+              // 穿出紙面 (· / ⊙)
+              const dotR = 2.6 + s * 4.4;
+              const ringR = dotR + 3.2;
+              ctx2D.save();
+              ctx2D.globalAlpha = alpha;
+              // 淡光環加強辨識度
+              ctx2D.beginPath();
+              ctx2D.arc(px, py, ringR, 0, Math.PI * 2);
+              ctx2D.strokeStyle = 'rgba(2, 132, 199, 0.35)';
+              ctx2D.lineWidth = 1.4;
+              ctx2D.stroke();
+
+              ctx2D.beginPath();
+              ctx2D.arc(px, py, dotR, 0, Math.PI * 2);
+              ctx2D.fillStyle = '#0284c7';
+              ctx2D.fill();
+              ctx2D.restore();
+            } else {
+              // 穿入紙面 (×)
+              const arm = 3.6 + s * 5.6;
+              ctx2D.save();
+              ctx2D.globalAlpha = alpha;
+              ctx2D.strokeStyle = '#4f46e5';
+              ctx2D.lineWidth = 1.8 + s * 1.1;
+              ctx2D.lineCap = 'round';
+              ctx2D.beginPath();
+              ctx2D.moveTo(px - arm, py - arm);
+              ctx2D.lineTo(px + arm, py + arm);
+              ctx2D.moveTo(px + arm, py - arm);
+              ctx2D.lineTo(px - arm, py + arm);
+              ctx2D.stroke();
+              ctx2D.restore();
+            }
+          } else if (state.mode2D === 'inout') {
+            // 垂直分量極弱處顯示極淡參考小點，表示網格位置不雜亂
+            ctx2D.fillStyle = 'rgba(148, 163, 184, 0.25)';
+            ctx2D.beginPath();
+            ctx2D.arc(px, py, 1.5, 0, Math.PI * 2);
+            ctx2D.fill();
+          }
+        }
+
+        // 5B. 切面內分量：箭頭 (→ 鈷藍 #0369a1)
+        // 注意 Canvas Y 軸向下，故 dy = -bv
+        if (showArrows && bPar > parThreshold) {
+          const s = normalizeStrength(bPar, bRef);
+          const len = 10 + s * 16;
+          const dirX = bu / bPar;
+          const dirY = -bv / bPar; // 關鍵：Y 軸反轉！
+
+          const x1 = px - dirX * len * 0.45;
+          const y1 = py - dirY * len * 0.45;
+          const x2 = px + dirX * len * 0.55;
+          const y2 = py + dirY * len * 0.55;
+
+          const alpha = 0.35 + s * 0.65;
+          const color = `rgba(3, 105, 161, ${alpha.toFixed(2)})`;
+          drawArrow(ctx2D, x1, y1, x2, y2, 5.2 + s * 2.8, color, 1.7 + s * 0.9);
+        }
+      }
+
+      // 6. 繪製穿過切面的銅導線截面（橘銅色圓形 ⊙ 穿出 / ⊗ 穿入）
+      for (const pw of cache2D.piercingWires) {
+        const px = cx + pw.u * scale;
+        const py = cy - pw.v * scale;
+        const r = Math.max(10, Math.min(14, scale * 0.16));
+        const isOut = pw.dotIN > 0;
+
+        ctx2D.save();
+        // 外白色光暈與銅橘底色
+        ctx2D.beginPath();
+        ctx2D.arc(px, py, r + 2.5, 0, Math.PI * 2);
+        ctx2D.fillStyle = 'rgba(255, 255, 255, 0.92)';
+        ctx2D.fill();
+
+        ctx2D.beginPath();
+        ctx2D.arc(px, py, r, 0, Math.PI * 2);
+        ctx2D.fillStyle = '#fef3c7';
+        ctx2D.fill();
+        ctx2D.strokeStyle = '#d97706';
+        ctx2D.lineWidth = 2.8;
+        ctx2D.stroke();
+
+        if (isOut) {
+          // 電流穿出 ⊙
+          ctx2D.beginPath();
+          ctx2D.arc(px, py, r * 0.34, 0, Math.PI * 2);
+          ctx2D.fillStyle = '#c2410c';
+          ctx2D.fill();
+        } else {
+          // 電流穿入 ⊗
+          const k = r * 0.52;
+          ctx2D.strokeStyle = '#c2410c';
+          ctx2D.lineWidth = 2.6;
+          ctx2D.lineCap = 'round';
+          ctx2D.beginPath();
+          ctx2D.moveTo(px - k, py - k);
+          ctx2D.lineTo(px + k, py + k);
+          ctx2D.moveTo(px + k, py - k);
+          ctx2D.lineTo(px - k, py + k);
+          ctx2D.stroke();
+        }
+        ctx2D.restore();
+      }
+
+      // 7. 繪製左右端點 A 與 B 座標徽章
+      drawEndBadge2D(ctx2D, Math.max(18, boxX), cy, 'A');
+      drawEndBadge2D(ctx2D, Math.min(width - 18, boxX + boxW), cy, 'B');
+
+      // 8. 若正在進行磁針探測，在游標位置繪製迷你旋轉磁針
+      if (state.probe.active) {
+        drawInteractiveCompassProbe(ctx2D, width, height);
+      }
+    }
+
+    function drawEndBadge2D(ctx, x, y, text) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(x, y, 12, 0, Math.PI * 2);
+      ctx.fillStyle = '#059669';
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '800 12px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, x, y + 0.5);
+      ctx.restore();
+    }
+
+    /**
+     * 繪製互動迷你小磁針（紅 N / 藍 S）並更新浮動資訊卡
+     */
+    function drawInteractiveCompassProbe(ctx, width, height) {
+      const { canvasX: px, canvasY: py, u, v } = state.probe;
+      const f = evalFieldOnSlice(u, v);
+
+      const compassR = 17;
+      ctx.save();
+      ctx.translate(px, py);
+
+      // 羅盤外殼
+      ctx.beginPath();
+      ctx.arc(0, 0, compassR, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.94)';
+      ctx.fill();
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // 若有顯著切面內分量，旋轉繪製紅 N / 藍 S 磁針
+      if (f.bPar > 1e-4) {
+        const ang = Math.atan2(-f.bv, f.bu); // Canvas Y 反轉
+        ctx.save();
+        ctx.rotate(ang);
+
+        // 紅色 N 極針尖（指向磁場方向）
+        ctx.beginPath();
+        ctx.moveTo(compassR - 3, 0);
+        ctx.lineTo(0, -4.5);
+        ctx.lineTo(0, 4.5);
+        ctx.closePath();
+        ctx.fillStyle = '#ef4444';
+        ctx.fill();
+
+        // 藍色 S 極針尾
+        ctx.beginPath();
+        ctx.moveTo(-(compassR - 3), 0);
+        ctx.lineTo(0, -4.5);
+        ctx.lineTo(0, 4.5);
+        ctx.closePath();
+        ctx.fillStyle = '#2563eb';
+        ctx.fill();
+
+        // 中心軸點
+        ctx.beginPath();
+        ctx.arc(0, 0, 2.3, 0, Math.PI * 2);
+        ctx.fillStyle = '#0f172a';
+        ctx.fill();
+        ctx.restore();
+      } else if (Math.abs(f.bPerp) > 1e-4) {
+        // 純垂直切面磁場時，磁針中央顯示 · 或 ×
+        if (f.bPerp > 0) {
+          ctx.beginPath();
+          ctx.arc(0, 0, 5, 0, Math.PI * 2);
+          ctx.fillStyle = '#0284c7';
+          ctx.fill();
+        } else {
+          ctx.strokeStyle = '#4f46e5';
+          ctx.lineWidth = 2.6;
+          ctx.beginPath();
+          ctx.moveTo(-5, -5); ctx.lineTo(5, 5);
+          ctx.moveTo(5, -5); ctx.lineTo(-5, 5);
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+
+      // 更新浮動資訊卡內容與位置（確保不超出邊界）
+      const tooltip = document.getElementById('probe-tooltip');
+      tooltip.classList.remove('hidden');
+
+      document.getElementById('probe-coords').textContent = `(${u.toFixed(1)}, ${v.toFixed(1)})`;
+
+      const inPlaneRatio = f.bMag > 1e-6 ? Math.round((f.bPar / f.bMag) * 100) : 0;
+      const perpRatio = f.bMag > 1e-6 ? Math.round((Math.abs(f.bPerp) / f.bMag) * 100) : 0;
+
+      if (inPlaneRatio >= 8) {
+        let deg = Math.round((Math.atan2(f.bv, f.bu) * 180) / Math.PI);
+        if (deg < 0) deg += 360;
+        const dirs = ['→', '↗', '↑', '↖', '←', '↙', '↓', '↘'];
+        const arrowIcon = dirs[Math.round(deg / 45) % 8];
+        document.getElementById('probe-inplane').textContent = `${arrowIcon} ${deg}° (${inPlaneRatio}%)`;
+      } else {
+        document.getElementById('probe-inplane').textContent = '極弱 (≈0%)';
+      }
+
+      const perpEl = document.getElementById('probe-perp');
+      if (perpRatio >= 8) {
+        if (f.bPerp > 0) {
+          perpEl.textContent = `穿出 · (${perpRatio}%)`;
+          perpEl.className = 'font-bold text-sky-600';
+        } else {
+          perpEl.textContent = `穿入 × (${perpRatio}%)`;
+          perpEl.className = 'font-bold text-indigo-600';
+        }
+      } else {
+        perpEl.textContent = '平行切面 (≈0%)';
+        perpEl.className = 'font-bold text-slate-500';
+      }
+
+      const ttW = tooltip.offsetWidth || 165;
+      const ttH = tooltip.offsetHeight || 74;
+      let tx = px + 24;
+      let ty = py - ttH - 12;
+      if (tx + ttW > width - 8) tx = px - ttW - 24;
+      if (tx < 8) tx = 8;
+      if (ty < 8) ty = py + 24;
+      if (ty + ttH > height - 8) ty = Math.max(8, height - ttH - 8);
+
+      tooltip.style.left = `${tx}px`;
+      tooltip.style.top = `${ty}px`;
+    }
+
+    /**
+     * 綁定 2D 畫布滑鼠與觸控磁針探測事件
+     */
+    function bind2DProbeEvents() {
+      const updateProbe = (clientX, clientY) => {
+        const rect = canvas2DWrap.getBoundingClientRect();
+        const px = clientX - rect.left;
+        const py = clientY - rect.top;
+        if (px < 0 || py < 0 || px > rect.width || py > rect.height) {
+          hideProbe();
+          return;
+        }
+        state.probe.active = true;
+        state.probe.canvasX = px;
+        state.probe.canvasY = py;
+        state.probe.u = (px - cache2D.cx) / cache2D.scale;
+        state.probe.v = -(py - cache2D.cy) / cache2D.scale;
+        render2D();
+      };
+
+      const hideProbe = () => {
+        if (!state.probe.active) return;
+        state.probe.active = false;
+        document.getElementById('probe-tooltip').classList.add('hidden');
+        render2D();
+      };
+
+      canvas2DWrap.addEventListener('pointermove', (e) => {
+        updateProbe(e.clientX, e.clientY);
+      });
+      canvas2DWrap.addEventListener('pointerdown', (e) => {
+        updateProbe(e.clientX, e.clientY);
+      });
+      canvas2DWrap.addEventListener('pointerleave', hideProbe);
+      canvas2DWrap.addEventListener('pointercancel', hideProbe);
+    }
+
+    // =========================================================================
+    // 6. 模型切換、UI 同步、分隔條拖曳與動畫主迴圈
+    // =========================================================================
+    let toastTimer = null;
+    function showToast(message) {
+      const el = document.getElementById('toast-msg');
+      el.textContent = message;
+      el.classList.remove('opacity-0', 'translate-y-2');
+      el.classList.add('opacity-100', 'translate-y-0');
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        el.classList.add('opacity-0', 'translate-y-2');
+        el.classList.remove('opacity-100', 'translate-y-0');
+      }, 2400);
+    }
+
+    /**
+     * 切換四大物理模型並自動套用該模型最經典的預設切面與鏡頭視角
+     */
+    function selectModel(modelKey, resetView = true) {
+      state.model = modelKey;
+
+      // 更新頂部按鈕樣式
+      document.querySelectorAll('.model-btn').forEach(btn => {
+        const active = btn.dataset.model === modelKey;
+        if (active) {
+          btn.className = 'model-btn flex items-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-xl text-xs sm:text-sm font-extrabold transition-all whitespace-nowrap bg-white text-sky-700 shadow-sm ring-2 ring-sky-500/80';
+        } else {
+          btn.className = 'model-btn flex items-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap text-slate-600 hover:bg-white/70 hover:text-slate-900';
+        }
+      });
+
+      // 動態顯示各模型專屬控制項
+      document.getElementById('lbl-reverse').textContent = modelKey === 'magnet' ? '反轉磁極' : '反轉電流';
+      document.getElementById('solenoid-turns-wrap').classList.toggle('hidden', modelKey !== 'solenoid');
+      document.getElementById('row-chk-internal').classList.toggle('hidden', modelKey !== 'magnet');
+      document.getElementById('row-chk-current').classList.toggle('hidden', modelKey === 'magnet');
+
+      // 重建物理場、3D 幾何與磁力線
+      rebuildPhysicsSegments();
+      rebuild3DModel();
+      rebuild3DFieldLines();
+
+      // 套用各模型最經典課本切面與最佳觀看鏡頭
+      if (resetView) {
+        if (modelKey === 'magnet') {
+          applyPresetSlice('xy', true);
+          setCameraPos(0.5, 2.3, 8.2);
+        } else if (modelKey === 'wire') {
+          applyPresetSlice('xz', true);
+          setCameraPos(0.4, 3.6, 7.6);
+        } else if (modelKey === 'loop') {
+          applyPresetSlice('xy', true);
+          setCameraPos(2.4, 2.5, 7.5);
+        } else if (modelKey === 'solenoid') {
+          applyPresetSlice('xy', true);
+          setCameraPos(1.2, 2.6, 8.5);
+        }
+      } else {
+        cache2D.dirty = true;
+        render2D();
+      }
+    }
+
+    function setCameraPos(x, y, z) {
+      if (!camera || !controls) return;
+      camera.position.set(x, y, z);
+      controls.target.set(0, 0, 0);
+      controls.update();
+    }
+
+    function update2DModeButtonsUI() {
+      document.querySelectorAll('.mode2d-btn').forEach(btn => {
+        const active = btn.dataset['2dmode'] === state.mode2D;
+        if (active) {
+          btn.className = 'mode2d-btn px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all whitespace-nowrap bg-white text-sky-700 shadow-sm';
+        } else {
+          btn.className = 'mode2d-btn px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap text-slate-600 hover:text-slate-900';
+        }
+      });
+    }
+
+    /**
+     * 更新 3D 與 2D 視窗大小
+     */
+    function handleResize() {
+      if (renderer && camera) {
+        const w = threeContainer.clientWidth;
+        const h = threeContainer.clientHeight;
+        if (w > 10 && h > 10) {
+          camera.aspect = w / h;
+          camera.updateProjectionMatrix();
+          renderer.setSize(w, h);
+        }
+      }
+      cache2D.dirty = true;
+      render2D();
+    }
+
+    /**
+     * 切換上下分割 / 左右分割版面並支援分隔條拖曳
+     */
+    function applySplitLayout() {
+      const workspace = document.getElementById('workspace');
+      const pane3D = document.getElementById('pane-3d');
+      const splitter = document.getElementById('splitter');
+      const pill = splitter.querySelector('.splitter-pill');
+      const lblLayout = document.getElementById('lbl-layout');
+      const iconLayout = document.getElementById('icon-layout');
+
+      const pct = Math.round(state.splitRatio * 1000) / 10;
+
+      if (state.splitDirection === 'vertical') {
+        workspace.classList.remove('flex-row');
+        workspace.classList.add('flex-col');
+        pane3D.style.flex = `0 0 ${pct}%`;
+        splitter.className = 'splitter-bar shrink-0 h-3 w-full bg-slate-200 border-y border-slate-300 flex items-center justify-center cursor-row-resize z-20';
+        pill.className = 'splitter-pill w-14 h-1.5 rounded-full bg-slate-400 transition-colors';
+        lblLayout.textContent = '左右分割';
+        iconLayout.innerHTML = '<rect x="3" y="3" width="18" height="18" rx="2.5" /><line x1="12" y1="3" x2="12" y2="21" />';
+      } else {
+        workspace.classList.remove('flex-col');
+        workspace.classList.add('flex-row');
+        pane3D.style.flex = `0 0 ${pct}%`;
+        splitter.className = 'splitter-bar shrink-0 w-3 h-full bg-slate-200 border-x border-slate-300 flex items-center justify-center cursor-col-resize z-20';
+        pill.className = 'splitter-pill h-14 w-1.5 rounded-full bg-slate-400 transition-colors';
+        lblLayout.textContent = '上下分割';
+        iconLayout.innerHTML = '<rect x="3" y="3" width="18" height="18" rx="2.5" /><line x1="3" y1="12" x2="21" y2="12" />';
+      }
+      requestAnimationFrame(handleResize);
+    }
+
+    function bindSplitterDrag() {
+      const splitter = document.getElementById('splitter');
+      const workspace = document.getElementById('workspace');
+      const pane3D = document.getElementById('pane-3d');
+      let dragging = false;
+
+      splitter.addEventListener('pointerdown', (e) => {
+        dragging = true;
+        splitter.classList.add('dragging');
+        splitter.setPointerCapture(e.pointerId);
+        e.preventDefault();
+      });
+
+      splitter.addEventListener('pointermove', (e) => {
+        if (!dragging) return;
+        const rect = workspace.getBoundingClientRect();
+        let ratio;
+        if (state.splitDirection === 'vertical') {
+          ratio = (e.clientY - rect.top) / rect.height;
+        } else {
+          ratio = (e.clientX - rect.left) / rect.width;
+        }
+        state.splitRatio = Math.max(0.28, Math.min(0.76, ratio));
+        pane3D.style.flex = `0 0 ${(state.splitRatio * 100).toFixed(1)}%`;
+        handleResize();
+      });
+
+      const endDrag = () => {
+        if (!dragging) return;
+        dragging = false;
+        splitter.classList.remove('dragging');
+        handleResize();
+      };
+      splitter.addEventListener('pointerup', endDrag);
+      splitter.addEventListener('pointercancel', endDrag);
+    }
+
+    /**
+     * 綁定所有按鈕與控制面板事件
+     */
+    function bindUIEvents() {
+      // 四大物理模型按鈕
+      document.querySelectorAll('.model-btn').forEach(btn => {
+        btn.addEventListener('click', () => selectModel(btn.dataset.model, true));
+      });
+
+      // 反轉電流 / 磁極
+      document.getElementById('btn-reverse').addEventListener('click', () => {
+        state.polarity *= -1;
+        rebuildPhysicsSegments();
+        rebuild3DModel();
+        rebuild3DFieldLines();
+        render2D();
+        showToast(state.model === 'magnet' ? '⇄ 已反轉條形磁鐵 N / S 極' : '⇄ 已反轉導線電流方向');
+      });
+
+      // 暫停 / 播放動畫
+      document.getElementById('btn-playpause').addEventListener('click', () => {
+        state.isPlaying = !state.isPlaying;
+        document.getElementById('icon-playpause').textContent = state.isPlaying ? '⏸' : '▶';
+        document.getElementById('lbl-playpause').textContent = state.isPlaying ? '暫停' : '播放';
+      });
+
+      // 上下 / 左右分割切換
+      document.getElementById('btn-layout-toggle').addEventListener('click', () => {
+        state.splitDirection = state.splitDirection === 'vertical' ? 'horizontal' : 'vertical';
+        state.splitRatio = state.splitDirection === 'vertical' ? 0.58 : 0.54;
+        applySplitLayout();
+      });
+
+      // 旋轉 3D vs 畫線切面模式切換
+      document.getElementById('mode-orbit').addEventListener('click', () => {
+        state.interactionMode = 'orbit';
+        updateInteractionModeUI();
+      });
+      document.getElementById('mode-slice').addEventListener('click', () => {
+        state.interactionMode = 'slice';
+        updateInteractionModeUI();
+      });
+
+      // 行動裝置摺疊右側控制面板
+      document.getElementById('btn-toggle-3d-panel').addEventListener('click', () => {
+        const panel = document.getElementById('panel-3d-controls');
+        panel.classList.toggle('hidden');
+        panel.classList.toggle('flex');
+      });
+
+      // 快速預設切面
+      document.querySelectorAll('.preset-btn').forEach(btn => {
+        btn.addEventListener('click', () => applyPresetSlice(btn.dataset.preset));
+      });
+
+      // 翻轉 2D 視角（3D 面板與 2D 標題列兩處皆可觸發）
+      document.getElementById('btn-flip-slice-top').addEventListener('click', flip2DSliceView);
+      document.getElementById('btn-flip-slice-2d').addEventListener('click', flip2DSliceView);
+
+      // 重置鏡頭
+      document.getElementById('btn-reset-cam').addEventListener('click', () => {
+        if (state.model === 'wire') setCameraPos(0.4, 3.6, 7.6);
+        else if (state.model === 'loop') setCameraPos(2.4, 2.5, 7.5);
+        else setCameraPos(0.6, 2.6, 8.4);
+      });
+
+      // 螺線管匝數滑桿
+      const sliderTurns = document.getElementById('slider-turns');
+      sliderTurns.addEventListener('input', () => {
+        state.solenoidTurns = parseInt(sliderTurns.value, 10);
+        document.getElementById('lbl-turns').textContent = `${state.solenoidTurns} 匝`;
+        if (state.model === 'solenoid') {
+          rebuildPhysicsSegments();
+          rebuild3DModel();
+          rebuild3DFieldLines();
+          render2D();
+        }
+      });
+
+      // 3D 顯示核取方塊
+      document.getElementById('chk-fieldlines').addEventListener('change', (e) => {
+        state.showFieldLines = e.target.checked;
+        if (fieldLinesGroup) fieldLinesGroup.visible = state.showFieldLines;
+      });
+      document.getElementById('chk-current').addEventListener('change', (e) => {
+        state.showCurrentFlow = e.target.checked;
+        if (currentAnimGroup) currentAnimGroup.visible = state.showCurrentFlow;
+      });
+      document.getElementById('chk-sliceplane').addEventListener('change', (e) => {
+        state.showSlicePlane = e.target.checked;
+        if (sliceGroup) sliceGroup.visible = state.showSlicePlane;
+      });
+      document.getElementById('chk-internal').addEventListener('change', (e) => {
+        state.showInternalMagnetLines = e.target.checked;
+        // 切換磁鐵實體透明度與內部磁力線可見度
+        if (state.model === 'magnet') {
+          rebuild3DModel();
+          fieldLineObjects.forEach(obj => {
+            if (obj.userData.isInternal) obj.visible = state.showInternalMagnetLines;
+          });
+          updateFieldArrowPositions(animPhase);
+        }
+      });
+
+      // 2D 磁場表示方式切換
+      document.querySelectorAll('.mode2d-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.mode2D = btn.dataset['2dmode'];
+          update2DModeButtonsUI();
+          render2D();
+        });
+      });
+
+      // 2D 流線開關
+      document.getElementById('chk-2d-streamlines').addEventListener('change', (e) => {
+        state.show2DStreamlines = e.target.checked;
+        render2D();
+      });
+
+      window.addEventListener('resize', handleResize);
+    }
+
+    // 動畫主迴圈
+    let animPhase = 0;
+    let lastTimestamp = 0;
+
+    function animate(timestamp = 0) {
+      requestAnimationFrame(animate);
+      const dt = lastTimestamp ? Math.min(0.05, (timestamp - lastTimestamp) / 1000) : 0.016;
+      lastTimestamp = timestamp;
+
+      if (state.isPlaying) {
+        animPhase += dt;
+        if (state.showFieldLines) updateFieldArrowPositions(animPhase);
+        if (state.showCurrentFlow && state.model !== 'magnet') updateCurrentBeadPositions(animPhase);
+      }
+
+      if (controls) controls.update();
+      if (renderer && scene && camera) {
+        renderer.render(scene, camera);
+        renderAxisTriad();
+      }
+    }
+
+    // =========================================================================
+    // 7. 頁面載入後啟動模擬
+    // =========================================================================
+    window.addEventListener('load', () => {
+      try {
+        const ok = initThreeJS();
+        bindUIEvents();
+        bindSliceDrawingEvents();
+        bind2DProbeEvents();
+        bindSplitterDrag();
+        updateInteractionModeUI();
+        update2DModeButtonsUI();
+        applySplitLayout();
+
+        if (ok) {
+          // 預設開啟「條形磁鐵」並自動建立正面縱切面，立刻呈現 3D 與 2D 聯動
+          selectModel('magnet', true);
+          handleResize();
+          animate();
+        }
+      } catch (err) {
+        console.error('應用程式啟動錯誤:', err);
+      }
+    });
+  </script>
+</body>
+</html>

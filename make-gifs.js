@@ -222,9 +222,18 @@ async function findPrimaryVisualRegion(page) {
             }
         }
 
+        const preferredCanvas = document.getElementById('canvas7aTank');
         const canvases = Array.from(document.querySelectorAll('canvas'));
         let bestCanvas = null;
         let bestScore = 0;
+
+        if (preferredCanvas && isVisible(preferredCanvas)) {
+            const pr = preferredCanvas.getBoundingClientRect();
+            if (pr.width >= 180 && pr.height >= 120) {
+                bestCanvas = preferredCanvas;
+                bestScore = Infinity;
+            }
+        }
 
         for (const cv of canvases) {
             if (!isVisible(cv)) continue;
@@ -353,6 +362,30 @@ async function createGifForHtml(browser, pageUrl, htmlPath, gifPath) {
 
             const demoBtn = document.getElementById('btnLoadDemoDirectly');
             if (demoBtn) { demoBtn.click(); return 'demo'; }
+
+            const rxnTab = document.querySelector('.tab-btn[data-tab="mod7a"]');
+            if (rxnTab && document.getElementById('canvas7aTank')) {
+                rxnTab.click();
+                const mod7a = document.getElementById('mod7a');
+                if (mod7a) mod7a.style.animation = 'none';
+                return 'tab';
+            }
+
+            const playRearrangeBtn = document.getElementById('btnPlayRearrange');
+            if (playRearrangeBtn && document.getElementById('canvas1a')) {
+                const mod1 = document.getElementById('mod1');
+                if (mod1) mod1.style.animation = 'none';
+                document.querySelector('.step-btn[data-cidx="0"][data-delta="1"]')?.click();
+                document.querySelector('.step-btn[data-cidx="2"][data-delta="1"]')?.click();
+                if (!playRearrangeBtn.disabled) playRearrangeBtn.click();
+                return 'rearrange';
+            }
+
+            const thomsonPreset = document.getElementById('preset-e-only');
+            if (thomsonPreset && document.getElementById('btn-mode-1')) {
+                thomsonPreset.click();
+                return 'thomson';
+            }
             return '';
         });
 
@@ -362,6 +395,10 @@ async function createGifForHtml(browser, pageUrl, htmlPath, gifPath) {
                 { timeout: 25000 }
             ).catch(() => { });
             await new Promise(r => setTimeout(r, 800));
+        } else if (clickedAction === 'tab') {
+            await new Promise(r => setTimeout(r, 900));
+        } else if (clickedAction === 'rearrange') {
+            await new Promise(r => setTimeout(r, 250));
         } else {
             await new Promise(r => setTimeout(r, 350));
         }
@@ -383,11 +420,18 @@ async function createGifForHtml(browser, pageUrl, htmlPath, gifPath) {
         const dx = Math.min(110, mouseBox.width * 0.22);
         const dy = Math.min(60, mouseBox.height * 0.16);
 
-        await page.mouse.move(cx - dx, cy + dy);
-        await page.mouse.move(cx, cy, { steps: 5 });
-        await page.mouse.down();
-        await page.mouse.move(cx + dx, cy - dy, { steps: 8 });
-        await page.mouse.up();
+        if (clickedAction === 'thomson') {
+            await page.mouse.move(cx - dx * 0.45, cy);
+            await page.mouse.down();
+            await page.mouse.move(cx + dx * 0.45, cy + dy * 0.3, { steps: 8 });
+            await page.mouse.up();
+        } else {
+            await page.mouse.move(cx - dx, cy + dy);
+            await page.mouse.move(cx, cy, { steps: 5 });
+            await page.mouse.down();
+            await page.mouse.move(cx + dx, cy - dy, { steps: 8 });
+            await page.mouse.up();
+        }
 
         const framesCount = 15;
         for (let i = 0; i < framesCount; i++) {

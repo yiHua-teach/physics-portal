@@ -1,0 +1,3828 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5">
+  <title>國中理化互動實驗室｜質量守恆與莫耳限量試劑</title>
+  <meta name="description" content="國中理化互動實驗室：涵蓋 1A 分子積木平衡室（原子不滅與化學反應式係數重組動畫）、1B 開放 vs. 密閉電子秤實驗、2A 莫耳標準貨櫃稱重站與 2B 限量試劑反應裝配線。" />
+  <meta name="portal-tags" content="化學, 化學反應式, 質量守恆, 原子不滅, 莫耳, 限量試劑" />
+  <meta name="portal-badge" content="分子積木平衡室" />
+  <meta name="portal-featured" content="true" />
+  <style>
+    /* ==========================================================================
+       1. 設計系統與色彩變數（現代明亮科學教室淺色主題）
+       ========================================================================== */
+    :root {
+      --bg-page: #FAF7F2;
+      --bg-card: #FFFFFF;
+      --bg-subtle: #F3EFE8;
+      --bg-panel: #F8FAFC;
+      --text-main: #1E293B;
+      --text-muted: #475569;
+      --text-light: #64748B;
+      --border-soft: #E2DDD5;
+      --border-strong: #CBD5E1;
+
+      --primary: #0F766E;       /* 實驗室沉穩青綠 */
+      --primary-hover: #115E59;
+      --primary-soft: #CCFBF1;
+      --accent-blue: #2563EB;
+      --accent-blue-soft: #DBEAFE;
+      --accent-amber: #D97706;
+      --accent-amber-soft: #FEF3C7;
+      --accent-red: #DC2626;
+      --accent-red-soft: #FEE2E2;
+      --accent-green: #059669;
+      --accent-green-soft: #D1FAE5;
+      --accent-purple: #7C3AED;
+      --accent-purple-soft: #EDE9FE;
+
+      --shadow-sm: 0 2px 6px rgba(30, 41, 59, 0.06);
+      --shadow-md: 0 6px 18px rgba(30, 41, 59, 0.08);
+      --shadow-lg: 0 12px 28px rgba(30, 41, 59, 0.12);
+
+      --radius-sm: 10px;
+      --radius-md: 16px;
+      --radius-lg: 22px;
+      --radius-pill: 999px;
+
+      --font-sans: "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", "Heiti TC", system-ui, -apple-system, sans-serif;
+      --font-mono: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg-page);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      line-height: 1.5;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    button {
+      font-family: inherit;
+      cursor: pointer;
+      border: none;
+      background: none;
+      transition: transform 0.12s ease, background-color 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+      user-select: none;
+    }
+
+    button:active:not(:disabled) {
+      transform: scale(0.96);
+    }
+
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    /* ==========================================================================
+       2. 頂部導覽列（大螢幕觸控友善）
+       ========================================================================== */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(255, 255, 255, 0.94);
+      backdrop-filter: blur(10px);
+      border-bottom: 2px solid var(--border-soft);
+      box-shadow: var(--shadow-sm);
+      padding: 10px 20px;
+    }
+
+    .topbar-inner {
+      max-width: 1440px;
+      margin: 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #0F766E, #14B8A6);
+      color: #FFFFFF;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      box-shadow: 0 4px 10px rgba(15, 118, 110, 0.28);
+      flex-shrink: 0;
+    }
+
+    .brand-title {
+      font-size: 1.2rem;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      color: var(--text-main);
+    }
+
+    .brand-sub {
+      font-size: 0.82rem;
+      color: var(--text-light);
+      font-weight: 600;
+    }
+
+    .module-tabs {
+      display: flex;
+      background: var(--bg-subtle);
+      padding: 5px;
+      border-radius: var(--radius-pill);
+      gap: 6px;
+      border: 1px solid var(--border-soft);
+    }
+
+    .module-tab-btn {
+      padding: 10px 20px;
+      border-radius: var(--radius-pill);
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .module-tab-btn.active {
+      background: var(--primary);
+      color: #FFFFFF;
+      box-shadow: 0 4px 12px rgba(15, 118, 110, 0.28);
+    }
+
+    .module-tab-btn:not(.active):hover {
+      background: rgba(255, 255, 255, 0.75);
+      color: var(--text-main);
+    }
+
+    .topbar-tools {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .tool-btn {
+      padding: 10px 16px;
+      border-radius: var(--radius-md);
+      font-size: 0.95rem;
+      font-weight: 700;
+      border: 2px solid var(--border-soft);
+      background: var(--bg-card);
+      color: var(--text-main);
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 44px;
+    }
+
+    .tool-btn:hover {
+      border-color: var(--primary);
+      background: #F0FDFA;
+    }
+
+    .tool-btn.mask-active {
+      background: var(--accent-amber);
+      border-color: #B45309;
+      color: #FFFFFF;
+      box-shadow: 0 4px 12px rgba(217, 119, 6, 0.35);
+    }
+
+    /* ==========================================================================
+       3. 主容器與子分頁導覽
+       ========================================================================== */
+    .main-container {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 18px 20px 40px;
+    }
+
+    .module-section {
+      display: none;
+    }
+
+    .module-section.active {
+      display: block;
+      animation: fadeIn 0.22s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .subtab-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .subtabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .subtab-btn {
+      padding: 12px 22px;
+      border-radius: var(--radius-md);
+      font-size: 1.05rem;
+      font-weight: 800;
+      background: var(--bg-card);
+      color: var(--text-muted);
+      border: 2px solid var(--border-soft);
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .subtab-btn.active {
+      background: var(--accent-blue);
+      color: #FFFFFF;
+      border-color: var(--accent-blue);
+      box-shadow: 0 5px 14px rgba(37, 99, 235, 0.28);
+    }
+
+    .subtab-btn:not(.active):hover {
+      border-color: var(--accent-blue);
+      color: var(--accent-blue);
+    }
+
+    .subpage {
+      display: none;
+    }
+
+    .subpage.active {
+      display: block;
+    }
+
+    /* 通用卡片與按鈕 */
+    .card {
+      background: var(--bg-card);
+      border: 1.5px solid var(--border-soft);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      padding: 18px 20px;
+      margin-bottom: 18px;
+    }
+
+    .card-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .card-title {
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .pill-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .pill-btn {
+      padding: 10px 16px;
+      border-radius: var(--radius-pill);
+      font-size: 0.98rem;
+      font-weight: 700;
+      background: var(--bg-subtle);
+      color: var(--text-main);
+      border: 2px solid transparent;
+      min-height: 44px;
+    }
+
+    .pill-btn:hover {
+      background: #E7E1D6;
+    }
+
+    .pill-btn.active {
+      background: var(--primary-soft);
+      color: var(--primary-hover);
+      border-color: var(--primary);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #0F766E, #0D9488);
+      color: #FFFFFF;
+      padding: 12px 22px;
+      border-radius: var(--radius-md);
+      font-size: 1.05rem;
+      font-weight: 800;
+      box-shadow: 0 4px 12px rgba(15, 118, 110, 0.28);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 48px;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: linear-gradient(135deg, #115E59, #0F766E);
+    }
+
+    .btn-blue {
+      background: linear-gradient(135deg, #2563EB, #3B82F6);
+      color: #FFFFFF;
+      padding: 12px 22px;
+      border-radius: var(--radius-md);
+      font-size: 1.05rem;
+      font-weight: 800;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.28);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 48px;
+    }
+
+    .btn-amber {
+      background: linear-gradient(135deg, #D97706, #F59E0B);
+      color: #FFFFFF;
+      padding: 12px 22px;
+      border-radius: var(--radius-md);
+      font-size: 1.05rem;
+      font-weight: 800;
+      box-shadow: 0 4px 12px rgba(217, 119, 6, 0.28);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 48px;
+    }
+
+    .btn-secondary {
+      background: var(--bg-subtle);
+      color: var(--text-main);
+      border: 2px solid var(--border-soft);
+      padding: 10px 18px;
+      border-radius: var(--radius-md);
+      font-size: 1rem;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 46px;
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: #E8E2D7;
+    }
+
+    /* 教學預測遮罩效果 */
+    .maskable {
+      position: relative;
+      transition: filter 0.25s ease;
+    }
+
+    body.prediction-masked .maskable {
+      position: relative;
+    }
+
+    body.prediction-masked .maskable > .mask-content {
+      filter: blur(11px);
+      opacity: 0.18;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .mask-overlay-label {
+      display: none;
+    }
+
+    body.prediction-masked .maskable .mask-overlay-label {
+      display: flex;
+      position: absolute;
+      inset: 0;
+      align-items: center;
+      justify-content: center;
+      background: rgba(254, 243, 199, 0.92);
+      border: 2px dashed #D97706;
+      border-radius: inherit;
+      color: #92400E;
+      font-weight: 800;
+      font-size: 1.05rem;
+      padding: 8px 14px;
+      text-align: center;
+      z-index: 5;
+      cursor: pointer;
+    }
+
+    .mask-banner {
+      display: none;
+      background: #FEF3C7;
+      border: 2px solid #F59E0B;
+      color: #92400E;
+      border-radius: var(--radius-md);
+      padding: 10px 16px;
+      margin-bottom: 14px;
+      font-weight: 800;
+      font-size: 1rem;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    body.prediction-masked .mask-banner {
+      display: flex;
+    }
+
+    /* ==========================================================================
+       4. 模組 1A：分子積木平衡室
+       ========================================================================== */
+    .equation-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      padding: 16px;
+      background: #F8FAFC;
+      border-radius: var(--radius-md);
+      border: 2px solid var(--border-soft);
+      margin-bottom: 16px;
+    }
+
+    .eq-term {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: #FFFFFF;
+      border: 2px solid var(--border-soft);
+      border-radius: var(--radius-md);
+      padding: 10px 14px;
+      min-width: 126px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .eq-formula {
+      font-size: 1.65rem;
+      font-weight: 900;
+      color: var(--text-main);
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+
+    .eq-coef-display {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: var(--accent-blue-soft);
+      color: var(--accent-blue);
+      font-family: var(--font-mono);
+      font-size: 1.45rem;
+      font-weight: 900;
+    }
+
+    .eq-coef-display.zero {
+      background: #FEE2E2;
+      color: #DC2626;
+    }
+
+    .stepper {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .step-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: var(--bg-subtle);
+      color: var(--text-main);
+      font-size: 1.5rem;
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid var(--border-strong);
+    }
+
+    .step-btn:hover:not(:disabled) {
+      background: var(--primary);
+      color: #FFFFFF;
+      border-color: var(--primary);
+    }
+
+    .eq-op {
+      font-size: 2rem;
+      font-weight: 900;
+      color: var(--text-light);
+      padding: 0 4px;
+    }
+
+    .eq-arrow {
+      font-size: 2.2rem;
+      font-weight: 900;
+      color: var(--primary);
+      padding: 0 8px;
+    }
+
+    .status-strip {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .balance-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 20px;
+      border-radius: var(--radius-pill);
+      font-size: 1.1rem;
+      font-weight: 800;
+      border: 2px solid transparent;
+    }
+
+    .balance-badge.unbalanced {
+      background: var(--accent-amber-soft);
+      color: #9A3412;
+      border-color: #FDBA74;
+    }
+
+    .balance-badge.balanced {
+      background: var(--accent-green-soft);
+      color: #065F46;
+      border-color: #34D399;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
+    }
+
+    .stage-canvas-wrap {
+      width: 100%;
+      height: 360px;
+      background: linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%);
+      border: 2px solid var(--border-soft);
+      border-radius: var(--radius-md);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stage-canvas-wrap canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .atom-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-top: 12px;
+      justify-content: center;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      background: var(--bg-panel);
+      padding: 6px 12px;
+      border-radius: var(--radius-pill);
+      border: 1px solid var(--border-soft);
+    }
+
+    .legend-dot {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      display: inline-block;
+      border: 2px solid #334155;
+    }
+
+    /* 原子計數天平網格 */
+    .scales-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .scale-card {
+      background: #FFFFFF;
+      border: 2px solid var(--border-soft);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      text-align: center;
+      transition: border-color 0.25s ease, background-color 0.25s ease;
+    }
+
+    .scale-card.equal {
+      border-color: #34D399;
+      background: #F0FDF4;
+    }
+
+    .scale-card.unequal {
+      border-color: #FDBA74;
+      background: #FFF7ED;
+    }
+
+    .scale-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-weight: 800;
+      font-size: 1.08rem;
+    }
+
+    .scale-svg {
+      width: 100%;
+      max-width: 240px;
+      height: 120px;
+      display: block;
+      margin: 0 auto;
+      overflow: visible;
+    }
+
+    .scale-beam-group {
+      transform-origin: 120px 64px;
+      transition: transform 0.45s cubic-bezier(0.34, 1.4, 0.64, 1);
+    }
+
+    /* ==========================================================================
+       5. 模組 1B：開放 vs. 密閉容器電子秤實驗
+       ========================================================================== */
+    .lab1b-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 1fr;
+      gap: 18px;
+    }
+
+    @media (max-width: 960px) {
+      .lab1b-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .lab-canvas-box {
+      width: 100%;
+      height: 410px;
+      background: linear-gradient(180deg, #F8FAFC 0%, #EFF6FF 100%);
+      border: 2px solid var(--border-soft);
+      border-radius: var(--radius-md);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .lab-canvas-box canvas,
+    .micro-canvas-box canvas,
+    .chart-canvas-box canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .micro-canvas-box {
+      width: 100%;
+      height: 235px;
+      background: #FFFFFF;
+      border: 2px solid var(--border-soft);
+      border-radius: var(--radius-md);
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 14px;
+    }
+
+    .chart-canvas-box {
+      width: 100%;
+      height: 195px;
+      background: #FFFFFF;
+      border: 2px solid var(--border-soft);
+      border-radius: var(--radius-md);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .conservation-equation-card {
+      margin-top: 14px;
+      background: #F0FDF4;
+      border: 2px solid #86EFAC;
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-around;
+      gap: 10px;
+      text-align: center;
+    }
+
+    .cons-item-label {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+
+    .cons-item-val {
+      font-size: 1.45rem;
+      font-weight: 900;
+      font-family: var(--font-mono);
+      color: var(--text-main);
+    }
+
+    .cons-item-val.escaped {
+      color: var(--accent-red);
+    }
+
+    .cons-item-val.total {
+      color: var(--accent-green);
+    }
+
+    .cons-op {
+      font-size: 1.6rem;
+      font-weight: 900;
+      color: var(--text-light);
+    }
+
+    /* ==========================================================================
+       6. 模組 2A：莫耳標準貨櫃稱重站
+       ========================================================================== */
+    .stations-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+
+    @media (max-width: 960px) {
+      .stations-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .station-card {
+      background: #FFFFFF;
+      border: 2px solid var(--border-soft);
+      border-radius: var(--radius-lg);
+      padding: 16px 18px;
+      box-shadow: var(--shadow-md);
+    }
+
+    .station-card.station-a {
+      border-top: 6px solid #0F766E;
+    }
+
+    .station-card.station-b {
+      border-top: 6px solid #2563EB;
+    }
+
+    .station-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .substance-select {
+      font-family: inherit;
+      font-size: 1.05rem;
+      font-weight: 800;
+      padding: 10px 14px;
+      border-radius: var(--radius-md);
+      border: 2px solid var(--border-strong);
+      background: #FFFFFF;
+      color: var(--text-main);
+      min-height: 46px;
+      flex: 1;
+      min-width: 190px;
+    }
+
+    .mole-slider-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--bg-panel);
+      padding: 10px 12px;
+      border-radius: var(--radius-md);
+      border: 1.5px solid var(--border-soft);
+      margin-bottom: 12px;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      flex: 1;
+      height: 10px;
+      border-radius: 999px;
+      background: #CBD5E1;
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--primary);
+      border: 3px solid #FFFFFF;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+      cursor: pointer;
+    }
+
+    .station-b input[type="range"]::-webkit-slider-thumb {
+      background: var(--accent-blue);
+    }
+
+    .station-canvas-box {
+      width: 100%;
+      height: 275px;
+      background: linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 100%);
+      border: 2px solid var(--border-soft);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+
+    .station-canvas-box canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .metrics-4grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .metric-box {
+      background: var(--bg-panel);
+      border: 1.5px solid var(--border-soft);
+      border-radius: var(--radius-md);
+      padding: 10px 12px;
+    }
+
+    .metric-box.highlight-atoms {
+      background: #FFFBEB;
+      border-color: #FCD34D;
+    }
+
+    .metric-label {
+      font-size: 0.86rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+
+    .metric-val {
+      font-size: 1.28rem;
+      font-weight: 900;
+      color: var(--text-main);
+      font-family: var(--font-mono);
+    }
+
+    .metric-note {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #B45309;
+      margin-top: 2px;
+    }
+
+    /* ==========================================================================
+       7. 模組 2B：限量試劑反應裝配線
+       ========================================================================== */
+    .reactant-inputs-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 14px;
+    }
+
+    @media (max-width: 820px) {
+      .reactant-inputs-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .input-panel {
+      background: var(--bg-panel);
+      border: 2px solid var(--border-soft);
+      border-radius: var(--radius-md);
+      padding: 12px 16px;
+    }
+
+    .input-panel-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-weight: 800;
+      font-size: 1.1rem;
+    }
+
+    .factory-canvas-box {
+      width: 100%;
+      height: 365px;
+      background: linear-gradient(180deg, #FFFFFF 0%, #F1F5F9 100%);
+      border: 2px solid var(--border-soft);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      position: relative;
+      margin-bottom: 16px;
+    }
+
+    .factory-canvas-box canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .ice-table-wrap {
+      width: 100%;
+      overflow-x: auto;
+      border-radius: var(--radius-md);
+      border: 2px solid var(--border-soft);
+    }
+
+    table.ice-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #FFFFFF;
+      font-size: 1rem;
+      min-width: 600px;
+    }
+
+    .ice-table th, .ice-table td {
+      padding: 12px 14px;
+      text-align: center;
+      border-bottom: 1.5px solid var(--border-soft);
+    }
+
+    .ice-table thead th {
+      background: #F1F5F9;
+      font-weight: 800;
+      color: var(--text-main);
+      font-size: 1.05rem;
+    }
+
+    .ice-table tbody th {
+      background: #FAF7F2;
+      font-weight: 800;
+      color: var(--text-muted);
+      text-align: left;
+      padding-left: 18px;
+      width: 150px;
+    }
+
+    .ice-val-main {
+      font-family: var(--font-mono);
+      font-size: 1.18rem;
+      font-weight: 900;
+      color: var(--text-main);
+    }
+
+    .ice-val-sub {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--text-light);
+      font-family: var(--font-mono);
+    }
+
+    .tag-limiting {
+      display: inline-block;
+      margin-top: 4px;
+      padding: 3px 10px;
+      border-radius: var(--radius-pill);
+      background: var(--accent-red-soft);
+      color: var(--accent-red);
+      font-size: 0.82rem;
+      font-weight: 800;
+      border: 1.5px solid #FCA5A5;
+    }
+
+    .tag-excess {
+      display: inline-block;
+      margin-top: 4px;
+      padding: 3px 10px;
+      border-radius: var(--radius-pill);
+      background: var(--accent-amber-soft);
+      color: #B45309;
+      font-size: 0.82rem;
+      font-weight: 800;
+      border: 1.5px solid #FCD34D;
+    }
+
+    .tag-perfect {
+      display: inline-block;
+      margin-top: 4px;
+      padding: 3px 10px;
+      border-radius: var(--radius-pill);
+      background: var(--accent-green-soft);
+      color: #065F46;
+      font-size: 0.82rem;
+      font-weight: 800;
+      border: 1.5px solid #6EE7B7;
+    }
+
+    .mass-verify-bar {
+      margin-top: 14px;
+      padding: 14px 18px;
+      border-radius: var(--radius-md);
+      background: #ECFDF5;
+      border: 2px solid #6EE7B7;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: #065F46;
+    }
+
+    /* 輕量 Toast 通知（取代 alert） */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(90px);
+      background: #1E293B;
+      color: #FFFFFF;
+      padding: 12px 22px;
+      border-radius: var(--radius-pill);
+      font-weight: 700;
+      font-size: 0.98rem;
+      box-shadow: var(--shadow-lg);
+      z-index: 999;
+      opacity: 0;
+      transition: transform 0.28s ease, opacity 0.28s ease;
+      pointer-events: none;
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    /* 行動裝置與平板微調 */
+    @media (max-width: 720px) {
+      .topbar { padding: 10px 12px; }
+      .main-container { padding: 12px 12px 32px; }
+      .module-tab-btn { padding: 8px 13px; font-size: 0.9rem; }
+      .subtab-btn { padding: 10px 14px; font-size: 0.95rem; }
+      .eq-term { min-width: 108px; padding: 8px 10px; }
+      .eq-formula { font-size: 1.35rem; }
+      .stage-canvas-wrap { height: 310px; }
+      .factory-canvas-box { height: 320px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ======================================================================
+       頂部導覽列：模組切換、預測遮罩、全螢幕演示
+       ====================================================================== -->
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true">⚗️</div>
+        <div>
+          <div class="brand-title">國中理化互動動畫實驗室</div>
+          <div class="brand-sub">微觀粒子 × 巨觀實驗 × 化學計量</div>
+        </div>
+      </div>
+
+      <nav class="module-tabs" role="tablist" aria-label="主要模組切換">
+        <button class="module-tab-btn active" data-module="mod1" role="tab" aria-selected="true">
+          ⚖️ 模組一：質量守恆與分子積木
+        </button>
+        <button class="module-tab-btn" data-module="mod2" role="tab" aria-selected="false">
+          📦 模組二：莫耳貨櫃與限量試劑
+        </button>
+      </nav>
+
+      <div class="topbar-tools">
+        <button id="btnPredictionMask" class="tool-btn" title="課堂提問時先隱藏答案，讓學生預測後再揭曉">
+          👁️ 教學預測遮罩：關
+        </button>
+        <button id="btnFullscreen" class="tool-btn" title="切換教室大螢幕全螢幕演示">
+          ⛶ 全螢幕演示
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-container">
+    <!-- 預測遮罩啟用提示條 -->
+    <div class="mask-banner" role="status">
+      <span>🎯 教學預測遮罩已開啟：答案提示與計算結果已暫時隱藏，請引導學生先預測再點擊揭曉！</span>
+      <button id="btnUnmaskQuick" class="btn-amber" style="padding:8px 16px; min-height:38px; font-size:0.95rem;">
+        ✨ 立即揭曉全部結果
+      </button>
+    </div>
+
+    <!-- ====================================================================
+         模組一：質量守恆與分子積木重組室
+         ==================================================================== -->
+    <section id="mod1" class="module-section active">
+      <div class="subtab-bar">
+        <div class="subtabs">
+          <button class="subtab-btn active" data-sub="sub1a">🧩 1A 分子積木平衡室</button>
+          <button class="subtab-btn" data-sub="sub1b">🧪 1B 開放 vs. 密閉電子秤實驗</button>
+        </div>
+      </div>
+
+      <!-- ===================== 子分頁 1A：分子積木平衡室 ===================== -->
+      <div id="sub1a" class="subpage active">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">選擇國中經典化學反應</div>
+            <div class="pill-group" id="rxn1aSelector"></div>
+          </div>
+
+          <!-- 互動係數反應式列 -->
+          <div class="equation-bar" id="eq1aBar"></div>
+
+          <!-- 狀態列與操作鈕 -->
+          <div class="status-strip">
+            <div class="maskable" style="border-radius: 999px;">
+              <div class="mask-content">
+                <div id="badge1aStatus" class="balance-badge unbalanced">
+                  ⚖️ 左右原子數尚未相等，請調整係數
+                </div>
+              </div>
+              <div class="mask-overlay-label" onclick="togglePredictionMask()">❓ 預測：反應式平衡了嗎？點擊揭曉</div>
+            </div>
+
+            <div style="display:flex; flex-wrap:wrap; gap:10px;">
+              <button id="btnPlayRearrange" class="btn-primary" disabled>
+                ✨ 播放原子重組動畫
+              </button>
+              <button id="btnReset1a" class="btn-secondary">
+                ↺ 一鍵重置係數
+              </button>
+            </div>
+          </div>
+
+          <!-- 分子積木舞台 Canvas -->
+          <div class="stage-canvas-wrap">
+            <canvas id="canvas1a"></canvas>
+          </div>
+
+          <!-- 原子顏色圖例 -->
+          <div class="atom-legend" id="legend1a"></div>
+        </div>
+
+        <!-- 原子計數天平區 -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">⚖️ 各元素原子計數槓桿天平（反應前 vs. 反應後）</div>
+            <span style="font-size:0.95rem; font-weight:700; color:var(--text-muted);">
+              每種原子顆數都必須兩側相等，才符合「原子不滅」
+            </span>
+          </div>
+          <div class="maskable" style="border-radius: 16px;">
+            <div class="mask-content">
+              <div class="scales-grid" id="scales1aGrid"></div>
+            </div>
+            <div class="mask-overlay-label" onclick="togglePredictionMask()">
+              🙈 預測模式中：請先數一數上方畫面的原子顆數，再點擊揭曉天平狀態
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===================== 子分頁 1B：開放 vs. 密閉容器電子秤實驗 ===================== -->
+      <div id="sub1b" class="subpage">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">選擇實驗與容器條件</div>
+            <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center;">
+              <div class="pill-group" id="exp1bSelector">
+                <button class="pill-btn active" data-exp="gas">🫧 產氣反應：CaCO₃ + 2HCl → CO₂↑</button>
+                <button class="pill-btn" data-exp="precip">❄️ 沉澱對照：Na₂CO₃ + CaCl₂ → CaCO₃↓</button>
+              </div>
+              <div class="pill-group" id="container1bSelector">
+                <button class="pill-btn active" data-mode="open">🔓 開放錐形瓶（無蓋）</button>
+                <button class="pill-btn" data-mode="closed">🎈 密閉容器（套上氣球）</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 實驗控制鈕 -->
+          <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px;">
+            <div id="exp1bFormulaNote" style="font-size:1.05rem; font-weight:800; color:var(--primary-hover); background:var(--primary-soft); padding:8px 16px; border-radius:12px;">
+              反應式：CaCO₃(s) + 2HCl(aq) → CaCl₂(aq) + H₂O(l) + CO₂(g)↑
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:10px;">
+              <button id="btnStart1b" class="btn-primary">▶ 開始反應</button>
+              <button id="btnPause1b" class="btn-amber" disabled>⏸ 暫停</button>
+              <button id="btnReset1b" class="btn-secondary">↺ 重新實驗</button>
+            </div>
+          </div>
+
+          <!-- 巨觀 × 微觀雙視窗 -->
+          <div class="lab1b-grid">
+            <!-- 左側：巨觀實驗台 + 守恆算式卡片 -->
+            <div>
+              <div style="font-weight:800; margin-bottom:8px; color:var(--text-muted); display:flex; justify-content:space-between;">
+                <span>🔬 巨觀實驗台與高精度電子秤</span>
+                <span id="status1bText" style="color:var(--primary);">待命中（初始 150.00 g）</span>
+              </div>
+              <div class="lab-canvas-box">
+                <canvas id="canvas1bMacro"></canvas>
+              </div>
+
+              <!-- 總質量守恆驗證卡片 -->
+              <div class="maskable" style="border-radius:16px;">
+                <div class="mask-content">
+                  <div class="conservation-equation-card" id="consCard1b">
+                    <div>
+                      <div class="cons-item-label">電子秤讀數（瓶內）</div>
+                      <div class="cons-item-val" id="val1bScale">150.00 g</div>
+                    </div>
+                    <div class="cons-op">+</div>
+                    <div>
+                      <div class="cons-item-label" id="lbl1bEscaped">逸散至空氣的 CO₂</div>
+                      <div class="cons-item-val escaped" id="val1bEscaped">0.00 g</div>
+                    </div>
+                    <div class="cons-op">=</div>
+                    <div>
+                      <div class="cons-item-label">系統總質量（恆守恆）</div>
+                      <div class="cons-item-val total" id="val1bTotal">150.00 g</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="mask-overlay-label" onclick="togglePredictionMask()">
+                  ❓ 預測：電子秤讀數與總質量會如何變化？點擊揭曉
+                </div>
+              </div>
+            </div>
+
+            <!-- 右側：微觀放大鏡 + 讀數折線圖 -->
+            <div>
+              <div style="font-weight:800; margin-bottom:8px; color:var(--text-muted); display:flex; justify-content:space-between;">
+                <span>🔍 微觀粒子放大鏡（氣體逸散／反彈／沉澱）</span>
+                <span id="micro1bBadge" style="color:var(--accent-blue); font-size:0.9rem;">開放瓶口</span>
+              </div>
+              <div class="micro-canvas-box">
+                <canvas id="canvas1bMicro"></canvas>
+              </div>
+
+              <div style="font-weight:800; margin-bottom:8px; color:var(--text-muted); display:flex; justify-content:space-between;">
+                <span>📈 電子秤讀數 (g) vs. 反應時間 (s)</span>
+                <span style="font-size:0.85rem; color:var(--text-light);">會保留上一次實驗虛線供對照</span>
+              </div>
+              <div class="chart-canvas-box">
+                <canvas id="canvas1bChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         模組二：莫耳貨櫃與限量試劑工廠
+         ==================================================================== -->
+    <section id="mod2" class="module-section">
+      <div class="subtab-bar">
+        <div class="subtabs">
+          <button class="subtab-btn active" data-sub="sub2a">📦 2A 莫耳標準貨櫃稱重站</button>
+          <button class="subtab-btn" data-sub="sub2b">🏭 2B 限量試劑反應裝配線</button>
+        </div>
+      </div>
+
+      <!-- ===================== 子分頁 2A：莫耳標準貨櫃稱重站 ===================== -->
+      <div id="sub2a" class="subpage active">
+        <div class="card" style="padding:14px 18px;">
+          <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px;">
+            <div style="font-size:1.05rem; font-weight:800; color:var(--primary-hover);">
+              💡 核心觀念：每 1 個標準莫耳貨櫃，永遠固定裝入 <span style="font-family:var(--font-mono); color:#DC2626;">6.0 × 10²³</span> 顆粒子（分子或原子）！
+            </div>
+            <div class="pill-group">
+              <button class="pill-btn" data-preset="sameMol">⚖️ 同莫耳比重量 (1mol 水 vs CO₂)</button>
+              <button class="pill-btn" data-preset="sameMass">🔢 同重量比顆數 (18g 水 vs 18g 碳)</button>
+              <button class="pill-btn" data-preset="atomCount">⚛️ 同分子數比原子數 (2mol O₂ vs H₂O)</button>
+              <button class="pill-btn" data-preset="bigSmall">🧊 單原子 vs 大分子 (1mol 鐵 vs 葡萄糖)</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="stations-grid">
+          <!-- 左稱重站 A -->
+          <div class="station-card station-a">
+            <div class="station-controls">
+              <span style="font-weight:900; font-size:1.15rem; color:#0F766E;">🅰 稱重站 A</span>
+              <select id="select2aA" class="substance-select" aria-label="選擇稱重站A物質"></select>
+            </div>
+            <div class="mole-slider-row">
+              <button class="step-btn" id="minus2aA" aria-label="減少站A莫耳數">−</button>
+              <input type="range" id="slider2aA" min="0.5" max="5.0" step="0.5" value="1.0">
+              <button class="step-btn" id="plus2aA" aria-label="增加站A莫耳數">+</button>
+              <span id="molLabel2aA" style="min-width:86px; text-align:right; font-family:var(--font-mono); font-size:1.25rem; font-weight:900; color:#0F766E;">1.0 mol</span>
+            </div>
+            <div class="station-canvas-box">
+              <canvas id="canvas2aA"></canvas>
+            </div>
+            <div class="metrics-4grid" id="metrics2aA"></div>
+          </div>
+
+          <!-- 右稱重站 B -->
+          <div class="station-card station-b">
+            <div class="station-controls">
+              <span style="font-weight:900; font-size:1.15rem; color:#2563EB;">🅱 稱重站 B</span>
+              <select id="select2aB" class="substance-select" aria-label="選擇稱重站B物質"></select>
+            </div>
+            <div class="mole-slider-row">
+              <button class="step-btn" id="minus2aB" aria-label="減少站B莫耳數">−</button>
+              <input type="range" id="slider2aB" min="0.5" max="5.0" step="0.5" value="1.0">
+              <button class="step-btn" id="plus2aB" aria-label="增加站B莫耳數">+</button>
+              <span id="molLabel2aB" style="min-width:86px; text-align:right; font-family:var(--font-mono); font-size:1.25rem; font-weight:900; color:#2563EB;">1.0 mol</span>
+            </div>
+            <div class="station-canvas-box">
+              <canvas id="canvas2aB"></canvas>
+            </div>
+            <div class="maskable" style="border-radius:14px;">
+              <div class="mask-content">
+                <div class="metrics-4grid" id="metrics2aB"></div>
+              </div>
+              <div class="mask-overlay-label" onclick="togglePredictionMask()">
+                ❓ 預測稱重站 B 的重量與粒子數？點擊揭曉
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===================== 子分頁 2B：限量試劑反應裝配線 ===================== -->
+      <div id="sub2b" class="subpage">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">選擇工廠反應線</div>
+            <div class="pill-group" id="rxn2bSelector"></div>
+          </div>
+
+          <!-- 反應式與投入量控制 -->
+          <div id="rxn2bBanner" style="text-align:center; font-size:1.35rem; font-weight:900; color:var(--text-main); background:#F8FAFC; border:2px solid var(--border-soft); border-radius:14px; padding:10px 16px; margin-bottom:14px;">
+          </div>
+
+          <div class="reactant-inputs-grid">
+            <div class="input-panel">
+              <div class="input-panel-top">
+                <span id="label2bA" style="color:#0F766E;">反應物 A</span>
+                <span id="val2bA" style="font-family:var(--font-mono); font-size:1.3rem; color:#0F766E;">4 mol</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:10px;">
+                <button class="step-btn" id="minus2bA">−</button>
+                <input type="range" id="slider2bA" min="0" max="10" step="1" value="4">
+                <button class="step-btn" id="plus2bA">+</button>
+              </div>
+            </div>
+
+            <div class="input-panel">
+              <div class="input-panel-top">
+                <span id="label2bB" style="color:#2563EB;">反應物 B</span>
+                <span id="val2bB" style="font-family:var(--font-mono); font-size:1.3rem; color:#2563EB;">3 mol</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:10px;">
+                <button class="step-btn" id="minus2bB">−</button>
+                <input type="range" id="slider2bB" min="0" max="10" step="1" value="3">
+                <button class="step-btn" id="plus2bB">+</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 裝配線操作列 -->
+          <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px;">
+            <div style="display:flex; flex-wrap:wrap; gap:10px;">
+              <button id="btnStart2b" class="btn-primary">▶ 啟動裝配線動畫</button>
+              <button id="btnInstant2b" class="btn-blue">⚡ 立即完成配對</button>
+              <button id="btnReset2b" class="btn-secondary">↺ 重置輸送帶</button>
+            </div>
+            <div id="status2bSummary" style="font-weight:800; font-size:1.02rem; color:var(--text-muted);">
+              調整投入量後，按下「啟動裝配線動畫」觀察限量與過量試劑
+            </div>
+          </div>
+
+          <!-- 輸送帶視覺化 Canvas -->
+          <div class="factory-canvas-box">
+            <canvas id="canvas2b"></canvas>
+          </div>
+
+          <!-- ICE 反應前後數據對照表 -->
+          <div class="maskable" style="border-radius:16px;">
+            <div class="mask-content">
+              <div class="ice-table-wrap">
+                <table class="ice-table" id="iceTable2b"></table>
+              </div>
+              <div class="mass-verify-bar" id="massVerify2b"></div>
+            </div>
+            <div class="mask-overlay-label" onclick="togglePredictionMask()">
+              🧠 預測遮罩中：請先心算哪一個是「限量試劑」、生成多少產物與剩餘量，再點擊揭曉完整數據表！
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast" role="alert" aria-live="polite"></div>
+
+  <script>
+    /* ==========================================================================
+       一、全域狀態管理與共用工具函式
+       ========================================================================== */
+    const APP = {
+      activeModule: 'mod1',
+      activeSub: { mod1: 'sub1a', mod2: 'sub2a' },
+      predictionMasked: false
+    };
+
+    // 輕量提示氣泡（完全取代 alert）
+    let toastTimer = null;
+    function showToast(msg) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
+    }
+
+    // 化學式下標轉換（例如 H2O -> H<sub>2</sub>O）
+    function formatFormulaHTML(str) {
+      return str.replace(/(\d+)/g, '<sub>$1</sub>');
+    }
+
+    // 科學記號格式化（莫耳數 -> 粒子數：N * 6.0 × 10^23）
+    function formatAvogadroHTML(molCount) {
+      if (molCount <= 0) return '0';
+      const raw = molCount * 6.0;
+      const expShift = Math.floor(Math.log10(raw + 1e-12));
+      const mantissa = raw / Math.pow(10, expShift);
+      const totalExp = 23 + expShift;
+      // 修正浮點誤差（例如 1.00 -> 1.0, 9.999 -> 1.0）
+      let mFixed = Math.round(mantissa * 100) / 100;
+      let finalExp = totalExp;
+      if (mFixed >= 10) {
+        mFixed = mFixed / 10;
+        finalExp += 1;
+      }
+      const mStr = (Math.round(mFixed * 10) === mFixed * 10) ? mFixed.toFixed(1) : mFixed.toFixed(2);
+      return `${mStr} × 10<sup>${finalExp}</sup>`;
+    }
+
+    // 數值精準四捨五入（避免浮點數尾數）
+    function roundNum(n, digits = 2) {
+      const p = Math.pow(10, digits);
+      return Math.round(n * p) / p;
+    }
+
+    // HiDPI Canvas 尺寸自動同步（支援 RWD 與螢幕縮放）
+    function syncCanvas(canvas) {
+      if (!canvas) return null;
+      const rect = canvas.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return null;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const targetW = Math.round(rect.width * dpr);
+      const targetH = Math.round(rect.height * dpr);
+      if (canvas.width !== targetW || canvas.height !== targetH) {
+        canvas.width = targetW;
+        canvas.height = targetH;
+      }
+      const ctx = canvas.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      return { ctx, w: rect.width, h: rect.height };
+    }
+
+    // 圓角矩形輔助繪製（相容所有舊瀏覽器）
+    function drawRoundRect(ctx, x, y, w, h, r) {
+      const radius = Math.min(r, w / 2, h / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.lineTo(x + w - radius, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
+      ctx.lineTo(x + w, y + h - radius);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
+      ctx.lineTo(x + radius, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - radius);
+      ctx.lineTo(x, y + radius);
+      ctx.quadraticCurveTo(x, y, x + radius, y);
+      ctx.closePath();
+    }
+
+    // 原子視覺規格（高對比、教室最後一排清晰可辨）
+    const ATOM_STYLE = {
+      H:  { name: '氫 (H)',  fill: '#F8FAFC', hi: '#FFFFFF', stroke: '#334155', text: '#0F172A', r: 13 },
+      O:  { name: '氧 (O)',  fill: '#EF4444', hi: '#FCA5A5', stroke: '#991B1B', text: '#FFFFFF', r: 18 },
+      C:  { name: '碳 (C)',  fill: '#334155', hi: '#64748B', stroke: '#0F172A', text: '#FFFFFF', r: 19 },
+      N:  { name: '氮 (N)',  fill: '#2563EB', hi: '#93C5FD', stroke: '#1E3A8A', text: '#FFFFFF', r: 18 },
+      Mg: { name: '鎂 (Mg)', fill: '#9333EA', hi: '#E9D5FF', stroke: '#581C87', text: '#FFFFFF', r: 21 },
+      Fe: { name: '鐵 (Fe)', fill: '#B45309', hi: '#FDE68A', stroke: '#78350F', text: '#FFFFFF', r: 20 }
+    };
+
+    // 繪製立體感原子球體
+    function drawAtomSphere(ctx, x, y, el, scale = 1, alpha = 1) {
+      const st = ATOM_STYLE[el] || ATOM_STYLE.C;
+      const r = st.r * scale;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      const grad = ctx.createRadialGradient(x - r * 0.32, y - r * 0.35, r * 0.12, x, y, r);
+      grad.addColorStop(0, st.hi);
+      grad.addColorStop(0.55, st.fill);
+      grad.addColorStop(1, st.stroke);
+
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fillStyle = grad;
+      ctx.fill();
+      ctx.lineWidth = Math.max(1.8, 2.2 * scale);
+      ctx.strokeStyle = st.stroke;
+      ctx.stroke();
+
+      ctx.fillStyle = st.text;
+      ctx.font = `900 ${Math.round(Math.max(10, r * 0.85))}px ${getComputedStyle(document.body).fontFamily}`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(el, x, y + 0.5);
+      ctx.restore();
+    }
+
+    // 繪製分子鍵結線（支援單鍵、雙鍵、三鍵）
+    function drawBond(ctx, x1, y1, x2, y2, order = 1, alpha = 1) {
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle = '#64748B';
+      ctx.lineCap = 'round';
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const len = Math.hypot(dx, dy) || 1;
+      const nx = -dy / len;
+      const ny = dx / len;
+
+      if (order === 1) {
+        ctx.lineWidth = 4.5;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+      } else if (order === 2) {
+        ctx.lineWidth = 3;
+        [-3.5, 3.5].forEach(off => {
+          ctx.beginPath();
+          ctx.moveTo(x1 + nx * off, y1 + ny * off);
+          ctx.lineTo(x2 + nx * off, y2 + ny * off);
+          ctx.stroke();
+        });
+      } else {
+        ctx.lineWidth = 2.4;
+        [-5, 0, 5].forEach(off => {
+          ctx.beginPath();
+          ctx.moveTo(x1 + nx * off, y1 + ny * off);
+          ctx.lineTo(x2 + nx * off, y2 + ny * off);
+          ctx.stroke();
+        });
+      }
+      ctx.restore();
+    }
+
+    // 分子幾何藍圖（相對於分子中心的原子座標與鍵結）
+    const MOLECULE_BLUEPRINTS = {
+      H2: {
+        atoms: [{ el: 'H', x: -13, y: 0 }, { el: 'H', x: 13, y: 0 }],
+        bonds: [[0, 1, 1]]
+      },
+      O2: {
+        atoms: [{ el: 'O', x: -19, y: 0 }, { el: 'O', x: 19, y: 0 }],
+        bonds: [[0, 1, 2]]
+      },
+      N2: {
+        atoms: [{ el: 'N', x: -19, y: 0 }, { el: 'N', x: 19, y: 0 }],
+        bonds: [[0, 1, 3]]
+      },
+      H2O: {
+        atoms: [{ el: 'O', x: 0, y: -7 }, { el: 'H', x: -20, y: 12 }, { el: 'H', x: 20, y: 12 }],
+        bonds: [[0, 1, 1], [0, 2, 1]]
+      },
+      NH3: {
+        atoms: [
+          { el: 'N', x: 0, y: -8 },
+          { el: 'H', x: -22, y: 11 },
+          { el: 'H', x: 0, y: 18 },
+          { el: 'H', x: 22, y: 11 }
+        ],
+        bonds: [[0, 1, 1], [0, 2, 1], [0, 3, 1]]
+      },
+      CH4: {
+        atoms: [
+          { el: 'C', x: 0, y: 0 },
+          { el: 'H', x: 0, y: -26 },
+          { el: 'H', x: 0, y: 26 },
+          { el: 'H', x: -26, y: 0 },
+          { el: 'H', x: 26, y: 0 }
+        ],
+        bonds: [[0, 1, 1], [0, 2, 1], [0, 3, 1], [0, 4, 1]]
+      },
+      CO2: {
+        atoms: [{ el: 'C', x: 0, y: 0 }, { el: 'O', x: -32, y: 0 }, { el: 'O', x: 32, y: 0 }],
+        bonds: [[0, 1, 2], [0, 2, 2]]
+      },
+      H2O2: {
+        atoms: [
+          { el: 'O', x: -16, y: -2 },
+          { el: 'O', x: 16, y: 2 },
+          { el: 'H', x: -32, y: -18 },
+          { el: 'H', x: 32, y: 18 }
+        ],
+        bonds: [[0, 1, 1], [0, 2, 1], [1, 3, 1]]
+      },
+      Mg: {
+        atoms: [{ el: 'Mg', x: 0, y: 0 }],
+        bonds: []
+      },
+      MgO: {
+        atoms: [{ el: 'Mg', x: -18, y: 0 }, { el: 'O', x: 18, y: 0 }],
+        bonds: [[0, 1, 2]]
+      }
+    };
+
+    function drawMoleculeAt(ctx, formula, cx, cy, scale = 1, bondAlpha = 1, atomAlpha = 1) {
+      const bp = MOLECULE_BLUEPRINTS[formula];
+      if (!bp) return;
+      bp.bonds.forEach(([i, j, ord]) => {
+        const a = bp.atoms[i], b = bp.atoms[j];
+        drawBond(ctx, cx + a.x * scale, cy + a.y * scale, cx + b.x * scale, cy + b.y * scale, ord, bondAlpha);
+      });
+      bp.atoms.forEach(a => {
+        drawAtomSphere(ctx, cx + a.x * scale, cy + a.y * scale, a.el, scale, atomAlpha);
+      });
+    }
+
+    /* ==========================================================================
+       二、導覽切換、預測遮罩與全螢幕控制
+       ========================================================================== */
+    function togglePredictionMask(forceState) {
+      APP.predictionMasked = (typeof forceState === 'boolean') ? forceState : !APP.predictionMasked;
+      document.body.classList.toggle('prediction-masked', APP.predictionMasked);
+      const btn = document.getElementById('btnPredictionMask');
+      btn.classList.toggle('mask-active', APP.predictionMasked);
+      btn.textContent = APP.predictionMasked ? '🙈 教學預測遮罩：開' : '👁️ 教學預測遮罩：關';
+    }
+
+    document.getElementById('btnPredictionMask').addEventListener('click', () => togglePredictionMask());
+    document.getElementById('btnUnmaskQuick').addEventListener('click', () => togglePredictionMask(false));
+
+    document.getElementById('btnFullscreen').addEventListener('click', () => {
+      try {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().catch(() => {
+            showToast('目前瀏覽器環境不允許自動全螢幕，可按 F11 進入全螢幕演示');
+          });
+        } else {
+          document.exitFullscreen();
+        }
+      } catch (e) {
+        showToast('可按鍵盤 F11 切換全螢幕演示');
+      }
+    });
+
+    document.addEventListener('fullscreenchange', () => {
+      const btn = document.getElementById('btnFullscreen');
+      btn.textContent = document.fullscreenElement ? '🗗 退出全螢幕' : '⛶ 全螢幕演示';
+    });
+
+    // 主模組切換
+    document.querySelectorAll('.module-tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const target = btn.dataset.module;
+        APP.activeModule = target;
+        document.querySelectorAll('.module-tab-btn').forEach(b => {
+          b.classList.toggle('active', b.dataset.module === target);
+          b.setAttribute('aria-selected', b.dataset.module === target ? 'true' : 'false');
+        });
+        document.querySelectorAll('.module-section').forEach(sec => {
+          sec.classList.toggle('active', sec.id === target);
+        });
+      });
+    });
+
+    // 子分頁切換
+    document.querySelectorAll('.subtab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const subId = btn.dataset.sub;
+        const parentMod = btn.closest('.module-section').id;
+        APP.activeSub[parentMod] = subId;
+        const parentEl = document.getElementById(parentMod);
+        parentEl.querySelectorAll('.subtab-btn').forEach(b => b.classList.toggle('active', b.dataset.sub === subId));
+        parentEl.querySelectorAll('.subpage').forEach(p => p.classList.toggle('active', p.id === subId));
+      });
+    });
+
+    /* ==========================================================================
+       三、模組 1A：分子積木平衡室（含原子重組飛行與獨立槓桿天平）
+       ========================================================================== */
+    const MOD1A = {
+      reactions: [
+        {
+          id: 'water', name: '水的合成',
+          reactants: [{ f: 'H2', atoms: { H: 2 } }, { f: 'O2', atoms: { O: 2 } }],
+          products:  [{ f: 'H2O', atoms: { H: 2, O: 1 } }],
+          elements: ['H', 'O'],
+          initCoefs: [1, 1, 1],
+          answer: [2, 1, 2]
+        },
+        {
+          id: 'ammonia', name: '氨氣合成',
+          reactants: [{ f: 'N2', atoms: { N: 2 } }, { f: 'H2', atoms: { H: 2 } }],
+          products:  [{ f: 'NH3', atoms: { N: 1, H: 3 } }],
+          elements: ['N', 'H'],
+          initCoefs: [1, 1, 1],
+          answer: [1, 3, 2]
+        },
+        {
+          id: 'methane', name: '甲烷燃燒',
+          reactants: [{ f: 'CH4', atoms: { C: 1, H: 4 } }, { f: 'O2', atoms: { O: 2 } }],
+          products:  [{ f: 'CO2', atoms: { C: 1, O: 2 } }, { f: 'H2O', atoms: { H: 2, O: 1 } }],
+          elements: ['C', 'H', 'O'],
+          initCoefs: [1, 1, 1, 1],
+          answer: [1, 2, 1, 2]
+        },
+        {
+          id: 'peroxide', name: '雙氧水分解',
+          reactants: [{ f: 'H2O2', atoms: { H: 2, O: 2 } }],
+          products:  [{ f: 'H2O', atoms: { H: 2, O: 1 } }, { f: 'O2', atoms: { O: 2 } }],
+          elements: ['H', 'O'],
+          initCoefs: [1, 1, 1],
+          answer: [2, 2, 1]
+        },
+        {
+          id: 'magnesium', name: '鎂帶燃燒',
+          reactants: [{ f: 'Mg', atoms: { Mg: 1 } }, { f: 'O2', atoms: { O: 2 } }],
+          products:  [{ f: 'MgO', atoms: { Mg: 1, O: 1 } }],
+          elements: ['Mg', 'O'],
+          initCoefs: [1, 1, 1],
+          answer: [2, 1, 2]
+        }
+      ],
+      rxnIdx: 0,
+      coefs: [1, 1, 1],
+      animating: false,
+      animTime: 0,
+      animDuration: 3.2,
+      flyPaths: [],
+      idleTime: 0,
+
+      init() {
+        const selWrap = document.getElementById('rxn1aSelector');
+        selWrap.innerHTML = '';
+        this.reactions.forEach((r, i) => {
+          const btn = document.createElement('button');
+          btn.className = 'pill-btn' + (i === 0 ? ' active' : '');
+          btn.textContent = r.name;
+          btn.addEventListener('click', () => this.selectReaction(i));
+          selWrap.appendChild(btn);
+        });
+
+        document.getElementById('btnPlayRearrange').addEventListener('click', () => this.startRearrange());
+        document.getElementById('btnReset1a').addEventListener('click', () => {
+          const r = this.reactions[this.rxnIdx];
+          this.coefs = [...r.initCoefs];
+          this.animating = false;
+          this.renderEquationBar();
+          this.updateBalances();
+        });
+
+        this.selectReaction(0);
+      },
+
+      selectReaction(idx) {
+        this.rxnIdx = idx;
+        const r = this.reactions[idx];
+        this.coefs = [...r.initCoefs];
+        this.animating = false;
+        this.animTime = 0;
+
+        document.querySelectorAll('#rxn1aSelector .pill-btn').forEach((b, i) => {
+          b.classList.toggle('active', i === idx);
+        });
+
+        // 更新原子圖例
+        const legend = document.getElementById('legend1a');
+        legend.innerHTML = r.elements.map(el => {
+          const st = ATOM_STYLE[el];
+          return `<span class="legend-item">
+            <span class="legend-dot" style="background:${st.fill}; border-color:${st.stroke};"></span>
+            ${st.name}
+          </span>`;
+        }).join('');
+
+        this.renderEquationBar();
+        this.buildScalesDOM();
+        this.updateBalances();
+      },
+
+      renderEquationBar() {
+        const r = this.reactions[this.rxnIdx];
+        const bar = document.getElementById('eq1aBar');
+        bar.innerHTML = '';
+        let coefPointer = 0;
+
+        const addSide = (list) => {
+          list.forEach((sp, sIdx) => {
+            const cIdx = coefPointer++;
+            if (sIdx > 0) {
+              const plus = document.createElement('span');
+              plus.className = 'eq-op';
+              plus.textContent = '+';
+              bar.appendChild(plus);
+            }
+            const term = document.createElement('div');
+            term.className = 'eq-term';
+
+            const val = this.coefs[cIdx];
+            term.innerHTML = `
+              <div class="eq-formula">
+                <span class="eq-coef-display ${val === 0 ? 'zero' : ''}" id="coefVal1a_${cIdx}">${val}</span>
+                <span>${formatFormulaHTML(sp.f)}</span>
+              </div>
+              <div class="stepper">
+                <button class="step-btn" data-cidx="${cIdx}" data-delta="-1" aria-label="減少係數">−</button>
+                <button class="step-btn" data-cidx="${cIdx}" data-delta="1" aria-label="增加係數">+</button>
+              </div>
+            `;
+            bar.appendChild(term);
+          });
+        };
+
+        addSide(r.reactants);
+        const arrow = document.createElement('span');
+        arrow.className = 'eq-arrow';
+        arrow.textContent = '➜';
+        bar.appendChild(arrow);
+        addSide(r.products);
+
+        bar.querySelectorAll('.step-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const ci = Number(btn.dataset.cidx);
+            const delta = Number(btn.dataset.delta);
+            const next = Math.max(0, Math.min(6, this.coefs[ci] + delta));
+            if (next !== this.coefs[ci]) {
+              this.coefs[ci] = next;
+              this.animating = false;
+              const badge = document.getElementById(`coefVal1a_${ci}`);
+              badge.textContent = next;
+              badge.classList.toggle('zero', next === 0);
+              this.updateBalances();
+            }
+          });
+        });
+      },
+
+      getAtomCounts() {
+        const r = this.reactions[this.rxnIdx];
+        const left = {}, right = {};
+        r.elements.forEach(el => { left[el] = 0; right[el] = 0; });
+
+        let p = 0;
+        r.reactants.forEach(sp => {
+          const c = this.coefs[p++];
+          Object.entries(sp.atoms).forEach(([el, n]) => left[el] += c * n);
+        });
+        r.products.forEach(sp => {
+          const c = this.coefs[p++];
+          Object.entries(sp.atoms).forEach(([el, n]) => right[el] += c * n);
+        });
+        return { left, right };
+      },
+
+      isBalanced() {
+        const r = this.reactions[this.rxnIdx];
+        if (this.coefs.some(c => c <= 0)) return false;
+        const { left, right } = this.getAtomCounts();
+        return r.elements.every(el => left[el] === right[el] && left[el] > 0);
+      },
+
+      buildScalesDOM() {
+        const r = this.reactions[this.rxnIdx];
+        const grid = document.getElementById('scales1aGrid');
+        grid.innerHTML = r.elements.map(el => {
+          const st = ATOM_STYLE[el];
+          return `
+            <div class="scale-card" id="scaleCard_${el}">
+              <div class="scale-header">
+                <span style="display:inline-flex; align-items:center; gap:8px;">
+                  <span class="legend-dot" style="background:${st.fill}; border-color:${st.stroke};"></span>
+                  ${st.name} 原子天平
+                </span>
+                <span id="scaleBadge_${el}" style="font-size:0.95rem;"></span>
+              </div>
+              <svg class="scale-svg" viewBox="0 0 240 124">
+                <!-- 底座與支柱 -->
+                <polygon points="104,114 136,114 126,64 114,64" fill="#64748B"/>
+                <rect x="76" y="110" width="88" height="10" rx="5" fill="#334155"/>
+                <!-- 槓桿與秤盤群組 -->
+                <g class="scale-beam-group" id="scaleBeam_${el}">
+                  <rect x="30" y="60" width="180" height="8" rx="4" fill="#475569"/>
+                  <!-- 左秤盤 -->
+                  <line x1="48" y1="64" x2="36" y2="92" stroke="#94A3B8" stroke-width="2"/>
+                  <line x1="48" y1="64" x2="60" y2="92" stroke="#94A3B8" stroke-width="2"/>
+                  <path d="M 24 92 Q 48 106 72 92 Z" fill="#CBD5E1" stroke="#475569" stroke-width="2"/>
+                  <circle cx="48" cy="40" r="18" fill="#FFFFFF" stroke="${st.stroke}" stroke-width="2.5"/>
+                  <text id="scaleLeftNum_${el}" x="48" y="45" text-anchor="middle" font-size="18" font-weight="900" fill="#0F172A">0</text>
+                  <!-- 右秤盤 -->
+                  <line x1="192" y1="64" x2="180" y2="92" stroke="#94A3B8" stroke-width="2"/>
+                  <line x1="192" y1="64" x2="204" y2="92" stroke="#94A3B8" stroke-width="2"/>
+                  <path d="M 168 92 Q 192 106 216 92 Z" fill="#CBD5E1" stroke="#475569" stroke-width="2"/>
+                  <circle cx="192" cy="40" r="18" fill="#FFFFFF" stroke="${st.stroke}" stroke-width="2.5"/>
+                  <text id="scaleRightNum_${el}" x="192" y="45" text-anchor="middle" font-size="18" font-weight="900" fill="#0F172A">0</text>
+                </g>
+                <!-- 中心樞軸 -->
+                <circle cx="120" cy="64" r="6" fill="#0F172A"/>
+              </svg>
+              <div style="display:flex; justify-content:space-between; font-size:0.85rem; font-weight:700; color:var(--text-light); padding:0 18px;">
+                <span>反應物（左）</span>
+                <span>生成物（右）</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+      },
+
+      updateBalances() {
+        const r = this.reactions[this.rxnIdx];
+        const { left, right } = this.getAtomCounts();
+        const balanced = this.isBalanced();
+
+        // 檢查是否為最簡整數比倍數
+        const isSimplest = balanced && this.coefs.every((c, i) => c === r.answer[i]);
+
+        const badge = document.getElementById('badge1aStatus');
+        if (balanced) {
+          badge.className = 'balance-badge balanced';
+          badge.textContent = isSimplest
+            ? '🎉 反應式已平衡！（最簡整數比，原子完全守恆）'
+            : '✅ 原子已平衡！（提示：係數可同除以公因數化為最簡整數比）';
+        } else {
+          badge.className = 'balance-badge unbalanced';
+          badge.textContent = this.coefs.some(c => c === 0)
+            ? '⚠️ 係數不能為 0，請調整各項係數'
+            : '⚖️ 左右原子數尚未相等，請觀察下方天平調整係數';
+        }
+
+        document.getElementById('btnPlayRearrange').disabled = !balanced;
+
+        // 更新每一座元素天平
+        r.elements.forEach(el => {
+          const L = left[el], R = right[el];
+          const eq = (L === R && L > 0);
+          const card = document.getElementById(`scaleCard_${el}`);
+          const beam = document.getElementById(`scaleBeam_${el}`);
+          const lTxt = document.getElementById(`scaleLeftNum_${el}`);
+          const rTxt = document.getElementById(`scaleRightNum_${el}`);
+          const sBadge = document.getElementById(`scaleBadge_${el}`);
+
+          lTxt.textContent = L;
+          rTxt.textContent = R;
+          card.classList.toggle('equal', eq);
+          card.classList.toggle('unequal', !eq);
+
+          // 較重（較多顆）的一側往下沉
+          let angle = 0;
+          if (L > R) angle = -Math.min(16, 6 + (L - R) * 2.5);
+          else if (R > L) angle = Math.min(16, 6 + (R - L) * 2.5);
+          beam.style.transform = `rotate(${angle}deg)`;
+
+          if (eq) {
+            sBadge.textContent = '✅ 相等';
+            sBadge.style.color = '#059669';
+          } else {
+            sBadge.textContent = L > R ? '◀ 左側較多' : '右側較多 ▶';
+            sBadge.style.color = '#EA580C';
+          }
+        });
+      },
+
+      // 計算左右所有分子的佈局中心座標（確保不重疊、自動縮放）
+      computeLayout(w, h) {
+        const r = this.reactions[this.rxnIdx];
+        const padX = 24;
+        const midX = w / 2;
+        const leftZone = { x: padX, y: 46, w: midX - 58 - padX, h: h - 66 };
+        const rightZone = { x: midX + 58, y: 46, w: w - padX - (midX + 58), h: h - 66 };
+
+        const layoutSide = (speciesList, startIdx, zone) => {
+          const items = [];
+          const countSpecies = speciesList.length;
+          const rowH = zone.h / countSpecies;
+
+          speciesList.forEach((sp, sIdx) => {
+            const c = this.coefs[startIdx + sIdx];
+            const subY = zone.y + sIdx * rowH;
+            if (c <= 0) return;
+
+            const cols = c <= 3 ? c : Math.ceil(c / 2);
+            const rows = c <= 3 ? 1 : 2;
+            const cellW = zone.w / cols;
+            const cellH = rowH / rows;
+            const scale = Math.min(1.05, Math.min(cellW / 86, cellH / 66));
+
+            for (let k = 0; k < c; k++) {
+              const col = k % cols;
+              const row = Math.floor(k / cols);
+              const cx = zone.x + (col + 0.5) * cellW;
+              const cy = subY + (row + 0.5) * cellH;
+              items.push({ formula: sp.f, cx, cy, scale });
+            }
+          });
+          return items;
+        };
+
+        const leftMols = layoutSide(r.reactants, 0, leftZone);
+        const rightMols = layoutSide(r.products, r.reactants.length, rightZone);
+        return { leftMols, rightMols, leftZone, rightZone, midX };
+      },
+
+      // 啟動原子重組飛行動畫（一對一精準配對每一顆原子）
+      startRearrange() {
+        if (!this.isBalanced()) return;
+        const canvas = document.getElementById('canvas1a');
+        const info = syncCanvas(canvas);
+        if (!info) return;
+        const { leftMols, rightMols } = this.computeLayout(info.w, info.h);
+
+        const srcByEl = {};
+        leftMols.forEach(m => {
+          const bp = MOLECULE_BLUEPRINTS[m.formula];
+          bp.atoms.forEach(a => {
+            if (!srcByEl[a.el]) srcByEl[a.el] = [];
+            srcByEl[a.el].push({
+              x: m.cx + a.x * m.scale,
+              y: m.cy + a.y * m.scale,
+              scale: m.scale
+            });
+          });
+        });
+
+        const dstByEl = {};
+        rightMols.forEach(m => {
+          const bp = MOLECULE_BLUEPRINTS[m.formula];
+          bp.atoms.forEach(a => {
+            if (!dstByEl[a.el]) dstByEl[a.el] = [];
+            dstByEl[a.el].push({
+              x: m.cx + a.x * m.scale,
+              y: m.cy + a.y * m.scale,
+              scale: m.scale
+            });
+          });
+        });
+
+        this.flyPaths = [];
+        Object.keys(srcByEl).forEach(el => {
+          const srcs = srcByEl[el];
+          const dsts = dstByEl[el] || [];
+          srcs.forEach((s, i) => {
+            const d = dsts[i] || s;
+            const arcOffset = ((i % 2 === 0 ? -1 : 1) * (35 + (i % 3) * 24));
+            this.flyPaths.push({
+              el,
+              x0: s.x, y0: s.y, s0: s.scale,
+              x1: d.x, y1: d.y, s1: d.scale,
+              cx: (s.x + d.x) / 2,
+              cy: (s.y + d.y) / 2 + arcOffset
+            });
+          });
+        });
+
+        this.animating = true;
+        this.animTime = 0;
+      },
+
+      update(dt) {
+        this.idleTime += dt;
+        if (this.animating) {
+          this.animTime += dt;
+          if (this.animTime >= this.animDuration) {
+            this.animating = false;
+            this.animTime = this.animDuration;
+          }
+        }
+      },
+
+      render() {
+        const canvas = document.getElementById('canvas1a');
+        const info = syncCanvas(canvas);
+        if (!info) return;
+        const { ctx, w, h } = info;
+        ctx.clearRect(0, 0, w, h);
+
+        const { leftMols, rightMols, leftZone, rightZone, midX } = this.computeLayout(w, h);
+
+        // 左右區域底板
+        ctx.save();
+        drawRoundRect(ctx, leftZone.x - 8, 12, leftZone.w + 16, h - 24, 16);
+        ctx.fillStyle = 'rgba(241, 245, 249, 0.72)';
+        ctx.fill();
+        ctx.strokeStyle = '#E2E8F0';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        drawRoundRect(ctx, rightZone.x - 8, 12, rightZone.w + 16, h - 24, 16);
+        ctx.fillStyle = 'rgba(240, 253, 250, 0.75)';
+        ctx.fill();
+        ctx.strokeStyle = '#CCFBF1';
+        ctx.stroke();
+
+        // 區域標題
+        ctx.font = `800 15px ${getComputedStyle(document.body).fontFamily}`;
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#475569';
+        ctx.fillText('反應物（反應前分子積木）', leftZone.x + leftZone.w / 2, 32);
+        ctx.fillStyle = '#0F766E';
+        ctx.fillText('生成物（反應後分子積木）', rightZone.x + rightZone.w / 2, 32);
+
+        // 中央大箭頭
+        ctx.fillStyle = this.isBalanced() ? '#0F766E' : '#94A3B8';
+        ctx.beginPath();
+        ctx.moveTo(midX - 24, h / 2 - 10);
+        ctx.lineTo(midX + 6, h / 2 - 10);
+        ctx.lineTo(midX + 6, h / 2 - 22);
+        ctx.lineTo(midX + 28, h / 2);
+        ctx.lineTo(midX + 6, h / 2 + 22);
+        ctx.lineTo(midX + 6, h / 2 + 10);
+        ctx.lineTo(midX - 24, h / 2 + 10);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+
+        if (!this.animating) {
+          // 靜態微幅漂浮展示
+          leftMols.forEach((m, idx) => {
+            const bob = Math.sin(this.idleTime * 2.2 + idx * 1.1) * 2.5;
+            drawMoleculeAt(ctx, m.formula, m.cx, m.cy + bob, m.scale);
+          });
+          rightMols.forEach((m, idx) => {
+            const bob = Math.sin(this.idleTime * 2.2 + idx * 1.1 + 1.5) * 2.5;
+            drawMoleculeAt(ctx, m.formula, m.cx, m.cy + bob, m.scale);
+          });
+        } else {
+          // 三階段原子重組動畫：0~0.24 斷鍵震動、0.24~0.76 原子飛越重排、0.76~1.0 重新成鍵
+          const p = Math.min(1, this.animTime / this.animDuration);
+
+          if (p < 0.24) {
+            const sub = p / 0.24;
+            const shake = Math.sin(sub * Math.PI * 10) * 3.5 * sub;
+            const bondAlpha = Math.max(0, 1 - sub * 1.25);
+            leftMols.forEach(m => drawMoleculeAt(ctx, m.formula, m.cx + shake, m.cy, m.scale, bondAlpha, 1));
+            // 右側顯示淡化目標輪廓
+            rightMols.forEach(m => drawMoleculeAt(ctx, m.formula, m.cx, m.cy, m.scale, 0.16, 0.16));
+
+            ctx.fillStyle = '#D97706';
+            ctx.font = `800 15px ${getComputedStyle(document.body).fontFamily}`;
+            ctx.textAlign = 'center';
+            ctx.fillText('步驟 1：舊化學鍵斷裂，分子解離成個別原子！', midX, h - 18);
+          } else if (p < 0.76) {
+            const rawT = (p - 0.24) / 0.52;
+            // 平滑緩入緩出
+            const t = rawT < 0.5 ? 2 * rawT * rawT : 1 - Math.pow(-2 * rawT + 2, 2) / 2;
+
+            // 繪製柔和軌跡虛線與飛行中的原子
+            this.flyPaths.forEach(fp => {
+              ctx.save();
+              ctx.beginPath();
+              ctx.moveTo(fp.x0, fp.y0);
+              ctx.quadraticCurveTo(fp.cx, fp.cy, fp.x1, fp.y1);
+              ctx.strokeStyle = 'rgba(148, 163, 184, 0.28)';
+              ctx.setLineDash([5, 5]);
+              ctx.lineWidth = 1.6;
+              ctx.stroke();
+              ctx.restore();
+
+              const u = 1 - t;
+              const x = u * u * fp.x0 + 2 * u * t * fp.cx + t * t * fp.x1;
+              const y = u * u * fp.y0 + 2 * u * t * fp.cy + t * t * fp.y1;
+              const sc = fp.s0 + (fp.s1 - fp.s0) * t;
+              drawAtomSphere(ctx, x, y, fp.el, sc, 1);
+            });
+
+            ctx.fillStyle = '#2563EB';
+            ctx.font = `800 15px ${getComputedStyle(document.body).fontFamily}`;
+            ctx.textAlign = 'center';
+            ctx.fillText('步驟 2：原子種類與總數完全不變，正在重新排列組合…', midX, h - 18);
+          } else {
+            const sub = (p - 0.76) / 0.24;
+            // 左側淡出殘影方便對照，右側形成新化學鍵並閃耀綠光
+            leftMols.forEach(m => drawMoleculeAt(ctx, m.formula, m.cx, m.cy, m.scale, 0.18, 0.18));
+            rightMols.forEach(m => {
+              ctx.save();
+              ctx.beginPath();
+              ctx.arc(m.cx, m.cy, 38 * m.scale + sub * 16, 0, Math.PI * 2);
+              ctx.strokeStyle = `rgba(16, 185, 129, ${(1 - sub) * 0.7})`;
+              ctx.lineWidth = 3;
+              ctx.stroke();
+              ctx.restore();
+              drawMoleculeAt(ctx, m.formula, m.cx, m.cy, m.scale, sub, 1);
+            });
+
+            ctx.fillStyle = '#059669';
+            ctx.font = `800 15px ${getComputedStyle(document.body).fontFamily}`;
+            ctx.textAlign = 'center';
+            ctx.fillText('步驟 3：形成新分子！原子不滅，總質量守恆！', midX, h - 18);
+          }
+        }
+      }
+    };
+
+    /* ==========================================================================
+       四、模組 1B：開放 vs. 密閉容器電子秤實驗
+       ========================================================================== */
+    const MOD1B = {
+      expType: 'gas',      // 'gas' | 'precip'
+      mode: 'open',        // 'open' | 'closed'
+      running: false,
+      paused: false,
+      finished: false,
+      elapsed: 0,
+      duration: 10.0,      // 反應歷時 10 秒
+      initialMass: 150.00,
+      maxCO2Mass: 4.40,    // 0.1 mol CO2 = 4.40 g
+      currentScale: 150.00,
+      escapedMass: 0.00,
+      history: [],         // [{t, m}]
+      prevHistory: null,   // 上一次實驗紀錄供曲線對比
+      prevLabel: '',
+      macroBubbles: [],
+      macroMists: [],
+      precipFlakes: [],
+      microParticles: [],
+      spawnTimer: 0,
+
+      init() {
+        document.querySelectorAll('#exp1bSelector .pill-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            if (this.expType === btn.dataset.exp) return;
+            this.expType = btn.dataset.exp;
+            document.querySelectorAll('#exp1bSelector .pill-btn').forEach(b => b.classList.toggle('active', b === btn));
+            this.prevHistory = null;
+            this.reset(false);
+            this.updateFormulaText();
+          });
+        });
+
+        document.querySelectorAll('#container1bSelector .pill-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            if (this.mode === btn.dataset.mode) return;
+            // 若本次有跑過數據，保存為對照虛線
+            if (this.history.length > 5) {
+              this.prevHistory = [...this.history];
+              this.prevLabel = this.mode === 'open' ? '上次（開放瓶）' : '上次（密閉氣球）';
+            }
+            this.mode = btn.dataset.mode;
+            document.querySelectorAll('#container1bSelector .pill-btn').forEach(b => b.classList.toggle('active', b === btn));
+            this.reset(false);
+          });
+        });
+
+        document.getElementById('btnStart1b').addEventListener('click', () => {
+          if (this.finished) this.reset(true);
+          this.running = true;
+          this.paused = false;
+          this.updateButtons();
+        });
+
+        document.getElementById('btnPause1b').addEventListener('click', () => {
+          if (!this.running) return;
+          this.paused = !this.paused;
+          this.updateButtons();
+        });
+
+        document.getElementById('btnReset1b').addEventListener('click', () => this.reset(true));
+
+        this.updateFormulaText();
+        this.reset(false);
+      },
+
+      updateFormulaText() {
+        const el = document.getElementById('exp1bFormulaNote');
+        if (this.expType === 'gas') {
+          el.innerHTML = '反應式：CaCO<sub>3</sub>(s) + 2HCl(aq) → CaCl<sub>2</sub>(aq) + H<sub>2</sub>O(l) + CO<sub>2</sub>(g)↑';
+        } else {
+          el.innerHTML = '反應式：Na<sub>2</sub>CO<sub>3</sub>(aq) + CaCl<sub>2</sub>(aq) → CaCO<sub>3</sub>(s)↓（白色沉澱）+ 2NaCl(aq)';
+        }
+      },
+
+      reset(savePrev) {
+        if (savePrev && this.history.length > 5) {
+          this.prevHistory = [...this.history];
+          this.prevLabel = this.mode === 'open' ? '上次（開放瓶）' : '上次（密閉氣球）';
+        }
+        this.running = false;
+        this.paused = false;
+        this.finished = false;
+        this.elapsed = 0;
+        this.currentScale = this.initialMass;
+        this.escapedMass = 0;
+        this.history = [{ t: 0, m: this.initialMass }];
+        this.macroBubbles = [];
+        this.macroMists = [];
+        this.precipFlakes = [];
+        this.microParticles = [];
+        this.spawnTimer = 0;
+
+        // 初始化微觀背景粒子（液相離子）
+        for (let i = 0; i < 16; i++) {
+          this.microParticles.push({
+            kind: this.expType === 'gas' ? 'ion' : (i % 2 === 0 ? 'ca' : 'co3'),
+            x: 60 + Math.random() * 240,
+            y: 135 + Math.random() * 85,
+            vx: (Math.random() - 0.5) * 45,
+            vy: (Math.random() - 0.5) * 35,
+            settled: false
+          });
+        }
+
+        document.getElementById('micro1bBadge').textContent =
+          this.mode === 'open' ? '🔓 開放瓶口（氣體可飛出）' : '🎈 密閉氣球（氣體反彈留存）';
+        document.getElementById('lbl1bEscaped').textContent =
+          this.expType === 'gas'
+            ? (this.mode === 'open' ? '逸散至空氣的 CO₂' : '被氣球留住的 CO₂（已在瓶內秤重）')
+            : '逸散氣體（無產氣）';
+
+        this.updateReadouts();
+        this.updateButtons();
+      },
+
+      updateButtons() {
+        const startBtn = document.getElementById('btnStart1b');
+        const pauseBtn = document.getElementById('btnPause1b');
+        startBtn.disabled = this.running && !this.finished;
+        startBtn.textContent = this.finished ? '▶ 再次實驗' : '▶ 開始反應';
+        pauseBtn.disabled = !this.running || this.finished;
+        pauseBtn.textContent = this.paused ? '▶ 繼續' : '⏸ 暫停';
+
+        const statusTxt = document.getElementById('status1bText');
+        if (this.finished) statusTxt.textContent = '✅ 反應完成！觀察讀數與曲線';
+        else if (this.running && !this.paused) statusTxt.textContent = `反應進行中（${this.elapsed.toFixed(1)}s / ${this.duration.toFixed(0)}s）`;
+        else if (this.paused) statusTxt.textContent = '⏸ 已暫停（可於畫面解說）';
+        else statusTxt.textContent = '待命中（初始 150.00 g）';
+      },
+
+      updateReadouts() {
+        document.getElementById('val1bScale').textContent = `${this.currentScale.toFixed(2)} g`;
+        const escVal = document.getElementById('val1bEscaped');
+        if (this.expType === 'gas' && this.mode === 'open') {
+          escVal.textContent = `${this.escapedMass.toFixed(2)} g`;
+          escVal.style.color = '#DC2626';
+        } else {
+          escVal.textContent = '0.00 g';
+          escVal.style.color = '#059669';
+        }
+        document.getElementById('val1bTotal').textContent = `${this.initialMass.toFixed(2)} g`;
+      },
+
+      update(dt) {
+        // 即使待命時微觀液體離子也保持輕微熱運動
+        this.updateMicroParticles(dt, this.running && !this.paused);
+
+        if (!this.running || this.paused || this.finished) return;
+
+        this.elapsed = Math.min(this.duration, this.elapsed + dt);
+        const progress = this.elapsed / this.duration;
+        // 模擬真實反應速率曲線：初期快、後期漸緩 (1 - e^-3.2t 歸一化)
+        const ease = (1 - Math.exp(-3.2 * progress)) / (1 - Math.exp(-3.2));
+
+        if (this.expType === 'gas') {
+          const co2Gen = this.maxCO2Mass * ease;
+          if (this.mode === 'open') {
+            this.escapedMass = co2Gen;
+            this.currentScale = this.initialMass - co2Gen;
+          } else {
+            this.escapedMass = 0;
+            this.currentScale = this.initialMass;
+          }
+        } else {
+          this.escapedMass = 0;
+          this.currentScale = this.initialMass;
+        }
+
+        // 每 0.12 秒記錄一筆折線圖數據
+        const lastRec = this.history[this.history.length - 1];
+        if (!lastRec || this.elapsed - lastRec.t >= 0.12 || this.elapsed >= this.duration) {
+          this.history.push({ t: this.elapsed, m: this.currentScale });
+        }
+
+        // 生成巨觀氣泡／煙霧或白色沉澱微粒
+        const rateIntensity = Math.max(0.15, 1 - progress * 0.85);
+        this.spawnTimer += dt * rateIntensity;
+        if (this.spawnTimer > 0.065) {
+          this.spawnTimer = 0;
+          if (this.expType === 'gas') {
+            this.macroBubbles.push({
+              x: (Math.random() - 0.5) * 90,
+              y: 0,
+              r: 2.5 + Math.random() * 4,
+              vy: 42 + Math.random() * 35
+            });
+            if (this.mode === 'open') {
+              this.macroMists.push({
+                x: (Math.random() - 0.5) * 18,
+                y: 0,
+                r: 6 + Math.random() * 6,
+                vx: (Math.random() - 0.5) * 20,
+                vy: 38 + Math.random() * 22,
+                alpha: 0.72
+              });
+            }
+            // 在微觀放大鏡中生成 CO2 分子
+            if (this.microParticles.filter(p => p.kind === 'co2').length < 32) {
+              this.microParticles.push({
+                kind: 'co2',
+                x: 110 + Math.random() * 140,
+                y: 195 + Math.random() * 20,
+                vx: (Math.random() - 0.5) * 55,
+                vy: -(68 + Math.random() * 48)
+              });
+            }
+          } else {
+            // 白色碳酸鈣沉澱微粒往下沉降
+            this.precipFlakes.push({
+              x: (Math.random() - 0.5) * 100,
+              y: -55 + Math.random() * 25,
+              r: 2.2 + Math.random() * 2.8,
+              vy: 16 + Math.random() * 14,
+              landed: false
+            });
+          }
+        }
+
+        // 更新巨觀粒子
+        this.macroBubbles.forEach(b => { b.y -= b.vy * dt; b.x += Math.sin(b.y * 0.12) * 10 * dt; });
+        this.macroBubbles = this.macroBubbles.filter(b => b.y > -72);
+
+        this.macroMists.forEach(m => {
+          m.x += m.vx * dt;
+          m.y -= m.vy * dt;
+          m.r += 9 * dt;
+          m.alpha -= 0.42 * dt;
+        });
+        this.macroMists = this.macroMists.filter(m => m.alpha > 0.02);
+
+        this.precipFlakes.forEach(f => {
+          if (!f.landed) {
+            f.y += f.vy * dt;
+            if (f.y >= 4) { f.y = 4; f.landed = true; }
+          }
+        });
+        if (this.precipFlakes.length > 160) this.precipFlakes.shift();
+
+        if (this.elapsed >= this.duration) {
+          this.finished = true;
+          this.running = false;
+        }
+
+        this.updateReadouts();
+        this.updateButtons();
+      },
+
+      updateMicroParticles(dt, active) {
+        const canvas = document.getElementById('canvas1bMicro');
+        const w = canvas ? (canvas.clientWidth || 380) : 380;
+        const h = canvas ? (canvas.clientHeight || 235) : 235;
+        const liquidY = h * 0.56;
+        const neckLeft = w * 0.34;
+        const neckRight = w * 0.66;
+        const progress = this.elapsed / this.duration;
+        const balloonR = 32 + progress * 46;
+        const balloonCY = liquidY - 42 - progress * 22;
+
+        for (let i = this.microParticles.length - 1; i >= 0; i--) {
+          const p = this.microParticles[i];
+          if (p.kind === 'co2') {
+            p.x += p.vx * dt;
+            p.y += p.vy * dt;
+
+            // 離開液面進入氣相區
+            if (p.y < liquidY) {
+              if (this.mode === 'open') {
+                // 瓶頸內反彈，飛出頂部消失
+                if (p.y > 26) {
+                  if (p.x < neckLeft + 10) { p.x = neckLeft + 10; p.vx = Math.abs(p.vx); }
+                  if (p.x > neckRight - 10) { p.x = neckRight - 10; p.vx = -Math.abs(p.vx); }
+                }
+                if (p.y < -25) {
+                  this.microParticles.splice(i, 1);
+                  continue;
+                }
+              } else {
+                // 密閉模式：在膨脹氣球圓形內壁反彈
+                const dx = p.x - w / 2;
+                const dy = p.y - balloonCY;
+                const dist = Math.hypot(dx, dy);
+                if (dist > balloonR - 10 && p.y < liquidY - 12) {
+                  const nx = dx / (dist || 1);
+                  const ny = dy / (dist || 1);
+                  p.x = w / 2 + nx * (balloonR - 11);
+                  p.y = balloonCY + ny * (balloonR - 11);
+                  const dot = p.vx * nx + p.vy * ny;
+                  if (dot > 0) {
+                    p.vx -= 2 * dot * nx;
+                    p.vy -= 2 * dot * ny;
+                  }
+                }
+                // 避免沉回液面太深
+                if (p.y > liquidY - 4 && p.vy > 0) p.vy = -Math.abs(p.vy);
+              }
+            }
+          } else if (p.kind === 'precip_solid') {
+            if (p.y < h - 18) p.y += 30 * dt;
+          } else {
+            // 液相離子布朗運動
+            p.x += p.vx * dt;
+            p.y += p.vy * dt;
+            if (p.x < 28) { p.x = 28; p.vx = Math.abs(p.vx); }
+            if (p.x > w - 28) { p.x = w - 28; p.vx = -Math.abs(p.vx); }
+            if (p.y < liquidY + 12) { p.y = liquidY + 12; p.vy = Math.abs(p.vy); }
+            if (p.y > h - 18) { p.y = h - 18; p.vy = -Math.abs(p.vy); }
+          }
+        }
+
+        // 沉澱模式：將部分離子轉為白色沉澱晶體往下沉
+        if (active && this.expType === 'precip' && Math.random() < dt * 2.2) {
+          const targetCount = Math.floor(progress * 18);
+          const curSolid = this.microParticles.filter(p => p.kind === 'precip_solid').length;
+          if (curSolid < targetCount) {
+            this.microParticles.push({
+              kind: 'precip_solid',
+              x: 45 + Math.random() * (w - 90),
+              y: liquidY + 15 + Math.random() * 25,
+              vx: 0, vy: 28
+            });
+          }
+        }
+      },
+
+      render() {
+        this.renderMacro();
+        this.renderMicro();
+        this.renderChart();
+      },
+
+      renderMacro() {
+        const info = syncCanvas(document.getElementById('canvas1bMacro'));
+        if (!info) return;
+        const { ctx, w, h } = info;
+        ctx.clearRect(0, 0, w, h);
+
+        const cx = w / 2;
+        const benchY = h - 22;
+        const scaleTopY = benchY - 78;
+        const flaskBottomY = scaleTopY - 8;
+        const progress = this.elapsed / this.duration;
+        const ease = (1 - Math.exp(-3.2 * progress)) / (1 - Math.exp(-3.2));
+
+        // 實驗桌面
+        ctx.fillStyle = '#E2DDD5';
+        ctx.fillRect(0, benchY, w, 22);
+        ctx.fillStyle = '#CBD5E1';
+        ctx.fillRect(0, benchY, w, 3);
+
+        // 電子秤主體
+        const sw = Math.min(260, w * 0.68);
+        drawRoundRect(ctx, cx - sw / 2, scaleTopY + 12, sw, 68, 14);
+        ctx.fillStyle = '#334155';
+        ctx.fill();
+        ctx.strokeStyle = '#1E293B';
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+
+        // 秤盤金屬台
+        drawRoundRect(ctx, cx - sw * 0.42, scaleTopY, sw * 0.84, 14, 6);
+        ctx.fillStyle = '#CBD5E1';
+        ctx.fill();
+        ctx.strokeStyle = '#64748B';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // 電子秤 LCD 顯示幕
+        const lcdW = sw * 0.72;
+        drawRoundRect(ctx, cx - lcdW / 2, scaleTopY + 24, lcdW, 44, 8);
+        ctx.fillStyle = '#0F172A';
+        ctx.fill();
+        ctx.strokeStyle = '#475569';
+        ctx.stroke();
+
+        ctx.fillStyle = APP.predictionMasked ? '#F59E0B' : '#34D399';
+        ctx.font = `900 28px ${getComputedStyle(document.body).fontFamily}`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const dispText = APP.predictionMasked ? '???.?? g' : `${this.currentScale.toFixed(2)} g`;
+        ctx.fillText(dispText, cx, scaleTopY + 46);
+
+        // 錐形瓶幾何座標
+        const neckTopY = flaskBottomY - 172;
+        const neckBotY = flaskBottomY - 122;
+        const neckHalfW = 20;
+        const baseHalfW = 72;
+
+        // 瓶內液體繪製（剪裁在錐形瓶內）
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(cx - neckHalfW, neckTopY);
+        ctx.lineTo(cx - neckHalfW, neckBotY);
+        ctx.lineTo(cx - baseHalfW, flaskBottomY - 10);
+        ctx.quadraticCurveTo(cx - baseHalfW, flaskBottomY, cx - baseHalfW + 14, flaskBottomY);
+        ctx.lineTo(cx + baseHalfW - 14, flaskBottomY);
+        ctx.quadraticCurveTo(cx + baseHalfW, flaskBottomY, cx + baseHalfW, flaskBottomY - 10);
+        ctx.lineTo(cx + neckHalfW, neckBotY);
+        ctx.lineTo(cx + neckHalfW, neckTopY);
+        ctx.closePath();
+        ctx.clip();
+
+        const liqY = flaskBottomY - 72;
+        if (this.expType === 'gas') {
+          ctx.fillStyle = 'rgba(186, 230, 253, 0.72)';
+          ctx.fillRect(cx - baseHalfW, liqY, baseHalfW * 2, 76);
+
+          // 底部大理石顆粒（CaCO3，隨反應縮小）
+          const marbleScale = Math.max(0.28, 1 - ease * 0.72);
+          ctx.fillStyle = '#E2E8F0';
+          ctx.strokeStyle = '#64748B';
+          ctx.lineWidth = 1.5;
+          [-26, -8, 12, 28].forEach((ox, idx) => {
+            ctx.beginPath();
+            ctx.ellipse(cx + ox, flaskBottomY - 7, 11 * marbleScale, 7 * marbleScale, idx * 0.3, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+          });
+
+          // 上升氣泡
+          this.macroBubbles.forEach(b => {
+            ctx.beginPath();
+            ctx.arc(cx + b.x, flaskBottomY - 10 + b.y, b.r, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+            ctx.fill();
+            ctx.strokeStyle = '#38BDF8';
+            ctx.lineWidth = 1.2;
+            ctx.stroke();
+          });
+        } else {
+          // 沉澱反應：液體由透明逐漸變乳白濁，底部累積白色沉澱層
+          const cloudAlpha = Math.min(0.82, ease * 0.82);
+          ctx.fillStyle = `rgba(224, 242, 254, 0.65)`;
+          ctx.fillRect(cx - baseHalfW, liqY, baseHalfW * 2, 76);
+          ctx.fillStyle = `rgba(255, 255, 255, ${cloudAlpha * 0.7})`;
+          ctx.fillRect(cx - baseHalfW, liqY, baseHalfW * 2, 76);
+
+          // 白色沉澱雪花與底層堆積
+          this.precipFlakes.forEach(f => {
+            ctx.beginPath();
+            ctx.arc(cx + f.x, flaskBottomY - 8 + f.y, f.r, 0, Math.PI * 2);
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fill();
+          });
+          if (ease > 0.05) {
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(cx - baseHalfW, flaskBottomY - 16 * ease, baseHalfW * 2, 18 * ease);
+          }
+        }
+        ctx.restore();
+
+        // 錐形瓶玻璃外框
+        ctx.beginPath();
+        ctx.moveTo(cx - neckHalfW - 4, neckTopY);
+        ctx.lineTo(cx - neckHalfW, neckTopY + 4);
+        ctx.lineTo(cx - neckHalfW, neckBotY);
+        ctx.lineTo(cx - baseHalfW, flaskBottomY - 10);
+        ctx.quadraticCurveTo(cx - baseHalfW, flaskBottomY, cx - baseHalfW + 14, flaskBottomY);
+        ctx.lineTo(cx + baseHalfW - 14, flaskBottomY);
+        ctx.quadraticCurveTo(cx + baseHalfW, flaskBottomY, cx + baseHalfW, flaskBottomY - 10);
+        ctx.lineTo(cx + neckHalfW, neckBotY);
+        ctx.lineTo(cx + neckHalfW, neckTopY + 4);
+        ctx.lineTo(cx + neckHalfW + 4, neckTopY);
+        ctx.strokeStyle = '#475569';
+        ctx.lineWidth = 3.2;
+        ctx.stroke();
+
+        // 開放模式逸散的 CO2 煙霧與箭頭
+        if (this.mode === 'open' && this.expType === 'gas') {
+          this.macroMists.forEach(m => {
+            ctx.beginPath();
+            ctx.arc(cx + m.x, neckTopY - 8 + m.y, m.r, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(239, 68, 68, ${m.alpha * 0.45})`;
+            ctx.fill();
+          });
+          if (this.running || this.finished) {
+            ctx.fillStyle = '#DC2626';
+            ctx.font = `800 14px ${getComputedStyle(document.body).fontFamily}`;
+            ctx.textAlign = 'left';
+            ctx.fillText('⬆ CO₂ 氣體逸散至空氣', cx + 32, neckTopY - 22);
+          }
+        }
+
+        // 密閉模式：橡皮氣球（產氣時明顯膨脹，沉澱時維持扁平）
+        if (this.mode === 'closed') {
+          const inflate = (this.expType === 'gas') ? ease : 0;
+          const bx = cx;
+          const rx = 18 + inflate * 44;
+          const ry = 20 + inflate * 50;
+          const by = neckTopY - 10 - ry * 0.85;
+
+          // 氣球套口
+          drawRoundRect(ctx, cx - neckHalfW - 4, neckTopY - 6, (neckHalfW + 4) * 2, 16, 5);
+          ctx.fillStyle = '#F59E0B';
+          ctx.fill();
+          ctx.strokeStyle = '#B45309';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+
+          // 氣球本體
+          const bGrad = ctx.createRadialGradient(bx - rx * 0.3, by - ry * 0.3, 4, bx, by, Math.max(rx, ry));
+          bGrad.addColorStop(0, '#FEF08A');
+          bGrad.addColorStop(0.55, '#F59E0B');
+          bGrad.addColorStop(1, '#D97706');
+
+          ctx.beginPath();
+          ctx.ellipse(bx, by, rx, ry, 0, 0, Math.PI * 2);
+          ctx.fillStyle = bGrad;
+          ctx.fill();
+          ctx.strokeStyle = '#B45309';
+          ctx.lineWidth = 2.4;
+          ctx.stroke();
+
+          if (inflate > 0.15) {
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = `900 ${Math.round(13 + inflate * 5)}px ${getComputedStyle(document.body).fontFamily}`;
+            ctx.textAlign = 'center';
+            ctx.fillText('CO₂', bx, by + 2);
+          }
+        }
+      },
+
+      renderMicro() {
+        const info = syncCanvas(document.getElementById('canvas1bMicro'));
+        if (!info) return;
+        const { ctx, w, h } = info;
+        ctx.clearRect(0, 0, w, h);
+
+        const liquidY = h * 0.56;
+        const neckL = w * 0.34;
+        const neckR = w * 0.66;
+        const progress = this.elapsed / this.duration;
+
+        // 液相背景
+        ctx.fillStyle = this.expType === 'gas' ? 'rgba(224, 242, 254, 0.7)' : 'rgba(241, 245, 249, 0.85)';
+        ctx.fillRect(0, liquidY, w, h - liquidY);
+
+        // 液面波紋線
+        ctx.beginPath();
+        ctx.moveTo(0, liquidY);
+        ctx.lineTo(w, liquidY);
+        ctx.strokeStyle = '#38BDF8';
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+
+        // 容器瓶口或密閉氣球內壁邊界
+        if (this.mode === 'open') {
+          ctx.strokeStyle = '#64748B';
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.moveTo(neckL, 18); ctx.lineTo(neckL, liquidY);
+          ctx.moveTo(neckR, 18); ctx.lineTo(neckR, liquidY);
+          ctx.stroke();
+
+          ctx.fillStyle = '#DC2626';
+          ctx.font = `800 13px ${getComputedStyle(document.body).fontFamily}`;
+          ctx.textAlign = 'center';
+          ctx.fillText('▲ 開放瓶口（CO₂ 飛出即離開電子秤）▲', w / 2, 16);
+        } else {
+          const balloonR = 32 + (this.expType === 'gas' ? progress * 46 : 0);
+          const balloonCY = liquidY - 42 - (this.expType === 'gas' ? progress * 22 : 0);
+          ctx.beginPath();
+          ctx.arc(w / 2, balloonCY, balloonR, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(254, 243, 199, 0.55)';
+          ctx.fill();
+          ctx.strokeStyle = '#D97706';
+          ctx.lineWidth = 3.5;
+          ctx.setLineDash([6, 4]);
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          ctx.fillStyle = '#B45309';
+          ctx.font = `800 13px ${getComputedStyle(document.body).fontFamily}`;
+          ctx.textAlign = 'center';
+          ctx.fillText('密閉氣球內壁（氣體撞擊反彈不逸散）', w / 2, 16);
+        }
+
+        // 繪製所有微觀粒子
+        this.microParticles.forEach(p => {
+          if (p.kind === 'co2') {
+            // 迷你 O=C=O 分子
+            drawAtomSphere(ctx, p.x - 10, p.y, 'O', 0.36);
+            drawAtomSphere(ctx, p.x + 10, p.y, 'O', 0.36);
+            drawAtomSphere(ctx, p.x, p.y, 'C', 0.38);
+          } else if (p.kind === 'precip_solid') {
+            ctx.fillStyle = '#FFFFFF';
+            ctx.strokeStyle = '#64748B';
+            ctx.lineWidth = 1.6;
+            ctx.fillRect(p.x - 6, p.y - 6, 12, 12);
+            ctx.strokeRect(p.x - 6, p.y - 6, 12, 12);
+          } else {
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+            ctx.fillStyle = p.kind === 'ca' ? '#93C5FD' : (p.kind === 'co3' ? '#FCD34D' : '#CBD5E1');
+            ctx.fill();
+            ctx.strokeStyle = '#64748B';
+            ctx.lineWidth = 1.2;
+            ctx.stroke();
+          }
+        });
+      },
+
+      renderChart() {
+        const info = syncCanvas(document.getElementById('canvas1bChart'));
+        if (!info) return;
+        const { ctx, w, h } = info;
+        ctx.clearRect(0, 0, w, h);
+
+        const padL = 56, padR = 18, padT = 22, padB = 30;
+        const cw = w - padL - padR;
+        const ch = h - padT - padB;
+        const minM = 144, maxM = 152;
+
+        // 格線與 Y 軸刻度
+        ctx.font = `700 12px ${getComputedStyle(document.body).fontFamily}`;
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        [144, 146, 148, 150, 152].forEach(val => {
+          const y = padT + (1 - (val - minM) / (maxM - minM)) * ch;
+          ctx.beginPath();
+          ctx.moveTo(padL, y);
+          ctx.lineTo(w - padR, y);
+          ctx.strokeStyle = val === 150 ? '#CBD5E1' : '#F1F5F9';
+          ctx.lineWidth = val === 150 ? 1.5 : 1;
+          ctx.stroke();
+          ctx.fillStyle = '#64748B';
+          ctx.fillText(`${val}g`, padL - 6, y);
+        });
+
+        // X 軸刻度
+        ctx.textAlign = 'center';
+        [0, 2, 4, 6, 8, 10].forEach(sec => {
+          const x = padL + (sec / this.duration) * cw;
+          ctx.fillStyle = '#64748B';
+          ctx.fillText(`${sec}s`, x, h - 12);
+        });
+
+        // 軸框線
+        ctx.strokeStyle = '#94A3B8';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(padL, padT);
+        ctx.lineTo(padL, padT + ch);
+        ctx.lineTo(padL + cw, padT + ch);
+        ctx.stroke();
+
+        if (APP.predictionMasked) {
+          ctx.fillStyle = '#D97706';
+          ctx.font = `800 15px ${getComputedStyle(document.body).fontFamily}`;
+          ctx.textAlign = 'center';
+          ctx.fillText('🙈 預測模式中：讀數曲線已隱藏', padL + cw / 2, padT + ch / 2);
+          return;
+        }
+
+        const plotLine = (pts, color, dashed) => {
+          if (!pts || pts.length < 2) return;
+          ctx.save();
+          ctx.beginPath();
+          pts.forEach((pt, idx) => {
+            const x = padL + (pt.t / this.duration) * cw;
+            const y = padT + (1 - (pt.m - minM) / (maxM - minM)) * ch;
+            if (idx === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          });
+          ctx.strokeStyle = color;
+          ctx.lineWidth = dashed ? 2.4 : 3.4;
+          if (dashed) ctx.setLineDash([6, 4]);
+          ctx.stroke();
+          ctx.restore();
+        };
+
+        if (this.prevHistory) {
+          plotLine(this.prevHistory, '#94A3B8', true);
+          ctx.fillStyle = '#64748B';
+          ctx.font = `700 12px ${getComputedStyle(document.body).fontFamily}`;
+          ctx.textAlign = 'right';
+          ctx.fillText(`--- ${this.prevLabel}`, w - padR - 4, padT + 10);
+        }
+
+        const activeColor = (this.expType === 'gas' && this.mode === 'open') ? '#DC2626' : '#059669';
+        plotLine(this.history, activeColor, false);
+
+        // 最新資料點高亮圓點
+        const last = this.history[this.history.length - 1];
+        if (last) {
+          const lx = padL + (last.t / this.duration) * cw;
+          const ly = padT + (1 - (last.m - minM) / (maxM - minM)) * ch;
+          ctx.beginPath();
+          ctx.arc(lx, ly, 5.5, 0, Math.PI * 2);
+          ctx.fillStyle = activeColor;
+          ctx.fill();
+          ctx.strokeStyle = '#FFFFFF';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+      }
+    };
+
+    /* ==========================================================================
+       五、模組 2A：莫耳標準貨櫃稱重站（雙站並排對比）
+       ========================================================================== */
+    const MOD2A = {
+      substances: [
+        { id: 'H2O',     name: '水 (H₂O)',          formula: 'H2O',     mw: 18,  atomsPerUnit: 3,  unitName: '分子', color: '#0EA5E9', tint: 'rgba(14, 165, 233, 0.14)' },
+        { id: 'CO2',     name: '二氧化碳 (CO₂)',     formula: 'CO2',     mw: 44,  atomsPerUnit: 3,  unitName: '分子', color: '#64748B', tint: 'rgba(100, 116, 139, 0.14)' },
+        { id: 'O2',      name: '氧氣 (O₂)',          formula: 'O2',      mw: 32,  atomsPerUnit: 2,  unitName: '分子', color: '#EF4444', tint: 'rgba(239, 68, 68, 0.13)' },
+        { id: 'Fe',      name: '鐵 (Fe)',            formula: 'Fe',      mw: 56,  atomsPerUnit: 1,  unitName: '原子', color: '#B45309', tint: 'rgba(180, 83, 9, 0.14)' },
+        { id: 'C',       name: '碳 (C)',             formula: 'C',       mw: 12,  atomsPerUnit: 1,  unitName: '原子', color: '#334155', tint: 'rgba(51, 65, 85, 0.14)' },
+        { id: 'C6H12O6', name: '葡萄糖 (C₆H₁₂O₆)',   formula: 'C6H12O6', mw: 180, atomsPerUnit: 24, unitName: '分子', color: '#8B5CF6', tint: 'rgba(139, 92, 246, 0.14)' }
+      ],
+      stations: {
+        A: { subId: 'H2O', mol: 1.0 },
+        B: { subId: 'CO2', mol: 1.0 }
+      },
+      time: 0,
+
+      init() {
+        ['A', 'B'].forEach(key => {
+          const sel = document.getElementById(`select2a${key}`);
+          sel.innerHTML = this.substances.map(s =>
+            `<option value="${s.id}">${s.name} — ${s.mw} g/mol</option>`
+          ).join('');
+          sel.value = this.stations[key].subId;
+
+          sel.addEventListener('change', () => {
+            this.stations[key].subId = sel.value;
+            this.updateStationUI(key);
+          });
+
+          const slider = document.getElementById(`slider2a${key}`);
+          slider.addEventListener('input', () => {
+            this.stations[key].mol = parseFloat(slider.value);
+            this.updateStationUI(key);
+          });
+
+          document.getElementById(`minus2a${key}`).addEventListener('click', () => {
+            this.stations[key].mol = Math.max(0.5, roundNum(this.stations[key].mol - 0.5, 1));
+            this.updateStationUI(key);
+          });
+          document.getElementById(`plus2a${key}`).addEventListener('click', () => {
+            this.stations[key].mol = Math.min(5.0, roundNum(this.stations[key].mol + 0.5, 1));
+            this.updateStationUI(key);
+          });
+
+          this.updateStationUI(key);
+        });
+
+        // 快速教學情境按鈕
+        const presets = {
+          sameMol:   { A: ['H2O', 1.0], B: ['CO2', 1.0], msg: '情境：都是 1.0 mol（同粒子數），重量卻是 18g vs 44g！' },
+          sameMass:  { A: ['H2O', 1.0], B: ['C', 1.5],   msg: '情境：兩邊都是 18g，但碳有 1.5 mol，顆數比水更多！' },
+          atomCount: { A: ['O2', 2.0],  B: ['H2O', 2.0], msg: '情境：都是 2.0 mol 分子，但水分子含 3 原子，總原子數較多！' },
+          bigSmall:  { A: ['Fe', 1.0],  B: ['C6H12O6', 1.0], msg: '情境：都是 1.0 mol，葡萄糖每分子含 24 顆原子，重量高達 180g！' }
+        };
+
+        document.querySelectorAll('[data-preset]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const p = presets[btn.dataset.preset];
+            if (!p) return;
+            this.stations.A = { subId: p.A[0], mol: p.A[1] };
+            this.stations.B = { subId: p.B[0], mol: p.B[1] };
+            this.updateStationUI('A');
+            this.updateStationUI('B');
+            showToast(p.msg);
+          });
+        });
+      },
+
+      getSub(id) {
+        return this.substances.find(s => s.id === id) || this.substances[0];
+      },
+
+      updateStationUI(key) {
+        const st = this.stations[key];
+        const sub = this.getSub(st.subId);
+        document.getElementById(`select2a${key}`).value = st.subId;
+        document.getElementById(`slider2a${key}`).value = st.mol;
+        document.getElementById(`molLabel2a${key}`).textContent = `${st.mol.toFixed(1)} mol`;
+
+        const totalAtomMol = roundNum(st.mol * sub.atomsPerUnit, 1);
+        const container = document.getElementById(`metrics2a${key}`);
+        container.innerHTML = `
+          <div class="metric-box">
+            <div class="metric-label">莫耳數 (貨櫃數)</div>
+            <div class="metric-val">${st.mol.toFixed(1)} mol</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">${sub.atomsPerUnit === 1 ? '原子量' : '分子量'}</div>
+            <div class="metric-val">${sub.mw} g/mol</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">${sub.unitName}總數</div>
+            <div class="metric-val">${formatAvogadroHTML(st.mol)}</div>
+          </div>
+          <div class="metric-box highlight-atoms">
+            <div class="metric-label">⚛️ 總原子數（含 ${totalAtomMol} mol 原子）</div>
+            <div class="metric-val">${formatAvogadroHTML(totalAtomMol)}</div>
+            <div class="metric-note">每 1 ${sub.unitName}含 ${sub.atomsPerUnit} 顆原子</div>
+          </div>
+        `;
+      },
+
+      update(dt) {
+        this.time += dt;
+      },
+
+      // 繪製貨櫃內迷你物質粒子
+      drawMiniParticle(ctx, subId, x, y) {
+        if (subId === 'H2O') {
+          drawAtomSphere(ctx, x, y - 2, 'O', 0.34);
+          drawAtomSphere(ctx, x - 6, y + 4, 'H', 0.30);
+          drawAtomSphere(ctx, x + 6, y + 4, 'H', 0.30);
+        } else if (subId === 'CO2') {
+          drawAtomSphere(ctx, x - 8, y, 'O', 0.28);
+          drawAtomSphere(ctx, x + 8, y, 'O', 0.28);
+          drawAtomSphere(ctx, x, y, 'C', 0.30);
+        } else if (subId === 'O2') {
+          drawAtomSphere(ctx, x - 5, y, 'O', 0.32);
+          drawAtomSphere(ctx, x + 5, y, 'O', 0.32);
+        } else if (subId === 'Fe') {
+          drawAtomSphere(ctx, x, y, 'Fe', 0.40);
+        } else if (subId === 'C') {
+          drawAtomSphere(ctx, x, y, 'C', 0.40);
+        } else {
+          // 葡萄糖六角環簡圖
+          ctx.save();
+          ctx.beginPath();
+          for (let k = 0; k < 6; k++) {
+            const ang = (Math.PI / 3) * k - Math.PI / 6;
+            const px = x + Math.cos(ang) * 9;
+            const py = y + Math.sin(ang) * 9;
+            if (k === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          }
+          ctx.closePath();
+          ctx.fillStyle = '#DDD6FE';
+          ctx.fill();
+          ctx.strokeStyle = '#7C3AED';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          ctx.restore();
+        }
+      },
+
+      renderStation(key) {
+        const info = syncCanvas(document.getElementById(`canvas2a${key}`));
+        if (!info) return;
+        const { ctx, w, h } = info;
+        ctx.clearRect(0, 0, w, h);
+
+        const st = this.stations[key];
+        const sub = this.getSub(st.subId);
+        const totalMass = roundNum(st.mol * sub.mw, 1);
+        const cx = w / 2;
+        const scaleY = h - 68;
+
+        // 電子秤底座
+        const sw = Math.min(280, w * 0.78);
+        drawRoundRect(ctx, cx - sw / 2, scaleY + 12, sw, 50, 12);
+        ctx.fillStyle = key === 'A' ? '#134E4A' : '#1E3A8A';
+        ctx.fill();
+
+        // 秤盤
+        drawRoundRect(ctx, cx - sw * 0.46, scaleY, sw * 0.92, 13, 6);
+        ctx.fillStyle = '#CBD5E1';
+        ctx.fill();
+        ctx.strokeStyle = '#64748B';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // LCD 重量顯示
+        drawRoundRect(ctx, cx - sw * 0.36, scaleY + 20, sw * 0.72, 34, 8);
+        ctx.fillStyle = '#0F172A';
+        ctx.fill();
+        ctx.fillStyle = (key === 'B' && APP.predictionMasked) ? '#F59E0B' : '#34D399';
+        ctx.font = `900 22px ${getComputedStyle(document.body).fontFamily}`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const massTxt = (key === 'B' && APP.predictionMasked) ? '??? g' : `${totalMass.toFixed(1)} g`;
+        ctx.fillText(massTxt, cx, scaleY + 37);
+
+        // 堆疊標準莫耳貨櫃（每列最多 2 個，向上堆疊，支援 0.5 半箱）
+        const fullBoxes = Math.floor(st.mol);
+        const hasHalf = (st.mol - fullBoxes) >= 0.49;
+        const totalSlots = fullBoxes + (hasHalf ? 1 : 0);
+
+        const cols = totalSlots <= 1 ? 1 : 2;
+        const rows = Math.ceil(totalSlots / 2);
+        const boxW = Math.min(116, (sw * 0.86 - (cols - 1) * 10) / cols);
+        const boxH = Math.min(54, (scaleY - 22) / Math.max(rows, 1) - 6);
+
+        for (let i = 0; i < totalSlots; i++) {
+          const isHalf = (i === fullBoxes && hasHalf);
+          const row = Math.floor(i / 2);
+          const col = i % 2;
+          const itemsInThisRow = (row === rows - 1 && totalSlots % 2 === 1) ? 1 : cols;
+          const rowW = itemsInThisRow * boxW + (itemsInThisRow - 1) * 10;
+          const startX = cx - rowW / 2;
+
+          const bx = startX + col * (boxW + 10);
+          const drawW = isHalf ? boxW * 0.56 : boxW;
+          const drawX = isHalf ? bx + (boxW - drawW) / 2 : bx;
+          const by = scaleY - 6 - (row + 1) * (boxH + 6) + 6;
+
+          // 透明貨櫃外框
+          drawRoundRect(ctx, drawX, by, drawW, boxH, 9);
+          ctx.fillStyle = sub.tint;
+          ctx.fill();
+          ctx.strokeStyle = sub.color;
+          ctx.lineWidth = 2.4;
+          if (isHalf) ctx.setLineDash([5, 3]);
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          // 貨櫃內漂浮粒子
+          const pCount = isHalf ? 3 : 6;
+          for (let p = 0; p < pCount; p++) {
+            const px = drawX + 14 + ((p + 0.5) / pCount) * (drawW - 28);
+            const py = by + boxH * 0.44 + Math.sin(this.time * 2.5 + p * 1.4 + i) * (boxH * 0.16);
+            this.drawMiniParticle(ctx, sub.id, px, py);
+          }
+
+          // 貨櫃底部標籤
+          ctx.fillStyle = sub.color;
+          ctx.font = `800 11px ${getComputedStyle(document.body).fontFamily}`;
+          ctx.textAlign = 'center';
+          ctx.fillText(isHalf ? '0.5 mol' : '1 mol (6×10²³)', drawX + drawW / 2, by + boxH - 8);
+        }
+      },
+
+      render() {
+        this.renderStation('A');
+        this.renderStation('B');
+      }
+    };
+
+    /* ==========================================================================
+       六、模組 2B：限量試劑反應裝配線
+       ========================================================================== */
+    const MOD2B = {
+      reactions: [
+        {
+          id: 'burger', name: '🍔 漢堡工廠（暖身）', isAnalogy: true, unit: '個',
+          eqText: '2 麵包 + 1 肉排 ➜ 1 美味漢堡',
+          A: { name: '麵包', formula: '麵包', coef: 2, mw: 0, icon: 'bun' },
+          B: { name: '肉排', formula: '肉排', coef: 1, mw: 0, icon: 'patty' },
+          products: [{ name: '漢堡', formula: '漢堡', coef: 1, mw: 0, icon: 'burger' }],
+          defaults: [5, 4]
+        },
+        {
+          id: 'water', name: '💧 水的合成', isAnalogy: false, unit: 'mol',
+          eqText: '2 H₂ + O₂ ➜ 2 H₂O',
+          A: { name: '氫氣 (H₂)', formula: 'H2', coef: 2, mw: 2, icon: 'H2' },
+          B: { name: '氧氣 (O₂)', formula: 'O2', coef: 1, mw: 32, icon: 'O2' },
+          products: [{ name: '水 (H₂O)', formula: 'H2O', coef: 2, mw: 18, icon: 'H2O' }],
+          defaults: [4, 3]
+        },
+        {
+          id: 'ammonia', name: '💨 氨氣合成', isAnalogy: false, unit: 'mol',
+          eqText: 'N₂ + 3 H₂ ➜ 2 NH₃',
+          A: { name: '氮氣 (N₂)', formula: 'N2', coef: 1, mw: 28, icon: 'N2' },
+          B: { name: '氫氣 (H₂)', formula: 'H2', coef: 3, mw: 2, icon: 'H2' },
+          products: [{ name: '氨氣 (NH₃)', formula: 'NH3', coef: 2, mw: 17, icon: 'NH3' }],
+          defaults: [3, 6]
+        },
+        {
+          id: 'methane', name: '🔥 甲烷燃燒', isAnalogy: false, unit: 'mol',
+          eqText: 'CH₄ + 2 O₂ ➜ CO₂ + 2 H₂O',
+          A: { name: '甲烷 (CH₄)', formula: 'CH4', coef: 1, mw: 16, icon: 'CH4' },
+          B: { name: '氧氣 (O₂)', formula: 'O2', coef: 2, mw: 32, icon: 'O2' },
+          products: [
+            { name: '二氧化碳 (CO₂)', formula: 'CO2', coef: 1, mw: 44, icon: 'CO2' },
+            { name: '水 (H₂O)', formula: 'H2O', coef: 2, mw: 18, icon: 'H2O' }
+          ],
+          defaults: [4, 6]
+        },
+        {
+          id: 'mgo', name: '⚡ 鎂帶氧化', isAnalogy: false, unit: 'mol',
+          eqText: '2 Mg + O₂ ➜ 2 MgO',
+          A: { name: '鎂 (Mg)', formula: 'Mg', coef: 2, mw: 24, icon: 'Mg' },
+          B: { name: '氧氣 (O₂)', formula: 'O2', coef: 1, mw: 32, icon: 'O2' },
+          products: [{ name: '氧化鎂 (MgO)', formula: 'MgO', coef: 2, mw: 40, icon: 'MgO' }],
+          defaults: [6, 2]
+        }
+      ],
+      rxnIdx: 0,
+      initA: 5,
+      initB: 4,
+      phase: 'idle',       // 'idle' | 'running' | 'done'
+      completedBatches: 0,
+      maxBatches: 0,
+      batchProgress: 0,    // 0 ~ 1 單批次進度
+      beltScroll: 0,
+      gearAngle: 0,
+      flashAlpha: 0,
+
+      init() {
+        const sel = document.getElementById('rxn2bSelector');
+        sel.innerHTML = '';
+        this.reactions.forEach((r, i) => {
+          const btn = document.createElement('button');
+          btn.className = 'pill-btn' + (i === 0 ? ' active' : '');
+          btn.textContent = r.name;
+          btn.addEventListener('click', () => this.selectReaction(i));
+          sel.appendChild(btn);
+        });
+
+        const bindInput = (which) => {
+          const slider = document.getElementById(`slider2b${which}`);
+          slider.addEventListener('input', () => {
+            this[`init${which}`] = parseInt(slider.value, 10);
+            this.resetLine();
+          });
+          document.getElementById(`minus2b${which}`).addEventListener('click', () => {
+            this[`init${which}`] = Math.max(0, this[`init${which}`] - 1);
+            this.resetLine();
+          });
+          document.getElementById(`plus2b${which}`).addEventListener('click', () => {
+            this[`init${which}`] = Math.min(10, this[`init${which}`] + 1);
+            this.resetLine();
+          });
+        };
+        bindInput('A');
+        bindInput('B');
+
+        document.getElementById('btnStart2b').addEventListener('click', () => this.startLine());
+        document.getElementById('btnInstant2b').addEventListener('click', () => this.finishInstant());
+        document.getElementById('btnReset2b').addEventListener('click', () => this.resetLine());
+
+        this.selectReaction(0);
+      },
+
+      selectReaction(idx) {
+        this.rxnIdx = idx;
+        const r = this.reactions[idx];
+        this.initA = r.defaults[0];
+        this.initB = r.defaults[1];
+
+        document.querySelectorAll('#rxn2bSelector .pill-btn').forEach((b, i) => {
+          b.classList.toggle('active', i === idx);
+        });
+        document.getElementById('rxn2bBanner').textContent = `反應式：${r.eqText}`;
+        this.resetLine();
+      },
+
+      // 計算化學計量精準結果
+      calcStoich() {
+        const r = this.reactions[this.rxnIdx];
+        const batchesA = Math.floor(this.initA / r.A.coef);
+        const batchesB = Math.floor(this.initB / r.B.coef);
+        // 若是化學反應允許非整數莫耳？因投入量皆為整數且我們以完整批次視覺化展示，
+        // 若要處理如 N2(1) + 3H2(3) 投入 H2=4 時，1.333 莫耳也可精準計算！
+        // 化學計量真實上限為 Math.min(initA / coefA, initB / coefB)
+        const exactExtA = this.initA / r.A.coef;
+        const exactExtB = this.initB / r.B.coef;
+        // 漢堡必須是整數個，化學反應則用精準連續莫耳數
+        const extent = r.isAnalogy
+          ? Math.floor(Math.min(exactExtA, exactExtB))
+          : Math.min(exactExtA, exactExtB);
+
+        const usedA = roundNum(extent * r.A.coef, 2);
+        const usedB = roundNum(extent * r.B.coef, 2);
+        const remA = roundNum(this.initA - usedA, 2);
+        const remB = roundNum(this.initB - usedB, 2);
+
+        const prodFinal = r.products.map(p => ({
+          ...p,
+          amount: roundNum(extent * p.coef, 2)
+        }));
+
+        let limiting = 'none'; // 'A' | 'B' | 'both' | 'none'
+        if (this.initA === 0 && this.initB === 0) limiting = 'none';
+        else if (Math.abs(exactExtA - exactExtB) < 1e-6 && (!r.isAnalogy || (remA === 0 && remB === 0))) limiting = 'both';
+        else if (exactExtA < exactExtB) limiting = 'A';
+        else limiting = 'B';
+
+        // 動畫批次數（每批執行完整化學計量比，若有小數尾數最後加 1 批收尾）
+        const animBatches = r.isAnalogy ? extent : Math.ceil(extent - 1e-6);
+
+        return { extent, animBatches, usedA, usedB, remA, remB, prodFinal, limiting };
+      },
+
+      resetLine() {
+        const r = this.reactions[this.rxnIdx];
+        this.phase = 'idle';
+        this.completedBatches = 0;
+        this.batchProgress = 0;
+        this.flashAlpha = 0;
+
+        document.getElementById('slider2bA').value = this.initA;
+        document.getElementById('slider2bB').value = this.initB;
+        document.getElementById('label2bA').textContent = `投入 ${r.A.name}（每次消耗 ${r.A.coef}）`;
+        document.getElementById('label2bB').textContent = `投入 ${r.B.name}（每次消耗 ${r.B.coef}）`;
+        document.getElementById('val2bA').textContent = `${this.initA} ${r.unit}`;
+        document.getElementById('val2bB').textContent = `${this.initB} ${r.unit}`;
+
+        document.getElementById('status2bSummary').textContent = '原料已就定位，點擊「啟動裝配線動畫」開始組裝！';
+        this.renderICETable();
+      },
+
+      startLine() {
+        const st = this.calcStoich();
+        this.completedBatches = 0;
+        this.batchProgress = 0;
+        this.maxBatches = st.animBatches;
+        if (this.maxBatches <= 0) {
+          this.phase = 'done';
+          document.getElementById('status2bSummary').textContent = '⚠️ 原料不足以進行任何一組反應！';
+          this.renderICETable();
+          return;
+        }
+        this.phase = 'running';
+        document.getElementById('status2bSummary').textContent = '⚙️ 裝配線運轉中…觀察原料依比例配對組裝！';
+      },
+
+      finishInstant() {
+        const st = this.calcStoich();
+        this.maxBatches = st.animBatches;
+        this.completedBatches = st.animBatches;
+        this.batchProgress = 0;
+        this.phase = 'done';
+        this.updateDoneSummary(st);
+        this.renderICETable();
+      },
+
+      updateDoneSummary(st) {
+        const r = this.reactions[this.rxnIdx];
+        const sumEl = document.getElementById('status2bSummary');
+        if (APP.predictionMasked) {
+          sumEl.textContent = '✅ 裝配線已完成運作（預測遮罩中，請先討論結果）';
+          return;
+        }
+        if (st.limiting === 'both') {
+          sumEl.textContent = '🎉 兩者剛剛好完全用完，沒有任何過量剩餘！';
+        } else if (st.limiting === 'A') {
+          sumEl.textContent = `🔴 限量試劑：${r.A.name}（耗盡）｜🟠 過量試劑：${r.B.name}（剩餘 ${st.remB} ${r.unit}）`;
+        } else if (st.limiting === 'B') {
+          sumEl.textContent = `🔴 限量試劑：${r.B.name}（耗盡）｜🟠 過量試劑：${r.A.name}（剩餘 ${st.remA} ${r.unit}）`;
+        } else {
+          sumEl.textContent = '⚠️ 尚未投入足夠原料';
+        }
+      },
+
+      renderICETable() {
+        const r = this.reactions[this.rxnIdx];
+        const st = this.calcStoich();
+        const table = document.getElementById('iceTable2b');
+
+        const cols = [
+          { name: r.A.name, mw: r.A.mw, init: this.initA, chg: -st.usedA, fin: st.remA, role: st.limiting === 'A' ? 'lim' : (st.limiting === 'both' ? 'perf' : (st.remA > 0 ? 'exc' : '')) },
+          { name: r.B.name, mw: r.B.mw, init: this.initB, chg: -st.usedB, fin: st.remB, role: st.limiting === 'B' ? 'lim' : (st.limiting === 'both' ? 'perf' : (st.remB > 0 ? 'exc' : '')) },
+          ...st.prodFinal.map(p => ({ name: p.name, mw: p.mw, init: 0, chg: +p.amount, fin: p.amount, role: 'prod' }))
+        ];
+
+        const fmtCell = (val, mw, showSign = false) => {
+          const sign = showSign ? (val > 0 ? '+' : '') : '';
+          const main = `${sign}${val} ${r.unit}`;
+          if (r.isAnalogy) return `<div class="ice-val-main">${main}</div>`;
+          const mass = roundNum(val * mw, 1);
+          const mSign = showSign ? (mass > 0 ? '+' : '') : '';
+          return `<div class="ice-val-main">${main}</div><div class="ice-val-sub">(${mSign}${mass} g)</div>`;
+        };
+
+        const roleTag = (role) => {
+          if (role === 'lim') return '<div class="tag-limiting">限量試劑（已耗盡）</div>';
+          if (role === 'exc') return '<div class="tag-excess">過量試劑（有剩餘）</div>';
+          if (role === 'perf') return '<div class="tag-perfect">完美完全反應</div>';
+          return '';
+        };
+
+        table.innerHTML = `
+          <thead>
+            <tr>
+              <th>反應階段</th>
+              ${cols.map(c => `<th>${c.name}${roleTag(c.role)}</th>`).join('')}
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th>反應前（初）</th>
+              ${cols.map(c => `<td>${fmtCell(c.init, c.mw, false)}</td>`).join('')}
+            </tr>
+            <tr>
+              <th>變化量（消耗/生成）</th>
+              ${cols.map(c => `<td style="color:${c.chg < 0 ? '#DC2626' : '#059669'};">${fmtCell(c.chg, c.mw, true)}</td>`).join('')}
+            </tr>
+            <tr style="background:#F8FAFC;">
+              <th>反應後（末）</th>
+              ${cols.map(c => `<td>${fmtCell(c.fin, c.mw, false)}</td>`).join('')}
+            </tr>
+          </tbody>
+        `;
+
+        // 底部質量守恆驗證列
+        const bar = document.getElementById('massVerify2b');
+        if (r.isAnalogy) {
+          bar.innerHTML = `
+            <span>🍔 漢堡比喻驗證：做出 ${st.prodFinal[0].amount} 個漢堡，消耗 ${st.usedA} 片麵包與 ${st.usedB} 片肉排。</span>
+            <span>剩餘原料：麵包 ${st.remA} 個、肉排 ${st.remB} 個</span>
+          `;
+        } else {
+          const initMass = roundNum(this.initA * r.A.mw + this.initB * r.B.mw, 1);
+          const prodMass = roundNum(st.prodFinal.reduce((acc, p) => acc + p.amount * p.mw, 0), 1);
+          const remMass = roundNum(st.remA * r.A.mw + st.remB * r.B.mw, 1);
+          const totalAfter = roundNum(prodMass + remMass, 1);
+          bar.innerHTML = `
+            <span>⚖️ 質量守恆驗證：反應前總質量 <strong style="font-family:var(--font-mono);">${initMass} g</strong> ＝ 產物 <strong style="font-family:var(--font-mono);">${prodMass} g</strong> ＋ 剩餘反應物 <strong style="font-family:var(--font-mono);">${remMass} g</strong> ＝ <strong style="font-family:var(--font-mono);">${totalAfter} g</strong></span>
+            <span>✅ 限量試劑決定產物上限，總質量依然守恆！</span>
+          `;
+        }
+      },
+
+      update(dt) {
+        if (this.phase === 'running') {
+          this.beltScroll = (this.beltScroll + dt * 55) % 24;
+          this.gearAngle += dt * 3.2;
+          this.batchProgress += dt * 1.15; // 每組約 0.87 秒
+
+          if (this.batchProgress > 0.45 && this.batchProgress < 0.72) {
+            this.flashAlpha = Math.sin(((this.batchProgress - 0.45) / 0.27) * Math.PI);
+          } else {
+            this.flashAlpha = 0;
+          }
+
+          if (this.batchProgress >= 1.0) {
+            this.batchProgress = 0;
+            this.completedBatches++;
+            if (this.completedBatches >= this.maxBatches) {
+              this.phase = 'done';
+              this.flashAlpha = 0;
+              this.updateDoneSummary(this.calcStoich());
+              this.renderICETable();
+            }
+          }
+        }
+      },
+
+      // 繪製工廠貨品圖示（漢堡元件或化學分子）
+      drawItemIcon(ctx, icon, x, y, scale = 0.65) {
+        if (icon === 'bun') {
+          ctx.save();
+          ctx.fillStyle = '#F59E0B';
+          ctx.strokeStyle = '#B45309';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(x, y + 4, 15, Math.PI, 0);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+          // 芝麻點
+          ctx.fillStyle = '#FEF3C7';
+          [-5, 0, 5].forEach(ox => { ctx.beginPath(); ctx.arc(x + ox, y - 3, 1.5, 0, Math.PI * 2); ctx.fill(); });
+          ctx.restore();
+        } else if (icon === 'patty') {
+          ctx.save();
+          drawRoundRect(ctx, x - 15, y - 6, 30, 12, 5);
+          ctx.fillStyle = '#78350F';
+          ctx.fill();
+          ctx.strokeStyle = '#451A03';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          ctx.restore();
+        } else if (icon === 'burger') {
+          ctx.save();
+          // 底層麵包
+          drawRoundRect(ctx, x - 15, y + 4, 30, 7, 3);
+          ctx.fillStyle = '#F59E0B'; ctx.fill();
+          // 肉排
+          drawRoundRect(ctx, x - 16, y - 2, 32, 7, 3);
+          ctx.fillStyle = '#78350F'; ctx.fill();
+          // 生菜與起司
+          ctx.fillStyle = '#22C55E'; ctx.fillRect(x - 15, y - 5, 30, 3);
+          ctx.fillStyle = '#FACC15'; ctx.fillRect(x - 14, y - 7, 28, 3);
+          // 頂層麵包
+          ctx.beginPath();
+          ctx.arc(x, y - 6, 15, Math.PI, 0);
+          ctx.closePath();
+          ctx.fillStyle = '#F59E0B'; ctx.fill();
+          ctx.strokeStyle = '#B45309'; ctx.lineWidth = 1.6; ctx.stroke();
+          ctx.restore();
+        } else {
+          drawMoleculeAt(ctx, icon, x, y, scale);
+        }
+      },
+
+      render() {
+        const info = syncCanvas(document.getElementById('canvas2b'));
+        if (!info) return;
+        const { ctx, w, h } = info;
+        ctx.clearRect(0, 0, w, h);
+
+        const r = this.reactions[this.rxnIdx];
+        const st = this.calcStoich();
+
+        const cx = w * 0.48;
+        const machW = Math.min(138, w * 0.2);
+        const machH = 190;
+        const machX = cx - machW / 2;
+        const machY = h / 2 - machH / 2;
+
+        const beltAY = h * 0.30;
+        const beltBY = h * 0.70;
+        const prodY = h * 0.30;
+        const excY = h * 0.72;
+
+        // 繪製輸送帶 Helper
+        const drawBelt = (x1, x2, y, label, tint) => {
+          ctx.save();
+          drawRoundRect(ctx, x1, y + 18, x2 - x1, 16, 8);
+          ctx.fillStyle = '#475569';
+          ctx.fill();
+
+          // 滾動條紋
+          ctx.save();
+          ctx.clip();
+          ctx.strokeStyle = '#94A3B8';
+          ctx.lineWidth = 3;
+          for (let sx = x1 - 24 + this.beltScroll; sx < x2 + 24; sx += 24) {
+            ctx.beginPath();
+            ctx.moveTo(sx, y + 18);
+            ctx.lineTo(sx - 8, y + 34);
+            ctx.stroke();
+          }
+          ctx.restore();
+
+          // 標籤
+          ctx.fillStyle = tint;
+          ctx.font = `800 13px ${getComputedStyle(document.body).fontFamily}`;
+          ctx.textAlign = 'left';
+          ctx.fillText(label, x1 + 4, y - 30);
+          ctx.restore();
+        };
+
+        drawBelt(18, machX, beltAY, `原料輸送帶 A：${r.A.name}`, '#0F766E');
+        drawBelt(18, machX, beltBY, `原料輸送帶 B：${r.B.name}`, '#2563EB');
+        drawBelt(machX + machW, w - 18, prodY, '📦 產物出貨區', '#059669');
+        drawBelt(machX + machW, w - 18, excY, '⚠️ 過量剩餘區', '#D97706');
+
+        // 計算當下剩餘待輸入、已產出數量
+        const doneExt = this.phase === 'done'
+          ? st.extent
+          : Math.min(st.extent, this.completedBatches);
+        const curUsedA = roundNum(doneExt * r.A.coef, 2);
+        const curUsedB = roundNum(doneExt * r.B.coef, 2);
+
+        // 正在進入機器的當前批次（若 running）
+        const activeConsumeA = (this.phase === 'running') ? Math.min(r.A.coef, roundNum(this.initA - curUsedA, 2)) : 0;
+        const activeConsumeB = (this.phase === 'running') ? Math.min(r.B.coef, roundNum(this.initB - curUsedB, 2)) : 0;
+
+        // 繪製左側排隊中的原料（若 phase==='done'，剩餘原料已移到右側過量區！）
+        const queueA = this.phase === 'done' ? 0 : Math.max(0, Math.ceil(this.initA - curUsedA - (this.batchProgress > 0.05 ? activeConsumeA : 0)));
+        const queueB = this.phase === 'done' ? 0 : Math.max(0, Math.ceil(this.initB - curUsedB - (this.batchProgress > 0.05 ? activeConsumeB : 0)));
+
+        const drawRowIcons = (count, icon, xStart, xEnd, y, alignRight = true) => {
+          if (count <= 0) return;
+          const avail = Math.max(40, xEnd - xStart - 20);
+          const step = Math.min(34, avail / Math.max(count, 1));
+          const sc = count > 6 ? 0.52 : 0.62;
+          for (let i = 0; i < count; i++) {
+            const x = alignRight ? (xEnd - 22 - i * step) : (xStart + 24 + i * step);
+            this.drawItemIcon(ctx, icon, x, y, sc);
+          }
+        };
+
+        drawRowIcons(queueA, r.A.icon, 20, machX - 6, beltAY - 2, true);
+        drawRowIcons(queueB, r.B.icon, 20, machX - 6, beltBY - 2, true);
+
+        // 正在被吸入組裝機的原料動畫
+        if (this.phase === 'running' && this.batchProgress < 0.55) {
+          const t = this.batchProgress / 0.55;
+          const xIn = (machX - 16) + t * (machW * 0.52);
+          for (let k = 0; k < Math.ceil(activeConsumeA); k++) {
+            this.drawItemIcon(ctx, r.A.icon, xIn - k * 16, beltAY - 2 + t * (h / 2 - beltAY), 0.58);
+          }
+          for (let k = 0; k < Math.ceil(activeConsumeB); k++) {
+            this.drawItemIcon(ctx, r.B.icon, xIn - k * 16, beltBY - 2 + t * (h / 2 - beltBY), 0.58);
+          }
+        }
+
+        // 正在送出機器的產物動畫
+        if (this.phase === 'running' && this.batchProgress >= 0.55) {
+          const t = (this.batchProgress - 0.55) / 0.45;
+          const xOut = cx + t * (machW * 0.6 + 24);
+          r.products.forEach((p, pi) => {
+            this.drawItemIcon(ctx, p.icon, xOut + pi * 26, h / 2 + t * (prodY - h / 2), 0.58);
+          });
+        }
+
+        // 中央化學反應組裝機本體
+        ctx.save();
+        drawRoundRect(ctx, machX, machY, machW, machH, 18);
+        const mGrad = ctx.createLinearGradient(machX, machY, machX, machY + machH);
+        mGrad.addColorStop(0, '#334155');
+        mGrad.addColorStop(1, '#1E293B');
+        ctx.fillStyle = mGrad;
+        ctx.fill();
+        ctx.strokeStyle = this.flashAlpha > 0.1 ? '#FACC15' : '#0F172A';
+        ctx.lineWidth = this.flashAlpha > 0.1 ? 4.5 : 3;
+        ctx.stroke();
+
+        // 合成閃光核心視窗
+        drawRoundRect(ctx, machX + 16, machY + 46, machW - 32, 68, 12);
+        ctx.fillStyle = this.flashAlpha > 0.05
+          ? `rgba(250, 204, 21, ${0.25 + this.flashAlpha * 0.65})`
+          : '#0F172A';
+        ctx.fill();
+
+        // 旋轉齒輪
+        const drawGear = (gx, gy, gr, ang) => {
+          ctx.save();
+          ctx.translate(gx, gy);
+          ctx.rotate(ang);
+          ctx.fillStyle = '#94A3B8';
+          for (let t = 0; t < 8; t++) {
+            ctx.rotate(Math.PI / 4);
+            ctx.fillRect(-3, -gr - 4, 6, 8);
+          }
+          ctx.beginPath();
+          ctx.arc(0, 0, gr, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.arc(0, 0, gr * 0.42, 0, Math.PI * 2);
+          ctx.fillStyle = '#1E293B';
+          ctx.fill();
+          ctx.restore();
+        };
+        drawGear(cx - 18, machY + 80, 14, this.gearAngle);
+        drawGear(cx + 18, machY + 80, 11, -this.gearAngle * 1.25);
+
+        ctx.fillStyle = '#F8FAFC';
+        ctx.font = `800 13px ${getComputedStyle(document.body).fontFamily}`;
+        ctx.textAlign = 'center';
+        ctx.fillText('反應組裝機', cx, machY + 26);
+
+        ctx.fillStyle = '#38BDF8';
+        ctx.font = `800 12px ${getComputedStyle(document.body).fontFamily}`;
+        ctx.fillText(`配方比 ${r.A.coef} : ${r.B.coef}`, cx, machY + machH - 36);
+        ctx.fillStyle = '#CBD5E1';
+        ctx.fillText(`已完成 ${this.completedBatches} 組`, cx, machY + machH - 16);
+        ctx.restore();
+
+        // 右上：已產出的產物
+        const prodIcons = [];
+        r.products.forEach(p => {
+          const amt = this.phase === 'done'
+            ? Math.round(st.extent * p.coef)
+            : Math.min(Math.round(st.extent * p.coef), this.completedBatches * p.coef);
+          for (let k = 0; k < Math.min(amt, 8); k++) prodIcons.push(p.icon);
+        });
+        if (prodIcons.length > 0) {
+          const xStart = machX + machW + 10;
+          const avail = Math.max(60, w - 24 - xStart);
+          const step = Math.min(34, avail / prodIcons.length);
+          prodIcons.forEach((ic, idx) => {
+            this.drawItemIcon(ctx, ic, xStart + 20 + idx * step, prodY - 2, prodIcons.length > 6 ? 0.5 : 0.6);
+          });
+        }
+        if (this.phase === 'done' && !APP.predictionMasked) {
+          const prodTxt = st.prodFinal.map(p => `${p.amount} ${r.unit} ${p.formula}`).join(' + ');
+          ctx.fillStyle = '#059669';
+          ctx.font = `800 13px ${getComputedStyle(document.body).fontFamily}`;
+          ctx.textAlign = 'right';
+          ctx.fillText(`產出：${prodTxt}`, w - 22, prodY - 30);
+        }
+
+        // 右下：完成後的過量剩餘區 + 限量印章
+        if (this.phase === 'done') {
+          const remIcon = st.remA > 0 ? r.A.icon : (st.remB > 0 ? r.B.icon : null);
+          const remCount = st.remA > 0 ? st.remA : st.remB;
+          const remName = st.remA > 0 ? r.A.name : r.B.name;
+
+          if (remIcon && remCount > 0) {
+            drawRowIcons(Math.ceil(remCount), remIcon, machX + machW + 10, w - 20, excY - 2, false);
+            if (!APP.predictionMasked) {
+              ctx.fillStyle = '#B45309';
+              ctx.font = `800 13px ${getComputedStyle(document.body).fontFamily}`;
+              ctx.textAlign = 'right';
+              ctx.fillText(`過量試劑：剩餘 ${remCount} ${r.unit} ${remName}`, w - 22, excY - 30);
+            }
+          }
+
+          // 蓋上醒目印章（預測遮罩開啟時不顯示印章）
+          if (!APP.predictionMasked) {
+            const drawStamp = (sx, sy, text, borderCol, bgCol, txtCol) => {
+              ctx.save();
+              ctx.translate(sx, sy);
+              ctx.rotate(-0.08);
+              drawRoundRect(ctx, -98, -20, 196, 40, 10);
+              ctx.fillStyle = bgCol;
+              ctx.fill();
+              ctx.strokeStyle = borderCol;
+              ctx.lineWidth = 3;
+              ctx.stroke();
+              ctx.fillStyle = txtCol;
+              ctx.font = `900 14px ${getComputedStyle(document.body).fontFamily}`;
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+              ctx.fillText(text, 0, 1);
+              ctx.restore();
+            };
+
+            if (st.limiting === 'A') {
+              drawStamp(machX * 0.5, beltAY - 2, '限量試劑（已耗盡！）', '#DC2626', 'rgba(254, 226, 226, 0.95)', '#B91C1C');
+            } else if (st.limiting === 'B') {
+              drawStamp(machX * 0.5, beltBY - 2, '限量試劑（已耗盡！）', '#DC2626', 'rgba(254, 226, 226, 0.95)', '#B91C1C');
+            } else if (st.limiting === 'both') {
+              drawStamp(machX + machW + (w - machX - machW) * 0.5, excY - 2, '🎉 完美完全反應！', '#059669', 'rgba(209, 250, 229, 0.95)', '#065F46');
+            }
+          }
+        }
+      }
+    };
+
+    /* ==========================================================================
+       七、單一主動畫迴圈（避免分頁切換重複註冊或效能浪費）
+       ========================================================================== */
+    let lastTimestamp = 0;
+
+    function masterLoop(timestamp) {
+      const dt = lastTimestamp ? Math.min((timestamp - lastTimestamp) / 1000, 0.05) : 0.016;
+      lastTimestamp = timestamp;
+
+      const curSub = APP.activeSub[APP.activeModule];
+      if (APP.activeModule === 'mod1') {
+        if (curSub === 'sub1a') {
+          MOD1A.update(dt);
+          MOD1A.render();
+        } else if (curSub === 'sub1b') {
+          MOD1B.update(dt);
+          MOD1B.render();
+        }
+      } else if (APP.activeModule === 'mod2') {
+        if (curSub === 'sub2a') {
+          MOD2A.update(dt);
+          MOD2A.render();
+        } else if (curSub === 'sub2b') {
+          MOD2B.update(dt);
+          MOD2B.render();
+        }
+      }
+
+      requestAnimationFrame(masterLoop);
+    }
+
+    // 頁面載入完成後初始化全部模組並啟動單一動畫迴圈
+    window.addEventListener('DOMContentLoaded', () => {
+      try {
+        MOD1A.init();
+        MOD1B.init();
+        MOD2A.init();
+        MOD2B.init();
+        requestAnimationFrame(masterLoop);
+      } catch (err) {
+        console.error('初始化失敗:', err);
+        showToast('初始化時發生未預期錯誤，請重新整理頁面');
+      }
+    });
+  </script>
+</body>
+</html>

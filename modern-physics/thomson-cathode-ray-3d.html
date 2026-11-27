@@ -1,0 +1,2915 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>3D 湯姆森發現電子（1897 陰極射線管）互動式教學實驗室</title>
+  <meta name="description" content="1897 年湯姆森陰極射線管 3D 互動實驗：包含電磁偏轉與荷質比 (e/m) 速度選擇器測定、馬爾他十字靶直進性驗證、小風車葉輪質量動能實驗及西瓜模型互動知識卡。" />
+  <meta name="portal-tags" content="近代物理, 湯姆森, 陰極射線, 電子, 荷質比, 3D視覺" />
+  <meta name="portal-badge" content="3D 陰極射線實驗" />
+  <meta name="portal-featured" content="true" />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Google Fonts: Noto Sans TC + Inter + JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@500;700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet" />
+
+  <!-- Three.js r128 & OrbitControls -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+  <style>
+    :root {
+      --bg-deep: #070d19;
+      --hud-bg: rgba(11, 20, 36, 0.78);
+      --hud-border: rgba(148, 163, 184, 0.24);
+      --emerald-glow: #34f59a;
+      --amber-brass: #e5b869;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: radial-gradient(circle at 50% 42%, #132138 0%, #091121 58%, #050912 100%);
+      font-family: 'Noto Sans TC', 'Inter', system-ui, -apple-system, sans-serif;
+      color: #f1f5f9;
+      user-select: none;
+    }
+
+    .font-mono-num {
+      font-family: 'JetBrains Mono', 'Inter', monospace;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* 3D Canvas 滿版容器 */
+    #canvas-container {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      touch-action: none;
+    }
+
+    #canvas-container canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* 毛玻璃 HUD 卡片 */
+    .glass-panel {
+      background: var(--hud-bg);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid var(--hud-border);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    }
+
+    /* 自訂大屏滑桿樣式（觸控與滑鼠皆易操作） */
+    input[type="range"].lab-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.25);
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type="range"].lab-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #f8fafc;
+      border: 3px solid #34f59a;
+      box-shadow: 0 0 12px rgba(52, 245, 154, 0.6);
+      cursor: pointer;
+      transition: transform 0.12s ease, box-shadow 0.12s ease;
+    }
+
+    input[type="range"].lab-slider::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+      box-shadow: 0 0 16px rgba(52, 245, 154, 0.85);
+    }
+
+    input[type="range"].lab-slider.slider-electric::-webkit-slider-thumb {
+      border-color: #ff6b4a;
+      box-shadow: 0 0 12px rgba(255, 107, 74, 0.65);
+    }
+
+    input[type="range"].lab-slider.slider-magnetic::-webkit-slider-thumb {
+      border-color: #38bdf8;
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.65);
+    }
+
+    input[type="range"].lab-slider::-moz-range-thumb {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #f8fafc;
+      border: 3px solid #34f59a;
+      cursor: pointer;
+    }
+
+    /* 細緻滾動條 */
+    .thin-scroll::-webkit-scrollbar {
+      width: 5px;
+    }
+    .thin-scroll::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .thin-scroll::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.35);
+      border-radius: 999px;
+    }
+
+    /* 動畫過渡：大屏簡報模式收合 */
+    .hud-collapsible {
+      transition: opacity 0.3s ease, transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    body.presentation-mode .hud-right-panel {
+      opacity: 0;
+      transform: translateX(115%);
+      pointer-events: none;
+    }
+
+    body.presentation-mode .hud-left-panel {
+      opacity: 0;
+      transform: translateX(-115%);
+      pointer-events: none;
+    }
+
+    /* 金屬徽章脈衝提示動畫 */
+    @keyframes metalPulse {
+      0% { box-shadow: 0 0 0 0 rgba(52, 245, 154, 0.7); }
+      70% { box-shadow: 0 0 0 12px rgba(52, 245, 154, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(52, 245, 154, 0); }
+    }
+    .animate-metal-pulse {
+      animation: metalPulse 0.9s ease-out;
+    }
+
+    /* 螢光按鈕微光 */
+    .btn-balance-glow {
+      background: linear-gradient(135deg, #059669 0%, #0d9488 50%, #0284c7 100%);
+      box-shadow: 0 4px 18px rgba(16, 185, 129, 0.4);
+    }
+    .btn-balance-glow:hover {
+      filter: brightness(1.12);
+      box-shadow: 0 6px 22px rgba(16, 185, 129, 0.6);
+    }
+  </style>
+</head>
+<body class="antialiased selection:bg-emerald-500/30">
+
+  <!-- 3D 實驗室畫布容器 -->
+  <div id="canvas-container" aria-label="3D 湯姆森陰極射線管互動場景"></div>
+
+  <!-- 頂部導覽與三合一模式切換列 -->
+  <header class="fixed top-2 left-2 right-2 md:top-3 md:left-4 md:right-4 z-20 pointer-events-none flex flex-col gap-2">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <!-- 標題區 -->
+      <div class="glass-panel pointer-events-auto rounded-2xl px-3.5 py-2 flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-400/25 to-amber-400/20 border border-emerald-400/40 flex items-center justify-center shrink-0">
+          <span class="text-emerald-300 font-bold text-base font-mono-num">e⁻</span>
+        </div>
+        <div class="leading-tight">
+          <div class="flex items-center gap-2">
+            <h1 class="text-sm sm:text-base lg:text-lg font-bold tracking-wide text-slate-50">
+              湯姆森發現電子
+            </h1>
+            <span class="hidden sm:inline-block text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/30">
+              1897 經典實驗
+            </span>
+          </div>
+          <p class="text-[11px] text-slate-400 hidden md:block">
+            3D 陰極射線管互動教學 • 滑鼠左鍵旋轉 / 滾輪縮放 / 右鍵平移
+          </p>
+        </div>
+      </div>
+
+      <!-- 三合一實驗模式切換列 -->
+      <nav class="glass-panel pointer-events-auto rounded-2xl p-1 flex items-center gap-1 overflow-x-auto max-w-full" aria-label="實驗模式切換">
+        <button id="btn-mode-1" data-mode="1" class="mode-tab px-3 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all bg-emerald-500/25 text-emerald-200 border border-emerald-400/50 shadow-sm">
+          1. 電磁偏轉與荷質比
+        </button>
+        <button id="btn-mode-2" data-mode="2" class="mode-tab px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition-all text-slate-300 hover:text-white hover:bg-slate-700/50 border border-transparent">
+          2. 十字靶 (直進性)
+        </button>
+        <button id="btn-mode-3" data-mode="3" class="mode-tab px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition-all text-slate-300 hover:text-white hover:bg-slate-700/50 border border-transparent">
+          3. 小風車 (質量動能)
+        </button>
+      </nav>
+
+      <!-- 右上角工具按鈕：知識卡 & 大屏簡報模式 -->
+      <div class="glass-panel pointer-events-auto rounded-2xl p-1 flex items-center gap-1">
+        <button id="btn-open-knowledge" class="px-3 py-2 rounded-xl text-xs sm:text-sm font-bold text-amber-200 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40 transition-all flex items-center gap-1.5 whitespace-nowrap">
+          <span>🍉</span>
+          <span class="hidden sm:inline">結論與西瓜模型</span>
+          <span class="sm:hidden">知識卡</span>
+        </button>
+        <button id="btn-toggle-presentation" title="切換大屏簡報模式 (快捷鍵 H)" class="px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold text-slate-200 hover:bg-slate-700/60 transition-all flex items-center gap-1.5 whitespace-nowrap">
+          <svg id="icon-pres-hide" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
+          </svg>
+          <span id="txt-pres-mode" class="hidden md:inline">收合面板</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 多視角相機切換列（輕巧置中/靠左浮動） -->
+    <div class="flex items-center justify-between gap-2">
+      <div class="glass-panel pointer-events-auto rounded-xl px-1.5 py-1 flex items-center gap-1 overflow-x-auto">
+        <span class="text-[11px] text-slate-400 px-2 font-semibold hidden sm:inline">視角：</span>
+        <button data-cam="overview" class="cam-btn px-2.5 py-1 rounded-lg text-xs font-semibold bg-sky-500/25 text-sky-200 border border-sky-400/40 transition-all whitespace-nowrap">
+          3D 總覽
+        </button>
+        <button data-cam="front" class="cam-btn px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-300 hover:bg-slate-700/60 border border-transparent transition-all whitespace-nowrap">
+          正面平視
+        </button>
+        <button data-cam="screen" class="cam-btn px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-300 hover:bg-slate-700/60 border border-transparent transition-all whitespace-nowrap">
+          螢光屏特寫
+        </button>
+        <button data-cam="deflect" class="cam-btn px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-300 hover:bg-slate-700/60 border border-transparent transition-all whitespace-nowrap">
+          偏轉區特寫
+        </button>
+      </div>
+
+      <!-- 動態實驗狀態提示氣泡（平衡 / 撞板 / 材質獨立性） -->
+      <div id="status-banner" class="hidden md:flex glass-panel pointer-events-auto rounded-xl px-3.5 py-1.5 items-center gap-2 text-xs lg:text-sm font-bold border-emerald-400/40 text-emerald-200 transition-all">
+        <span id="status-dot" class="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#34f59a]"></span>
+        <span id="status-text">電子束水平直線射出（無外加偏轉場）</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- 左側即時物理儀表板 HUD（大屏清晰讀數） -->
+  <aside id="left-hud" class="hud-collapsible hud-left-panel fixed left-2 bottom-14 sm:left-4 sm:bottom-16 md:top-32 md:bottom-auto z-20 w-[calc(100%-1rem)] max-w-[300px] sm:w-[290px] pointer-events-none hidden sm:block">
+    <div class="glass-panel pointer-events-auto rounded-2xl p-3.5 space-y-3">
+      <!-- 模式一儀表板 -->
+      <div id="telemetry-mode-1" class="space-y-2.5">
+        <div class="flex items-center justify-between border-b border-slate-700/70 pb-2">
+          <h2 class="text-xs sm:text-sm font-bold text-amber-300 tracking-wider flex items-center gap-1.5">
+            <span>📊</span> 即時物理儀表板
+          </h2>
+          <span id="badge-regime" class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-700/80 text-slate-200">
+            無偏轉
+          </span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div class="rounded-xl bg-slate-900/70 border border-slate-700/60 p-2">
+            <div class="text-[11px] text-slate-400">加速電壓 Vₐ</div>
+            <div class="text-base font-bold text-emerald-300 font-mono-num">
+              <span id="read-va">2.00</span> <span class="text-xs font-normal text-slate-400">kV</span>
+            </div>
+          </div>
+          <div class="rounded-xl bg-slate-900/70 border border-slate-700/60 p-2">
+            <div class="text-[11px] text-slate-400">電子初速 vₓ</div>
+            <div class="text-base font-bold text-emerald-300 font-mono-num">
+              <span id="read-vx">2.65</span> <span class="text-[11px] font-normal text-slate-400">×10⁷ m/s</span>
+            </div>
+          </div>
+          <div class="rounded-xl bg-slate-900/70 border border-slate-700/60 p-2">
+            <div class="text-[11px] text-orange-300/90">電場強度 E</div>
+            <div class="text-sm font-bold text-orange-300 font-mono-num">
+              <span id="read-E">0.0</span> <span class="text-[11px] font-normal text-slate-400">kV/m</span>
+            </div>
+            <div id="read-E-dir" class="text-[10px] text-slate-400">未施加電場</div>
+          </div>
+          <div class="rounded-xl bg-slate-900/70 border border-slate-700/60 p-2">
+            <div class="text-[11px] text-sky-300/90">磁場強度 B</div>
+            <div class="text-sm font-bold text-sky-300 font-mono-num">
+              <span id="read-B">0.00</span> <span class="text-[11px] font-normal text-slate-400">mT</span>
+            </div>
+            <div id="read-B-dir" class="text-[10px] text-slate-400">未施加磁場</div>
+          </div>
+        </div>
+
+        <!-- 螢光屏位移與荷質比 -->
+        <div class="rounded-xl bg-emerald-950/45 border border-emerald-500/35 p-2.5 space-y-1.5">
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-slate-300">螢光屏位移 Δy</span>
+            <span id="read-dy" class="text-base font-bold text-emerald-300 font-mono-num">0.00 cm</span>
+          </div>
+          <div class="flex items-center justify-between border-t border-emerald-500/20 pt-1.5">
+            <span class="text-xs text-amber-200/90">測得荷質比 e/m</span>
+            <span id="read-em" class="text-sm font-bold text-amber-300 font-mono-num">1.76 × 10¹¹ C/kg</span>
+          </div>
+        </div>
+
+        <!-- 陰極材質獨立性教學徽章 -->
+        <div id="metal-insight-card" class="rounded-xl bg-slate-800/75 border border-amber-400/35 p-2.5 text-xs leading-relaxed text-slate-200 transition-all">
+          <div class="flex items-center justify-between mb-1">
+            <span class="font-bold text-amber-300">目前陰極：<span id="read-cathode-metal">鋁 (Al)</span></span>
+            <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold">e/m 恆定</span>
+          </div>
+          <p class="text-[11px] text-slate-300">
+            更換金屬材質，偏轉量與荷質比皆相同 → <strong class="text-emerald-300">證明電子是所有原子的共同基本粒子！</strong>
+          </p>
+        </div>
+      </div>
+
+      <!-- 模式二儀表板 -->
+      <div id="telemetry-mode-2" class="hidden space-y-2.5">
+        <div class="flex items-center justify-between border-b border-slate-700/70 pb-2">
+          <h2 class="text-sm font-bold text-emerald-300">✚ 十字靶直進性驗證</h2>
+          <span id="read-cross-state" class="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-500/25 text-emerald-200">
+            十字靶立起
+          </span>
+        </div>
+        <p class="text-xs text-slate-300 leading-relaxed">
+          陰極發出的寬光錐電子束射向右端螢光屏。當金屬馬爾他十字靶立起時，會阻擋部分電子束，在螢光屏上投射出<strong class="text-emerald-300">邊緣銳利的黑色十字陰影</strong>。
+        </p>
+        <div class="rounded-xl bg-emerald-950/45 border border-emerald-500/35 p-2.5 text-xs text-emerald-200 font-semibold">
+          核心結論：陰極射線沿「直線」傳播（直進性），與光線相似。
+        </div>
+      </div>
+
+      <!-- 模式三儀表板 -->
+      <div id="telemetry-mode-3" class="hidden space-y-2.5">
+        <div class="flex items-center justify-between border-b border-slate-700/70 pb-2">
+          <h2 class="text-sm font-bold text-amber-300">⚙️ 小風車葉輪實驗</h2>
+          <span id="read-wheel-dir" class="text-xs font-bold px-2 py-0.5 rounded-full bg-sky-500/25 text-sky-200">
+            左極(陰) → 右極(陽)
+          </span>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div class="rounded-xl bg-slate-900/70 border border-slate-700/60 p-2">
+            <div class="text-[11px] text-slate-400">葉輪轉速</div>
+            <div class="text-base font-bold text-amber-300 font-mono-num">
+              <span id="read-wheel-rpm">0</span> <span class="text-[11px] font-normal text-slate-400">RPM</span>
+            </div>
+          </div>
+          <div class="rounded-xl bg-slate-900/70 border border-slate-700/60 p-2">
+            <div class="text-[11px] text-slate-400">軌道位置</div>
+            <div class="text-base font-bold text-emerald-300 font-mono-num">
+              <span id="read-wheel-pos">-2.80</span> <span class="text-[11px] font-normal text-slate-400">cm</span>
+            </div>
+          </div>
+        </div>
+        <div class="rounded-xl bg-amber-950/40 border border-amber-500/35 p-2.5 text-xs text-amber-200 leading-relaxed">
+          電子束撞擊葉輪上半部雲母片，施加推力使其旋轉並沿軌道滾動 → <strong class="text-white">證明陰極射線是由具「質量與動能」的微粒組成！</strong>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- 右側互動控制面板（桌面右側、手機可展開抽屜） -->
+  <aside id="right-hud" class="hud-collapsible hud-right-panel fixed right-2 top-[116px] sm:top-32 bottom-14 sm:bottom-16 sm:right-4 z-20 w-[calc(100%-1rem)] max-w-[335px] sm:w-[325px] pointer-events-none flex flex-col">
+    <div class="glass-panel pointer-events-auto rounded-2xl p-3.5 overflow-y-auto thin-scroll max-h-full space-y-3.5">
+
+      <!-- ============ 模式一控制區 ============ -->
+      <div id="controls-mode-1" class="space-y-3.5">
+        <!-- 快捷教學按鈕 -->
+        <div>
+          <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">一鍵教學演示</div>
+          <div class="grid grid-cols-2 gap-1.5">
+            <button id="preset-e-only" class="px-2.5 py-2 rounded-xl text-xs font-bold bg-orange-500/20 hover:bg-orange-500/35 text-orange-200 border border-orange-400/40 transition-all">
+              僅開電場 (向正極)
+            </button>
+            <button id="preset-b-only" class="px-2.5 py-2 rounded-xl text-xs font-bold bg-sky-500/20 hover:bg-sky-500/35 text-sky-200 border border-sky-400/40 transition-all">
+              僅開磁場 (右手定則)
+            </button>
+            <button id="preset-balance" class="col-span-2 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-white btn-balance-glow transition-all flex items-center justify-center gap-1.5">
+              <span>⚡</span> 一鍵電磁平衡（速度選擇器 E = vB）
+            </button>
+            <button id="preset-reset" class="col-span-2 px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-700/60 hover:bg-slate-600/70 text-slate-200 border border-slate-600/60 transition-all">
+              ↺ 歸零重設（恢復水平直線）
+            </button>
+          </div>
+        </div>
+
+        <!-- 物理參數滑桿 -->
+        <div class="space-y-3 border-t border-slate-700/70 pt-3">
+          <!-- 加速電壓 Va -->
+          <div class="space-y-1">
+            <div class="flex justify-between items-center text-xs">
+              <label for="slider-va" class="font-bold text-emerald-300">加速電壓 Vₐ</label>
+              <span class="font-mono-num font-bold text-slate-100"><span id="val-va">2.0</span> kV</span>
+            </div>
+            <input id="slider-va" type="range" min="1.0" max="5.0" step="0.1" value="2.0" class="lab-slider" />
+            <div class="flex justify-between text-[10px] text-slate-400">
+              <span>1.0 kV (慢)</span>
+              <span>決定電子初速 vₓ</span>
+              <span>5.0 kV (快)</span>
+            </div>
+          </div>
+
+          <!-- 電場偏轉電壓 Vd -->
+          <div class="space-y-1">
+            <div class="flex justify-between items-center text-xs">
+              <label for="slider-vd" class="font-bold text-orange-300">偏轉電壓 V_d</label>
+              <span class="font-mono-num font-bold text-orange-200">
+                <span id="val-vd">0</span> V <span id="val-vd-pol" class="text-[11px] font-sans text-slate-400">(無電場)</span>
+              </span>
+            </div>
+            <input id="slider-vd" type="range" min="-1000" max="1000" step="20" value="0" class="lab-slider slider-electric" />
+            <div class="flex justify-between text-[10px] text-slate-400">
+              <span>-1000V (上−下+)</span>
+              <span>0</span>
+              <span>+1000V (上+下−)</span>
+            </div>
+          </div>
+
+          <!-- 磁場強度 B -->
+          <div class="space-y-1">
+            <div class="flex justify-between items-center text-xs">
+              <label for="slider-b" class="font-bold text-sky-300">磁場強度 B</label>
+              <span class="font-mono-num font-bold text-sky-200">
+                <span id="val-b">0.00</span> mT <span id="val-b-dir" class="text-[11px] font-sans text-slate-400">(無磁場)</span>
+              </span>
+            </div>
+            <input id="slider-b" type="range" min="-3.0" max="3.0" step="0.02" value="0" class="lab-slider slider-magnetic" />
+            <div class="flex justify-between text-[10px] text-slate-400">
+              <span>-3.0mT (⊙射出)</span>
+              <span>0</span>
+              <span>+3.0mT (⊗射入)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3D 向量與場線開關 -->
+        <div class="border-t border-slate-700/70 pt-3">
+          <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">3D 場線與受力向量顯示</div>
+          <div class="grid grid-cols-3 gap-1.5">
+            <button id="toggle-efield" class="vec-toggle px-2 py-2 rounded-xl text-[11px] font-bold bg-orange-500/25 text-orange-200 border border-orange-400/50 transition-all">
+              電場線 E
+            </button>
+            <button id="toggle-bfield" class="vec-toggle px-2 py-2 rounded-xl text-[11px] font-bold bg-sky-500/25 text-sky-200 border border-sky-400/50 transition-all">
+              磁場 ⊗/⊙
+            </button>
+            <button id="toggle-forces" class="vec-toggle px-2 py-2 rounded-xl text-[11px] font-bold bg-emerald-500/25 text-emerald-200 border border-emerald-400/50 transition-all">
+              受力 Fₑ/F_B
+            </button>
+          </div>
+        </div>
+
+        <!-- 陰極金屬材質切換 -->
+        <div class="border-t border-slate-700/70 pt-3">
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">更換陰極金屬材質</span>
+            <span class="text-[10px] text-emerald-300 font-semibold">驗證粒子普適性</span>
+          </div>
+          <div class="grid grid-cols-4 gap-1.5">
+            <button data-metal="Al" class="metal-btn px-1.5 py-2 rounded-xl text-xs font-bold border transition-all flex flex-col items-center gap-1 bg-slate-700/80 border-emerald-400 text-white">
+              <span class="w-4 h-4 rounded-full bg-gradient-to-br from-slate-100 to-slate-400 border border-white/50"></span>
+              <span>鋁 Al</span>
+            </button>
+            <button data-metal="Cu" class="metal-btn px-1.5 py-2 rounded-xl text-xs font-semibold border border-slate-700 bg-slate-800/60 text-slate-300 hover:bg-slate-700/60 transition-all flex flex-col items-center gap-1">
+              <span class="w-4 h-4 rounded-full bg-gradient-to-br from-orange-300 to-amber-700 border border-orange-200/40"></span>
+              <span>銅 Cu</span>
+            </button>
+            <button data-metal="Fe" class="metal-btn px-1.5 py-2 rounded-xl text-xs font-semibold border border-slate-700 bg-slate-800/60 text-slate-300 hover:bg-slate-700/60 transition-all flex flex-col items-center gap-1">
+              <span class="w-4 h-4 rounded-full bg-gradient-to-br from-slate-400 to-slate-700 border border-slate-300/30"></span>
+              <span>鐵 Fe</span>
+            </button>
+            <button data-metal="Pt" class="metal-btn px-1.5 py-2 rounded-xl text-xs font-semibold border border-slate-700 bg-slate-800/60 text-slate-300 hover:bg-slate-700/60 transition-all flex flex-col items-center gap-1">
+              <span class="w-4 h-4 rounded-full bg-gradient-to-br from-white via-zinc-200 to-zinc-400 border border-white/70"></span>
+              <span>鉑 Pt</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ 模式二控制區（十字靶） ============ -->
+      <div id="controls-mode-2" class="hidden space-y-3.5">
+        <div class="text-xs text-slate-300 leading-relaxed">
+          控制管內的馬爾他金屬十字靶，觀察螢光屏上的陰影變化，驗證陰極射線的直線傳播特性。
+        </div>
+
+        <button id="btn-toggle-cross" class="w-full py-3 px-4 rounded-xl text-sm font-bold bg-emerald-500/25 hover:bg-emerald-500/35 text-emerald-200 border border-emerald-400/50 transition-all flex items-center justify-center gap-2">
+          <span id="txt-cross-btn">⬇️ 將十字靶放倒</span>
+        </button>
+
+        <div class="space-y-1.5 border-t border-slate-700/70 pt-3">
+          <div class="flex justify-between text-xs">
+            <label for="slider-va-m2" class="font-bold text-emerald-300">陰極射線加速電壓 Vₐ</label>
+            <span class="font-mono-num font-bold"><span id="val-va-m2">2.5</span> kV</span>
+          </div>
+          <input id="slider-va-m2" type="range" min="1.0" max="5.0" step="0.1" value="2.5" class="lab-slider" />
+        </div>
+
+        <div class="rounded-xl bg-slate-900/70 border border-slate-700/60 p-3 text-xs text-slate-300 space-y-1.5">
+          <div class="font-bold text-amber-300">💡 課堂提問引導</div>
+          <p>1. 若放倒十字靶，螢光屏原本黑影的位置會發生什麼事？</p>
+          <p>2. 為什麼影子的邊緣如此清晰銳利？這說明了射線如何行進？</p>
+        </div>
+      </div>
+
+      <!-- ============ 模式三控制區（小風車葉輪） ============ -->
+      <div id="controls-mode-3" class="hidden space-y-3.5">
+        <div class="text-xs text-slate-300 leading-relaxed">
+          開啟高壓電源後，電子束高速撞擊雲母小風車上半部葉片，將動量與動能傳遞給葉輪，推動其沿玻璃軌道滾動。
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <button id="btn-wheel-power" class="py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold bg-emerald-500/25 hover:bg-emerald-500/35 text-emerald-200 border border-emerald-400/50 transition-all">
+            ⚡ 電源：開啟
+          </button>
+          <button id="btn-wheel-reset" class="py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold bg-slate-700/70 hover:bg-slate-600/80 text-slate-100 border border-slate-500/50 transition-all">
+            ↺ 重設葉輪位置
+          </button>
+        </div>
+
+        <button id="btn-wheel-reverse" class="w-full py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold bg-amber-500/20 hover:bg-amber-500/35 text-amber-200 border border-amber-400/45 transition-all">
+          ⇄ 反轉電極方向（觀察反向滾動）
+        </button>
+
+        <div class="space-y-1.5 border-t border-slate-700/70 pt-3">
+          <div class="flex justify-between text-xs">
+            <label for="slider-va-m3" class="font-bold text-emerald-300">加速電壓 Vₐ（影響推力）</label>
+            <span class="font-mono-num font-bold"><span id="val-va-m3">2.5</span> kV</span>
+          </div>
+          <input id="slider-va-m3" type="range" min="1.0" max="5.0" step="0.1" value="2.5" class="lab-slider" />
+        </div>
+
+        <div class="rounded-xl bg-slate-900/70 border border-slate-700/60 p-3 text-xs text-slate-300 space-y-1.5">
+          <div class="font-bold text-amber-300">💡 觀察重點</div>
+          <p>• 提高加速電壓，電子動能增加，葉輪滾動加速變快！</p>
+          <p>• 反轉左右電極，電子改由右側陰極發射，葉輪減速後反向滾動！</p>
+        </div>
+      </div>
+
+    </div>
+  </aside>
+
+  <!-- 底部操作控制與快捷鍵列 -->
+  <footer class="fixed bottom-2 left-2 right-2 sm:bottom-3 sm:left-4 sm:right-4 z-20 pointer-events-none flex items-center justify-between gap-2">
+    <div class="glass-panel pointer-events-auto rounded-xl px-2.5 py-1.5 flex items-center gap-2">
+      <button id="btn-play-pause" class="px-3 py-1 rounded-lg text-xs font-bold bg-emerald-500/20 hover:bg-emerald-500/35 text-emerald-200 border border-emerald-400/40 transition-all flex items-center gap-1.5">
+        <span id="icon-play-pause">⏸</span>
+        <span id="txt-play-pause">暫停動畫</span>
+      </button>
+      <div class="hidden lg:flex items-center gap-2 text-[11px] text-slate-400 pl-1 border-l border-slate-700/70">
+        <span><kbd class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-200 border border-slate-600 font-mono-num">Space</kbd> 暫停</span>
+        <span><kbd class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-200 border border-slate-600 font-mono-num">R</kbd> 重置視角</span>
+        <span><kbd class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-200 border border-slate-600 font-mono-num">1/2/3</kbd> 模式</span>
+        <span><kbd class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-200 border border-slate-600 font-mono-num">H</kbd> 簡報模式</span>
+      </div>
+    </div>
+
+    <!-- 手機版精簡數值條（sm 以下顯示） -->
+    <div id="mobile-mini-hud" class="sm:hidden glass-panel pointer-events-auto rounded-xl px-3 py-1.5 text-xs font-mono-num text-emerald-300 font-bold">
+      Δy: <span id="mobile-dy">0.00</span> cm
+    </div>
+
+    <!-- 右下角：大屏簡報模式還原鈕（僅在收合時顯眼提示） -->
+    <button id="btn-restore-hud" class="hidden pointer-events-auto glass-panel rounded-xl px-4 py-2 text-xs sm:text-sm font-bold text-emerald-200 border-emerald-400/50 hover:bg-emerald-500/25 transition-all shadow-lg">
+      顯示控制面板 (H)
+    </button>
+  </footer>
+
+  <!-- ============ 湯姆森實驗結論與西瓜模型 互動知識卡 Modal ============ -->
+  <div id="knowledge-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-3 sm:p-6 bg-slate-950/75 backdrop-blur-md">
+    <div class="glass-panel rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto thin-scroll p-5 sm:p-7 border border-amber-400/30 shadow-2xl relative">
+      <!-- 關閉按鈕 -->
+      <button id="btn-close-knowledge" aria-label="關閉知識卡" class="absolute top-4 right-4 w-9 h-9 rounded-full bg-slate-800/80 hover:bg-slate-700 text-slate-200 flex items-center justify-center border border-slate-600/60 transition-all text-lg font-bold">
+        ✕
+      </button>
+
+      <div class="flex items-center gap-3 mb-5">
+        <div class="w-11 h-11 rounded-2xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-2xl">
+          🍉
+        </div>
+        <div>
+          <h2 class="text-lg sm:text-2xl font-black text-amber-200 tracking-wide">
+            1897 湯姆森實驗結論與「西瓜模型」
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-400">
+            人類首次發現次原子粒子「電子」，打破道耳頓「原子不可再分割」的觀念
+          </p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        <!-- 左側：四大發現與公式推導 -->
+        <div class="lg:col-span-7 space-y-4">
+          <div class="rounded-2xl bg-slate-900/75 border border-slate-700/70 p-4 space-y-2.5">
+            <h3 class="text-sm sm:text-base font-bold text-emerald-300">🔬 陰極射線四大關鍵發現</h3>
+            <ul class="space-y-2 text-xs sm:text-sm text-slate-200 leading-relaxed">
+              <li class="flex gap-2">
+                <span class="text-emerald-400 font-bold">1.</span>
+                <span><strong class="text-white">直進性（十字靶）：</strong>在螢光屏投射出清晰十字陰影，證明沿直線傳播。</span>
+              </li>
+              <li class="flex gap-2">
+                <span class="text-orange-400 font-bold">2.</span>
+                <span><strong class="text-white">帶負電（電磁偏轉）：</strong>在電場中向正極偏轉，磁場中依勞侖茲力偏轉，證實帶負電荷。</span>
+              </li>
+              <li class="flex gap-2">
+                <span class="text-amber-400 font-bold">3.</span>
+                <span><strong class="text-white">具質量與動能（小風車）：</strong>可推動雲母葉輪旋轉滾動，證明是帶質量的高速粒子流。</span>
+              </li>
+              <li class="flex gap-2">
+                <span class="text-sky-400 font-bold">4.</span>
+                <span><strong class="text-white">物質普適性（換材質）：</strong>更換鋁、銅、鐵、鉑等不同陰極金屬，測得荷質比皆相同，證明電子存在於所有原子中！</span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="rounded-2xl bg-slate-900/75 border border-sky-500/30 p-4 space-y-2.5">
+            <h3 class="text-sm sm:text-base font-bold text-sky-300">📐 荷質比 e/m 經典推導</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs sm:text-sm">
+              <div class="rounded-xl bg-slate-800/80 p-3 border border-slate-700">
+                <div class="text-slate-400 text-xs mb-1">① 速度選擇器（電磁平衡）</div>
+                <div class="font-mono-num text-emerald-300 font-bold text-sm">
+                  Fₑ = F_B ⇒ eE = evB
+                </div>
+                <div class="font-mono-num text-white font-bold mt-1">
+                  v = E / B
+                </div>
+              </div>
+              <div class="rounded-xl bg-slate-800/80 p-3 border border-slate-700">
+                <div class="text-slate-400 text-xs mb-1">② 荷質比公式</div>
+                <div class="font-mono-num text-amber-300 font-bold text-sm">
+                  e/m = E / (B² R) = v² / (2 Vₐ)
+                </div>
+                <div class="font-mono-num text-white font-bold mt-1">
+                  ≈ 1.76 × 10¹¹ C/kg
+                </div>
+              </div>
+            </div>
+            <p class="text-xs text-slate-300 leading-relaxed pt-1">
+              湯姆森發現此荷質比約為氫離子（H⁺）的 <strong class="text-amber-300">1836 倍</strong>，推斷電子質量遠小於最輕的氫原子，是原子內部的微小組件。
+            </p>
+          </div>
+        </div>
+
+        <!-- 右側：互動西瓜模型（葡萄乾布丁模型）Canvas -->
+        <div class="lg:col-span-5 flex flex-col rounded-2xl bg-slate-900/80 border border-rose-400/35 p-4">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-sm sm:text-base font-bold text-rose-300">🍉 湯姆森西瓜模型 (1904)</h3>
+            <span class="text-[11px] px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-200 border border-rose-400/30">葡萄乾布丁模型</span>
+          </div>
+
+          <div class="relative flex-1 min-h-[220px] flex items-center justify-center rounded-xl bg-slate-950/70 border border-slate-800 overflow-hidden">
+            <canvas id="plum-pudding-canvas" width="320" height="240" class="w-full h-full max-w-[320px] max-h-[240px] cursor-pointer"></canvas>
+          </div>
+
+          <div class="mt-3 flex gap-2">
+            <button id="btn-plum-vibrate" class="flex-1 py-1.5 px-2.5 rounded-xl text-xs font-bold bg-rose-500/20 hover:bg-rose-500/35 text-rose-200 border border-rose-400/40 transition-all">
+              ✨ 輕觸擾動電子
+            </button>
+            <button id="btn-plum-labels" class="flex-1 py-1.5 px-2.5 rounded-xl text-xs font-bold bg-slate-700/70 hover:bg-slate-600/80 text-slate-200 border border-slate-600 transition-all">
+              🏷️ 切換標註
+            </button>
+          </div>
+
+          <p class="text-xs text-slate-300 mt-2.5 leading-relaxed">
+            原子是均勻帶正電的球體（如<span class="text-rose-300 font-bold">西瓜果肉</span>），帶負電的電子（如<span class="text-sky-300 font-bold">西瓜籽</span>）均勻鑲嵌其中，使整體呈現電中性。
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================== 核心 JavaScript 與 Three.js 模擬引擎 ======================== -->
+  <script>
+    (function () {
+      'use strict';
+
+      /* ============================================================================
+         1. 物理常數與實驗裝置幾何參數（全部使用 SI 單位與等比例 3D 尺度）
+         ============================================================================ */
+      const PHYSICS = {
+        E_OVER_M: 1.75882e11,   // 電子真實荷質比 e/m (C/kg)
+        PLATE_D: 0.036,         // 上下偏轉板間距 d = 3.6 cm (m)
+        PLATE_L: 0.060,         // 偏轉板長度 L_p = 6.0 cm (m)
+        DRIFT_L: 0.120,         // 離開偏轉板至螢光屏距離 L_s = 12.0 cm (m)
+        SCREEN_R: 0.060,        // 螢光屏有效半徑 R_s = 6.0 cm (m)
+        SCALE: 50.0             // 尺度換算：1 m = 50 Three.js 單位（即 1 cm = 0.5 單位）
+      };
+
+      // 偏轉板在 Three.js 世界的 X 範圍：x in [-1.5, +1.5]（長度 3.0 單位 = 6.0 cm）
+      const X_CATHODE = -6.4;
+      const X_ANODE_1 = -4.2;
+      const X_ANODE_2 = -2.6;
+      const X_PLATE_START = -1.5;
+      const X_PLATE_END = 1.5;
+      const X_SCREEN_BASE = 7.5; // 1.5 + 6.0 = 7.5（drift = 12.0 cm）
+      const Y_PLATE_HALF = (PHYSICS.PLATE_D * 0.5) * PHYSICS.SCALE; // 0.9 單位
+
+      // 四種陰極金屬材質參數（視覺外觀不同，但荷質比 e/m 完全相同）
+      const METALS = {
+        Al: { name: '鋁 (Al)', color: 0xdbe2ea, roughness: 0.28, metalness: 0.85 },
+        Cu: { name: '銅 (Cu)', color: 0xd97a4a, roughness: 0.30, metalness: 0.88 },
+        Fe: { name: '鐵 (Fe)', color: 0x646e78, roughness: 0.45, metalness: 0.82 },
+        Pt: { name: '鉑 (Pt)', color: 0xf1f5f9, roughness: 0.16, metalness: 0.95 }
+      };
+
+      /* ============================================================================
+         2. 全域應用程式狀態
+         ============================================================================ */
+      const state = {
+        mode: 1,                  // 1: 電磁偏轉, 2: 十字靶, 3: 小風車
+        paused: false,
+        presentationMode: false,
+
+        // 模式一參數
+        va_kV: 2.0,               // 加速電壓 (kV)
+        vd_V: 0,                  // 偏轉板電壓 (V)
+        b_mT: 0.0,                // 磁場強度 (mT), >0 為射入紙面(⊗, -Z)
+        showEField: true,
+        showBField: true,
+        showForces: true,
+        cathodeMetal: 'Al',
+
+        // 模式一即時計算結果
+        vx: 0,
+        E_Vm: 0,
+        hitPlate: false,
+        hitPlateSign: 0,          // +1 上板, -1 下板
+        hitPoint3D: new THREE.Vector3(X_SCREEN_BASE, 0, 0),
+        screenDyCm: 0,
+        trajectoryPts: [],
+
+        // 模式二參數（十字靶）
+        vaM2_kV: 2.5,
+        crossUp: true,
+        crossAngle: 0,            // 0 = 立起, Math.PI/2 = 放倒
+
+        // 模式三參數（小風車）
+        vaM3_kV: 2.5,
+        wheelPowerOn: true,
+        wheelDirection: 1,        // +1: 左陰極→右陽極(向右滾), -1: 右陰極→左陽極(向左滾)
+        wheelX: -2.8,             // 葉輪目前 X 座標 (範圍 [-3.6, +3.6])
+        wheelVel: 0,              // 葉輪滾動速度 (units/s)
+        wheelRotZ: 0,             // 葉輪旋轉角度 (rad)
+
+        // 相機平滑過渡狀態
+        camLerpActive: false,
+        camTargetPos: new THREE.Vector3(),
+        camTargetLook: new THREE.Vector3()
+      };
+
+      /* ============================================================================
+         3. 程序化紋理產生器（完全無須外部圖片）
+         ============================================================================ */
+
+      // 胡桃木紋理
+      function createWalnutTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 512;
+        canvas.height = 512;
+        const ctx = canvas.getContext('2d');
+
+        ctx.fillStyle = '#3d2415';
+        ctx.fillRect(0, 0, 512, 512);
+
+        // 繪製柔和木紋條紋
+        for (let i = 0; i < 160; i++) {
+          const y = (i / 160) * 512;
+          const alpha = 0.06 + Math.random() * 0.14;
+          ctx.strokeStyle = i % 2 === 0 ? `rgba(25, 12, 5, ${alpha})` : `rgba(110, 68, 38, ${alpha})`;
+          ctx.lineWidth = 1.5 + Math.random() * 4;
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          for (let x = 0; x <= 512; x += 32) {
+            const wave = Math.sin(x * 0.015 + i * 0.25) * 6;
+            ctx.lineTo(x, y + wave);
+          }
+          ctx.stroke();
+        }
+        const tex = new THREE.CanvasTexture(canvas);
+        tex.wrapS = THREE.RepeatWrapping;
+        tex.wrapT = THREE.RepeatWrapping;
+        tex.repeat.set(2, 1);
+        return tex;
+      }
+
+      // 銅線繞組紋理（亥姆霍茲線圈）
+      function createCopperCoilTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 256;
+        canvas.height = 256;
+        const ctx = canvas.getContext('2d');
+
+        ctx.fillStyle = '#a85525';
+        ctx.fillRect(0, 0, 256, 256);
+
+        for (let y = 0; y < 256; y += 6) {
+          const grad = ctx.createLinearGradient(0, y, 0, y + 6);
+          grad.addColorStop(0, '#5c280c');
+          grad.addColorStop(0.35, '#df8246');
+          grad.addColorStop(0.65, '#f2a66e');
+          grad.addColorStop(1, '#5c280c');
+          ctx.fillStyle = grad;
+          ctx.fillRect(0, y, 256, 6);
+        }
+        const tex = new THREE.CanvasTexture(canvas);
+        tex.wrapS = THREE.RepeatWrapping;
+        tex.wrapT = THREE.RepeatWrapping;
+        tex.repeat.set(8, 2);
+        return tex;
+      }
+
+      // 動態建立文字/符號精靈貼圖（用於 + / - 極性、⊗ / ⊙ 磁場符號、向量標籤）
+      function createBadgeSprite(text, bgColor, textColor, borderColor, size = 128, fontScale = 0.52) {
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+
+        ctx.clearRect(0, 0, size, size);
+        const r = size * 0.44;
+        ctx.beginPath();
+        ctx.arc(size / 2, size / 2, r, 0, Math.PI * 2);
+        ctx.fillStyle = bgColor;
+        ctx.fill();
+        ctx.lineWidth = size * 0.055;
+        ctx.strokeStyle = borderColor;
+        ctx.stroke();
+
+        ctx.fillStyle = textColor;
+        ctx.font = `900 ${Math.floor(size * fontScale)}px "Inter", "Noto Sans TC", sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, size / 2, size / 2 + size * 0.03);
+
+        const tex = new THREE.CanvasTexture(canvas);
+        const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
+        const sprite = new THREE.Sprite(mat);
+        return sprite;
+      }
+
+      function createTextPillSprite(text, textColor, borderColor) {
+        const canvas = document.createElement('canvas');
+        canvas.width = 256;
+        canvas.height = 80;
+        const ctx = canvas.getContext('2d');
+
+        ctx.clearRect(0, 0, 256, 80);
+        // 圓角矩形底框
+        const x = 10, y = 12, w = 236, h = 56, r = 24;
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + w, y, x + w, y + h, r);
+        ctx.arcTo(x + w, y + h, x, y + h, r);
+        ctx.arcTo(x, y + h, x, y, r);
+        ctx.arcTo(x, y, x + w, y, r);
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(8, 15, 28, 0.88)';
+        ctx.fill();
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = borderColor;
+        ctx.stroke();
+
+        ctx.fillStyle = textColor;
+        ctx.font = 'bold 32px "Noto Sans TC", "Inter", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, 128, 41);
+
+        const tex = new THREE.CanvasTexture(canvas);
+        const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
+        const sprite = new THREE.Sprite(mat);
+        sprite.scale.set(2.1, 0.65, 1);
+        return sprite;
+      }
+
+      // 實驗底座黃銅銘牌紋理
+      function createNameplateTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 512;
+        canvas.height = 110;
+        const ctx = canvas.getContext('2d');
+
+        const grad = ctx.createLinearGradient(0, 0, 512, 110);
+        grad.addColorStop(0, '#9c7129');
+        grad.addColorStop(0.5, '#e8c474');
+        grad.addColorStop(1, '#8c611e');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, 512, 110);
+
+        ctx.strokeStyle = '#3a2507';
+        ctx.lineWidth = 6;
+        ctx.strokeRect(8, 8, 496, 94);
+
+        ctx.fillStyle = '#2a1804';
+        ctx.font = 'bold 28px "Inter", serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('J. J. THOMSON • 1897', 256, 48);
+        ctx.font = 'bold 20px "Noto Sans TC", sans-serif';
+        ctx.fillText('陰極射線管實驗裝置  CATHODE RAY TUBE', 256, 82);
+
+        return new THREE.CanvasTexture(canvas);
+      }
+
+      /* ============================================================================
+         4. 模式一螢光屏動態畫布（含刻度與餘輝殘影）
+         ============================================================================ */
+      const screenCanvasM1 = document.createElement('canvas');
+      screenCanvasM1.width = 512;
+      screenCanvasM1.height = 512;
+      const screenCtxM1 = screenCanvasM1.getContext('2d');
+      const screenTexM1 = new THREE.CanvasTexture(screenCanvasM1);
+
+      // 獨立餘輝圖層，讓移動滑桿時光斑留下柔和綠色螢光餘輝
+      const trailCanvasM1 = document.createElement('canvas');
+      trailCanvasM1.width = 512;
+      trailCanvasM1.height = 512;
+      const trailCtxM1 = trailCanvasM1.getContext('2d');
+
+      function updatePhosphorScreenM1(hitScreen, dyCm) {
+        const W = 512, H = 512, cx = 256, cy = 256;
+
+        // 1. 餘輝漸隱
+        trailCtxM1.globalCompositeOperation = 'destination-out';
+        trailCtxM1.fillStyle = 'rgba(0, 0, 0, 0.14)';
+        trailCtxM1.fillRect(0, 0, W, H);
+        trailCtxM1.globalCompositeOperation = 'source-over';
+
+        // 2. 若電子束擊中螢光屏，在餘輝層繪製明亮翠綠螢光斑點
+        if (hitScreen && Math.abs(dyCm) <= 6.2) {
+          // 尺度：±6 cm 對應半徑 210 px
+          const py = cy - (dyCm / 6.0) * 210;
+          const grad = trailCtxM1.createRadialGradient(cx, py, 2, cx, py, 36);
+          grad.addColorStop(0, 'rgba(235, 255, 245, 1.0)');
+          grad.addColorStop(0.22, 'rgba(72, 255, 168, 0.95)');
+          grad.addColorStop(0.55, 'rgba(16, 220, 120, 0.45)');
+          grad.addColorStop(1, 'rgba(0, 180, 90, 0.0)');
+          trailCtxM1.fillStyle = grad;
+          trailCtxM1.beginPath();
+          trailCtxM1.arc(cx, py, 36, 0, Math.PI * 2);
+          trailCtxM1.fill();
+        }
+
+        // 3. 合成至主螢光屏畫布
+        const bgGrad = screenCtxM1.createRadialGradient(cx, cy, 20, cx, cy, 256);
+        bgGrad.addColorStop(0, '#0a2419');
+        bgGrad.addColorStop(0.75, '#071911');
+        bgGrad.addColorStop(1, '#040e0a');
+        screenCtxM1.fillStyle = bgGrad;
+        screenCtxM1.fillRect(0, 0, W, H);
+
+        // 繪製同心圓與十字刻度線
+        screenCtxM1.strokeStyle = 'rgba(94, 234, 175, 0.25)';
+        screenCtxM1.lineWidth = 1.5;
+        screenCtxM1.beginPath();
+        screenCtxM1.moveTo(cx, 24);
+        screenCtxM1.lineTo(cx, H - 24);
+        screenCtxM1.moveTo(24, cy);
+        screenCtxM1.lineTo(W - 24, cy);
+        screenCtxM1.stroke();
+
+        // 繪製垂直公分刻度 (-6 ~ +6 cm)
+        screenCtxM1.font = 'bold 18px "JetBrains Mono", monospace';
+        screenCtxM1.fillStyle = 'rgba(134, 239, 172, 0.78)';
+        screenCtxM1.textAlign = 'left';
+        screenCtxM1.textBaseline = 'middle';
+
+        for (let cm = -6; cm <= 6; cm++) {
+          const y = cy - (cm / 6.0) * 210;
+          const isMajor = cm % 2 === 0;
+          const tickHalf = isMajor ? 18 : 9;
+          screenCtxM1.strokeStyle = isMajor ? 'rgba(134, 239, 172, 0.65)' : 'rgba(134, 239, 172, 0.35)';
+          screenCtxM1.lineWidth = isMajor ? 2.2 : 1.4;
+          screenCtxM1.beginPath();
+          screenCtxM1.moveTo(cx - tickHalf, y);
+          screenCtxM1.lineTo(cx + tickHalf, y);
+          screenCtxM1.stroke();
+
+          if (isMajor && cm !== 0) {
+            const label = cm > 0 ? `+${cm}` : `${cm}`;
+            screenCtxM1.fillText(label, cx + 26, y);
+          }
+        }
+        screenCtxM1.fillStyle = 'rgba(134, 239, 172, 0.6)';
+        screenCtxM1.font = 'bold 15px "Noto Sans TC", sans-serif';
+        screenCtxM1.fillText('cm', cx + 26, 36);
+
+        // 疊加發光光斑餘輝
+        screenCtxM1.drawImage(trailCanvasM1, 0, 0);
+        screenTexM1.needsUpdate = true;
+      }
+
+      /* ============================================================================
+         5. 模式二螢光屏動態畫布（馬爾他十字靶銳利陰影即時投影）
+         ============================================================================ */
+      const screenCanvasM2 = document.createElement('canvas');
+      screenCanvasM2.width = 512;
+      screenCanvasM2.height = 512;
+      const screenCtxM2 = screenCanvasM2.getContext('2d');
+      const screenTexM2 = new THREE.CanvasTexture(screenCanvasM2);
+
+      function updatePhosphorScreenM2(crossAngleRad, vaKV) {
+        const W = 512, H = 512, cx = 256, cy = 256;
+        const intensity = 0.55 + (vaKV / 5.0) * 0.45;
+
+        // 明亮翠綠螢光圓面
+        const grad = screenCtxM2.createRadialGradient(cx, cy, 10, cx, cy, 245);
+        grad.addColorStop(0, `rgba(120, 255, 185, ${intensity})`);
+        grad.addColorStop(0.55, `rgba(28, 224, 128, ${intensity * 0.92})`);
+        grad.addColorStop(0.88, `rgba(8, 125, 68, ${intensity * 0.8})`);
+        grad.addColorStop(1, '#04120b');
+        screenCtxM2.fillStyle = grad;
+        screenCtxM2.fillRect(0, 0, W, H);
+
+        // 依照十字靶立起角度（cos(angle)）即時壓縮垂直投影陰影
+        const cosA = Math.cos(crossAngleRad);
+        if (cosA > 0.03) {
+          screenCtxM2.save();
+          // 樞軸位於下方，放倒時陰影向下方收縮
+          const pivotY = cy + 125;
+          screenCtxM2.translate(cx, pivotY);
+          screenCtxM2.scale(1.0, cosA);
+          screenCtxM2.translate(0, -125);
+
+          screenCtxM2.fillStyle = 'rgba(4, 14, 9, 0.94)';
+          screenCtxM2.shadowColor = 'rgba(2, 8, 5, 0.85)';
+          screenCtxM2.shadowBlur = 4;
+
+          // 繪製標準馬爾他十字形（4 瓣向外展寬）
+          const drawMalteseArm = (rot) => {
+            screenCtxM2.save();
+            screenCtxM2.rotate(rot);
+            screenCtxM2.beginPath();
+            screenCtxM2.moveTo(0, 0);
+            screenCtxM2.lineTo(-42, -122);
+            screenCtxM2.lineTo(0, -104);
+            screenCtxM2.lineTo(42, -122);
+            screenCtxM2.closePath();
+            screenCtxM2.fill();
+            screenCtxM2.restore();
+          };
+          drawMalteseArm(0);
+          drawMalteseArm(Math.PI / 2);
+          drawMalteseArm(Math.PI);
+          drawMalteseArm((3 * Math.PI) / 2);
+
+          // 底座支撐桿陰影
+          screenCtxM2.fillRect(-10, 40, 20, 105);
+          screenCtxM2.restore();
+        }
+
+        screenTexM2.needsUpdate = true;
+      }
+
+      /* ============================================================================
+         6. Three.js 場景、燈光、相機與 OrbitControls 初始化
+         ============================================================================ */
+      let scene, camera, renderer, controls;
+      let sharedBaseGroup, mode1Group, mode2Group, mode3Group;
+      let spotPointLight;
+
+      // 模式一動態物件參考
+      let m1CathodeMesh, m1TopPlate, m1BotPlate, m1TopEdgeMat, m1BotEdgeMat;
+      let m1TopSignSprite, m1BotSignSprite;
+      let m1CoilAuraFront, m1CoilAuraBack;
+      let m1BeamCoreMesh, m1BeamGlowMesh;
+      let m1ParticlesGroup, m1Particles = [];
+      let m1SparksGroup, m1Sparks = [];
+      let m1EFieldGroup, m1BFieldGroup, m1ForcesGroup;
+      let m1FeArrow, m1FbArrow, m1FeLabel, m1FbLabel;
+
+      // 模式二動態物件參考
+      let m2CrossPivot, m2ConeMat, m2Particles = [];
+
+      // 模式三動態物件參考
+      let m3WheelGroup, m3WheelSpinner, m3BeamMesh, m3BeamGlowMesh;
+      let m3LeftElectrodeMat, m3RightElectrodeMat;
+      let m3Particles = [], m3SparkLight;
+
+      const CAM_PRESETS = {
+        overview: { pos: new THREE.Vector3(-0.8, 4.4, 15.6), look: new THREE.Vector3(0.4, 0.1, 0) },
+        front:    { pos: new THREE.Vector3(0.5, 0.3, 15.2),  look: new THREE.Vector3(0.5, 0.1, 0) },
+        screen:   { pos: new THREE.Vector3(12.2, 1.4, 5.2),  look: new THREE.Vector3(7.5, 0.0, 0) },
+        deflect:  { pos: new THREE.Vector3(0.2, 1.3, 7.2),   look: new THREE.Vector3(0.0, 0.0, 0) }
+      };
+
+      function initThree() {
+        const container = document.getElementById('canvas-container');
+
+        scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x070e1c, 0.018);
+
+        camera = new THREE.PerspectiveCamera(42, container.clientWidth / container.clientHeight, 0.1, 120);
+        camera.position.copy(CAM_PRESETS.overview.pos);
+
+        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.15;
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        container.appendChild(renderer.domElement);
+
+        // OrbitControls（含安全降級備援）
+        if (typeof THREE.OrbitControls === 'function') {
+          controls = new THREE.OrbitControls(camera, renderer.domElement);
+          controls.enableDamping = true;
+          controls.dampingFactor = 0.065;
+          controls.minDistance = 4.5;
+          controls.maxDistance = 32;
+          controls.maxPolarAngle = Math.PI * 0.85;
+          controls.target.copy(CAM_PRESETS.overview.look);
+          controls.addEventListener('start', () => {
+            state.camLerpActive = false;
+          });
+        } else {
+          // 簡易手動拖曳備援
+          setupFallbackControls(renderer.domElement);
+        }
+
+        // 實驗室燈光佈置（暖色主光突顯胡桃木與黃銅，冷色補光勾勒玻璃邊緣）
+        const hemiLight = new THREE.HemisphereLight(0xa5c8ff, 0x261a12, 0.72);
+        scene.add(hemiLight);
+
+        const keyLight = new THREE.DirectionalLight(0xfff1dc, 1.25);
+        keyLight.position.set(7, 13, 10);
+        keyLight.castShadow = true;
+        keyLight.shadow.mapSize.width = 1024;
+        keyLight.shadow.mapSize.height = 1024;
+        keyLight.shadow.camera.near = 2;
+        keyLight.shadow.camera.far = 36;
+        const d = 12;
+        keyLight.shadow.camera.left = -d;
+        keyLight.shadow.camera.right = d;
+        keyLight.shadow.camera.top = d;
+        keyLight.shadow.camera.bottom = -d;
+        scene.add(keyLight);
+
+        const rimLight = new THREE.DirectionalLight(0x66b2ff, 0.85);
+        rimLight.position.set(-10, 6, -9);
+        scene.add(rimLight);
+
+        const underFill = new THREE.PointLight(0x22d3ee, 0.35, 25);
+        underFill.position.set(0, -3.5, 4);
+        scene.add(underFill);
+
+        // 螢光光點動態局部照明
+        spotPointLight = new THREE.PointLight(0x34f59a, 1.4, 9);
+        spotPointLight.position.set(X_SCREEN_BASE, 0, 0);
+        scene.add(spotPointLight);
+
+        // 建立共用實驗桌座與三套實驗裝置
+        buildSharedLabBase();
+        buildMode1Apparatus();
+        buildMode2Apparatus();
+        buildMode3Apparatus();
+
+        // 預設顯示模式一
+        setExperimentMode(1);
+      }
+
+      // 備援相機拖曳控制（萬一 CDN OrbitControls 無法載入）
+      function setupFallbackControls(domEl) {
+        let dragging = false, prevX = 0, prevY = 0;
+        let theta = 0.05, phi = 1.3, radius = 16;
+        const target = CAM_PRESETS.overview.look.clone();
+
+        const updateCam = () => {
+          camera.position.set(
+            target.x + radius * Math.sin(phi) * Math.sin(theta),
+            target.y + radius * Math.cos(phi),
+            target.z + radius * Math.sin(phi) * Math.cos(theta)
+          );
+          camera.lookAt(target);
+        };
+        domEl.addEventListener('mousedown', (e) => { dragging = true; prevX = e.clientX; prevY = e.clientY; });
+        window.addEventListener('mouseup', () => { dragging = false; });
+        window.addEventListener('mousemove', (e) => {
+          if (!dragging) return;
+          theta -= (e.clientX - prevX) * 0.006;
+          phi = Math.max(0.25, Math.min(2.6, phi - (e.clientY - prevY) * 0.006));
+          prevX = e.clientX; prevY = e.clientY;
+          updateCam();
+        });
+        domEl.addEventListener('wheel', (e) => {
+          radius = Math.max(5, Math.min(30, radius + e.deltaY * 0.01));
+          updateCam();
+        }, { passive: true });
+        controls = { target, update: () => {} };
+      }
+
+      /* ============================================================================
+         7. 共用復古實驗室底座（胡桃木台座 + 黃銅支柱 + 接線柱）
+         ============================================================================ */
+      function buildSharedLabBase() {
+        sharedBaseGroup = new THREE.Group();
+
+        const walnutTex = createWalnutTexture();
+        const woodMat = new THREE.MeshStandardMaterial({
+          map: walnutTex,
+          roughness: 0.48,
+          metalness: 0.06
+        });
+        const brassMat = new THREE.MeshStandardMaterial({
+          color: 0xd9a84e,
+          roughness: 0.24,
+          metalness: 0.88
+        });
+        const darkMetalMat = new THREE.MeshStandardMaterial({
+          color: 0x1e293b,
+          roughness: 0.55,
+          metalness: 0.65
+        });
+
+        // 實驗室深色微反光桌面（讓整個裝置有穩重的空間接地感）
+        const tableGeo = new THREE.CylinderGeometry(24, 24, 0.3, 64);
+        const tableMat = new THREE.MeshStandardMaterial({
+          color: 0x0b1323,
+          roughness: 0.72,
+          metalness: 0.2
+        });
+        const table = new THREE.Mesh(tableGeo, tableMat);
+        table.position.set(0, -4.65, 0);
+        table.receiveShadow = true;
+        sharedBaseGroup.add(table);
+
+        // 主胡桃木長方底座（雙層倒角層次）
+        const baseLower = new THREE.Mesh(new THREE.BoxGeometry(17.4, 0.45, 6.4), woodMat);
+        baseLower.position.set(0.2, -4.25, 0);
+        baseLower.castShadow = true;
+        baseLower.receiveShadow = true;
+        sharedBaseGroup.add(baseLower);
+
+        const baseUpper = new THREE.Mesh(new THREE.BoxGeometry(16.6, 0.5, 5.6), woodMat);
+        baseUpper.position.set(0.2, -3.82, 0);
+        baseUpper.castShadow = true;
+        baseUpper.receiveShadow = true;
+        sharedBaseGroup.add(baseUpper);
+
+        // 前方復古黃銅銘牌
+        const plateMat = new THREE.MeshStandardMaterial({
+          map: createNameplateTexture(),
+          roughness: 0.32,
+          metalness: 0.78
+        });
+        const nameplate = new THREE.Mesh(new THREE.BoxGeometry(4.4, 0.42, 0.06), plateMat);
+        nameplate.position.set(0.2, -3.82, 2.82);
+        sharedBaseGroup.add(nameplate);
+
+        // 四角黃銅裝飾螺絲與防滑腳墊
+        const corners = [[-7.6, -2.3], [8.0, -2.3], [-7.6, 2.3], [8.0, 2.3]];
+        corners.forEach(([cx, cz]) => {
+          const screw = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.08, 16), brassMat);
+          screw.position.set(cx, -3.55, cz);
+          sharedBaseGroup.add(screw);
+        });
+
+        // 左右黃銅支架柱（托住玻璃管頸部與中段）
+        const createSupportPillar = (xPos, yTop, collarR) => {
+          const g = new THREE.Group();
+          const foot = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.58, 0.25, 24), brassMat);
+          foot.position.set(xPos, -3.45, 0);
+          g.add(foot);
+
+          const h = yTop - (-3.45);
+          const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, h, 20), brassMat);
+          rod.position.set(xPos, -3.45 + h / 2, 0);
+          rod.castShadow = true;
+          g.add(rod);
+
+          // 玻璃管托環（下半弧形托架）
+          const cradle = new THREE.Mesh(
+            new THREE.TorusGeometry(collarR, 0.09, 12, 28, Math.PI),
+            brassMat
+          );
+          cradle.position.set(xPos, 0, 0);
+          cradle.rotation.z = Math.PI;
+          cradle.rotation.y = Math.PI / 2;
+          g.add(cradle);
+
+          return g;
+        };
+
+        sharedBaseGroup.add(createSupportPillar(-5.5, -1.05, 1.05));
+        sharedBaseGroup.add(createSupportPillar(-2.4, -1.2, 1.2));
+
+        // 左端高壓電源接線柱（黑：陰極，紅：陽極）
+        const createBindingPost = (x, z, capColor) => {
+          const g = new THREE.Group();
+          const post = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 0.55, 16), brassMat);
+          post.position.set(x, -3.3, z);
+          g.add(post);
+          const cap = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.22, 0.22, 0.26, 16),
+            new THREE.MeshStandardMaterial({ color: capColor, roughness: 0.35 })
+          );
+          cap.position.set(x, -2.95, z);
+          g.add(cap);
+          return g;
+        };
+
+        sharedBaseGroup.add(createBindingPost(-7.1, 1.65, 0x1e293b)); // 陰極黑
+        sharedBaseGroup.add(createBindingPost(-6.2, 1.65, 0xdc2626)); // 陽極紅
+        sharedBaseGroup.add(createBindingPost(-0.5, 2.25, 0xd97706)); // 偏轉板接線
+        sharedBaseGroup.add(createBindingPost(0.5, 2.25, 0x2563eb));  // 偏轉板接線
+
+        // 微細桌面參考線環（增添科技教學質感）
+        const ringGeo = new THREE.RingGeometry(11.5, 11.55, 72);
+        const ringMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.12, side: THREE.DoubleSide });
+        const ring = new THREE.Mesh(ringGeo, ringMat);
+        ring.rotation.x = -Math.PI / 2;
+        ring.position.y = -4.48;
+        sharedBaseGroup.add(ring);
+
+        scene.add(sharedBaseGroup);
+      }
+
+      // 共用高透光吹製玻璃材質
+      function createGlassMaterial() {
+        return new THREE.MeshPhysicalMaterial({
+          color: 0xdff6ff,
+          transparent: true,
+          opacity: 0.16,
+          roughness: 0.06,
+          metalness: 0.08,
+          clearcoat: 1.0,
+          clearcoatRoughness: 0.04,
+          reflectivity: 0.95,
+          depthWrite: false,
+          side: THREE.FrontSide
+        });
+      }
+
+      /* ============================================================================
+         8. 模式一裝置：1897 湯姆森經典電磁偏轉陰極射線管
+         ============================================================================ */
+      function buildMode1Apparatus() {
+        mode1Group = new THREE.Group();
+
+        const brassMat = new THREE.MeshStandardMaterial({ color: 0xd8a84e, roughness: 0.24, metalness: 0.88 });
+        const glassMat = createGlassMaterial();
+
+        // --- A. 吹製玻璃真空管外殼（使用 LatheGeometry 繞 Y 軸旋轉再轉至 X 軸） ---
+        const profile = [
+          new THREE.Vector2(0.01, -7.5),
+          new THREE.Vector2(0.85, -7.35),
+          new THREE.Vector2(1.02, -6.9),
+          new THREE.Vector2(1.02, -2.7),
+          new THREE.Vector2(1.38, -2.0),
+          new THREE.Vector2(1.42, 1.5),
+          new THREE.Vector2(2.35, 4.3),
+          new THREE.Vector2(3.15, 7.1),
+          new THREE.Vector2(3.12, 7.6),
+          new THREE.Vector2(2.4, 8.02),
+          new THREE.Vector2(1.2, 8.22),
+          new THREE.Vector2(0.01, 8.28)
+        ];
+        const tubeGeo = new THREE.LatheGeometry(profile, 48);
+        tubeGeo.rotateZ(-Math.PI / 2); // 讓軸線對齊 +X 方向
+        const glassTube = new THREE.Mesh(tubeGeo, glassMat);
+        mode1Group.add(glassTube);
+
+        // 玻璃輪廓高光細環（強化大屏視覺可讀性）
+        const rimMat = new THREE.MeshBasicMaterial({ color: 0x93c5fd, transparent: true, opacity: 0.22 });
+        [-6.6, -2.6, 1.5, 7.45].forEach((rx, idx) => {
+          const rad = [1.03, 1.04, 1.43, 3.13][idx];
+          const rim = new THREE.Mesh(new THREE.TorusGeometry(rad, 0.018, 10, 48), rimMat);
+          rim.rotation.y = Math.PI / 2;
+          rim.position.x = rx;
+          mode1Group.add(rim);
+        });
+
+        // --- B. 左端陰極（可切換金屬材質）與微弱熱燈絲 ---
+        const cathodeStem = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.2, 16), brassMat);
+        cathodeStem.rotation.z = Math.PI / 2;
+        cathodeStem.position.set(-7.0, 0, 0);
+        mode1Group.add(cathodeStem);
+
+        const cathodeMat = new THREE.MeshStandardMaterial({
+          color: METALS.Al.color,
+          roughness: METALS.Al.roughness,
+          metalness: METALS.Al.metalness,
+          emissive: 0x0b2a1d,
+          emissiveIntensity: 0.2
+        });
+        m1CathodeMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.46, 0.16, 28), cathodeMat);
+        m1CathodeMesh.rotation.z = Math.PI / 2;
+        m1CathodeMesh.position.set(X_CATHODE, 0, 0);
+        mode1Group.add(m1CathodeMesh);
+
+        // 陰極背後微亮橘紅燈絲光暈
+        const heater = new THREE.Mesh(
+          new THREE.TorusGeometry(0.24, 0.04, 10, 24),
+          new THREE.MeshBasicMaterial({ color: 0xff8c42 })
+        );
+        heater.rotation.y = Math.PI / 2;
+        heater.position.set(X_CATHODE - 0.16, 0, 0);
+        mode1Group.add(heater);
+
+        // 陽極與雙狹縫準直器（讓學生看見電子束被加速與準直）
+        [X_ANODE_1, X_ANODE_2].forEach((ax) => {
+          const ring = new THREE.Mesh(new THREE.TorusGeometry(0.62, 0.18, 16, 32), brassMat);
+          ring.rotation.y = Math.PI / 2;
+          ring.position.set(ax, 0, 0);
+          mode1Group.add(ring);
+
+          // 中央微小狹縫環
+          const slit = new THREE.Mesh(
+            new THREE.RingGeometry(0.11, 0.56, 32),
+            new THREE.MeshStandardMaterial({ color: 0xb88b3a, roughness: 0.3, metalness: 0.85, side: THREE.DoubleSide })
+          );
+          slit.rotation.y = Math.PI / 2;
+          slit.position.set(ax, 0, 0);
+          mode1Group.add(slit);
+        });
+
+        // --- C. 上下平行金屬偏轉板（動態正負極標誌與發光色） ---
+        const plateGeo = new THREE.BoxGeometry(X_PLATE_END - X_PLATE_START, 0.09, 1.6);
+        m1TopEdgeMat = new THREE.MeshStandardMaterial({
+          color: 0xcbd5e1, roughness: 0.25, metalness: 0.85, emissive: 0x000000, emissiveIntensity: 0
+        });
+        m1BotEdgeMat = new THREE.MeshStandardMaterial({
+          color: 0xcbd5e1, roughness: 0.25, metalness: 0.85, emissive: 0x000000, emissiveIntensity: 0
+        });
+
+        m1TopPlate = new THREE.Mesh(plateGeo, m1TopEdgeMat);
+        m1TopPlate.position.set(0, Y_PLATE_HALF + 0.045, 0);
+        mode1Group.add(m1TopPlate);
+
+        m1BotPlate = new THREE.Mesh(plateGeo, m1BotEdgeMat);
+        m1BotPlate.position.set(0, -Y_PLATE_HALF - 0.045, 0);
+        mode1Group.add(m1BotPlate);
+
+        // 偏轉板外部黃銅引線柱
+        const topLead = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.7, 12), brassMat);
+        topLead.position.set(0, Y_PLATE_HALF + 0.42, 0);
+        mode1Group.add(topLead);
+
+        const botLead = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.7, 12), brassMat);
+        botLead.position.set(0, -Y_PLATE_HALF - 0.42, 0);
+        mode1Group.add(botLead);
+
+        // 正負極浮動標誌（+ / -）
+        m1TopSignSprite = createBadgeSprite('+', 'rgba(239,68,68,0.9)', '#fff', '#fca5a5');
+        m1TopSignSprite.position.set(1.75, Y_PLATE_HALF + 0.1, 0.45);
+        m1TopSignSprite.scale.set(0.62, 0.62, 1);
+        m1TopSignSprite.visible = false;
+        mode1Group.add(m1TopSignSprite);
+
+        m1BotSignSprite = createBadgeSprite('−', 'rgba(59,130,246,0.9)', '#fff', '#93c5fd');
+        m1BotSignSprite.position.set(1.75, -Y_PLATE_HALF - 0.1, 0.45);
+        m1BotSignSprite.scale.set(0.62, 0.62, 1);
+        m1BotSignSprite.visible = false;
+        mode1Group.add(m1BotSignSprite);
+
+        // --- D. 前後銅線繞製亥姆霍茲線圈（產生沿 Z 軸均勻磁場） ---
+        const copperTex = createCopperCoilTexture();
+        const copperMat = new THREE.MeshStandardMaterial({
+          map: copperTex,
+          color: 0xd97b43,
+          roughness: 0.34,
+          metalness: 0.78
+        });
+
+        const buildHelmholtzCoil = (zPos) => {
+          const g = new THREE.Group();
+          const coil = new THREE.Mesh(new THREE.TorusGeometry(2.15, 0.24, 20, 56), copperMat);
+          coil.position.set(0, 0, zPos);
+          coil.castShadow = true;
+          g.add(coil);
+
+          // 黃銅外框法蘭
+          const flange = new THREE.Mesh(new THREE.TorusGeometry(2.38, 0.06, 12, 56), brassMat);
+          flange.position.set(0, 0, zPos);
+          g.add(flange);
+
+          // 底部線圈支架連接至胡桃木底座
+          const stand = new THREE.Mesh(new THREE.BoxGeometry(0.42, 1.45, 0.36), brassMat);
+          stand.position.set(0, -2.85, zPos);
+          g.add(stand);
+
+          // 磁場通電微光環
+          const auraMat = new THREE.MeshBasicMaterial({
+            color: 0x38bdf8, transparent: true, opacity: 0.0, side: THREE.DoubleSide
+          });
+          const aura = new THREE.Mesh(new THREE.RingGeometry(1.78, 1.92, 48), auraMat);
+          aura.position.set(0, 0, zPos);
+          g.add(aura);
+
+          return { group: g, aura };
+        };
+
+        const frontCoil = buildHelmholtzCoil(2.25);
+        const backCoil = buildHelmholtzCoil(-2.25);
+        m1CoilAuraFront = frontCoil.aura;
+        m1CoilAuraBack = backCoil.aura;
+        mode1Group.add(frontCoil.group, backCoil.group);
+
+        // --- E. 右端帶刻度圓弧螢光屏 ---
+        const screenGeo = new THREE.CircleGeometry(3.02, 64);
+        screenGeo.rotateY(-Math.PI / 2); // 面向 -X（電子射入側），雙面可見
+        const screenMat = new THREE.MeshBasicMaterial({
+          map: screenTexM1,
+          side: THREE.DoubleSide
+        });
+        const screenMesh = new THREE.Mesh(screenGeo, screenMat);
+        screenMesh.position.set(X_SCREEN_BASE, 0, 0);
+        mode1Group.add(screenMesh);
+
+        // --- F. 陰極射線光束（雙層：高亮核心 + 柔和外層輝光） ---
+        const beamCoreMat = new THREE.MeshBasicMaterial({
+          color: 0xc8ffea,
+          transparent: true,
+          opacity: 0.95
+        });
+        const beamGlowMat = new THREE.MeshBasicMaterial({
+          color: 0x22f593,
+          transparent: true,
+          opacity: 0.34,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false
+        });
+        m1BeamCoreMesh = new THREE.Mesh(new THREE.BufferGeometry(), beamCoreMat);
+        m1BeamGlowMesh = new THREE.Mesh(new THREE.BufferGeometry(), beamGlowMat);
+        mode1Group.add(m1BeamCoreMesh, m1BeamGlowMesh);
+
+        // --- G. 沿軌跡高速流動的發光電子粒子球 ---
+        m1ParticlesGroup = new THREE.Group();
+        const pGeo = new THREE.SphereGeometry(0.085, 12, 12);
+        const pMat = new THREE.MeshBasicMaterial({ color: 0xeafff6 });
+        const pHaloGeo = new THREE.SphereGeometry(0.16, 10, 10);
+        const pHaloMat = new THREE.MeshBasicMaterial({
+          color: 0x34f59a, transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending, depthWrite: false
+        });
+        const PARTICLE_COUNT = 48;
+        for (let i = 0; i < PARTICLE_COUNT; i++) {
+          const g = new THREE.Group();
+          g.add(new THREE.Mesh(pGeo, pMat));
+          g.add(new THREE.Mesh(pHaloGeo, pHaloMat));
+          m1ParticlesGroup.add(g);
+          m1Particles.push({ mesh: g, t: i / PARTICLE_COUNT });
+        }
+        mode1Group.add(m1ParticlesGroup);
+
+        // --- H. 撞擊極板火花粒子 ---
+        m1SparksGroup = new THREE.Group();
+        const sparkGeo = new THREE.SphereGeometry(0.055, 8, 8);
+        const sparkMat = new THREE.MeshBasicMaterial({ color: 0xffc857 });
+        for (let i = 0; i < 16; i++) {
+          const s = new THREE.Mesh(sparkGeo, sparkMat);
+          s.visible = false;
+          m1SparksGroup.add(s);
+          m1Sparks.push({
+            mesh: s,
+            vel: new THREE.Vector3(),
+            life: Math.random()
+          });
+        }
+        mode1Group.add(m1SparksGroup);
+
+        // --- I. 3D 電場線、磁場符號 (⊗/⊙) 與勞侖茲受力向量 (Fₑ, F_B) ---
+        buildMode1FieldAndForceVisuals();
+
+        scene.add(mode1Group);
+      }
+
+      // 建立立體箭頭工具函數（沿 +Y 方向，總長 1.0 單位，底端在原點）
+      function create3DArrow(colorHex, radius = 0.055) {
+        const group = new THREE.Group();
+        const mat = new THREE.MeshBasicMaterial({ color: colorHex });
+        const shaft = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, 0.72, 14), mat);
+        shaft.position.y = 0.36;
+        const head = new THREE.Mesh(new THREE.ConeGeometry(radius * 2.5, 0.28, 16), mat);
+        head.position.y = 0.86;
+        group.add(shaft, head);
+        return group;
+      }
+
+      function buildMode1FieldAndForceVisuals() {
+        // 1. 電場線群組（5 條垂直箭頭排列在偏轉板之間）
+        m1EFieldGroup = new THREE.Group();
+        for (let i = -2; i <= 2; i++) {
+          const arrow = create3DArrow(0xff6b4a, 0.026);
+          arrow.position.set(i * 0.62, 0, -0.35);
+          m1EFieldGroup.add(arrow);
+        }
+        mode1Group.add(m1EFieldGroup);
+
+        // 2. 磁場符號群組（⊗ 射入紙面 / ⊙ 射出紙面 + 微弱 Z 軸箭頭）
+        m1BFieldGroup = new THREE.Group();
+        mode1Group.add(m1BFieldGroup);
+
+        // 3. 作用在電子束上的電力 Fₑ 與磁力 F_B 向量
+        m1ForcesGroup = new THREE.Group();
+        m1FeArrow = create3DArrow(0xff5e3a, 0.062);
+        m1FbArrow = create3DArrow(0x00d4ff, 0.062);
+
+        m1FeLabel = createTextPillSprite('Fₑ 電力', '#ff8c70', '#ff5e3a');
+        m1FbLabel = createTextPillSprite('F_B 磁力', '#67e8f9', '#00d4ff');
+
+        m1ForcesGroup.add(m1FeArrow, m1FbArrow, m1FeLabel, m1FbLabel);
+        mode1Group.add(m1ForcesGroup);
+      }
+
+      // 動態重建磁場 ⊗ / ⊙ 符號（只在方向改變時重建，效能極佳）
+      let lastBSignBuilt = 0;
+      function updateMagneticFieldVisuals() {
+        const bSign = state.b_mT > 0.005 ? 1 : (state.b_mT < -0.005 ? -1 : 0);
+        m1BFieldGroup.visible = state.showBField && bSign !== 0;
+
+        // 線圈通電微光
+        const auraOp = Math.min(0.65, (Math.abs(state.b_mT) / 3.0) * 0.65);
+        m1CoilAuraFront.material.opacity = auraOp;
+        m1CoilAuraBack.material.opacity = auraOp;
+        const auraCol = bSign >= 0 ? 0x38bdf8 : 0x818cf8;
+        m1CoilAuraFront.material.color.setHex(auraCol);
+        m1CoilAuraBack.material.color.setHex(auraCol);
+
+        if (bSign === 0) return;
+
+        if (bSign !== lastBSignBuilt) {
+          lastBSignBuilt = bSign;
+          while (m1BFieldGroup.children.length) {
+            m1BFieldGroup.remove(m1BFieldGroup.children[0]);
+          }
+          // bSign > 0 => 射入紙面 (⊗, -Z)；bSign < 0 => 射出紙面 (⊙, +Z)
+          const sym = bSign > 0 ? '⊗' : '⊙';
+          const bg = bSign > 0 ? 'rgba(14, 116, 144, 0.78)' : 'rgba(67, 56, 202, 0.78)';
+          const col = bSign > 0 ? '#7dd3fc' : '#c7d2fe';
+          const border = bSign > 0 ? '#38bdf8' : '#818cf8';
+
+          const xs = [-1.0, 0.0, 1.0];
+          const ys = [-0.52, 0.52];
+          xs.forEach((x) => {
+            ys.forEach((y) => {
+              const sp = createBadgeSprite(sym, bg, col, border, 128, 0.62);
+              sp.position.set(x, y, 0.58);
+              sp.scale.set(0.46, 0.46, 1);
+              m1BFieldGroup.add(sp);
+
+              // 3D 沿 Z 軸方向細箭頭，讓學生轉動視角時看清磁場立體方向！
+              const zArrow = create3DArrow(bSign > 0 ? 0x38bdf8 : 0x818cf8, 0.018);
+              zArrow.rotation.x = bSign > 0 ? -Math.PI / 2 : Math.PI / 2;
+              zArrow.position.set(x, y, bSign > 0 ? 0.5 : -0.5);
+              zArrow.scale.set(1, 1.0, 1);
+              m1BFieldGroup.add(zArrow);
+            });
+          });
+        }
+
+        // 依磁場大小微調符號尺寸
+        const sFactor = 0.78 + (Math.abs(state.b_mT) / 3.0) * 0.42;
+        m1BFieldGroup.children.forEach((child) => {
+          if (child.isSprite) {
+            child.scale.set(0.46 * sFactor, 0.46 * sFactor, 1);
+          }
+        });
+      }
+
+      /* ============================================================================
+         9. 模式一嚴謹物理引擎（RK4 勞侖茲力積分：精確右手定則與圓弧/拋物線）
+         ============================================================================ */
+      function recalculateMode1Physics() {
+        const Va = state.va_kV * 1000.0;                 // V
+        const E_y = state.vd_V / PHYSICS.PLATE_D;        // V/m (Vd > 0 => 上板+ 下板- => 電場向下 -Y，故 E_vec = (0, -E_y, 0))
+        const B_z = state.b_mT * 1e-3;                   // T   (B > 0  => 射入紙面 ⊗ -Z，故 B_vec = (0, 0, -B_z))
+        const qm = PHYSICS.E_OVER_M;                     // e/m > 0
+
+        // 初速度 v_x = sqrt(2 (e/m) Va)
+        const v0 = Math.sqrt(2.0 * qm * Va);
+        state.vx = v0;
+        state.E_Vm = E_y;
+
+        // 軌跡點陣列（從陰極出發，經準直器直達偏轉板入口）
+        const pts = [];
+        for (let i = 0; i <= 12; i++) {
+          const x = X_CATHODE + (i / 12) * (X_PLATE_START - X_CATHODE);
+          pts.push(new THREE.Vector3(x, 0, 0));
+        }
+
+        // 在偏轉板區域內使用 RK4 精確求解電子運動：
+        // a_x = +(e/m) * v_y * B_z
+        // a_y = +(e/m) * (E_y - v_x * B_z)
+        // 驗證：
+        //  1) Vd > 0 (E_y > 0), B = 0 => a_y > 0 (向上偏轉至正極板！)
+        //  2) Vd = 0, B > 0 (射入紙面 -Z) => v×B 向上 (+Y)，因電子帶負電，F_B 向下 (-Y)，a_y = -(e/m) v_x B_z < 0！
+        //  3) E_y = v_x B_z => a_y = 0 (完美水平直線通過！)
+        const accel = (vx, vy) => ({
+          ax: qm * vy * B_z,
+          ay: qm * (E_y - vx * B_z)
+        });
+
+        let x_m = 0.0; // 相對偏轉板起點之物理座標 (m)
+        let y_m = 0.0;
+        let vx = v0;
+        let vy = 0.0;
+
+        const steps = 60;
+        const dt = (PHYSICS.PLATE_L / v0) / steps;
+        const halfGap = PHYSICS.PLATE_D * 0.5;
+
+        let hitPlate = false;
+        let hitPlateSign = 0;
+
+        for (let step = 0; step < steps * 2; step++) {
+          if (x_m >= PHYSICS.PLATE_L) break;
+
+          // RK4 單步積分
+          const a1 = accel(vx, vy);
+          const k1x = vx, k1y = vy, k1vx = a1.ax, k1vy = a1.ay;
+
+          const a2 = accel(vx + 0.5 * dt * k1vx, vy + 0.5 * dt * k1vy);
+          const k2x = vx + 0.5 * dt * k1vx, k2y = vy + 0.5 * dt * k1vy, k2vx = a2.ax, k2vy = a2.ay;
+
+          const a3 = accel(vx + 0.5 * dt * k2vx, vy + 0.5 * dt * k2vy);
+          const k3x = vx + 0.5 * dt * k2vx, k3y = vy + 0.5 * dt * k2vy, k3vx = a3.ax, k3vy = a3.ay;
+
+          const a4 = accel(vx + dt * k3vx, vy + dt * k3vy);
+          const k4x = vx + dt * k3vx, k4y = vy + dt * k3vy, k4vx = a4.ax, k4vy = a4.ay;
+
+          const nextX = x_m + (dt / 6) * (k1x + 2 * k2x + 2 * k3x + k4x);
+          const nextY = y_m + (dt / 6) * (k1y + 2 * k2y + 2 * k3y + k4y);
+          const nextVx = vx + (dt / 6) * (k1vx + 2 * k2vx + 2 * k3vx + k4vx);
+          const nextVy = vy + (dt / 6) * (k1vy + 2 * k2vy + 2 * k3vy + k4vy);
+
+          // 若電子在強磁場下迴轉向後飛（nextVx <= 0），直接視為撞擊極板
+          if (Math.abs(nextY) >= halfGap || nextVx <= v0 * 0.1) {
+            hitPlate = true;
+            hitPlateSign = nextY >= 0 ? 1 : -1;
+            const clampY = hitPlateSign * halfGap;
+            const frac = Math.abs(nextY - y_m) > 1e-9 ? Math.max(0, Math.min(1, (clampY - y_m) / (nextY - y_m))) : 0.5;
+            const ix = x_m + frac * (nextX - x_m);
+            const wx = X_PLATE_START + ix * PHYSICS.SCALE;
+            const wy = clampY * PHYSICS.SCALE;
+            pts.push(new THREE.Vector3(wx, wy, 0));
+            state.hitPoint3D.set(wx, wy, 0);
+            break;
+          }
+
+          // 若跨過偏轉板出口，線性插值至精確出口處
+          if (nextX >= PHYSICS.PLATE_L) {
+            const frac = (PHYSICS.PLATE_L - x_m) / (nextX - x_m);
+            x_m = PHYSICS.PLATE_L;
+            y_m = y_m + frac * (nextY - y_m);
+            vx = vx + frac * (nextVx - vx);
+            vy = vy + frac * (nextVy - vy);
+            pts.push(new THREE.Vector3(X_PLATE_END, y_m * PHYSICS.SCALE, 0));
+            break;
+          }
+
+          x_m = nextX;
+          y_m = nextY;
+          vx = nextVx;
+          vy = nextVy;
+
+          if (step % 2 === 0) {
+            pts.push(new THREE.Vector3(X_PLATE_START + x_m * PHYSICS.SCALE, y_m * PHYSICS.SCALE, 0));
+          }
+        }
+
+        // 若順利離開偏轉板，在無場區沿出口切線等速直線飛向螢光屏
+        let screenHit = false;
+        let finalDyCm = 0;
+
+        if (!hitPlate) {
+          const slope = vy / vx;
+          const yScreenM = y_m + slope * PHYSICS.DRIFT_L;
+          finalDyCm = yScreenM * 100.0;
+
+          // 檢查是否超出玻璃喇叭口上下壁（半徑 6.0 cm）
+          const maxR = PHYSICS.SCREEN_R;
+          if (Math.abs(yScreenM) > maxR) {
+            // 計算與玻璃錐壁的交點（線性近似錐壁半徑從 0.028m 擴張到 0.060m）
+            const sign = yScreenM >= 0 ? 1 : -1;
+            const endY = sign * maxR * PHYSICS.SCALE;
+            const frac = Math.max(0.1, Math.min(1.0, (sign * maxR - y_m) / (yScreenM - y_m)));
+            const endX = X_PLATE_END + frac * (X_SCREEN_BASE - X_PLATE_END);
+            for (let k = 1; k <= 10; k++) {
+              const t = k / 10;
+              pts.push(new THREE.Vector3(
+                X_PLATE_END + t * (endX - X_PLATE_END),
+                y_m * PHYSICS.SCALE + t * (endY - y_m * PHYSICS.SCALE),
+                0
+              ));
+            }
+            state.hitPoint3D.set(endX, endY, 0);
+            screenHit = false;
+            hitPlate = true; // 撞擊管壁
+            hitPlateSign = sign;
+          } else {
+            const endY = yScreenM * PHYSICS.SCALE;
+            for (let k = 1; k <= 14; k++) {
+              const t = k / 14;
+              pts.push(new THREE.Vector3(
+                X_PLATE_END + t * (X_SCREEN_BASE - X_PLATE_END),
+                y_m * PHYSICS.SCALE + t * (endY - y_m * PHYSICS.SCALE),
+                0
+              ));
+            }
+            state.hitPoint3D.set(X_SCREEN_BASE, endY, 0);
+            screenHit = true;
+          }
+        }
+
+        state.hitPlate = hitPlate;
+        state.hitPlateSign = hitPlateSign;
+        state.screenDyCm = finalDyCm;
+        state.trajectoryPts = pts;
+
+        // 更新 3D 光束幾何
+        if (pts.length >= 2) {
+          const curve = new THREE.CatmullRomCurve3(pts);
+          const segs = Math.max(24, pts.length * 2);
+
+          m1BeamCoreMesh.geometry.dispose();
+          m1BeamGlowMesh.geometry.dispose();
+          m1BeamCoreMesh.geometry = new THREE.TubeGeometry(curve, segs, 0.052, 10, false);
+          m1BeamGlowMesh.geometry = new THREE.TubeGeometry(curve, segs, 0.165, 12, false);
+          state.beamCurve = curve;
+        }
+
+        // 更新偏轉板正負極顏色與符號
+        updateDeflectionPlateVisuals();
+
+        // 更新電場線與磁場視覺
+        updateElectricFieldVisuals();
+        updateMagneticFieldVisuals();
+
+        // 更新電力 Fₑ 與磁力 F_B 3D 向量箭頭
+        updateForceVectorVisuals(E_y, v0 * B_z);
+
+        // 移動螢光局部點光源
+        spotPointLight.position.set(state.hitPoint3D.x - 0.25, state.hitPoint3D.y, 0.3);
+        spotPointLight.intensity = screenHit ? 1.8 : 0.7;
+
+        // 更新 UI 讀數與狀態列
+        updateMode1TelemetryUI(screenHit);
+      }
+
+      function updateDeflectionPlateVisuals() {
+        const vd = state.vd_V;
+        if (Math.abs(vd) < 5) {
+          m1TopEdgeMat.emissive.setHex(0x000000);
+          m1TopEdgeMat.emissiveIntensity = 0;
+          m1BotEdgeMat.emissive.setHex(0x000000);
+          m1BotEdgeMat.emissiveIntensity = 0;
+          m1TopSignSprite.visible = false;
+          m1BotSignSprite.visible = false;
+        } else {
+          const intensity = 0.25 + (Math.abs(vd) / 1000) * 0.65;
+          const topIsPos = vd > 0;
+
+          m1TopEdgeMat.emissive.setHex(topIsPos ? 0xef4444 : 0x3b82f6);
+          m1TopEdgeMat.emissiveIntensity = intensity;
+          m1BotEdgeMat.emissive.setHex(topIsPos ? 0x3b82f6 : 0xef4444);
+          m1BotEdgeMat.emissiveIntensity = intensity;
+
+          m1TopSignSprite.visible = true;
+          m1BotSignSprite.visible = true;
+          // 交換 +/- 標誌位置
+          m1TopSignSprite.position.y = topIsPos ? (Y_PLATE_HALF + 0.14) : (-Y_PLATE_HALF - 0.14);
+          m1BotSignSprite.position.y = topIsPos ? (-Y_PLATE_HALF - 0.14) : (Y_PLATE_HALF + 0.14);
+        }
+      }
+
+      function updateElectricFieldVisuals() {
+        const vd = state.vd_V;
+        const active = state.showEField && Math.abs(vd) >= 5;
+        m1EFieldGroup.visible = active;
+        if (!active) return;
+
+        // Vd > 0 => 上板+ 下板- => 電場箭頭指向 -Y（向下）
+        const dirDown = vd > 0;
+        const len = 0.75 + (Math.abs(vd) / 1000) * 0.75;
+        m1EFieldGroup.children.forEach((arrow) => {
+          arrow.rotation.z = dirDown ? Math.PI : 0;
+          arrow.scale.set(1, len, 1);
+          arrow.position.y = dirDown ? (len * 0.5) : (-len * 0.5);
+        });
+      }
+
+      function updateForceVectorVisuals(Ey, vB) {
+        // 電子受力（單位電荷等效場強）：
+        // F_e 方向與 +Ey 相同（Ey > 0 向上 +Y）
+        // F_B 方向與 -vB 相同（B > 0 => vB > 0 => 磁力向下 -Y）
+        const show = state.showForces;
+        m1ForcesGroup.visible = show;
+        if (!show) return;
+
+        // 找出電子束在偏轉區中央 (x ≈ 0) 的 Y 位置作為受力向量起點
+        let anchorY = 0;
+        if (state.trajectoryPts.length > 0) {
+          let bestDist = 999;
+          for (const p of state.trajectoryPts) {
+            const dist = Math.abs(p.x - 0.0);
+            if (dist < bestDist) {
+              bestDist = dist;
+              anchorY = p.y;
+            }
+          }
+        }
+        anchorY = Math.max(-Y_PLATE_HALF + 0.1, Math.min(Y_PLATE_HALF - 0.1, anchorY));
+
+        // 歸一化箭頭視覺長度（參考值 25,000 V/m 對應約 1.65 單位長）
+        const refVal = 25000.0;
+        const feMag = Math.min(2.6, (Math.abs(Ey) / refVal) * 1.65);
+        const fbMag = Math.min(2.6, (Math.abs(vB) / refVal) * 1.65);
+
+        // 電力 F_e 箭頭（暖橘紅色）
+        if (feMag > 0.06) {
+          const feUp = Ey > 0;
+          m1FeArrow.visible = true;
+          m1FeLabel.visible = true;
+          m1FeArrow.position.set(-0.22, anchorY, 0.25);
+          m1FeArrow.rotation.z = feUp ? 0 : Math.PI;
+          m1FeArrow.scale.set(1.05, Math.max(0.38, feMag), 1.05);
+          m1FeLabel.position.set(-1.35, anchorY + (feUp ? Math.max(0.5, feMag * 0.85) : -Math.max(0.5, feMag * 0.85)), 0.45);
+        } else {
+          m1FeArrow.visible = false;
+          m1FeLabel.visible = false;
+        }
+
+        // 磁力 F_B 箭頭（亮青藍色）
+        if (fbMag > 0.06) {
+          const fbDown = vB > 0; // B > 0 => 磁力向下 (-Y)
+          m1FbArrow.visible = true;
+          m1FbLabel.visible = true;
+          m1FbArrow.position.set(0.22, anchorY, 0.25);
+          m1FbArrow.rotation.z = fbDown ? Math.PI : 0;
+          m1FbArrow.scale.set(1.05, Math.max(0.38, fbMag), 1.05);
+          m1FbLabel.position.set(1.45, anchorY + (fbDown ? -Math.max(0.5, fbMag * 0.85) : Math.max(0.5, fbMag * 0.85)), 0.45);
+        } else {
+          m1FbArrow.visible = false;
+          m1FbLabel.visible = false;
+        }
+      }
+
+      /* ============================================================================
+         10. 模式二裝置：十字靶實驗（馬爾他十字架 + 寬光錐陰極射線）
+         ============================================================================ */
+      function buildMode2Apparatus() {
+        mode2Group = new THREE.Group();
+        const brassMat = new THREE.MeshStandardMaterial({ color: 0xd8a84e, roughness: 0.25, metalness: 0.88 });
+        const glassMat = createGlassMaterial();
+
+        // 經典克魯克斯喇叭管玻璃外殼
+        const profile = [
+          new THREE.Vector2(0.01, -7.2),
+          new THREE.Vector2(0.95, -6.9),
+          new THREE.Vector2(1.05, -4.0),
+          new THREE.Vector2(2.1, 0.5),
+          new THREE.Vector2(3.2, 6.8),
+          new THREE.Vector2(3.15, 7.3),
+          new THREE.Vector2(2.2, 7.85),
+          new THREE.Vector2(0.01, 8.05)
+        ];
+        const tubeGeo = new THREE.LatheGeometry(profile, 48);
+        tubeGeo.rotateZ(-Math.PI / 2);
+        mode2Group.add(new THREE.Mesh(tubeGeo, glassMat));
+
+        // 左端陰極圓盤
+        const cathode = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.48, 0.48, 0.18, 28),
+          new THREE.MeshStandardMaterial({ color: 0xdbe2ea, roughness: 0.25, metalness: 0.9 })
+        );
+        cathode.rotation.z = Math.PI / 2;
+        cathode.position.set(-6.2, 0, 0);
+        mode2Group.add(cathode);
+
+        const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.1, 14), brassMat);
+        stem.rotation.z = Math.PI / 2;
+        stem.position.set(-6.75, 0, 0);
+        mode2Group.add(stem);
+
+        // 下方側陽極
+        const sideAnode = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.7, 16), brassMat);
+        sideAnode.position.set(-3.2, -1.25, 0);
+        mode2Group.add(sideAnode);
+
+        // 馬爾他十字靶（精細 3D ExtrudeGeometry + 樞軸絞鏈）
+        m2CrossPivot = new THREE.Group();
+        m2CrossPivot.position.set(1.4, -1.45, 0); // 底部絞鏈點
+
+        const shape = new THREE.Shape();
+        shape.moveTo(0, 0);
+        const addArm = (angle) => {
+          const pts = [
+            [0, 0],
+            [-0.42, 1.18],
+            [0, 1.0],
+            [0.42, 1.18]
+          ];
+          const c = Math.cos(angle), s = Math.sin(angle);
+          pts.forEach(([px, py], idx) => {
+            const rx = px * c - py * s;
+            const ry = px * s + py * c;
+            if (idx === 0) shape.moveTo(rx, ry);
+            else shape.lineTo(rx, ry);
+          });
+          shape.closePath();
+        };
+        addArm(0);
+        addArm(Math.PI / 2);
+        addArm(Math.PI);
+        addArm((3 * Math.PI) / 2);
+
+        const crossGeo = new THREE.ExtrudeGeometry(shape, { depth: 0.1, bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.02, bevelSegments: 2 });
+        crossGeo.center();
+        crossGeo.rotateY(Math.PI / 2); // 讓十字平面正對 X 軸（攔截光束）
+
+        const crossMat = new THREE.MeshStandardMaterial({
+          color: 0xb0bac5, roughness: 0.28, metalness: 0.92
+        });
+        const crossMesh = new THREE.Mesh(crossGeo, crossMat);
+        crossMesh.position.set(0, 1.45, 0);
+        m2CrossPivot.add(crossMesh);
+
+        // 支撐柄與絞鏈環
+        const stalk = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.09, 1.0, 14), brassMat);
+        stalk.position.set(0, 0.5, 0);
+        m2CrossPivot.add(stalk);
+
+        const hinge = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.5, 16), brassMat);
+        hinge.rotation.x = Math.PI / 2;
+        m2CrossPivot.add(hinge);
+
+        mode2Group.add(m2CrossPivot);
+
+        // 寬光錐陰極射線（自陰極擴散照射右端螢光屏）
+        const coneGeo = new THREE.CylinderGeometry(0.45, 3.05, 13.4, 40, 1, true);
+        coneGeo.rotateZ(Math.PI / 2); // 小頭在左 (-X)，大頭在右 (+X)
+        m2ConeMat = new THREE.MeshBasicMaterial({
+          color: 0x34f59a,
+          transparent: true,
+          opacity: 0.14,
+          side: THREE.DoubleSide,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false
+        });
+        const coneMesh = new THREE.Mesh(coneGeo, m2ConeMat);
+        coneMesh.position.set(0.5, 0, 0);
+        mode2Group.add(coneMesh);
+
+        // 光錐內部飛行的電子粒子
+        const pGeo = new THREE.SphereGeometry(0.06, 8, 8);
+        const pMat = new THREE.MeshBasicMaterial({ color: 0xa7f3d0 });
+        for (let i = 0; i < 64; i++) {
+          const m = new THREE.Mesh(pGeo, pMat);
+          const angle = Math.random() * Math.PI * 2;
+          const rFrac = Math.sqrt(Math.random());
+          mode2Group.add(m);
+          m2Particles.push({
+            mesh: m,
+            t: Math.random(),
+            angle,
+            rFrac
+          });
+        }
+
+        // 右端綠色螢光屏（即時投射銳利馬爾他十字陰影）
+        const screenGeo = new THREE.CircleGeometry(3.08, 64);
+        screenGeo.rotateY(-Math.PI / 2);
+        const screenMesh = new THREE.Mesh(screenGeo, new THREE.MeshBasicMaterial({
+          map: screenTexM2, side: THREE.DoubleSide
+        }));
+        screenMesh.position.set(7.2, 0, 0);
+        mode2Group.add(screenMesh);
+
+        scene.add(mode2Group);
+      }
+
+      /* ============================================================================
+         11. 模式三裝置：小風車葉輪實驗（雙玻璃軌道 + 雲母葉輪滾動）
+         ============================================================================ */
+      function buildMode3Apparatus() {
+        mode3Group = new THREE.Group();
+        const brassMat = new THREE.MeshStandardMaterial({ color: 0xd8a84e, roughness: 0.24, metalness: 0.88 });
+        const glassMat = createGlassMaterial();
+
+        // 長圓柱形玻璃真空管
+        const profile = [
+          new THREE.Vector2(0.01, -7.5),
+          new THREE.Vector2(1.4, -7.2),
+          new THREE.Vector2(1.9, -6.2),
+          new THREE.Vector2(1.9, 6.2),
+          new THREE.Vector2(1.4, 7.2),
+          new THREE.Vector2(0.01, 7.5)
+        ];
+        const tubeGeo = new THREE.LatheGeometry(profile, 48);
+        tubeGeo.rotateZ(-Math.PI / 2);
+        mode3Group.add(new THREE.Mesh(tubeGeo, glassMat));
+
+        // 左右對稱電極（位於管內上半部 y = +0.62，正對風車上半部葉片！）
+        m3LeftElectrodeMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.25, metalness: 0.85, emissive: 0x059669, emissiveIntensity: 0.45 });
+        m3RightElectrodeMat = new THREE.MeshStandardMaterial({ color: 0xd8a84e, roughness: 0.25, metalness: 0.85, emissive: 0x000000, emissiveIntensity: 0 });
+
+        const leftDisk = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.16, 24), m3LeftElectrodeMat);
+        leftDisk.rotation.z = Math.PI / 2;
+        leftDisk.position.set(-6.2, 0.62, 0);
+        mode3Group.add(leftDisk);
+
+        const rightDisk = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.16, 24), m3RightElectrodeMat);
+        rightDisk.rotation.z = Math.PI / 2;
+        rightDisk.position.set(6.2, 0.62, 0);
+        mode3Group.add(rightDisk);
+
+        // 電極引線桿
+        [-6.8, 6.8].forEach((px) => {
+          const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 1.2, 12), brassMat);
+          rod.rotation.z = Math.PI / 2;
+          rod.position.set(px, 0.62, 0);
+          mode3Group.add(rod);
+        });
+
+        // 兩條平行玻璃軌道（支撐葉輪水平滾動）
+        const railMat = new THREE.MeshPhysicalMaterial({
+          color: 0xe0f2fe, transparent: true, opacity: 0.55, roughness: 0.1, metalness: 0.1, clearcoat: 1.0
+        });
+        [-0.58, 0.58].forEach((rz) => {
+          const rail = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.085, 10.6, 16), railMat);
+          rail.rotation.z = Math.PI / 2;
+          rail.position.set(0, -0.58, rz);
+          mode3Group.add(rail);
+
+          // 軌道端點檔塊
+          [-5.1, 5.1].forEach((sx) => {
+            const stop = new THREE.Mesh(new THREE.SphereGeometry(0.14, 12, 12), brassMat);
+            stop.position.set(sx, -0.52, rz);
+            mode3Group.add(stop);
+          });
+        });
+
+        // 精緻的雲母片小風車（葉輪）
+        m3WheelGroup = new THREE.Group();
+        m3WheelGroup.position.set(state.wheelX, -0.36, 0); // 軸心剛好落在雙軌道上 (-0.58 + 0.085 + 0.135)
+
+        m3WheelSpinner = new THREE.Group();
+
+        // 細鋼輪軸（橫跨兩條玻璃軌道）
+        const axleMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.2, metalness: 0.92 });
+        const axle = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 1.75, 20), axleMat);
+        axle.rotation.x = Math.PI / 2;
+        m3WheelSpinner.add(axle);
+
+        // 中央黃銅輪轂
+        const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.52, 24), brassMat);
+        hub.rotation.x = Math.PI / 2;
+        m3WheelSpinner.add(hub);
+
+        // 8 片半透明發光雲母葉片（讓學生清楚看到每片葉片被推動旋轉）
+        const vaneMat = new THREE.MeshStandardMaterial({
+          color: 0xfef3c7,
+          roughness: 0.28,
+          metalness: 0.25,
+          emissive: 0x10b981,
+          emissiveIntensity: 0.15,
+          transparent: true,
+          opacity: 0.86,
+          side: THREE.DoubleSide
+        });
+        const spokeMat = new THREE.MeshStandardMaterial({ color: 0xd8a84e, roughness: 0.3, metalness: 0.85 });
+
+        for (let i = 0; i < 8; i++) {
+          const angle = (i / 8) * Math.PI * 2;
+          const armGroup = new THREE.Group();
+          armGroup.rotation.z = angle;
+
+          const spoke = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.85, 8), spokeMat);
+          spoke.position.y = 0.52;
+          armGroup.add(spoke);
+
+          // 雲母方片（面朝切線方向承接電子撞擊）
+          const vane = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.52, 0.72), vaneMat);
+          vane.position.y = 0.92;
+          armGroup.add(vane);
+
+          m3WheelSpinner.add(armGroup);
+        }
+
+        m3WheelGroup.add(m3WheelSpinner);
+        mode3Group.add(m3WheelGroup);
+
+        // 撞擊葉片發光電子束（位於上半部 y = +0.62）
+        const m3CoreGeo = new THREE.CylinderGeometry(0.065, 0.065, 12.2, 12);
+        m3CoreGeo.rotateZ(Math.PI / 2);
+        m3BeamMesh = new THREE.Mesh(m3CoreGeo, new THREE.MeshBasicMaterial({
+          color: 0xd1fae5, transparent: true, opacity: 0.9
+        }));
+        m3BeamMesh.position.set(0, 0.62, 0);
+        mode3Group.add(m3BeamMesh);
+
+        const m3GlowGeo = new THREE.CylinderGeometry(0.22, 0.22, 12.2, 14);
+        m3GlowGeo.rotateZ(Math.PI / 2);
+        m3BeamGlowMesh = new THREE.Mesh(m3GlowGeo, new THREE.MeshBasicMaterial({
+          color: 0x34f59a, transparent: true, opacity: 0.28, blending: THREE.AdditiveBlending, depthWrite: false
+        }));
+        m3BeamGlowMesh.position.set(0, 0.62, 0);
+        mode3Group.add(m3BeamGlowMesh);
+
+        // 電子流粒子
+        const pGeo = new THREE.SphereGeometry(0.075, 10, 10);
+        const pMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        for (let i = 0; i < 36; i++) {
+          const p = new THREE.Mesh(pGeo, pMat);
+          mode3Group.add(p);
+          m3Particles.push({ mesh: p, t: i / 36 });
+        }
+
+        // 電子撞擊葉片微亮閃光點
+        m3SparkLight = new THREE.PointLight(0x34f59a, 1.5, 4.5);
+        m3SparkLight.position.set(state.wheelX, 0.62, 0.2);
+        mode3Group.add(m3SparkLight);
+
+        scene.add(mode3Group);
+      }
+
+      /* ============================================================================
+         12. 模式切換、相機平滑轉場與 UI 儀表板更新
+         ============================================================================ */
+      function setExperimentMode(modeNum) {
+        state.mode = modeNum;
+        mode1Group.visible = modeNum === 1;
+        mode2Group.visible = modeNum === 2;
+        mode3Group.visible = modeNum === 3;
+
+        // 切換頂部頁籤樣式
+        document.querySelectorAll('.mode-tab').forEach((btn) => {
+          const isAct = Number(btn.dataset.mode) === modeNum;
+          btn.className = isAct
+            ? 'mode-tab px-3 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all bg-emerald-500/25 text-emerald-200 border border-emerald-400/50 shadow-sm'
+            : 'mode-tab px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition-all text-slate-300 hover:text-white hover:bg-slate-700/50 border border-transparent';
+        });
+
+        // 切換左右面板內容
+        [1, 2, 3].forEach((n) => {
+          document.getElementById(`controls-mode-${n}`).classList.toggle('hidden', n !== modeNum);
+          document.getElementById(`telemetry-mode-${n}`).classList.toggle('hidden', n !== modeNum);
+        });
+
+        // 調整局部點光源與初始更新
+        if (modeNum === 1) {
+          recalculateMode1Physics();
+        } else if (modeNum === 2) {
+          spotPointLight.position.set(7.0, 0, 0.5);
+          spotPointLight.intensity = 1.6;
+          updatePhosphorScreenM2(state.crossAngle, state.vaM2_kV);
+          setStatusBanner('十字靶實驗：觀察陰極射線投射出的銳利十字陰影', 'emerald');
+        } else if (modeNum === 3) {
+          spotPointLight.intensity = 0.6;
+          setStatusBanner('小風車實驗：電子束撞擊雲母葉片，推動葉輪沿軌道滾動', 'amber');
+        }
+      }
+
+      function setStatusBanner(text, tone = 'emerald') {
+        const banner = document.getElementById('status-banner');
+        const dot = document.getElementById('status-dot');
+        const txt = document.getElementById('status-text');
+        if (!banner) return;
+        txt.textContent = text;
+
+        const styles = {
+          emerald: { border: 'border-emerald-400/45', text: 'text-emerald-200', dot: 'bg-emerald-400 shadow-[0_0_8px_#34f59a]' },
+          amber:   { border: 'border-amber-400/50',   text: 'text-amber-200',   dot: 'bg-amber-400 shadow-[0_0_8px_#fbbf24]' },
+          orange:  { border: 'border-orange-400/50',  text: 'text-orange-200',  dot: 'bg-orange-400 shadow-[0_0_8px_#fb923c]' },
+          sky:     { border: 'border-sky-400/50',     text: 'text-sky-200',     dot: 'bg-sky-400 shadow-[0_0_8px_#38bdf8]' },
+          red:     { border: 'border-rose-500/60',    text: 'text-rose-200',    dot: 'bg-rose-500 shadow-[0_0_10px_#f43f5e]' }
+        };
+        const s = styles[tone] || styles.emerald;
+        banner.className = `hidden md:flex glass-panel pointer-events-auto rounded-xl px-3.5 py-1.5 items-center gap-2 text-xs lg:text-sm font-bold transition-all ${s.border} ${s.text}`;
+        dot.className = `w-2.5 h-2.5 rounded-full ${s.dot}`;
+      }
+
+      function updateMode1TelemetryUI(screenHit) {
+        const E_kVm = state.E_Vm / 1000.0;
+        const vx10_7 = state.vx / 1e7;
+
+        document.getElementById('read-va').textContent = state.va_kV.toFixed(2);
+        document.getElementById('read-vx').textContent = vx10_7.toFixed(2);
+        document.getElementById('read-E').textContent = (E_kVm >= 0 ? '+' : '') + E_kVm.toFixed(1);
+        document.getElementById('read-B').textContent = (state.b_mT >= 0 ? '+' : '') + state.b_mT.toFixed(2);
+
+        // 方向輔助文字
+        const eDirText = Math.abs(state.vd_V) < 5 ? '未施加電場' : (state.vd_V > 0 ? '上+下− (E↓，電力 Fₑ↑)' : '上−下+ (E↑，電力 Fₑ↓)');
+        const bDirText = Math.abs(state.b_mT) < 0.005 ? '未施加磁場' : (state.b_mT > 0 ? '⊗ 射入紙面 (磁力 F_B↓)' : '⊙ 射出紙面 (磁力 F_B↑)');
+        document.getElementById('read-E-dir').textContent = eDirText;
+        document.getElementById('read-B-dir').textContent = bDirText;
+
+        document.getElementById('val-va').textContent = state.va_kV.toFixed(1);
+        document.getElementById('val-vd').textContent = (state.vd_V > 0 ? '+' : '') + state.vd_V;
+        document.getElementById('val-vd-pol').textContent = Math.abs(state.vd_V) < 5 ? '(無電場)' : (state.vd_V > 0 ? '(上+ 下−)' : '(上− 下+)');
+        document.getElementById('val-b').textContent = (state.b_mT > 0 ? '+' : '') + state.b_mT.toFixed(2);
+        document.getElementById('val-b-dir').textContent = Math.abs(state.b_mT) < 0.005 ? '(無磁場)' : (state.b_mT > 0 ? '(⊗ 射入)' : '(⊙ 射出)');
+
+        const dyEl = document.getElementById('read-dy');
+        const mobileDyEl = document.getElementById('mobile-dy');
+        const badgeRegime = document.getElementById('badge-regime');
+
+        if (state.hitPlate) {
+          dyEl.textContent = state.hitPlateSign > 0 ? '撞擊上極板！' : '撞擊下極板！';
+          dyEl.className = 'text-sm font-bold text-rose-400';
+          mobileDyEl.textContent = '撞擊極板';
+          badgeRegime.textContent = '偏轉過大';
+          badgeRegime.className = 'text-[11px] font-bold px-2 py-0.5 rounded-full bg-rose-500/30 text-rose-200';
+          setStatusBanner('⚠️ 偏轉過大，電子束撞擊金屬極板（請減小電場/磁場或提高加速電壓）', 'red');
+          return;
+        }
+
+        dyEl.className = 'text-base font-bold text-emerald-300 font-mono-num';
+        const dyStr = (state.screenDyCm > 0.005 ? '+' : '') + state.screenDyCm.toFixed(2);
+        dyEl.textContent = `${dyStr} cm`;
+        mobileDyEl.textContent = dyStr;
+
+        const hasE = Math.abs(state.vd_V) >= 5;
+        const hasB = Math.abs(state.b_mT) >= 0.005;
+
+        if (!hasE && !hasB) {
+          badgeRegime.textContent = '無偏轉';
+          badgeRegime.className = 'text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-700/80 text-slate-200';
+          setStatusBanner('電子束沿 +X 方向水平直線射出（尚未開啟電場或磁場）', 'emerald');
+        } else if (hasE && hasB && Math.abs(state.screenDyCm) < 0.12) {
+          badgeRegime.textContent = '⚡ 電磁平衡';
+          badgeRegime.className = 'text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/35 text-emerald-200 border border-emerald-400/50';
+          setStatusBanner(`⚡ 電磁力完全平衡 (Fₑ = F_B)！推得電子速度 v = E/B = ${vx10_7.toFixed(2)}×10⁷ m/s`, 'emerald');
+        } else if (hasE && !hasB) {
+          badgeRegime.textContent = '純電場偏轉';
+          badgeRegime.className = 'text-[11px] font-bold px-2 py-0.5 rounded-full bg-orange-500/30 text-orange-200';
+          setStatusBanner(state.vd_V > 0 ? '純電場：電子帶負電，受向上電力 Fₑ 偏向正極（上板）' : '純電場：電子帶負電，受向下電力 Fₑ 偏向正極（下板）', 'orange');
+        } else if (!hasE && hasB) {
+          badgeRegime.textContent = '純磁場偏轉';
+          badgeRegime.className = 'text-[11px] font-bold px-2 py-0.5 rounded-full bg-sky-500/30 text-sky-200';
+          setStatusBanner(state.b_mT > 0 ? '純磁場 ⊗ 射入紙面：依勞侖茲力（電子負電），受向下磁力 F_B 做圓弧偏轉' : '純磁場 ⊙ 射出紙面：依勞侖茲力（電子負電），受向上磁力 F_B 做圓弧偏轉', 'sky');
+        } else {
+          badgeRegime.textContent = '電磁複合場';
+          badgeRegime.className = 'text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-500/25 text-amber-200';
+          setStatusBanner(`電磁複合場：調整 B 或 V_d 可使電力與磁力相互抵消（目前 Δy = ${dyStr} cm）`, 'amber');
+        }
+      }
+
+      function moveCameraToPreset(presetKey) {
+        const p = CAM_PRESETS[presetKey];
+        if (!p) return;
+        state.camTargetPos.copy(p.pos);
+        state.camTargetLook.copy(p.look);
+        state.camLerpActive = true;
+
+        document.querySelectorAll('.cam-btn').forEach((btn) => {
+          const act = btn.dataset.cam === presetKey;
+          btn.className = act
+            ? 'cam-btn px-2.5 py-1 rounded-lg text-xs font-semibold bg-sky-500/25 text-sky-200 border border-sky-400/40 transition-all whitespace-nowrap'
+            : 'cam-btn px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-300 hover:bg-slate-700/60 border border-transparent transition-all whitespace-nowrap';
+        });
+      }
+
+      /* ============================================================================
+         13. 互動西瓜模型（知識卡內建 Canvas 動畫）
+         ============================================================================ */
+      let plumShowLabels = true;
+      let plumShake = 0;
+      const plumElectrons = [];
+
+      function initPlumPuddingModel() {
+        const canvas = document.getElementById('plum-pudding-canvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+
+        // 均勻鑲嵌 14 顆負電電子（西瓜籽）
+        const rings = [
+          { r: 0, n: 1 },
+          { r: 34, n: 5 },
+          { r: 66, n: 8 }
+        ];
+        rings.forEach((ring, rIdx) => {
+          for (let i = 0; i < ring.n; i++) {
+            const ang = (i / ring.n) * Math.PI * 2 + rIdx * 0.4;
+            plumElectrons.push({
+              bx: Math.cos(ang) * ring.r,
+              by: Math.sin(ang) * ring.r,
+              phase: Math.random() * Math.PI * 2,
+              speed: 1.8 + Math.random() * 1.4
+            });
+          }
+        });
+
+        canvas.addEventListener('click', () => { plumShake = 1.0; });
+        document.getElementById('btn-plum-vibrate').addEventListener('click', () => { plumShake = 1.0; });
+        document.getElementById('btn-plum-labels').addEventListener('click', () => { plumShowLabels = !plumShowLabels; });
+
+        function renderPlum(time) {
+          const modal = document.getElementById('knowledge-modal');
+          if (!modal.classList.contains('hidden')) {
+            const W = canvas.width, H = canvas.height;
+            const cx = W * 0.5, cy = H * 0.5;
+            const R = 88;
+            ctx.clearRect(0, 0, W, H);
+
+            // 外圍柔光
+            const outerGlow = ctx.createRadialGradient(cx, cy, R * 0.7, cx, cy, R * 1.25);
+            outerGlow.addColorStop(0, 'rgba(244, 63, 94, 0.28)');
+            outerGlow.addColorStop(1, 'rgba(244, 63, 94, 0)');
+            ctx.fillStyle = outerGlow;
+            ctx.beginPath();
+            ctx.arc(cx, cy, R * 1.25, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 帶正電球體（西瓜果肉）
+            const bodyGrad = ctx.createRadialGradient(cx - 26, cy - 28, 12, cx, cy, R);
+            bodyGrad.addColorStop(0, '#fda4af');
+            bodyGrad.addColorStop(0.45, '#f43f5e');
+            bodyGrad.addColorStop(1, '#881337');
+            ctx.fillStyle = bodyGrad;
+            ctx.beginPath();
+            ctx.arc(cx, cy, R, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 淡雅 + 符號均勻分佈於果肉中
+            ctx.fillStyle = 'rgba(255, 228, 230, 0.35)';
+            ctx.font = 'bold 16px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            for (let i = 0; i < 10; i++) {
+              const a = (i / 10) * Math.PI * 2 + 0.2;
+              const rr = i % 2 === 0 ? 50 : 76;
+              ctx.fillText('+', cx + Math.cos(a) * rr, cy + Math.sin(a) * rr);
+            }
+
+            // 負電電子（西瓜籽）微幅熱振動
+            plumShake = Math.max(0, plumShake - 0.02);
+            const amp = 2.2 + plumShake * 8.5;
+            const t = time * 0.001;
+
+            plumElectrons.forEach((e) => {
+              const ox = Math.sin(t * e.speed + e.phase) * amp;
+              const oy = Math.cos(t * e.speed * 1.15 + e.phase) * amp;
+              const ex = cx + e.bx + ox;
+              const ey = cy + e.by + oy;
+
+              // 電子青藍光暈
+              ctx.fillStyle = 'rgba(56, 189, 248, 0.35)';
+              ctx.beginPath();
+              ctx.arc(ex, ey, 11, 0, Math.PI * 2);
+              ctx.fill();
+
+              // 電子本體
+              ctx.fillStyle = '#0284c7';
+              ctx.beginPath();
+              ctx.arc(ex, ey, 7.5, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.strokeStyle = '#bae6fd';
+              ctx.lineWidth = 1.5;
+              ctx.stroke();
+
+              // 負號
+              ctx.fillStyle = '#ffffff';
+              ctx.font = 'bold 12px Inter, sans-serif';
+              ctx.fillText('−', ex, ey + 0.5);
+            });
+
+            // 標註文字
+            if (plumShowLabels) {
+              ctx.font = 'bold 12px "Noto Sans TC", sans-serif';
+              ctx.fillStyle = '#fda4af';
+              ctx.textAlign = 'left';
+              ctx.fillText('均勻帶正電球體 (+)', 10, 22);
+              ctx.fillStyle = '#7dd3fc';
+              ctx.textAlign = 'right';
+              ctx.fillText('鑲嵌的負電電子 (e⁻)', W - 10, H - 14);
+            }
+          }
+          requestAnimationFrame(renderPlum);
+        }
+        requestAnimationFrame(renderPlum);
+      }
+
+      /* ============================================================================
+         14. 主動畫迴圈（60fps 流暢粒子流動、火花、十字靶絞鏈與小風車物理）
+         ============================================================================ */
+      let lastTime = 0;
+
+      function animate(timestamp) {
+        requestAnimationFrame(animate);
+
+        const dt = Math.min(0.05, (timestamp - lastTime) * 0.001 || 0.016);
+        lastTime = timestamp;
+
+        // 平滑相機轉場
+        if (state.camLerpActive) {
+          camera.position.lerp(state.camTargetPos, 0.085);
+          if (controls && controls.target) {
+            controls.target.lerp(state.camTargetLook, 0.085);
+          }
+          if (camera.position.distanceTo(state.camTargetPos) < 0.05) {
+            state.camLerpActive = false;
+          }
+        }
+        if (controls && typeof controls.update === 'function') {
+          controls.update();
+        }
+
+        const animDt = state.paused ? 0 : dt;
+
+        // --- 模式一動畫 ---
+        if (state.mode === 1) {
+          // 1. 電子粒子沿 RK4 軌跡高速流動
+          if (state.beamCurve) {
+            const speedNorm = 0.55 + (state.va_kV / 5.0) * 1.15;
+            m1Particles.forEach((p) => {
+              p.t = (p.t + animDt * speedNorm) % 1.0;
+              const pos = state.beamCurve.getPointAt(p.t);
+              p.mesh.position.copy(pos);
+            });
+          }
+
+          // 2. 螢光屏光斑與餘輝持續更新
+          updatePhosphorScreenM1(!state.hitPlate, state.screenDyCm);
+
+          // 3. 若撞擊極板，播放撞擊火花
+          m1Sparks.forEach((s) => {
+            if (!state.hitPlate) {
+              s.mesh.visible = false;
+              return;
+            }
+            s.mesh.visible = true;
+            s.life -= animDt * 2.4;
+            if (s.life <= 0) {
+              s.life = 0.4 + Math.random() * 0.6;
+              s.mesh.position.copy(state.hitPoint3D);
+              s.vel.set(
+                (Math.random() - 0.65) * 1.8,
+                -state.hitPlateSign * (0.4 + Math.random() * 1.5),
+                (Math.random() - 0.5) * 1.4
+              );
+            } else {
+              s.mesh.position.addScaledVector(s.vel, animDt);
+            }
+            s.mesh.scale.setScalar(Math.max(0.01, s.life));
+          });
+        }
+
+        // --- 模式二動畫（十字靶平滑立起/放倒 + 光錐粒子） ---
+        if (state.mode === 2) {
+          const targetAngle = state.crossUp ? 0 : Math.PI * 0.48;
+          if (Math.abs(state.crossAngle - targetAngle) > 0.002) {
+            state.crossAngle += (targetAngle - state.crossAngle) * Math.min(1, dt * 7.5);
+            m2CrossPivot.rotation.z = -state.crossAngle;
+            updatePhosphorScreenM2(state.crossAngle, state.vaM2_kV);
+          }
+
+          m2ConeMat.opacity = 0.09 + (state.vaM2_kV / 5.0) * 0.11;
+
+          const pSpeed = 0.5 + (state.vaM2_kV / 5.0) * 0.9;
+          m2Particles.forEach((p) => {
+            p.t = (p.t + animDt * pSpeed) % 1.0;
+            const x = -6.2 + p.t * 13.3;
+            const rMax = 0.4 + p.t * 2.55;
+            const r = rMax * p.rFrac;
+            const y = Math.sin(p.angle) * r;
+            const z = Math.cos(p.angle) * r;
+
+            // 若十字靶立起且粒子經過 x > 1.4 且位於十字範圍內則被遮擋隱藏
+            const blocked = (state.crossAngle < 0.35) && (x > 1.45) && (
+              (Math.abs(y) < 0.35 * (1 + (x - 1.4) * 0.08) && Math.abs(z) < 1.15 * (1 + (x - 1.4) * 0.08)) ||
+              (Math.abs(z) < 0.35 * (1 + (x - 1.4) * 0.08) && Math.abs(y) < 1.15 * (1 + (x - 1.4) * 0.08))
+            );
+            p.mesh.visible = !blocked;
+            p.mesh.position.set(x, y, z);
+          });
+        }
+
+        // --- 模式三動畫（小風車受電子束推力滾動） ---
+        if (state.mode === 3) {
+          const power = state.wheelPowerOn;
+          m3BeamMesh.visible = power;
+          m3BeamGlowMesh.visible = power;
+          m3SparkLight.intensity = power ? (1.1 + Math.sin(timestamp * 0.03) * 0.35) : 0;
+
+          // 電子流粒子移動方向依左右極性決定
+          const pSpeed = 0.7 + (state.vaM3_kV / 5.0) * 1.1;
+          m3Particles.forEach((p) => {
+            p.mesh.visible = power;
+            if (!power) return;
+            p.t = (p.t + animDt * pSpeed) % 1.0;
+            const x = state.wheelDirection > 0
+              ? (-6.1 + p.t * 12.2)
+              : (6.1 - p.t * 12.2);
+            p.mesh.position.set(x, 0.62, 0);
+          });
+
+          // 葉輪動力學：電子束撞擊上半部葉片產生推力，加上玻璃軌道微小滾動阻尼
+          if (animDt > 0) {
+            const driveAcc = power ? (state.wheelDirection * (0.55 + state.vaM3_kV * 0.52)) : 0;
+            const damping = 0.68;
+            state.wheelVel += (driveAcc - state.wheelVel * damping) * animDt;
+            state.wheelX += state.wheelVel * animDt;
+
+            // 軌道兩端檔塊邊界限制（柔和停下不穿模）
+            const minX = -3.85, maxX = 3.85;
+            if (state.wheelX < minX) {
+              state.wheelX = minX;
+              if (state.wheelVel < 0) state.wheelVel = 0;
+            } else if (state.wheelX > maxX) {
+              state.wheelX = maxX;
+              if (state.wheelVel > 0) state.wheelVel = 0;
+            }
+
+            // 純滾動條件：向右移動 (+X) 時葉輪順時針旋轉 (-Z)
+            // 輪軸接觸半徑 r_eff ≈ 0.32（讓視覺轉速清晰易懂）
+            state.wheelRotZ -= (state.wheelVel / 0.34) * animDt;
+
+            m3WheelGroup.position.x = state.wheelX;
+            m3WheelSpinner.rotation.z = state.wheelRotZ;
+            m3SparkLight.position.set(state.wheelX, 0.62, 0.25);
+
+            // 更新模式三即時數據
+            const rpm = Math.round(Math.abs(state.wheelVel / 0.34) * (60 / (2 * Math.PI)));
+            document.getElementById('read-wheel-rpm').textContent = rpm;
+            document.getElementById('read-wheel-pos').textContent = (state.wheelX * 2.0).toFixed(2);
+          }
+        }
+
+        renderer.render(scene, camera);
+      }
+
+      /* ============================================================================
+         15. UI 事件綁定與鍵盤快捷鍵
+         ============================================================================ */
+      function bindUIEvents() {
+        // 模式切換
+        document.querySelectorAll('.mode-tab').forEach((btn) => {
+          btn.addEventListener('click', () => setExperimentMode(Number(btn.dataset.mode)));
+        });
+
+        // 相機視角切換
+        document.querySelectorAll('.cam-btn').forEach((btn) => {
+          btn.addEventListener('click', () => moveCameraToPreset(btn.dataset.cam));
+        });
+
+        // 模式一滑桿
+        const sliderVa = document.getElementById('slider-va');
+        const sliderVd = document.getElementById('slider-vd');
+        const sliderB  = document.getElementById('slider-b');
+
+        sliderVa.addEventListener('input', () => {
+          state.va_kV = parseFloat(sliderVa.value);
+          recalculateMode1Physics();
+        });
+        sliderVd.addEventListener('input', () => {
+          state.vd_V = parseInt(sliderVd.value, 10);
+          recalculateMode1Physics();
+        });
+        sliderB.addEventListener('input', () => {
+          state.b_mT = parseFloat(sliderB.value);
+          recalculateMode1Physics();
+        });
+
+        // 快捷教學預設按鈕
+        document.getElementById('preset-e-only').addEventListener('click', () => {
+          state.vd_V = 600;
+          state.b_mT = 0;
+          sliderVd.value = state.vd_V;
+          sliderB.value = state.b_mT;
+          recalculateMode1Physics();
+        });
+
+        document.getElementById('preset-b-only').addEventListener('click', () => {
+          state.vd_V = 0;
+          state.b_mT = 0.72;
+          sliderVd.value = state.vd_V;
+          sliderB.value = state.b_mT;
+          recalculateMode1Physics();
+        });
+
+        document.getElementById('preset-balance').addEventListener('click', () => {
+          // 若目前未開電場，自動給予 +600V 方便呈現雙力拮抗平衡
+          if (Math.abs(state.vd_V) < 60) {
+            state.vd_V = 600;
+            sliderVd.value = state.vd_V;
+          }
+          // 精確計算速度選擇器平衡磁場 B = E / v_x
+          const Va = state.va_kV * 1000.0;
+          const vx = Math.sqrt(2.0 * PHYSICS.E_OVER_M * Va);
+          const E = state.vd_V / PHYSICS.PLATE_D;
+          const B_mT = (E / vx) * 1000.0;
+          state.b_mT = Math.max(-3.0, Math.min(3.0, Number(B_mT.toFixed(3))));
+          sliderB.value = state.b_mT;
+
+          // 自動開啟受力向量以便學生觀察 F_e = F_B
+          state.showForces = true;
+          updateVectorToggleStyles();
+          recalculateMode1Physics();
+        });
+
+        document.getElementById('preset-reset').addEventListener('click', () => {
+          state.va_kV = 2.0;
+          state.vd_V = 0;
+          state.b_mT = 0;
+          sliderVa.value = 2.0;
+          sliderVd.value = 0;
+          sliderB.value = 0;
+          recalculateMode1Physics();
+        });
+
+        // 3D 場線與向量開關
+        function updateVectorToggleStyles() {
+          const setBtn = (id, active, activeCls) => {
+            const el = document.getElementById(id);
+            el.className = active
+              ? `vec-toggle px-2 py-2 rounded-xl text-[11px] font-bold transition-all ${activeCls}`
+              : 'vec-toggle px-2 py-2 rounded-xl text-[11px] font-semibold bg-slate-800/70 text-slate-400 border border-slate-700 hover:text-slate-200 transition-all';
+          };
+          setBtn('toggle-efield', state.showEField, 'bg-orange-500/25 text-orange-200 border border-orange-400/50');
+          setBtn('toggle-bfield', state.showBField, 'bg-sky-500/25 text-sky-200 border border-sky-400/50');
+          setBtn('toggle-forces', state.showForces, 'bg-emerald-500/25 text-emerald-200 border border-emerald-400/50');
+        }
+
+        document.getElementById('toggle-efield').addEventListener('click', () => {
+          state.showEField = !state.showEField;
+          updateVectorToggleStyles();
+          recalculateMode1Physics();
+        });
+        document.getElementById('toggle-bfield').addEventListener('click', () => {
+          state.showBField = !state.showBField;
+          updateVectorToggleStyles();
+          recalculateMode1Physics();
+        });
+        document.getElementById('toggle-forces').addEventListener('click', () => {
+          state.showForces = !state.showForces;
+          updateVectorToggleStyles();
+          recalculateMode1Physics();
+        });
+
+        // 陰極金屬材質切換（改變 3D 外觀，荷質比與偏轉量完全不變！）
+        document.querySelectorAll('.metal-btn').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const code = btn.dataset.metal;
+            const info = METALS[code];
+            if (!info) return;
+            state.cathodeMetal = code;
+
+            // 更新 3D 陰極圓盤材質
+            m1CathodeMesh.material.color.setHex(info.color);
+            m1CathodeMesh.material.roughness = info.roughness;
+            m1CathodeMesh.material.metalness = info.metalness;
+
+            // 更新按鈕選中狀態
+            document.querySelectorAll('.metal-btn').forEach((b) => {
+              const act = b.dataset.metal === code;
+              b.className = act
+                ? 'metal-btn px-1.5 py-2 rounded-xl text-xs font-bold border transition-all flex flex-col items-center gap-1 bg-slate-700/80 border-emerald-400 text-white'
+                : 'metal-btn px-1.5 py-2 rounded-xl text-xs font-semibold border border-slate-700 bg-slate-800/60 text-slate-300 hover:bg-slate-700/60 transition-all flex flex-col items-center gap-1';
+            });
+
+            document.getElementById('read-cathode-metal').textContent = info.name;
+
+            // 觸發教學結論卡片脈衝發光提示
+            const card = document.getElementById('metal-insight-card');
+            card.classList.remove('animate-metal-pulse');
+            void card.offsetWidth;
+            card.classList.add('animate-metal-pulse');
+
+            setStatusBanner(`已更換陰極為「${info.name}」：光點位移與荷質比完全不變 → 電子存在於所有原子中！`, 'emerald');
+          });
+        });
+
+        // 模式二控制（十字靶）
+        document.getElementById('btn-toggle-cross').addEventListener('click', () => {
+          state.crossUp = !state.crossUp;
+          document.getElementById('txt-cross-btn').textContent = state.crossUp ? '⬇️ 將十字靶放倒' : '⬆️ 將十字靶立起';
+          const badge = document.getElementById('read-cross-state');
+          badge.textContent = state.crossUp ? '十字靶立起' : '十字靶放倒';
+          badge.className = state.crossUp
+            ? 'text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-500/25 text-emerald-200'
+            : 'text-xs font-bold px-2 py-0.5 rounded-full bg-slate-700 text-slate-300';
+          setStatusBanner(state.crossUp ? '十字靶已立起：電子束受阻擋，在螢光屏投射銳利十字陰影' : '十字靶已放倒：陰影消失，螢光屏呈現完整明亮綠光', 'emerald');
+        });
+
+        const sliderVaM2 = document.getElementById('slider-va-m2');
+        sliderVaM2.addEventListener('input', () => {
+          state.vaM2_kV = parseFloat(sliderVaM2.value);
+          document.getElementById('val-va-m2').textContent = state.vaM2_kV.toFixed(1);
+          updatePhosphorScreenM2(state.crossAngle, state.vaM2_kV);
+        });
+
+        // 模式三控制（小風車）
+        const btnWheelPower = document.getElementById('btn-wheel-power');
+        btnWheelPower.addEventListener('click', () => {
+          state.wheelPowerOn = !state.wheelPowerOn;
+          btnWheelPower.textContent = state.wheelPowerOn ? '⚡ 電源：開啟' : '⭕ 電源：關閉';
+          btnWheelPower.className = state.wheelPowerOn
+            ? 'py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold bg-emerald-500/25 hover:bg-emerald-500/35 text-emerald-200 border border-emerald-400/50 transition-all'
+            : 'py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-600 transition-all';
+        });
+
+        document.getElementById('btn-wheel-reset').addEventListener('click', () => {
+          state.wheelX = state.wheelDirection > 0 ? -3.1 : 3.1;
+          state.wheelVel = 0;
+          m3WheelGroup.position.x = state.wheelX;
+        });
+
+        document.getElementById('btn-wheel-reverse').addEventListener('click', () => {
+          state.wheelDirection *= -1;
+          const leftIsCathode = state.wheelDirection > 0;
+          m3LeftElectrodeMat.emissive.setHex(leftIsCathode ? 0x059669 : 0x000000);
+          m3LeftElectrodeMat.emissiveIntensity = leftIsCathode ? 0.45 : 0;
+          m3RightElectrodeMat.emissive.setHex(leftIsCathode ? 0x000000 : 0x059669);
+          m3RightElectrodeMat.emissiveIntensity = leftIsCathode ? 0 : 0.45;
+
+          document.getElementById('read-wheel-dir').textContent = leftIsCathode ? '左極(陰) → 右極(陽)' : '右極(陰) → 左極(陽)';
+          setStatusBanner(leftIsCathode ? '電極恢復：電子由左側陰極射出，推動小風車向右滾動' : '電極已反轉：電子改由右側陰極射出，推動小風車向左反向滾動！', 'amber');
+        });
+
+        const sliderVaM3 = document.getElementById('slider-va-m3');
+        sliderVaM3.addEventListener('input', () => {
+          state.vaM3_kV = parseFloat(sliderVaM3.value);
+          document.getElementById('val-va-m3').textContent = state.vaM3_kV.toFixed(1);
+        });
+
+        // 播放 / 暫停動畫
+        const togglePlayPause = () => {
+          state.paused = !state.paused;
+          document.getElementById('icon-play-pause').textContent = state.paused ? '▶' : '⏸';
+          document.getElementById('txt-play-pause').textContent = state.paused ? '繼續播放' : '暫停動畫';
+        };
+        document.getElementById('btn-play-pause').addEventListener('click', togglePlayPause);
+
+        // 大屏簡報模式（收合/展開面板）
+        const togglePresentationMode = () => {
+          state.presentationMode = !state.presentationMode;
+          document.body.classList.toggle('presentation-mode', state.presentationMode);
+          document.getElementById('txt-pres-mode').textContent = state.presentationMode ? '展開面板' : '收合面板';
+          document.getElementById('btn-restore-hud').classList.toggle('hidden', !state.presentationMode);
+        };
+        document.getElementById('btn-toggle-presentation').addEventListener('click', togglePresentationMode);
+        document.getElementById('btn-restore-hud').addEventListener('click', togglePresentationMode);
+
+        // 知識卡開關
+        const modal = document.getElementById('knowledge-modal');
+        document.getElementById('btn-open-knowledge').addEventListener('click', () => {
+          modal.classList.remove('hidden');
+          modal.classList.add('flex');
+        });
+        const closeModal = () => {
+          modal.classList.add('hidden');
+          modal.classList.remove('flex');
+        };
+        document.getElementById('btn-close-knowledge').addEventListener('click', closeModal);
+        modal.addEventListener('click', (e) => {
+          if (e.target === modal) closeModal();
+        });
+
+        // 鍵盤快捷鍵：Space 暫停/播放, R 重置視角, 1/2/3 切換模式, H 大屏簡報模式, Esc 關閉知識卡
+        window.addEventListener('keydown', (e) => {
+          if (e.target.tagName === 'INPUT' && e.code !== 'Space') return;
+          if (e.code === 'Space') {
+            e.preventDefault();
+            togglePlayPause();
+          } else if (e.key === 'r' || e.key === 'R') {
+            moveCameraToPreset('overview');
+          } else if (e.key === '1') {
+            setExperimentMode(1);
+          } else if (e.key === '2') {
+            setExperimentMode(2);
+          } else if (e.key === '3') {
+            setExperimentMode(3);
+          } else if (e.key === 'h' || e.key === 'H') {
+            togglePresentationMode();
+          } else if (e.key === 'Escape') {
+            closeModal();
+          }
+        });
+
+        // 視窗縮放響應式更新
+        window.addEventListener('resize', () => {
+          const container = document.getElementById('canvas-container');
+          if (!camera || !renderer) return;
+          camera.aspect = container.clientWidth / container.clientHeight;
+          camera.updateProjectionMatrix();
+          renderer.setSize(container.clientWidth, container.clientHeight);
+        });
+      }
+
+      /* ============================================================================
+         16. 頁面載入完成後啟動 3D 模擬與動畫迴圈
+         ============================================================================ */
+      window.onload = function () {
+        try {
+          initThree();
+          bindUIEvents();
+          initPlumPuddingModel();
+          requestAnimationFrame(animate);
+        } catch (err) {
+          console.error('3D 場景初始化失敗:', err);
+          const container = document.getElementById('canvas-container');
+          container.innerHTML = `
+            <div class="w-full h-full flex items-center justify-center p-6 text-center text-slate-200">
+              <div class="glass-panel rounded-2xl p-6 max-w-md space-y-2">
+                <div class="text-xl font-bold text-rose-400">無法啟動 WebGL 3D 畫面</div>
+                <p class="text-sm text-slate-300">請確認您的瀏覽器已啟用 WebGL 硬體加速，或重新整理頁面再試一次。</p>
+              </div>
+            </div>`;
+        }
+      };
+    })();
+  </script>
+</body>
+</html>

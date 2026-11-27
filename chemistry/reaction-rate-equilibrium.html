@@ -1,0 +1,3955 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5">
+  <title>國中理化互動實驗室｜反應速率與平衡章節</title>
+  <meta name="description" content="國中理化大螢幕微觀模擬系統：包含動態溶解平衡與結晶曲線、分子碰撞反應速率四大變因（溫度、濃度、表面積、催化劑）及可逆平衡與勒沙特列原理互動實驗。" />
+  <meta name="portal-tags" content="化學, 反應速率, 溶解平衡, 化學平衡, 勒沙特列原理, 碰撞學說" />
+  <meta name="portal-badge" content="三大互動實驗模組" />
+  <meta name="portal-featured" content="true" />
+  <style>
+    /* ==========================================================================
+       1. 教室教學美學設計系統（暖象牙白 × 高對比科學主題色）
+       ========================================================================== */
+    :root {
+      --bg-page: #FAF8F5;
+      --bg-card: #FFFFFF;
+      --bg-subtle: #F3EFE8;
+      --bg-panel: #F8FAFC;
+      --border-warm: #E5DFD5;
+      --border-strong: #CBD5E1;
+
+      --text-main: #1E293B;
+      --text-muted: #475569;
+      --text-light: #64748B;
+
+      --teal: #0F766E;
+      --teal-dark: #115E59;
+      --teal-soft: #CCFBF1;
+      --blue: #2563EB;
+      --blue-soft: #DBEAFE;
+      --amber: #D97706;
+      --amber-soft: #FEF3C7;
+      --red: #DC2626;
+      --red-soft: #FEE2E2;
+      --green: #059669;
+      --green-soft: #D1FAE5;
+      --purple: #7C3AED;
+      --purple-soft: #EDE9FE;
+
+      --shadow-sm: 0 2px 6px rgba(30, 41, 59, 0.05);
+      --shadow-md: 0 6px 20px rgba(30, 41, 59, 0.07);
+      --shadow-lg: 0 12px 30px rgba(30, 41, 59, 0.12);
+
+      --r-sm: 10px;
+      --r-md: 16px;
+      --r-lg: 20px;
+      --r-pill: 999px;
+
+      --font-sans: "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", "Heiti TC", system-ui, -apple-system, sans-serif;
+      --font-mono: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg-page);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      line-height: 1.5;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    button {
+      font-family: inherit;
+      cursor: pointer;
+      border: none;
+      background: none;
+      transition: transform 0.12s ease, background-color 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+      user-select: none;
+    }
+
+    button:active:not(:disabled) {
+      transform: scale(0.96);
+    }
+
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    /* ==========================================================================
+       2. 頂部固定課堂工具列
+       ========================================================================== */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 120;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 2px solid var(--border-warm);
+      box-shadow: var(--shadow-sm);
+      padding: 10px 18px;
+    }
+
+    .topbar-inner {
+      max-width: 1520px;
+      margin: 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 13px;
+      background: linear-gradient(135deg, #0F766E, #14B8A6);
+      color: #FFFFFF;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      box-shadow: 0 4px 10px rgba(15, 118, 110, 0.25);
+      flex-shrink: 0;
+    }
+
+    .brand-title {
+      font-size: 1.15rem;
+      font-weight: 900;
+      color: var(--text-main);
+      letter-spacing: 0.01em;
+    }
+
+    .brand-sub {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--text-light);
+    }
+
+    .tab-group {
+      display: flex;
+      flex-wrap: wrap;
+      background: var(--bg-subtle);
+      padding: 4px;
+      border-radius: var(--r-pill);
+      border: 1.5px solid var(--border-warm);
+      gap: 4px;
+    }
+
+    .tab-btn {
+      padding: 9px 16px;
+      border-radius: var(--r-pill);
+      font-size: 0.96rem;
+      font-weight: 800;
+      color: var(--text-muted);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 42px;
+    }
+
+    .tab-btn:hover:not(.active) {
+      background: rgba(255, 255, 255, 0.78);
+      color: var(--text-main);
+    }
+
+    .tab-btn.active {
+      background: var(--teal);
+      color: #FFFFFF;
+      box-shadow: 0 4px 12px rgba(15, 118, 110, 0.28);
+    }
+
+    .tool-group {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tool-btn {
+      padding: 8px 14px;
+      border-radius: var(--r-md);
+      font-size: 0.92rem;
+      font-weight: 800;
+      background: var(--bg-card);
+      color: var(--text-main);
+      border: 2px solid var(--border-warm);
+      min-height: 42px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .tool-btn:hover {
+      border-color: var(--teal);
+      background: #F0FDFA;
+    }
+
+    .tool-btn.mask-on {
+      background: var(--amber);
+      border-color: #B45309;
+      color: #FFFFFF;
+      box-shadow: 0 4px 12px rgba(217, 119, 6, 0.34);
+    }
+
+    .tool-btn.paused-on {
+      background: var(--blue);
+      border-color: #1D4ED8;
+      color: #FFFFFF;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.32);
+    }
+
+    /* ==========================================================================
+       3. 主容器、通用卡片、三欄網格與預測遮罩
+       ========================================================================== */
+    .main-wrap {
+      max-width: 1520px;
+      margin: 0 auto;
+      padding: 16px 18px 36px;
+    }
+
+    .module-panel {
+      display: none;
+    }
+
+    .module-panel.active {
+      display: block;
+      animation: fadeUp 0.22s ease;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* 預測遮罩提示橫幅 */
+    .mask-banner {
+      display: none;
+      background: #FEF3C7;
+      border: 2px solid #F59E0B;
+      color: #92400E;
+      border-radius: var(--r-md);
+      padding: 10px 16px;
+      margin-bottom: 14px;
+      font-weight: 800;
+      font-size: 0.98rem;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    body.prediction-masked .mask-banner {
+      display: flex;
+    }
+
+    /* 毛玻璃預測遮罩容器 */
+    .maskable {
+      position: relative;
+      border-radius: var(--r-md);
+    }
+
+    .mask-content {
+      transition: filter 0.25s ease, opacity 0.25s ease;
+    }
+
+    body.prediction-masked .maskable > .mask-content {
+      filter: blur(13px);
+      opacity: 0.14;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .mask-overlay {
+      display: none;
+    }
+
+    body.prediction-masked .maskable > .mask-overlay {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      background: rgba(254, 249, 235, 0.86);
+      backdrop-filter: blur(8px);
+      border: 2.5px dashed #D97706;
+      border-radius: inherit;
+      color: #92400E;
+      font-weight: 900;
+      font-size: 1.05rem;
+      padding: 16px;
+      text-align: center;
+      cursor: pointer;
+    }
+
+    .mask-overlay small {
+      font-size: 0.86rem;
+      font-weight: 700;
+      color: #B45309;
+    }
+
+    /* 三欄標準教學版面 */
+    .grid-3col {
+      display: grid;
+      grid-template-columns: 350px 1.15fr 1fr;
+      gap: 16px;
+      align-items: stretch;
+    }
+
+    @media (max-width: 1220px) {
+      .grid-3col {
+        grid-template-columns: 1fr 1fr;
+      }
+      .grid-3col > .col-wide-tablet {
+        grid-column: 1 / -1;
+      }
+    }
+
+    @media (max-width: 820px) {
+      .grid-3col {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1.5px solid var(--border-warm);
+      border-radius: var(--r-lg);
+      box-shadow: var(--shadow-md);
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .card-title {
+      font-size: 1.08rem;
+      font-weight: 900;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .badge-chip {
+      font-size: 0.84rem;
+      font-weight: 800;
+      padding: 4px 11px;
+      border-radius: var(--r-pill);
+      background: var(--bg-subtle);
+      color: var(--text-muted);
+      border: 1px solid var(--border-warm);
+    }
+
+    /* 按鈕與觸控滑桿 */
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-bottom: 12px;
+    }
+
+    .pill-btn {
+      padding: 9px 13px;
+      border-radius: var(--r-md);
+      font-size: 0.92rem;
+      font-weight: 800;
+      background: var(--bg-subtle);
+      color: var(--text-main);
+      border: 2px solid transparent;
+      min-height: 42px;
+      flex: 1;
+      min-width: 92px;
+      text-align: center;
+    }
+
+    .pill-btn:hover {
+      background: #E8E1D6;
+    }
+
+    .pill-btn.active {
+      background: var(--teal-soft);
+      color: var(--teal-dark);
+      border-color: var(--teal);
+    }
+
+    .pill-btn.active-blue {
+      background: var(--blue-soft);
+      color: #1D4ED8;
+      border-color: var(--blue);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #0F766E, #0D9488);
+      color: #FFFFFF;
+      padding: 11px 16px;
+      border-radius: var(--r-md);
+      font-size: 0.98rem;
+      font-weight: 800;
+      box-shadow: 0 4px 12px rgba(15, 118, 110, 0.25);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-height: 46px;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: linear-gradient(135deg, #115E59, #0F766E);
+    }
+
+    .btn-blue {
+      background: linear-gradient(135deg, #2563EB, #3B82F6);
+      color: #FFFFFF;
+      padding: 10px 15px;
+      border-radius: var(--r-md);
+      font-size: 0.94rem;
+      font-weight: 800;
+      box-shadow: 0 4px 10px rgba(37, 99, 235, 0.24);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-height: 44px;
+    }
+
+    .btn-amber {
+      background: linear-gradient(135deg, #D97706, #F59E0B);
+      color: #FFFFFF;
+      padding: 10px 15px;
+      border-radius: var(--r-md);
+      font-size: 0.94rem;
+      font-weight: 800;
+      box-shadow: 0 4px 10px rgba(217, 119, 6, 0.24);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-height: 44px;
+    }
+
+    .btn-red {
+      background: linear-gradient(135deg, #DC2626, #EF4444);
+      color: #FFFFFF;
+      padding: 10px 15px;
+      border-radius: var(--r-md);
+      font-size: 0.94rem;
+      font-weight: 800;
+      box-shadow: 0 4px 10px rgba(220, 38, 38, 0.24);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-height: 44px;
+    }
+
+    .btn-secondary {
+      background: var(--bg-subtle);
+      color: var(--text-main);
+      border: 2px solid var(--border-warm);
+      padding: 9px 14px;
+      border-radius: var(--r-md);
+      font-size: 0.92rem;
+      font-weight: 800;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-height: 44px;
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: #E8E1D6;
+    }
+
+    .control-box {
+      background: var(--bg-panel);
+      border: 1.5px solid var(--border-warm);
+      border-radius: var(--r-md);
+      padding: 11px 13px;
+      margin-bottom: 10px;
+    }
+
+    .control-label-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.95rem;
+      font-weight: 800;
+      margin-bottom: 7px;
+      color: var(--text-main);
+    }
+
+    .val-mono {
+      font-family: var(--font-mono);
+      font-weight: 900;
+      font-size: 1.05rem;
+      color: var(--teal);
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 10px;
+      border-radius: 999px;
+      background: #CBD5E1;
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: var(--teal);
+      border: 3px solid #FFFFFF;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.28);
+      cursor: pointer;
+    }
+
+    /* 大型觸控開關 */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      background: #FFFBEB;
+      border: 2px solid #FDE68A;
+      border-radius: var(--r-md);
+      padding: 10px 13px;
+      margin-bottom: 10px;
+      cursor: pointer;
+    }
+
+    .toggle-row.active-teal {
+      background: #F0FDFA;
+      border-color: #5EEAD4;
+    }
+
+    .switch-pill {
+      width: 54px;
+      height: 30px;
+      border-radius: 999px;
+      background: #CBD5E1;
+      position: relative;
+      transition: background 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .switch-pill::after {
+      content: "";
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #FFFFFF;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+      transition: transform 0.2s ease;
+    }
+
+    .switch-pill.on {
+      background: var(--green);
+    }
+
+    .switch-pill.on::after {
+      transform: translateX(24px);
+    }
+
+    .canvas-box {
+      width: 100%;
+      border: 2px solid var(--border-warm);
+      border-radius: var(--r-md);
+      background: #FFFFFF;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .canvas-box canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* ==========================================================================
+       4. 模組 1 專屬樣式：溶解平衡雙向速率儀與資訊卡
+       ========================================================================== */
+    .rate-meter-box {
+      margin-top: 12px;
+      background: var(--bg-panel);
+      border: 1.5px solid var(--border-warm);
+      border-radius: var(--r-md);
+      padding: 12px 14px;
+    }
+
+    .rate-bar-row {
+      display: grid;
+      grid-template-columns: 112px 1fr 48px;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      font-size: 0.92rem;
+      font-weight: 800;
+    }
+
+    .rate-track {
+      height: 16px;
+      background: #E2E8F0;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .rate-fill-dissolve {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #10B981, #34D399);
+      border-radius: 999px;
+      transition: width 0.16s ease;
+    }
+
+    .rate-fill-crystal {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #3B82F6, #60A5FA);
+      border-radius: 999px;
+      transition: width 0.16s ease;
+    }
+
+    .eq-status-banner {
+      margin-top: 8px;
+      padding: 9px 12px;
+      border-radius: var(--r-sm);
+      font-size: 0.96rem;
+      font-weight: 900;
+      text-align: center;
+    }
+
+    .eq-status-banner.dissolving { background: var(--green-soft); color: #065F46; }
+    .eq-status-banner.balanced   { background: var(--teal-soft); color: #115E59; border: 2px solid #14B8A6; }
+    .eq-status-banner.crystal    { background: var(--blue-soft); color: #1E40AF; }
+    .eq-status-banner.unsat      { background: var(--bg-subtle); color: var(--text-muted); }
+
+    .info-metrics-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .metric-tile {
+      background: var(--bg-panel);
+      border: 1.5px solid var(--border-warm);
+      border-radius: var(--r-sm);
+      padding: 9px 11px;
+    }
+
+    .metric-tile.full-span {
+      grid-column: 1 / -1;
+      background: #F0FDF4;
+      border-color: #86EFAC;
+    }
+
+    .metric-tile-label {
+      font-size: 0.82rem;
+      font-weight: 800;
+      color: var(--text-muted);
+    }
+
+    .metric-tile-val {
+      font-family: var(--font-mono);
+      font-size: 1.18rem;
+      font-weight: 900;
+      color: var(--text-main);
+    }
+
+    .metric-formula {
+      font-size: 0.84rem;
+      font-weight: 700;
+      color: #047857;
+      font-family: var(--font-mono);
+      margin-top: 2px;
+    }
+
+    /* ==========================================================================
+       5. 模組 7A 專屬樣式：進度條與歷史對照圖例
+       ========================================================================== */
+    .tank-stats-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+      font-size: 0.92rem;
+      font-weight: 800;
+    }
+
+    .progress-outer {
+      width: 100%;
+      height: 12px;
+      background: #E2E8F0;
+      border-radius: 999px;
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+
+    .progress-inner {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #10B981, #059669);
+      transition: width 0.15s ease;
+    }
+
+    .history-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+      font-size: 0.82rem;
+      font-weight: 800;
+    }
+
+    .hist-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 9px;
+      border-radius: var(--r-pill);
+      background: var(--bg-panel);
+      border: 1.5px solid var(--border-warm);
+    }
+
+    .hist-line {
+      width: 18px;
+      height: 3px;
+      display: inline-block;
+      border-radius: 2px;
+    }
+
+    /* ==========================================================================
+       6. 模組 7B 專屬樣式：平衡拉鋸戰頂部看板與勒沙特列筆記
+       ========================================================================== */
+    .tug-board {
+      background: var(--bg-card);
+      border: 2px solid var(--border-warm);
+      border-radius: var(--r-lg);
+      box-shadow: var(--shadow-md);
+      padding: 14px 20px;
+      margin-bottom: 16px;
+    }
+
+    .tug-top-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .tug-equation-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      padding: 10px 14px;
+      background: var(--bg-panel);
+      border: 1.5px solid var(--border-warm);
+      border-radius: var(--r-md);
+    }
+
+    .tug-side {
+      font-size: 1.38rem;
+      font-weight: 900;
+      text-align: center;
+      line-height: 1.35;
+    }
+
+    .tug-side small {
+      display: block;
+      font-size: 0.84rem;
+      font-weight: 800;
+      color: var(--text-muted);
+    }
+
+    .tug-arrows-box {
+      min-width: 210px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .tug-arrow-row {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-size: 0.85rem;
+      font-weight: 900;
+    }
+
+    .tug-status-pill {
+      padding: 7px 16px;
+      border-radius: var(--r-pill);
+      font-size: 0.98rem;
+      font-weight: 900;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .tug-status-pill.eq     { background: var(--green-soft); color: #065F46; border: 2px solid #34D399; }
+    .tug-status-pill.shiftR { background: var(--amber-soft); color: #9A3412; border: 2px solid #F59E0B; }
+    .tug-status-pill.shiftL { background: var(--blue-soft); color: #1E40AF; border: 2px solid #60A5FA; }
+
+    .lechat-card {
+      margin-top: 10px;
+      background: #FFFBEB;
+      border: 2px solid #FDE68A;
+      border-radius: var(--r-md);
+      padding: 11px 13px;
+      font-size: 0.9rem;
+    }
+
+    .lechat-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 7px;
+      margin-bottom: 5px;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    .lechat-step:last-child {
+      margin-bottom: 0;
+    }
+
+    .step-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #D97706;
+      color: #FFFFFF;
+      font-size: 0.8rem;
+      font-weight: 900;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .counter-strip {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-around;
+      gap: 8px;
+      margin-top: 10px;
+      background: var(--bg-panel);
+      border: 1.5px solid var(--border-warm);
+      border-radius: var(--r-md);
+      padding: 9px 10px;
+      font-size: 0.92rem;
+      font-weight: 900;
+    }
+
+    /* 快捷鍵底部提示 */
+    .shortcut-footer {
+      max-width: 1520px;
+      margin: 8px auto 0;
+      padding: 0 18px 24px;
+      text-align: center;
+      font-size: 0.84rem;
+      font-weight: 700;
+      color: var(--text-light);
+    }
+
+    .kbd {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 6px;
+      background: #FFFFFF;
+      border: 1.5px solid var(--border-strong);
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      font-weight: 900;
+      color: var(--text-main);
+      margin: 0 2px;
+    }
+
+    /* Toast 通知（取代 alert） */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(90px);
+      background: #1E293B;
+      color: #FFFFFF;
+      padding: 11px 22px;
+      border-radius: var(--r-pill);
+      font-weight: 800;
+      font-size: 0.95rem;
+      box-shadow: var(--shadow-lg);
+      z-index: 999;
+      opacity: 0;
+      transition: transform 0.26s ease, opacity 0.26s ease;
+      pointer-events: none;
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    @media (max-width: 640px) {
+      .topbar { padding: 8px 10px; }
+      .main-wrap { padding: 10px 10px 28px; }
+      .tab-btn { padding: 8px 11px; font-size: 0.86rem; }
+      .tug-side { font-size: 1.12rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ======================================================================
+       頂部固定課堂工具列
+       ====================================================================== -->
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true">⚗️</div>
+        <div>
+          <div class="brand-title">反應速率與平衡｜互動教學實驗室</div>
+          <div class="brand-sub">國中理化大螢幕微觀模擬系統</div>
+        </div>
+      </div>
+
+      <nav class="tab-group" role="tablist" aria-label="章節互動模組">
+        <button class="tab-btn active" data-tab="mod1" role="tab" aria-selected="true">1. 動態溶解平衡</button>
+        <button class="tab-btn" data-tab="mod7a" role="tab" aria-selected="false">7A. 反應速率與碰撞</button>
+        <button class="tab-btn" data-tab="mod7b" role="tab" aria-selected="false">7B. 可逆平衡拉鋸戰</button>
+      </nav>
+
+      <div class="tool-group">
+        <button id="btnMask" class="tool-btn" title="快捷鍵 M">🔮 預測遮罩 (M)</button>
+        <button id="btnPause" class="tool-btn" title="快捷鍵 Space">⏯ 暫停 (Space)</button>
+        <button id="btnFullscreen" class="tool-btn" title="切換大螢幕全螢幕">⛶ 全螢幕</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-wrap">
+    <!-- 預測遮罩啟用提示條 -->
+    <div class="mask-banner" role="status">
+      <span>🔮 課堂預測遮罩已開啟：微觀視窗、計算數據與平衡推導暫時隱藏，請引導學生先預測再揭曉！</span>
+      <button id="btnRevealAll" class="btn-amber" style="min-height:36px; padding:6px 14px; font-size:0.9rem;">
+        ✨ 立即揭曉 (M)
+      </button>
+    </div>
+
+    <!-- ====================================================================
+         模組 1：動態溶解平衡與結晶模擬器
+         ==================================================================== -->
+    <section id="mod1" class="module-panel active">
+      <div class="grid-3col">
+        <!-- 左區：巨觀燒杯與實驗控制 -->
+        <div class="card">
+          <div class="card-title">
+            <span>🧪 巨觀燒杯與實驗控制</span>
+            <span class="badge-chip">水固定 100 g</span>
+          </div>
+
+          <div class="pill-row" id="m1SoluteBtns">
+            <button class="pill-btn active" data-solute="KNO3">硝酸鉀<br><small>KNO₃</small></button>
+            <button class="pill-btn" data-solute="NaCl">食鹽<br><small>NaCl</small></button>
+            <button class="pill-btn" data-solute="CaOH2">熟石灰<br><small>Ca(OH)₂</small></button>
+          </div>
+
+          <!-- 巨觀燒杯 Canvas -->
+          <div class="canvas-box" style="height:245px; margin-bottom:12px; background:linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 100%);">
+            <canvas id="canvas1Macro"></canvas>
+          </div>
+
+          <!-- 溫度控制 -->
+          <div class="control-box">
+            <div class="control-label-row">
+              <span>🌡️ 水溫控制</span>
+              <span class="val-mono" id="m1TempVal">30.0 °C</span>
+            </div>
+            <input type="range" id="m1TempSlider" min="0" max="80" step="1" value="30">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:9px;">
+              <button id="m1Heat70" class="btn-red" style="min-height:40px; font-size:0.88rem; padding:7px 10px;">🔥 升溫至 70°C</button>
+              <button id="m1Cool20" class="btn-blue" style="min-height:40px; font-size:0.88rem; padding:7px 10px;">❄️ 急冷至 20°C</button>
+            </div>
+          </div>
+
+          <!-- 加入溶質控制 -->
+          <div class="control-box">
+            <div class="control-label-row">
+              <span>🥄 投入溶質總量</span>
+              <span class="val-mono" id="m1AddedVal">60.0 g</span>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr 0.9fr; gap:7px;">
+              <button id="m1AddScoop" class="btn-primary" style="min-height:42px; font-size:0.9rem; padding:7px 8px;">＋1 匙</button>
+              <button id="m1SubScoop" class="btn-secondary" style="min-height:42px; font-size:0.9rem; padding:7px 8px;">－1 匙</button>
+              <button id="m1ResetBtn" class="btn-secondary" style="min-height:42px; font-size:0.88rem; padding:7px 8px;">↺ 清空</button>
+            </div>
+          </div>
+
+          <!-- 教學亮點：追蹤標記粒子 -->
+          <div class="toggle-row" id="m1TrackToggle" role="switch" aria-checked="true" tabindex="0">
+            <div>
+              <div style="font-weight:900; font-size:0.95rem; color:#92400E;">✨ 追蹤標記粒子（3 顆橘光球）</div>
+              <div style="font-size:0.8rem; font-weight:700; color:#B45309;">飽和時親眼看見同一顆粒子進出晶體！</div>
+            </div>
+            <div class="switch-pill on" id="m1TrackSwitch"></div>
+          </div>
+        </div>
+
+        <!-- 中區：高倍微觀粒子視窗 + 雙向速率平衡儀 -->
+        <div class="card">
+          <div class="card-title">
+            <span>🔍 高倍微觀粒子視窗</span>
+            <span class="badge-chip" id="m1MicroHint">綠光=溶解↑　藍光=析出↓</span>
+          </div>
+
+          <div class="maskable" style="flex:1; display:flex; flex-direction:column;">
+            <div class="mask-content" style="flex:1; display:flex; flex-direction:column;">
+              <div class="canvas-box" style="height:365px; flex:1; background:#F8FAFC;">
+                <canvas id="canvas1Micro"></canvas>
+              </div>
+
+              <!-- 雙向動態速率平衡儀 -->
+              <div class="rate-meter-box">
+                <div style="font-size:0.9rem; font-weight:900; color:var(--text-muted); margin-bottom:8px;">
+                  ⚖️ 即時動態速率平衡儀（溶解 vs. 析出）
+                </div>
+                <div class="rate-bar-row">
+                  <span style="color:#059669;">⬆ 溶解速率</span>
+                  <div class="rate-track"><div class="rate-fill-dissolve" id="m1BarDissolve"></div></div>
+                  <span class="val-mono" style="color:#059669; text-align:right; font-size:0.92rem;" id="m1NumDissolve">0</span>
+                </div>
+                <div class="rate-bar-row" style="margin-bottom:0;">
+                  <span style="color:#2563EB;">⬇ 析出速率</span>
+                  <div class="rate-track"><div class="rate-fill-crystal" id="m1BarCrystal"></div></div>
+                  <span class="val-mono" style="color:#2563EB; text-align:right; font-size:0.92rem;" id="m1NumCrystal">0</span>
+                </div>
+                <div id="m1RateStatus" class="eq-status-banner balanced">
+                  ⚖️ 溶解速率 ＝ 析出速率（動態平衡！）
+                </div>
+              </div>
+            </div>
+
+            <div class="mask-overlay" onclick="togglePredictionMask()">
+              🔮 預測：目前微觀粒子是停止不動，還是雙向進出？
+              <small>點擊此處或按 M 鍵揭曉微觀視窗與速率儀</small>
+            </div>
+          </div>
+        </div>
+
+        <!-- 右區：溶解度曲線圖 + 即時數據計算卡 -->
+        <div class="card col-wide-tablet">
+          <div class="card-title">
+            <span>📈 溶解度曲線與定量計算</span>
+            <span class="badge-chip" id="m1SatLimitBadge">目前飽和點：-- g</span>
+          </div>
+
+          <div class="canvas-box" style="height:300px; background:#FFFFFF;">
+            <canvas id="canvas1Curve"></canvas>
+          </div>
+
+          <div class="maskable" style="margin-top:10px;">
+            <div class="mask-content">
+              <div class="info-metrics-grid">
+                <div class="metric-tile">
+                  <div class="metric-tile-label">溶液狀態</div>
+                  <div class="metric-tile-val" id="m1StateVal" style="font-size:1.05rem; color:var(--teal);">飽和含沉澱</div>
+                </div>
+                <div class="metric-tile">
+                  <div class="metric-tile-label">已溶解溶質</div>
+                  <div class="metric-tile-val" id="m1DissolvedVal">47.4 g</div>
+                </div>
+                <div class="metric-tile">
+                  <div class="metric-tile-label">杯底沉澱／析出量</div>
+                  <div class="metric-tile-val" id="m1UndissolvedVal" style="color:var(--red);">12.6 g</div>
+                </div>
+                <div class="metric-tile">
+                  <div class="metric-tile-label">當前溫度溶解度</div>
+                  <div class="metric-tile-val" id="m1SolubilityVal">47.4 g/100g水</div>
+                </div>
+                <div class="metric-tile full-span">
+                  <div class="metric-tile-label">重量百分濃度 P% ＝ 已溶解溶質 ÷ (已溶解溶質 ＋ 100g水) × 100%</div>
+                  <div class="metric-tile-val" id="m1PercentVal" style="color:#059669;">32.2 %</div>
+                  <div class="metric-formula" id="m1PercentFormula">47.4 ÷ (47.4 + 100) × 100% = 32.2%</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="mask-overlay" onclick="togglePredictionMask()">
+              🧠 請先依曲線圖算出析出克數與濃度 P%！
+              <small>點擊此處或按 M 鍵核對計算結果</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         模組 7A：分子碰撞加速器（反應速率四大變因）
+         ==================================================================== -->
+    <section id="mod7a" class="module-panel">
+      <div class="grid-3col">
+        <!-- 左區：四大變因控制面板 -->
+        <div class="card">
+          <div class="card-title">
+            <span>🎛️ 反應速率四大變因控制台</span>
+          </div>
+
+          <!-- 模式切換 -->
+          <div class="pill-row" id="m7aModeBtns">
+            <button class="pill-btn active" data-mode="homo">🫧 模式 A<br><small>均相碰撞 A+B→AB</small></button>
+            <button class="pill-btn" data-mode="solid">🪨 模式 B<br><small>固體表面積實驗</small></button>
+          </div>
+
+          <!-- 溫度滑桿 -->
+          <div class="control-box">
+            <div class="control-label-row">
+              <span>🌡️ 反應溫度（粒子動能）</span>
+              <span class="val-mono" id="m7aTempVal">40 °C</span>
+            </div>
+            <input type="range" id="m7aTempSlider" min="20" max="100" step="5" value="40">
+          </div>
+
+          <!-- 濃度滑桿 -->
+          <div class="control-box">
+            <div class="control-label-row">
+              <span id="m7aConcLabel">🧪 反應物濃度（A/B 對數）</span>
+              <span class="val-mono" id="m7aConcVal">24 對</span>
+            </div>
+            <input type="range" id="m7aConcSlider" min="12" max="40" step="4" value="24">
+          </div>
+
+          <!-- 固體顆粒大小（僅模式 B 顯示） -->
+          <div class="control-box" id="m7aSurfaceBox" style="display:none; background:#F0FDFA; border-color:#99F6E4;">
+            <div class="control-label-row">
+              <span>🪨 大理石顆粒大小（總質量相同：64 粒）</span>
+            </div>
+            <div class="pill-row" id="m7aSizeBtns" style="margin-bottom:4px;">
+              <button class="pill-btn active" data-size="1" style="min-width:74px; padding:8px 6px;">大塊狀<br><small>1 塊</small></button>
+              <button class="pill-btn" data-size="4" style="min-width:74px; padding:8px 6px;">中碎塊<br><small>4 塊</small></button>
+              <button class="pill-btn" data-size="16" style="min-width:74px; padding:8px 6px;">細粉末<br><small>16 粒</small></button>
+            </div>
+            <div id="m7aExposedInfo" style="font-size:0.83rem; font-weight:800; color:#0F766E; text-align:center;">
+              初始外露可碰撞表面粒子：28 / 64 (44%)
+            </div>
+          </div>
+
+          <!-- 催化劑開關 -->
+          <div class="toggle-row active-teal" id="m7aCatToggle" role="switch" aria-checked="false" tabindex="0">
+            <div>
+              <div style="font-weight:900; font-size:0.95rem; color:#0F766E;">⚡ 加入催化劑</div>
+              <div style="font-size:0.8rem; font-weight:700; color:#475569;">降低有效碰撞活化能門檻約 45%</div>
+            </div>
+            <div class="switch-pill" id="m7aCatSwitch"></div>
+          </div>
+
+          <!-- 操作按鈕群 -->
+          <div style="display:flex; flex-direction:column; gap:8px; margin-top:auto;">
+            <button id="m7aRestartBtn" class="btn-primary">▶ 開始 / 重新反應 (R)</button>
+            <div style="display:grid; grid-template-columns:1.35fr 0.65fr; gap:8px;">
+              <button id="m7aSaveCurveBtn" class="btn-blue" style="font-size:0.88rem; padding:8px 10px;">📌 保留曲線對照 (0/3)</button>
+              <button id="m7aClearCurveBtn" class="btn-secondary" style="font-size:0.86rem; padding:8px 8px;">清除對照</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 中區：微觀碰撞反應槽 Canvas -->
+        <div class="card">
+          <div class="card-title">
+            <span id="m7aTankTitle">⚡ 微觀碰撞反應槽 (A + B → AB)</span>
+            <span class="badge-chip" id="m7aTimerBadge">0.0 s</span>
+          </div>
+
+          <div class="tank-stats-bar">
+            <span style="color:#059669;">生成進度：<strong id="m7aProgPct" style="font-family:var(--font-mono);">0%</strong></span>
+            <span>有效碰撞：<strong id="m7aEffCount" style="color:#D97706; font-family:var(--font-mono);">0</strong> / 總碰撞：<strong id="m7aTotCount" style="font-family:var(--font-mono);">0</strong></span>
+          </div>
+          <div class="progress-outer"><div class="progress-inner" id="m7aProgBar"></div></div>
+
+          <div class="canvas-box" style="height:415px; flex:1; background:#F8FAFC;">
+            <canvas id="canvas7aTank"></canvas>
+          </div>
+
+          <div style="display:flex; flex-wrap:wrap; justify-content:center; gap:12px; margin-top:10px; font-size:0.86rem; font-weight:800; color:var(--text-muted);" id="m7aLegend">
+            <span>🔵 A 反應物</span>
+            <span>🟠 B 反應物</span>
+            <span>🟢 AB 生成物</span>
+            <span>✨ 金波紋=有效碰撞</span>
+          </div>
+        </div>
+
+        <!-- 右區：活化能門檻圖 + 生成物累積折線圖 -->
+        <div class="card col-wide-tablet">
+          <div class="card-title">
+            <span>⛰️ 活化能門檻與反應速率曲線</span>
+            <span class="badge-chip" id="m7aPassRatioBadge">動能達標：--%</span>
+          </div>
+
+          <div class="maskable" style="flex:1; display:flex; flex-direction:column;">
+            <div class="mask-content" style="flex:1; display:flex; flex-direction:column; gap:12px;">
+              <!-- 上圖：活化能示意圖 -->
+              <div class="canvas-box" style="height:190px; background:#FFFFFF;">
+                <canvas id="canvas7aEnergy"></canvas>
+              </div>
+
+              <!-- 下圖：生成物累積時間曲線 -->
+              <div class="canvas-box" style="height:240px; flex:1; background:#FFFFFF;">
+                <canvas id="canvas7aChart"></canvas>
+              </div>
+
+              <!-- 歷史對照圖例 -->
+              <div class="history-legend" id="m7aHistLegend">
+                <span class="hist-tag"><span class="hist-line" style="background:#0F766E;"></span>目前實線</span>
+              </div>
+            </div>
+
+            <div class="mask-overlay" onclick="togglePredictionMask()">
+              🔮 預測：改變條件後，活化能山丘與曲線斜率會怎麼變？
+              <small>點擊此處或按 M 鍵揭曉活化能與速率折線圖</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         模組 7B：可逆反應與平衡拉鋸戰（化學平衡與勒沙特列原理）
+         ==================================================================== -->
+    <section id="mod7b" class="module-panel">
+      <!-- 頂部：平衡拉鋸戰動態方程式看板 -->
+      <div class="tug-board">
+        <div class="tug-top-row">
+          <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px;">
+            <span style="font-weight:900; font-size:1.05rem;">選擇可逆反應系統：</span>
+            <div class="pill-row" id="m7bSysBtns" style="margin-bottom:0;">
+              <button class="pill-btn active" data-sys="chromate" style="flex:none;">🧪 系統一：鉻酸根酸鹼平衡</button>
+              <button class="pill-btn" data-sys="no2" style="flex:none;">🌡️ 系統二：二氧化氮溫度平衡</button>
+            </div>
+          </div>
+
+          <div class="maskable" style="border-radius:999px;">
+            <div class="mask-content">
+              <div id="m7bStatusPill" class="tug-status-pill eq">⚖️ 達成動態平衡 (R正 ＝ R逆)</div>
+            </div>
+            <div class="mask-overlay" onclick="togglePredictionMask()" style="padding:4px 14px; font-size:0.9rem;">
+              ❓ 預測移動方向？點擊揭曉
+            </div>
+          </div>
+        </div>
+
+        <div class="tug-equation-wrap">
+          <div class="tug-side" id="m7bLeftEq" style="color:#B45309;">
+            2 CrO<sub>4</sub><sup>2−</sup> + 2 H<sup>+</sup>
+            <small>黃色溶液（反應物）</small>
+          </div>
+
+          <!-- 動態伸縮雙向速率箭頭（支援預測遮罩） -->
+          <div class="maskable" style="min-width:230px;">
+            <div class="mask-content">
+              <div class="tug-arrows-box">
+                <div class="tug-arrow-row" style="color:#2563EB;">
+                  <span>R正</span>
+                  <svg width="160" height="22" viewBox="0 0 160 22" style="overflow:visible;">
+                    <line id="m7bFwdLine" x1="10" y1="11" x2="110" y2="11" stroke="#2563EB" stroke-width="5" stroke-linecap="round"/>
+                    <polygon id="m7bFwdHead" points="110,4 126,11 110,18" fill="#2563EB"/>
+                  </svg>
+                </div>
+                <div class="tug-arrow-row" style="color:#EA580C;">
+                  <span>R逆</span>
+                  <svg width="160" height="22" viewBox="0 0 160 22" style="overflow:visible;">
+                    <line id="m7bRevLine" x1="150" y1="11" x2="50" y2="11" stroke="#EA580C" stroke-width="5" stroke-linecap="round"/>
+                    <polygon id="m7bRevHead" points="50,4 34,11 50,18" fill="#EA580C"/>
+                  </svg>
+                </div>
+              </div>
+            </div>
+            <div class="mask-overlay" onclick="togglePredictionMask()" style="padding:6px 10px; font-size:0.86rem;">
+              🔮 預測 R正 與 R逆 誰較大？
+            </div>
+          </div>
+
+          <div class="tug-side" id="m7bRightEq" style="color:#C2410C;">
+            Cr<sub>2</sub>O<sub>7</sub><sup>2−</sup> + H<sub>2</sub>O
+            <small>橘紅色溶液（生成物）</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- 主體三欄 -->
+      <div class="grid-3col">
+        <!-- 左區：巨觀試管顏色實驗台 + 干擾控制台 -->
+        <div class="card">
+          <div class="card-title">
+            <span id="m7bMacroTitle">🧪 巨觀試管顏色觀察</span>
+            <span class="badge-chip" id="m7bCondBadge">pH 中性平衡</span>
+          </div>
+
+          <div class="canvas-box" style="height:290px; margin-bottom:12px; background:linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 100%);">
+            <canvas id="canvas7bMacro"></canvas>
+          </div>
+
+          <!-- 系統一干擾按鈕 -->
+          <div id="m7bCtrlChromate" style="display:flex; flex-direction:column; gap:8px;">
+            <button id="m7bAddAcid" class="btn-red">🧪 滴加稀硫酸（增加 H⁺）</button>
+            <button id="m7bAddBase" class="btn-blue">🧪 滴加氫氧化鈉（消耗 H⁺）</button>
+            <button id="m7bResetChr" class="btn-secondary">💧 恢復初始平衡 (R)</button>
+          </div>
+
+          <!-- 系統二干擾按鈕 + 連續溫度滑桿 -->
+          <div id="m7bCtrlNO2" style="display:none; flex-direction:column; gap:8px;">
+            <div class="control-box" style="margin-bottom:2px;">
+              <div class="control-label-row">
+                <span>🌡️ 水浴溫度微調</span>
+                <span class="val-mono" id="m7bTempVal">30 °C</span>
+              </div>
+              <input type="range" id="m7bTempSlider" min="5" max="80" step="1" value="30">
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+              <button id="m7bHotBtn" class="btn-red" style="font-size:0.88rem; padding:8px;">🔥 熱水浴 (75°C)</button>
+              <button id="m7bColdBtn" class="btn-blue" style="font-size:0.88rem; padding:8px;">❄️ 冰水浴 (5°C)</button>
+            </div>
+            <button id="m7bRoomBtn" class="btn-secondary">🌡️ 常溫平衡 (30°C)</button>
+          </div>
+        </div>
+
+        <!-- 中區：微觀可逆反應槽 Canvas -->
+        <div class="card">
+          <div class="card-title">
+            <span>🔍 微觀雙向可逆反應槽</span>
+            <span class="badge-chip">平衡時仍雙向反應</span>
+          </div>
+
+          <div class="maskable" style="flex:1; display:flex; flex-direction:column;">
+            <div class="mask-content" style="flex:1; display:flex; flex-direction:column;">
+              <div class="canvas-box" style="height:375px; flex:1; background:#F8FAFC;">
+                <canvas id="canvas7bMicro"></canvas>
+              </div>
+              <div class="counter-strip" id="m7bCounters"></div>
+            </div>
+            <div class="mask-overlay" onclick="togglePredictionMask()">
+              🔮 預測：干擾後哪一種微觀粒子變多了？平衡時兩者數量相等嗎？
+              <small>點擊此處或按 M 鍵揭曉微觀反應槽</small>
+            </div>
+          </div>
+        </div>
+
+        <!-- 右區：R-t 圖、C-t 圖與勒沙特列動態筆記 -->
+        <div class="card col-wide-tablet">
+          <div class="card-title">
+            <span>📈 速率 (R–t) 與粒子數 (C–t) 雙軌圖</span>
+          </div>
+
+          <div class="maskable" style="flex:1; display:flex; flex-direction:column;">
+            <div class="mask-content" style="flex:1; display:flex; flex-direction:column; gap:10px;">
+              <div class="canvas-box" style="height:165px; background:#FFFFFF;">
+                <canvas id="canvas7bRt"></canvas>
+              </div>
+              <div class="canvas-box" style="height:165px; background:#FFFFFF;">
+                <canvas id="canvas7bCt"></canvas>
+              </div>
+
+              <!-- 勒沙特列原理動態推導卡 -->
+              <div class="lechat-card">
+                <div style="font-weight:900; font-size:0.95rem; color:#92400E; margin-bottom:6px;">
+                  🧭 勒沙特列原理動態推導卡
+                </div>
+                <div class="lechat-step">
+                  <span class="step-num">1</span>
+                  <span id="m7bStep1">目前狀態：系統處於初始動態平衡，無額外干擾。</span>
+                </div>
+                <div class="lechat-step">
+                  <span class="step-num">2</span>
+                  <span id="m7bStep2">平衡移動：正反應速率 ＝ 逆反應速率，不發生淨移動。</span>
+                </div>
+                <div class="lechat-step">
+                  <span class="step-num">3</span>
+                  <span id="m7bStep3">現象變化：溶液呈現黃橙中間色，各粒子數維持恆定（但不必相等）。</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="mask-overlay" onclick="togglePredictionMask()">
+              🧠 預測：R–t 圖會怎麼瞬間跳動？C–t 圖平衡時會重疊嗎？
+              <small>點擊此處或按 M 鍵揭曉會考經典圖表與推導</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="shortcut-footer">
+    ⌨️ 教室快捷鍵：<span class="kbd">1</span><span class="kbd">2</span><span class="kbd">3</span> 切換模組 ｜
+    <span class="kbd">Space</span> 暫停／繼續 ｜
+    <span class="kbd">M</span> 預測遮罩 ｜
+    <span class="kbd">R</span> 重置目前模組
+  </footer>
+
+  <div id="toast" class="toast" role="alert" aria-live="polite"></div>
+
+  <script>
+    /* ==========================================================================
+       一、全域狀態管理與共用 High-DPI 繪圖工具
+       ========================================================================== */
+    const APP = {
+      activeTab: 'mod1',      // 'mod1' | 'mod7a' | 'mod7b'
+      paused: false,
+      masked: false
+    };
+
+    let toastTimer = null;
+    function showToast(msg) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.remove('show'), 2300);
+    }
+
+    function clamp(v, lo, hi) {
+      return Math.max(lo, Math.min(hi, v));
+    }
+
+    // 自動同步 Canvas 的 DPR 與容器像素尺寸（視窗縮放、分頁切換皆不模糊）
+    function syncCanvas(canvas) {
+      if (!canvas) return null;
+      const rect = canvas.getBoundingClientRect();
+      if (rect.width < 2 || rect.height < 2) return null;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const tw = Math.round(rect.width * dpr);
+      const th = Math.round(rect.height * dpr);
+      if (canvas.width !== tw || canvas.height !== th) {
+        canvas.width = tw;
+        canvas.height = th;
+      }
+      const ctx = canvas.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      return { ctx, w: rect.width, h: rect.height };
+    }
+
+    function roundRectPath(ctx, x, y, w, h, r) {
+      const rr = Math.min(r, w / 2, h / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + rr, y);
+      ctx.lineTo(x + w - rr, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + rr);
+      ctx.lineTo(x + w, y + h - rr);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - rr, y + h);
+      ctx.lineTo(x + rr, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - rr);
+      ctx.lineTo(x, y + rr);
+      ctx.quadraticCurveTo(x, y, x + rr, y);
+      ctx.closePath();
+    }
+
+    function drawGlossyBall(ctx, x, y, r, hiColor, midColor, strokeColor, label = '') {
+      const grad = ctx.createRadialGradient(x - r * 0.32, y - r * 0.35, r * 0.1, x, y, r);
+      grad.addColorStop(0, hiColor);
+      grad.addColorStop(0.58, midColor);
+      grad.addColorStop(1, strokeColor);
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fillStyle = grad;
+      ctx.fill();
+      ctx.lineWidth = 1.6;
+      ctx.strokeStyle = strokeColor;
+      ctx.stroke();
+
+      if (label) {
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = `900 ${Math.max(9, Math.round(r * 0.92))}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, x, y + 0.5);
+      }
+    }
+
+    /* ==========================================================================
+       二、工具列控制與鍵盤快捷鍵
+       ========================================================================== */
+    function switchTab(tabId) {
+      APP.activeTab = tabId;
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        const isAct = btn.dataset.tab === tabId;
+        btn.classList.toggle('active', isAct);
+        btn.setAttribute('aria-selected', isAct ? 'true' : 'false');
+      });
+      document.querySelectorAll('.module-panel').forEach(sec => {
+        sec.classList.toggle('active', sec.id === tabId);
+      });
+    }
+
+    function togglePredictionMask(force) {
+      APP.masked = (typeof force === 'boolean') ? force : !APP.masked;
+      document.body.classList.toggle('prediction-masked', APP.masked);
+      const btn = document.getElementById('btnMask');
+      btn.classList.toggle('mask-on', APP.masked);
+      btn.textContent = APP.masked ? '🙈 遮罩中 (M)' : '🔮 預測遮罩 (M)';
+    }
+
+    function togglePause(force) {
+      APP.paused = (typeof force === 'boolean') ? force : !APP.paused;
+      const btn = document.getElementById('btnPause');
+      btn.classList.toggle('paused-on', APP.paused);
+      btn.textContent = APP.paused ? '▶ 繼續 (Space)' : '⏯ 暫停 (Space)';
+    }
+
+    function resetActiveModule() {
+      if (APP.activeTab === 'mod1') {
+        MOD1.resetDefault();
+        showToast('已重置：動態溶解平衡模組');
+      } else if (APP.activeTab === 'mod7a') {
+        MOD7A.restartSim();
+        showToast('已重新開始：分子碰撞實驗');
+      } else if (APP.activeTab === 'mod7b') {
+        MOD7B.resetSystem();
+        showToast('已恢復初始動態平衡');
+      }
+    }
+
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+    });
+    document.getElementById('btnMask').addEventListener('click', () => togglePredictionMask());
+    document.getElementById('btnRevealAll').addEventListener('click', () => togglePredictionMask(false));
+    document.getElementById('btnPause').addEventListener('click', () => togglePause());
+
+    document.getElementById('btnFullscreen').addEventListener('click', () => {
+      try {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().catch(() => {
+            showToast('此視窗環境限制自動全螢幕，可按 F11 進入全螢幕');
+          });
+        } else {
+          document.exitFullscreen();
+        }
+      } catch (e) {
+        showToast('可按 F11 切換大螢幕全螢幕演示');
+      }
+    });
+
+    document.addEventListener('fullscreenchange', () => {
+      document.getElementById('btnFullscreen').textContent =
+        document.fullscreenElement ? '🗗 退出全螢幕' : '⛶ 全螢幕';
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (e.target && (e.target.tagName === 'INPUT' && e.target.type === 'text')) return;
+      if (e.code === 'Digit1') { switchTab('mod1'); }
+      else if (e.code === 'Digit2') { switchTab('mod7a'); }
+      else if (e.code === 'Digit3') { switchTab('mod7b'); }
+      else if (e.code === 'Space') {
+        e.preventDefault();
+        togglePause();
+      } else if (e.key === 'm' || e.key === 'M') {
+        togglePredictionMask();
+      } else if (e.key === 'r' || e.key === 'R') {
+        resetActiveModule();
+      }
+    });
+
+    /* ==========================================================================
+       三、模組 1：動態溶解平衡與結晶模擬器 (MOD1)
+       ========================================================================== */
+    const MOD1 = {
+      solutes: {
+        KNO3: {
+          name: '硝酸鉀 KNO₃',
+          fn: (T) => 13.3 + 0.65 * T + 0.0162 * T * T,
+          yMax: 180, scoop: 20, initAdded: 60, initTemp: 30, decimals: 1,
+          hi: '#7DD3FC', mid: '#0284C7', stroke: '#0369A1', crystalFill: '#E0F2FE', crystalStroke: '#0284C7'
+        },
+        NaCl: {
+          name: '食鹽 NaCl',
+          fn: (T) => 35.7 + 0.03 * T + 0.00015 * T * T,
+          yMax: 60, scoop: 10, initAdded: 40, initTemp: 30, decimals: 1,
+          hi: '#99F6E4', mid: '#0D9488', stroke: '#115E59', crystalFill: '#F0FDFA', crystalStroke: '#0F766E'
+        },
+        CaOH2: {
+          name: '熟石灰 Ca(OH)₂',
+          fn: (T) => Math.max(0.05, 0.185 - 0.00115 * T),
+          yMax: 0.25, scoop: 0.05, initAdded: 0.18, initTemp: 25, decimals: 3,
+          hi: '#DDD6FE', mid: '#7C3AED', stroke: '#5B21B6', crystalFill: '#F5F3FF', crystalStroke: '#7C3AED'
+        }
+      },
+      soluteKey: 'KNO3',
+      temp: 30,
+      targetTemp: 30,
+      thermalGlow: 0,       // >0 加熱紅橘光暈，<0 冰浴藍光暈
+      addedMass: 60,
+      dissolvedMass: 47.38, // 動態趨近目標溶解量，讓溶解與結晶過程具真實時間感
+      trackEnabled: true,
+
+      // 微觀粒子與晶體模型
+      waterMols: [],
+      soluteParticles: [],  // state: 'crystal' | 'solution'
+      flashes: [],          // {x, y, color, r, alpha}
+      rateDissolve: 0,
+      rateCrystal: 0,
+      exchangeTimer: 0,
+      time: 0,
+
+      init() {
+        // 綁定溶質切換鈕
+        document.querySelectorAll('#m1SoluteBtns .pill-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            this.selectSolute(btn.dataset.solute);
+          });
+        });
+
+        const slider = document.getElementById('m1TempSlider');
+        slider.addEventListener('input', () => {
+          const val = parseFloat(slider.value);
+          this.thermalGlow = val > this.temp ? 1.0 : (val < this.temp ? -1.0 : 0);
+          this.temp = val;
+          this.targetTemp = val;
+          this.updateUI();
+        });
+
+        document.getElementById('m1Heat70').addEventListener('click', () => {
+          this.targetTemp = 70;
+          this.thermalGlow = 1.4;
+          showToast('🔥 開始加熱至 70°C，觀察溶解速率與曲線點右移！');
+        });
+
+        document.getElementById('m1Cool20').addEventListener('click', () => {
+          this.targetTemp = 20;
+          this.thermalGlow = -1.4;
+          showToast('❄️ 放入冰浴急冷至 20°C，觀察結晶析出！');
+        });
+
+        document.getElementById('m1AddScoop').addEventListener('click', () => {
+          const s = this.getSolute();
+          this.addedMass = Math.min(s.yMax * 0.98, +(this.addedMass + s.scoop).toFixed(4));
+          this.syncMicroCounts(true);
+          this.updateUI();
+        });
+
+        document.getElementById('m1SubScoop').addEventListener('click', () => {
+          const s = this.getSolute();
+          this.addedMass = Math.max(0, +(this.addedMass - s.scoop).toFixed(4));
+          this.dissolvedMass = Math.min(this.dissolvedMass, this.addedMass);
+          this.syncMicroCounts(false);
+          this.updateUI();
+        });
+
+        document.getElementById('m1ResetBtn').addEventListener('click', () => {
+          this.addedMass = 0;
+          this.dissolvedMass = 0;
+          this.syncMicroCounts(false);
+          this.updateUI();
+        });
+
+        const trackRow = document.getElementById('m1TrackToggle');
+        const toggleTrack = () => {
+          this.trackEnabled = !this.trackEnabled;
+          document.getElementById('m1TrackSwitch').classList.toggle('on', this.trackEnabled);
+          trackRow.setAttribute('aria-checked', String(this.trackEnabled));
+        };
+        trackRow.addEventListener('click', toggleTrack);
+        trackRow.addEventListener('keydown', (e) => { if (e.key === 'Enter') toggleTrack(); });
+
+        // 初始化背景水分子
+        for (let i = 0; i < 36; i++) {
+          this.waterMols.push({
+            x: Math.random(),
+            y: 0.08 + Math.random() * 0.62,
+            vx: (Math.random() - 0.5) * 0.18,
+            vy: (Math.random() - 0.5) * 0.18,
+            ang: Math.random() * Math.PI * 2
+          });
+        }
+
+        this.selectSolute('KNO3');
+      },
+
+      getSolute() {
+        return this.solutes[this.soluteKey];
+      },
+
+      selectSolute(key) {
+        this.soluteKey = key;
+        document.querySelectorAll('#m1SoluteBtns .pill-btn').forEach(b => {
+          b.classList.toggle('active', b.dataset.solute === key);
+        });
+        this.resetDefault();
+      },
+
+      resetDefault() {
+        const s = this.getSolute();
+        this.temp = s.initTemp;
+        this.targetTemp = s.initTemp;
+        this.addedMass = s.initAdded;
+        this.dissolvedMass = Math.min(this.addedMass, s.fn(this.temp));
+        this.thermalGlow = 0;
+        this.flashes = [];
+        document.getElementById('m1TempSlider').value = this.temp;
+        this.rebuildMicroParticles();
+        this.updateUI();
+      },
+
+      // 依目前溶解與沉澱比例重建微觀粒子（固定標記 3 顆追蹤粒子）
+      rebuildMicroParticles() {
+        const s = this.getSolute();
+        this.soluteParticles = [];
+        const totalVisual = Math.round(clamp((this.addedMass / s.yMax) * 58, 0, 56));
+        const satFraction = this.addedMass > 0 ? clamp(this.dissolvedMass / this.addedMass, 0, 1) : 0;
+        const solCount = Math.round(totalVisual * satFraction);
+        const crysCount = Math.max(0, totalVisual - solCount);
+
+        const makeP = (state, idx) => ({
+          state,
+          x: 0.12 + Math.random() * 0.76,
+          y: state === 'solution' ? (0.1 + Math.random() * 0.56) : 0.85,
+          vx: (Math.random() - 0.5) * 0.35,
+          vy: (Math.random() - 0.5) * 0.35,
+          slot: idx,
+          tracked: false,
+          trail: []
+        });
+
+        for (let i = 0; i < crysCount; i++) this.soluteParticles.push(makeP('crystal', i));
+        for (let i = 0; i < solCount; i++) this.soluteParticles.push(makeP('solution', i));
+
+        this.assignTrackedParticles();
+      },
+
+      assignTrackedParticles() {
+        const currentTracked = this.soluteParticles.filter(p => p.tracked).length;
+        if (currentTracked >= 3) return;
+        let need = 3 - currentTracked;
+        // 優先挑選晶體表層或溶液中粒子作為亮橘追蹤粒子
+        for (let i = this.soluteParticles.length - 1; i >= 0 && need > 0; i--) {
+          if (!this.soluteParticles[i].tracked) {
+            this.soluteParticles[i].tracked = true;
+            this.soluteParticles[i].trail = [];
+            need--;
+          }
+        }
+      },
+
+      syncMicroCounts(addedNew) {
+        const s = this.getSolute();
+        const targetTotal = Math.round(clamp((this.addedMass / s.yMax) * 58, 0, 56));
+        while (this.soluteParticles.length < targetTotal) {
+          this.soluteParticles.push({
+            state: 'crystal',
+            x: 0.25 + Math.random() * 0.5,
+            y: 0.78,
+            vx: (Math.random() - 0.5) * 0.3,
+            vy: -0.2,
+            slot: this.soluteParticles.length,
+            tracked: false,
+            trail: []
+          });
+        }
+        while (this.soluteParticles.length > targetTotal) {
+          // 盡量保留被追蹤的粒子
+          const idx = this.soluteParticles.findIndex(p => !p.tracked);
+          this.soluteParticles.splice(idx >= 0 ? idx : this.soluteParticles.length - 1, 1);
+        }
+        if (addedNew) this.assignTrackedParticles();
+      },
+
+      // 取得某晶體槽位的標準化座標 (0~1)
+      getCrystalSlotPos(slotIdx) {
+        const cols = 12;
+        const row = Math.floor(slotIdx / cols);
+        const col = slotIdx % cols;
+        const x = 0.14 + (col / (cols - 1)) * 0.72 + (row % 2 === 1 ? 0.025 : 0);
+        const y = 0.91 - row * 0.072;
+        return { x: clamp(x, 0.08, 0.92), y: clamp(y, 0.68, 0.93) };
+      },
+
+      update(dt) {
+        this.time += dt;
+        const s = this.getSolute();
+
+        // 1. 平滑動畫變溫（點擊 70°C 或 20°C 時讓學生親眼看見動態過程）
+        if (Math.abs(this.targetTemp - this.temp) > 0.05) {
+          const diff = this.targetTemp - this.temp;
+          const step = Math.sign(diff) * Math.min(Math.abs(diff), 18 * dt);
+          this.temp += step;
+          this.thermalGlow = diff > 0 ? 1.0 : -1.0;
+          document.getElementById('m1TempSlider').value = Math.round(this.temp);
+        } else {
+          this.thermalGlow *= Math.pow(0.18, dt);
+          if (Math.abs(this.thermalGlow) < 0.02) this.thermalGlow = 0;
+        }
+
+        // 2. 動態溶解／結晶質量演進
+        const satLimit = s.fn(this.temp);
+        const targetDissolved = Math.min(this.addedMass, satLimit);
+        const massGap = targetDissolved - this.dissolvedMass;
+        const maxRelaxSpeed = s.yMax * 0.14; // 每秒最多變化約 14% 滿量程
+        if (Math.abs(massGap) > s.yMax * 0.0005) {
+          const delta = Math.sign(massGap) * Math.min(Math.abs(massGap), maxRelaxSpeed * dt + Math.abs(massGap) * 1.4 * dt);
+          this.dissolvedMass = clamp(this.dissolvedMass + delta, 0, this.addedMass);
+        } else {
+          this.dissolvedMass = targetDissolved;
+        }
+
+        const undissolved = Math.max(0, this.addedMass - this.dissolvedMass);
+        const tempFactor = 0.35 + (this.temp / 80) * 0.65; // 溫度越高微觀熱交換速率越快
+        const tol = s.yMax * 0.006;
+
+        // 3. 計算雙向微觀速率（溶解速率 vs 析出速率，範圍 0~100）
+        if (this.addedMass <= 0.0001) {
+          this.rateDissolve = 0;
+          this.rateCrystal = 0;
+        } else if (massGap > tol) {
+          // 正在淨溶解
+          const boost = clamp((massGap / (s.yMax * 0.18)) * 45, 14, 48);
+          const base = 36 * tempFactor;
+          this.rateDissolve = clamp(base + boost, 15, 98);
+          this.rateCrystal = clamp(base * (this.dissolvedMass / Math.max(satLimit, 0.001)), 4, this.rateDissolve - 12);
+        } else if (massGap < -tol) {
+          // 正在淨結晶（過飽和析出）
+          const boost = clamp((-massGap / (s.yMax * 0.18)) * 48, 16, 52);
+          const base = 36 * tempFactor;
+          this.rateDissolve = clamp(base, 12, 65);
+          this.rateCrystal = clamp(base + boost, this.rateDissolve + 14, 98);
+        } else if (undissolved > s.yMax * 0.002) {
+          // 飽和且有杯底晶體 -> 真正的動態平衡！（速率相等且 > 0）
+          const eqRate = Math.round(35 + tempFactor * 42);
+          this.rateDissolve = eqRate;
+          this.rateCrystal = eqRate;
+        } else {
+          // 未飽和且已全數溶解，沒有晶體可供交換
+          this.rateDissolve = 0;
+          this.rateCrystal = 0;
+        }
+
+        // 4. 更新水分子與微觀溶質粒子運動
+        const speedMult = 0.55 + (this.temp / 80) * 1.35;
+        this.waterMols.forEach(w => {
+          w.x += w.vx * speedMult * dt;
+          w.y += w.vy * speedMult * dt;
+          w.ang += 1.2 * speedMult * dt;
+          if (w.x < 0.04) { w.x = 0.04; w.vx = Math.abs(w.vx); }
+          if (w.x > 0.96) { w.x = 0.96; w.vx = -Math.abs(w.vx); }
+          if (w.y < 0.06) { w.y = 0.06; w.vy = Math.abs(w.vy); }
+          if (w.y > 0.72) { w.y = 0.72; w.vy = -Math.abs(w.vy); }
+        });
+
+        // 調整微觀溶質粒子溶液/晶體比例，並執行真實的雙向交換事件
+        this.syncMicroCounts(false);
+        const totalVis = this.soluteParticles.length;
+        const desiredSol = this.addedMass > 0 ? Math.round(totalVis * clamp(this.dissolvedMass / this.addedMass, 0, 1)) : 0;
+
+        const crysList = this.soluteParticles.filter(p => p.state === 'crystal');
+        const solList = this.soluteParticles.filter(p => p.state === 'solution');
+
+        // 確保晶體槽位整齊排列
+        crysList.forEach((p, i) => { p.slot = i; });
+
+        this.exchangeTimer += dt * (0.7 + tempFactor * 1.4);
+        if (this.exchangeTimer >= 0.24) {
+          this.exchangeTimer = 0;
+
+          if (solList.length < desiredSol && crysList.length > 0) {
+            // 淨溶解：從晶體頂部挑一顆脫離向上游
+            const p = crysList[crysList.length - 1];
+            const pos = this.getCrystalSlotPos(p.slot);
+            p.state = 'solution';
+            p.x = pos.x;
+            p.y = pos.y - 0.04;
+            p.vx = (Math.random() - 0.5) * 0.42;
+            p.vy = -(0.22 + Math.random() * 0.22);
+            this.flashes.push({ x: p.x, y: pos.y, color: '#10B981', r: 4, alpha: 0.95 });
+          } else if (solList.length > desiredSol && solList.length > 0) {
+            // 淨結晶：挑最靠近底部的溶液粒子附著成晶體
+            solList.sort((a, b) => b.y - a.y);
+            const p = solList[0];
+            p.state = 'crystal';
+            p.slot = crysList.length;
+            const pos = this.getCrystalSlotPos(p.slot);
+            this.flashes.push({ x: pos.x, y: pos.y, color: '#2563EB', r: 4, alpha: 0.95 });
+          } else if (this.rateDissolve > 0 && crysList.length > 0 && solList.length > 0) {
+            // 動態平衡雙向等速交換！讓 1 顆脫離、同時 1 顆附著（優先讓追蹤粒子參與，教學效果極佳）
+            const crysTracked = crysList.find(p => p.tracked);
+            const solTrackedNear = solList.find(p => p.tracked && p.y > 0.45);
+
+            const detachP = (crysTracked && Math.random() < 0.65) ? crysTracked : crysList[crysList.length - 1];
+            const attachP = (solTrackedNear && Math.random() < 0.65) ? solTrackedNear : solList[Math.floor(Math.random() * solList.length)];
+
+            if (detachP && attachP) {
+              const dPos = this.getCrystalSlotPos(detachP.slot);
+              detachP.state = 'solution';
+              detachP.x = dPos.x;
+              detachP.y = dPos.y - 0.04;
+              detachP.vx = (Math.random() - 0.5) * 0.45;
+              detachP.vy = -(0.24 + Math.random() * 0.2);
+              this.flashes.push({ x: dPos.x, y: dPos.y, color: '#10B981', r: 4, alpha: 0.92 });
+
+              attachP.state = 'crystal';
+              attachP.slot = detachP.slot;
+              const aPos = this.getCrystalSlotPos(attachP.slot);
+              this.flashes.push({ x: aPos.x, y: aPos.y, color: '#2563EB', r: 4, alpha: 0.92 });
+            }
+          }
+        }
+
+        // 更新所有溶質粒子位置與追蹤軌跡
+        this.soluteParticles.forEach(p => {
+          if (p.state === 'solution') {
+            p.x += p.vx * speedMult * dt;
+            p.y += p.vy * speedMult * dt;
+            if (p.x < 0.06) { p.x = 0.06; p.vx = Math.abs(p.vx); }
+            if (p.x > 0.94) { p.x = 0.94; p.vx = -Math.abs(p.vx); }
+            if (p.y < 0.07) { p.y = 0.07; p.vy = Math.abs(p.vy); }
+            if (p.y > 0.69) { p.y = 0.69; p.vy = -Math.abs(p.vy); }
+          } else {
+            const target = this.getCrystalSlotPos(p.slot);
+            p.x += (target.x - p.x) * Math.min(1, dt * 8);
+            p.y += (target.y - p.y) * Math.min(1, dt * 8);
+          }
+
+          if (p.tracked) {
+            p.trail.push({ x: p.x, y: p.y });
+            if (p.trail.length > 26) p.trail.shift();
+          }
+        });
+
+        // 更新閃光波紋
+        for (let i = this.flashes.length - 1; i >= 0; i--) {
+          const f = this.flashes[i];
+          f.r += 34 * dt;
+          f.alpha -= 1.65 * dt;
+          if (f.alpha <= 0) this.flashes.splice(i, 1);
+        }
+
+        this.updateUI();
+      },
+
+      updateUI() {
+        const s = this.getSolute();
+        const dec = s.decimals;
+        const sat = s.fn(this.temp);
+        const undissolved = Math.max(0, this.addedMass - this.dissolvedMass);
+        const pPct = (this.dissolvedMass / (this.dissolvedMass + 100)) * 100;
+
+        document.getElementById('m1TempVal').textContent = `${this.temp.toFixed(1)} °C`;
+        document.getElementById('m1AddedVal').textContent = `${this.addedMass.toFixed(dec)} g`;
+        document.getElementById('m1SatLimitBadge').textContent = `目前飽和點：${sat.toFixed(dec)} g`;
+
+        // 速率條更新
+        document.getElementById('m1BarDissolve').style.width = `${Math.round(this.rateDissolve)}%`;
+        document.getElementById('m1BarCrystal').style.width = `${Math.round(this.rateCrystal)}%`;
+        document.getElementById('m1NumDissolve').textContent = Math.round(this.rateDissolve);
+        document.getElementById('m1NumCrystal').textContent = Math.round(this.rateCrystal);
+
+        const rStat = document.getElementById('m1RateStatus');
+        if (this.rateDissolve === 0 && this.rateCrystal === 0) {
+          rStat.className = 'eq-status-banner unsat';
+          rStat.textContent = this.addedMass <= 0.0001 ? '💧 純水狀態（尚未加入溶質）' : '💧 未飽和：溶質已全數溶解，杯底無固體';
+        } else if (this.rateDissolve > this.rateCrystal + 3) {
+          rStat.className = 'eq-status-banner dissolving';
+          rStat.textContent = '⬆ 溶解速率 ＞ 析出速率（正在溶解中…）';
+        } else if (this.rateCrystal > this.rateDissolve + 3) {
+          rStat.className = 'eq-status-banner crystal';
+          rStat.textContent = '⬇ 析出速率 ＞ 溶解速率（正在結晶析出！）';
+        } else {
+          rStat.className = 'eq-status-banner balanced';
+          rStat.textContent = '⚖️ 溶解速率 ＝ 析出速率（動態平衡！）';
+        }
+
+        // 右側定量資訊卡
+        const stEl = document.getElementById('m1StateVal');
+        if (this.addedMass <= 0.0001) {
+          stEl.textContent = '純水';
+          stEl.style.color = '#64748B';
+        } else if (this.addedMass < sat - s.yMax * 0.005) {
+          stEl.textContent = '未飽和溶液';
+          stEl.style.color = '#0284C7';
+        } else if (Math.abs(this.addedMass - sat) <= s.yMax * 0.005) {
+          stEl.textContent = '剛好飽和';
+          stEl.style.color = '#059669';
+        } else {
+          stEl.textContent = '飽和（含沉澱）';
+          stEl.style.color = '#DC2626';
+        }
+
+        document.getElementById('m1DissolvedVal').textContent = `${this.dissolvedMass.toFixed(dec)} g`;
+        document.getElementById('m1UndissolvedVal').textContent = `${undissolved.toFixed(dec)} g`;
+        document.getElementById('m1SolubilityVal').textContent = `${sat.toFixed(dec)} g/100g水`;
+        document.getElementById('m1PercentVal').textContent = `${pPct.toFixed(dec === 3 ? 3 : 1)} %`;
+        document.getElementById('m1PercentFormula').textContent =
+          `${this.dissolvedMass.toFixed(dec)} ÷ (${this.dissolvedMass.toFixed(dec)} + 100) × 100% = ${pPct.toFixed(dec === 3 ? 3 : 1)}%`;
+      },
+
+      render() {
+        this.renderMacro();
+        this.renderMicro();
+        this.renderCurve();
+      },
+
+      renderMacro() {
+        const info = syncCanvas(document.getElementById('canvas1Macro'));
+        if (!info) return;
+        const { ctx, w, h } = info;
+        ctx.clearRect(0, 0, w, h);
+
+        const s = this.getSolute();
+        const cx = w * 0.45;
+        const beakerW = Math.min(168, w * 0.52);
+        const beakerH = 152;
+        const bx = cx - beakerW / 2;
+        const by = h - 38 - beakerH;
+        const bottomY = by + beakerH;
+
+        // 加熱火焰或藍色冰浴光暈
+        if (this.thermalGlow > 0.05) {
+          const g = ctx.createRadialGradient(cx, bottomY + 14, 6, cx, bottomY + 10, beakerW * 0.65);
+          g.addColorStop(0, `rgba(239, 68, 68, ${0.55 * Math.min(1, this.thermalGlow)})`);
+          g.addColorStop(0.5, `rgba(249, 115, 22, ${0.32 * Math.min(1, this.thermalGlow)})`);
+          g.addColorStop(1, 'rgba(249, 115, 22, 0)');
+          ctx.fillStyle = g;
+          ctx.fillRect(bx - 30, bottomY - 20, beakerW + 60, 56);
+          // 火焰圖示
+          ctx.fillStyle = '#EA580C';
+          ctx.font = '800 13px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('🔥🔥 加熱中 🔥🔥', cx, h - 10);
+        } else if (this.thermalGlow < -0.05) {
+          const a = Math.min(1, -this.thermalGlow);
+          const g = ctx.createRadialGradient(cx, bottomY + 10, 8, cx, bottomY + 6, beakerW * 0.7);
+          g.addColorStop(0, `rgba(59, 130, 246, ${0.45 * a})`);
+          g.addColorStop(1, 'rgba(59, 130, 246, 0)');
+          ctx.fillStyle = g;
+          ctx.fillRect(bx - 30, bottomY - 30, beakerW + 60, 62);
+          ctx.fillStyle = '#2563EB';
+          ctx.font = '800 13px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('❄️❄️ 冰浴降溫中 ❄️❄️', cx, h - 10);
+        } else {
+          // 實驗台線
+          ctx.fillStyle = '#E2DDD5';
+          ctx.fillRect(16, bottomY + 2, w - 32, 8);
+        }
+
+        // 水體（100g 水，隨濃度微調色深）
+        const liqH = beakerH * 0.68;
+        const liqY = bottomY - liqH;
+        const concRatio = clamp(this.dissolvedMass / s.yMax, 0, 1);
+        ctx.save();
+        roundRectPath(ctx, bx + 4, liqY, beakerW - 8, liqH - 3, 8);
+        ctx.fillStyle = `rgba(14, 165, 233, ${0.14 + concRatio * 0.24})`;
+        ctx.fill();
+        ctx.restore();
+
+        // 液面高光
+        ctx.beginPath();
+        ctx.moveTo(bx + 6, liqY);
+        ctx.lineTo(bx + beakerW - 6, liqY);
+        ctx.strokeStyle = '#38BDF8';
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+
+        // 杯底未溶解晶體堆積（高度與沉澱量成正比）
+        const undissolved = Math.max(0, this.addedMass - this.dissolvedMass);
+        if (undissolved > s.yMax * 0.002) {
+          const pileH = clamp((undissolved / (s.yMax * 0.75)) * 46, 7, 48);
+          ctx.beginPath();
+          ctx.moveTo(bx + 12, bottomY - 4);
+          ctx.quadraticCurveTo(cx, bottomY - 4 - pileH * 1.45, bx + beakerW - 12, bottomY - 4);
+          ctx.closePath();
+          ctx.fillStyle = s.crystalFill;
+          ctx.fill();
+          ctx.strokeStyle = s.crystalStroke;
+          ctx.lineWidth = 2;
+          ctx.stroke();
+
+          // 閃亮小晶體顆粒點綴
+          ctx.fillStyle = s.mid;
+          for (let i = 0; i < 8; i++) {
+            const px = bx + 26 + ((i * 19) % (beakerW - 52));
+            const py = bottomY - 7 - ((i * 7) % Math.max(4, Math.floor(pileH * 0.65)));
+            ctx.fillRect(px, py, 4, 4);
+          }
+        }
+
+        // 燒杯玻璃外框與刻度
+        ctx.strokeStyle = '#475569';
+        ctx.lineWidth = 3.2;
+        ctx.beginPath();
+        ctx.moveTo(bx - 6, by);
+        ctx.lineTo(bx, by + 6);
+        ctx.lineTo(bx, bottomY - 12);
+        ctx.quadraticCurveTo(bx, bottomY, bx + 12, bottomY);
+        ctx.lineTo(bx + beakerW - 12, bottomY);
+        ctx.quadraticCurveTo(bx + beakerW, bottomY, bx + beakerW, bottomY - 12);
+        ctx.lineTo(bx + beakerW, by + 6);
+        ctx.lineTo(bx + beakerW + 6, by);
+        ctx.stroke();
+
+        // 100g 水刻度標記
+        ctx.strokeStyle = '#94A3B8';
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.moveTo(bx + 8, liqY + 12);
+        ctx.lineTo(bx + 26, liqY + 12);
+        ctx.stroke();
+        ctx.fillStyle = '#64748B';
+        ctx.font = '700 11px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText('100g 水', bx + 10, liqY + 26);
+
+        // 右側動態溫度計
+        const tx = Math.min(w - 42, bx + beakerW + 38);
+        const tTop = by + 6;
+        const tBot = bottomY - 18;
+        const tH = tBot - tTop;
+        // 玻璃管
+        roundRectPath(ctx, tx - 6, tTop, 12, tH, 6);
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fill();
+        ctx.strokeStyle = '#64748B';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // 水銀柱高度
+        const frac = clamp(this.temp / 80, 0, 1);
+        const mercH = 12 + frac * (tH - 18);
+        const mercCol = this.temp > 50 ? '#EF4444' : (this.temp < 25 ? '#2563EB' : '#F59E0B');
+        roundRectPath(ctx, tx - 3, tBot - mercH, 6, mercH, 3);
+        ctx.fillStyle = mercCol;
+        ctx.fill();
+
+        // 溫度計液泡
+        ctx.beginPath();
+        ctx.arc(tx, tBot + 6, 11, 0, Math.PI * 2);
+        ctx.fillStyle = mercCol;
+        ctx.fill();
+        ctx.strokeStyle = '#475569';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.fillStyle = '#1E293B';
+        ctx.font = '900 12px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(`${Math.round(this.temp)}°C`, tx, tTop - 8);
+      },
+
+      renderMicro() {
+        const info = syncCanvas(document.getElementById('canvas1Micro'));
+        if (!info) return;
+        const { ctx, w, h } = info;
+        ctx.clearRect(0, 0, w, h);
+
+        const s = this.getSolute();
+
+        // 水背景漸層
+        const bg = ctx.createLinearGradient(0, 0, 0, h);
+        bg.addColorStop(0, '#F0F9FF');
+        bg.addColorStop(0.75, '#E0F2FE');
+        bg.addColorStop(1, '#CBD5E1');
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, w, h);
+
+        // 淡色半透明水分子背景熱運動
+        ctx.save();
+        ctx.globalAlpha = 0.35;
+        this.waterMols.forEach(wm => {
+          const wx = wm.x * w, wy = wm.y * h;
+          ctx.fillStyle = '#38BDF8';
+          ctx.beginPath();
+          ctx.arc(wx, wy, 4.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#FFFFFF';
+          ctx.beginPath();
+          ctx.arc(wx + Math.cos(wm.ang) * 5, wy + Math.sin(wm.ang) * 5, 2.5, 0, Math.PI * 2);
+          ctx.arc(wx + Math.cos(wm.ang + 1.8) * 5, wy + Math.sin(wm.ang + 1.8) * 5, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        ctx.restore();
+
+        // 晶體區底線標示
+        ctx.strokeStyle = 'rgba(100, 116, 139, 0.35)';
+        ctx.setLineDash([6, 4]);
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(12, h * 0.72);
+        ctx.lineTo(w - 12, h * 0.72);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.fillStyle = 'rgba(71, 85, 105, 0.75)';
+        ctx.font = '800 12px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText('💧 溶液區（自由游動溶質粒子）', 12, 20);
+        ctx.fillText('💎 杯底晶體點陣表面', 12, h * 0.72 + 16);
+
+        // 繪製閃光波紋（溶解綠光 / 析出藍光）
+        this.flashes.forEach(f => {
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(f.x * w, f.y * h, f.r, 0, Math.PI * 2);
+          ctx.strokeStyle = f.color;
+          ctx.globalAlpha = Math.max(0, f.alpha);
+          ctx.lineWidth = 3;
+          ctx.stroke();
+          ctx.restore();
+        });
+
+        // 繪製所有溶質粒子（先畫一般粒子，再畫橘光追蹤粒子與軌跡）
+        this.soluteParticles.forEach(p => {
+          if (p.tracked && this.trackEnabled) return;
+          const px = p.x * w, py = p.y * h;
+          drawGlossyBall(ctx, px, py, p.state === 'crystal' ? 9.5 : 8.5, s.hi, s.mid, s.stroke);
+        });
+
+        if (this.trackEnabled) {
+          this.soluteParticles.forEach(p => {
+            if (!p.tracked) return;
+            // 淡橘軌跡
+            if (p.trail.length > 2) {
+              ctx.save();
+              ctx.beginPath();
+              p.trail.forEach((pt, idx) => {
+                if (idx === 0) ctx.moveTo(pt.x * w, pt.y * h);
+                else ctx.lineTo(pt.x * w, pt.y * h);
+              });
+              ctx.strokeStyle = 'rgba(249, 115, 22, 0.45)';
+              ctx.lineWidth = 3;
+              ctx.lineCap = 'round';
+              ctx.stroke();
+              ctx.restore();
+            }
+            const px = p.x * w, py = p.y * h;
+            // 外發光環
+            ctx.beginPath();
+            ctx.arc(px, py, 14, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(249, 115, 22, 0.24)';
+            ctx.fill();
+            drawGlossyBall(ctx, px, py, 10, '#FED7AA', '#F97316', '#C2410C', '★');
+          });
+        }
+      },
+
+      renderCurve() {
+        const info = syncCanvas(document.getElementById('canvas1Curve'));
+        if (!info) return;
+        const { ctx, w, h } = info;
+        ctx.clearRect(0, 0, w, h);
+
+        const s = this.getSolute();
+        const padL = 56, padR = 22, padT = 26, padB = 38;
+        const cw = w - padL - padR;
+        const ch = h - padT - padB;
+
+        const mapX = (T) => padL + (T / 80) * cw;
+        const mapY = (g) => padT + (1 - clamp(g / s.yMax, 0, 1)) * ch;
+
+        // 著色區分「飽和析出區（上方暖紅）」與「未飽和區（下方淺藍）」
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(mapX(0), padT);
+        ctx.lineTo(mapX(80), padT);
+        for (let T = 80; T >= 0; T -= 2) ctx.lineTo(mapX(T), mapY(s.fn(T)));
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(254, 226, 226, 0.45)';
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(mapX(0), padT + ch);
+        for (let T = 0; T <= 80; T += 2) ctx.lineTo(mapX(T), mapY(s.fn(T)));
+        ctx.lineTo(mapX(80), padT + ch);
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(224, 242, 254, 0.5)';
+        ctx.fill();
+        ctx.restore();
+
+        // 格線與座標刻度
+        ctx.font = '700 11px monospace';
+        ctx.fillStyle = '#64748B';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        for (let i = 0; i <= 4; i++) {
+          const val = (s.yMax / 4) * i;
+          const y = mapY(val);
+          ctx.beginPath();
+          ctx.moveTo(padL, y);
+          ctx.lineTo(padL + cw, y);
+          ctx.strokeStyle = '#E2E8F0';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+          ctx.fillText(val.toFixed(s.decimals === 3 ? 2 : 0), padL - 6, y);
+        }
+
+        ctx.textAlign = 'center';
+        for (let T = 0; T <= 80; T += 20) {
+          const x = mapX(T);
+          ctx.beginPath();
+          ctx.moveTo(x, padT);
+          ctx.lineTo(x, padT + ch);
+          ctx.strokeStyle = '#E2E8F0';
+          ctx.stroke();
+          ctx.fillText(`${T}°C`, x, padT + ch + 14);
+        }
+
+        // 區域浮水印
+        ctx.font = '800 12px sans-serif';
+        ctx.fillStyle = 'rgba(185, 28, 28, 0.72)';
+        ctx.textAlign = 'left';
+        ctx.fillText('飽和析出區', padL + 8, padT + 16);
+        ctx.fillStyle = 'rgba(3, 105, 161, 0.72)';
+        ctx.textAlign = 'right';
+        ctx.fillText('未飽和區', padL + cw - 8, padT + ch - 12);
+
+        // 座標軸線與標題
+        ctx.strokeStyle = '#475569';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(padL, padT);
+        ctx.lineTo(padL, padT + ch);
+        ctx.lineTo(padL + cw, padT + ch);
+        ctx.stroke();
+
+        ctx.fillStyle = '#334155';
+        ctx.font = '800 11px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText('溶解度 (g/100g水)', 6, 13);
+        ctx.textAlign = 'center';
+        ctx.fillText('溫度 (°C)', padL + cw / 2, h - 7);
+
+        // 繪製溶解度曲線
+        ctx.beginPath();
+        for (let T = 0; T <= 80; T += 1) {
+          const x = mapX(T), y = mapY(s.fn(T));
+          if (T === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.strokeStyle = s.stroke;
+        ctx.lineWidth = 3.5;
+        ctx.stroke();
+
+        // 目前狀態點 (T, addedMass) 與垂直析出箭頭
+        const curX = mapX(this.temp);
+        const curY = mapY(this.addedMass);
+        const satG = s.fn(this.temp);
+        const satY = mapY(satG);
+
+        if (this.addedMass > satG + s.yMax * 0.004) {
+          // 垂直紅色虛線箭頭連至飽和曲線
+          ctx.save();
+          ctx.beginPath();
+          ctx.moveTo(curX, curY);
+          ctx.lineTo(curX, satY);
+          ctx.strokeStyle = '#DC2626';
+          ctx.lineWidth = 3;
+          ctx.setLineDash([5, 4]);
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          // 箭頭端
+          ctx.fillStyle = '#DC2626';
+          ctx.beginPath();
+          ctx.moveTo(curX, satY);
+          ctx.lineTo(curX - 6, satY - 10);
+          ctx.lineTo(curX + 6, satY - 10);
+          ctx.closePath();
+          ctx.fill();
+
+          // 析出量標籤（預測遮罩開時改為問號）
+          const precip = (this.addedMass - satG).toFixed(s.decimals);
+          const lbl = APP.masked ? '析出：? g' : `析出：${precip} g`;
+          const midY = (curY + satY) / 2;
+          const alignRight = curX > padL + cw * 0.62;
+          const bx = alignRight ? curX - 96 : curX + 10;
+          roundRectPath(ctx, bx, midY - 13, 88, 26, 7);
+          ctx.fillStyle = '#FEF2F2';
+          ctx.fill();
+          ctx.strokeStyle = '#DC2626';
+          ctx.lineWidth = 1.6;
+          ctx.stroke();
+          ctx.fillStyle = '#B91C1C';
+          ctx.font = '900 12px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(lbl, bx + 44, midY + 1);
+          ctx.restore();
+        }
+
+        // 飽和線上對應點
+        ctx.beginPath();
+        ctx.arc(curX, satY, 4.5, 0, Math.PI * 2);
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fill();
+        ctx.strokeStyle = s.stroke;
+        ctx.lineWidth = 2.2;
+        ctx.stroke();
+
+        // 發光目前點
+        ctx.beginPath();
+        ctx.arc(curX, curY, 12, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(234, 88, 12, 0.22)';
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(curX, curY, 6.5, 0, Math.PI * 2);
+        ctx.fillStyle = '#EA580C';
+        ctx.fill();
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+    };
+
+    /* ==========================================================================
+       四、模組 7A：分子碰撞加速器（反應速率四大變因） (MOD7A)
+       ========================================================================== */
+    const MOD7A = {
+      mode: 'homo',         // 'homo' | 'solid'
+      temp: 40,             // 20 ~ 100
+      conc: 24,             // 12 ~ 40
+      solidPieces: 1,       // 1 (大塊狀 8x8) | 4 (中碎塊 4x4) | 16 (細粉末 2x2)
+      catalyst: false,
+
+      elapsed: 0,
+      maxTime: 25,
+      totalTarget: 24,
+      reactedCount: 0,
+      totalCollisions: 0,
+      effectiveCollisions: 0,
+      finished: false,
+
+      particles: [],        // 均相模式 A/B/AB，固體模式酸粒子
+      solidBlocks: [],      // 固體模式 64 顆晶格粒子
+      bubbles: [],          // 固體模式上升氣泡
+      ripples: [],          // 碰撞波紋 {x,y,r,color,alpha}
+
+      series: [],           // [{t, pct}]
+      savedCurves: [],      // 最多 3 條 {label, color, points}
+      curvePalette: ['#2563EB', '#D97706', '#7C3AED'],
+
+      init() {
+        document.querySelectorAll('#m7aModeBtns .pill-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            this.mode = btn.dataset.mode;
+            document.querySelectorAll('#m7aModeBtns .pill-btn').forEach(b => b.classList.toggle('active', b === btn));
+            document.getElementById('m7aSurfaceBox').style.display = this.mode === 'solid' ? 'block' : 'none';
+            document.getElementById('m7aConcLabel').textContent =
+              this.mode === 'solid' ? '🧪 稀鹽酸濃度（酸粒子數）' : '🧪 反應物濃度（A/B 對數）';
+            document.getElementById('m7aTankTitle').textContent =
+              this.mode === 'solid' ? '🪨 固體表面積碰撞反應槽 (CaCO₃ + 2HCl)' : '⚡ 微觀碰撞反應槽 (A + B → AB)';
+            document.getElementById('m7aLegend').innerHTML = this.mode === 'solid'
+              ? '<span>⬜ 外露表面(可撞擊)</span><span>⬛ 內部被包覆</span><span>🟠 酸粒子 H⁺</span><span>🫧 CO₂ 氣泡</span>'
+              : '<span>🔵 A 反應物</span><span>🟠 B 反應物</span><span>🟢 AB 生成物</span><span>✨ 金波紋=有效碰撞</span>';
+            this.savedCurves = [];
+            this.renderLegend();
+            this.restartSim();
+          });
+        });
+
+        const tSlider = document.getElementById('m7aTempSlider');
+        tSlider.addEventListener('input', () => {
+          const oldSpeed = this.getSpeedFactor(this.temp);
+          this.temp = parseInt(tSlider.value, 10);
+          const ratio = this.getSpeedFactor(this.temp) / oldSpeed;
+          // 動態調整粒子速度（讓老師可即時拖動觀察加速！）
+          this.particles.forEach(p => { p.vx *= ratio; p.vy *= ratio; });
+          this.updateLabels();
+        });
+
+        const cSlider = document.getElementById('m7aConcSlider');
+        cSlider.addEventListener('input', () => {
+          this.conc = parseInt(cSlider.value, 10);
+          this.updateLabels();
+          this.restartSim();
+        });
+
+        document.querySelectorAll('#m7aSizeBtns .pill-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            this.solidPieces = parseInt(btn.dataset.size, 10);
+            document.querySelectorAll('#m7aSizeBtns .pill-btn').forEach(b => b.classList.toggle('active', b === btn));
+            this.restartSim();
+          });
+        });
+
+        const catRow = document.getElementById('m7aCatToggle');
+        const toggleCat = () => {
+          this.catalyst = !this.catalyst;
+          document.getElementById('m7aCatSwitch').classList.toggle('on', this.catalyst);
+          catRow.setAttribute('aria-checked', String(this.catalyst));
+          this.updateLabels();
+        };
+        catRow.addEventListener('click', toggleCat);
+        catRow.addEventListener('keydown', (e) => { if (e.key === 'Enter') toggleCat(); });
+
+        document.getElementById('m7aRestartBtn').addEventListener('click', () => this.restartSim());
+
+        document.getElementById('m7aSaveCurveBtn').addEventListener('click', () => {
+          if (this.series.length < 3) {
+            showToast('請先讓反應進行幾秒後再保留曲線！');
+            return;
+          }
+          const sizeName = this.solidPieces === 1 ? '大塊狀' : (this.solidPieces === 4 ? '中碎塊' : '細粉末');
+          const lbl = this.mode === 'solid'
+            ? `${sizeName} ${this.temp}°C${this.catalyst ? '+催化' : ''}`
+            : `${this.temp}°C ${this.conc}對 ${this.catalyst ? '+催化劑' : '無催化'}`;
+          if (this.savedCurves.length >= 3) this.savedCurves.shift();
+          const color = this.curvePalette[this.savedCurves.length % this.curvePalette.length];
+          this.savedCurves.push({ label: lbl, color, points: this.series.map(pt => ({ ...pt })) });
+          this.renderLegend();
+          showToast(`📌 已保留對照曲線：「${lbl}」`);
+        });
+
+        document.getElementById('m7aClearCurveBtn').addEventListener('click', () => {
+          this.savedCurves = [];
+          this.renderLegend();
+          showToast('已清除全部歷史對照線');
+        });
+
+        this.updateLabels();
+        this.restartSim();
+      },
+
+      getSpeedFactor(T) {
+        return 70 + (T - 20) * 1.95; // px/sec 基準速度
+      },
+
+      getThresholdEnergy() {
+        // 基準活化能門檻，催化劑開啟時降低約 45%
+        return this.catalyst ? 0.42 : 0.76;
+      },
+
+      getPassRatioPercent() {
+        // 根據溫度與活化能計算「動能達標粒子比例 %」（類波茲曼分佈平滑估算）
+        const ea = this.getThresholdEnergy();
+        const kT = 0.22 + (this.temp / 100) * 0.56;
+        const pct = Math.round(clamp(Math.exp(-ea / kT) * 100 * 1.38, 4, 96));
+        return pct;
+      },
+
+      updateLabels() {
+        document.getElementById('m7aTempVal').textContent = `${this.temp} °C`;
+        document.getElementById('m7aConcVal').textContent =
+          this.mode === 'solid' ? `${this.conc} 顆酸` : `${this.conc} 對`;
+        document.getElementById('m7aPassRatioBadge').textContent =
+          `動能達標：${this.getPassRatioPercent()}%`;
+        document.getElementById('m7aSaveCurveBtn').textContent =
+          `📌 保留曲線對照 (${this.savedCurves.length}/3)`;
+      },
+
+      renderLegend() {
+        this.updateLabels();
+        const wrap = document.getElementById('m7aHistLegend');
+        let html = `<span class="hist-tag"><span class="hist-line" style="background:#0F766E;"></span>目前實線</span>`;
+        this.savedCurves.forEach(c => {
+          html += `<span class="hist-tag"><span class="hist-line" style="background:${c.color}; border-top:2px dashed ${c.color}; height:0;"></span>${c.label}</span>`;
+        });
+        wrap.innerHTML = html;
+      },
+
+      restartSim() {
+        this.elapsed = 0;
+        this.reactedCount = 0;
+        this.totalCollisions = 0;
+        this.effectiveCollisions = 0;
+        this.finished = false;
+        this.particles = [];
+        this.solidBlocks = [];
+        this.bubbles = [];
+        this.ripples = [];
+        this.series = [{ t: 0, pct: 0 }];
+
+        const canvas = document.getElementById('canvas7aTank');
+        const w = (canvas && canvas.clientWidth > 60) ? canvas.clientWidth : 440;
+        const h = (canvas && canvas.clientHeight > 60) ? canvas.clientHeight : 400;
+        const baseSpd = this.getSpeedFactor(this.temp);
+
+        if (this.mode === 'homo') {
+          this.totalTarget = this.conc;
+          const spawn = (type) => {
+            const ang = Math.random() * Math.PI * 2;
+            const spd = baseSpd * (0.65 + Math.random() * 0.75);
+            return {
+              type,
+              x: 24 + Math.random() * (w - 48),
+              y: 24 + Math.random() * (h - 48),
+              vx: Math.cos(ang) * spd,
+              vy: Math.sin(ang) * spd,
+              r: type === 'A' ? 9 : 8.5,
+              energyBias: 0.55 + Math.random() * 0.9,
+              ang: Math.random() * Math.PI * 2
+            };
+          };
+          for (let i = 0; i < this.conc; i++) {
+            this.particles.push(spawn('A'));
+            this.particles.push(spawn('B'));
+          }
+        } else {
+          // 模式 B：總數嚴格固定 64 顆固體粒子！
+          this.totalTarget = 64;
+          const cell = 13;
+          const buildCluster = (cx, cy, dim) => {
+            const half = (dim * cell) / 2;
+            const clusterId = `${cx}_${cy}`;
+            for (let r = 0; r < dim; r++) {
+              for (let c = 0; c < dim; c++) {
+                this.solidBlocks.push({
+                  clusterId, r, c, dim,
+                  x: cx - half + (c + 0.5) * cell,
+                  y: cy - half + (r + 0.5) * cell,
+                  size: cell - 1.5,
+                  alive: true,
+                  exposed: false
+                });
+              }
+            }
+          };
+
+          if (this.solidPieces === 1) {
+            buildCluster(w * 0.5, h * 0.54, 8);
+          } else if (this.solidPieces === 4) {
+            const dx = Math.min(w * 0.22, 95), dy = Math.min(h * 0.2, 80);
+            buildCluster(w * 0.5 - dx, h * 0.54 - dy, 4);
+            buildCluster(w * 0.5 + dx, h * 0.54 - dy, 4);
+            buildCluster(w * 0.5 - dx, h * 0.54 + dy, 4);
+            buildCluster(w * 0.5 + dx, h * 0.54 + dy, 4);
+          } else {
+            // 16 粒細粉末（每粒 2x2 = 4 顆，共 64 顆，全部外露）
+            const cols = 4, rows = 4;
+            const spanW = Math.min(w - 90, 290);
+            const spanH = Math.min(h - 90, 250);
+            const x0 = w * 0.5 - spanW / 2;
+            const y0 = h * 0.54 - spanH / 2;
+            for (let rr = 0; rr < rows; rr++) {
+              for (let cc = 0; cc < cols; cc++) {
+                buildCluster(x0 + (cc / (cols - 1)) * spanW, y0 + (rr / (rows - 1)) * spanH, 2);
+              }
+            }
+          }
+
+          this.recalcSolidExposure();
+
+          // 生成酸粒子（避開中心固體區域邊緣生成）
+          for (let i = 0; i < this.conc; i++) {
+            const ang = Math.random() * Math.PI * 2;
+            const spd = baseSpd * (0.75 + Math.random() * 0.65);
+            const edge = i % 4;
+            let px = 22 + Math.random() * (w - 44);
+            let py = 22 + Math.random() * (h - 44);
+            if (edge === 0) py = 18 + Math.random() * 35;
+            else if (edge === 1) py = h - 18 - Math.random() * 35;
+            else if (edge === 2) px = 18 + Math.random() * 35;
+            else px = w - 18 - Math.random() * 35;
+            this.particles.push({
+              type: 'H', x: px, y: py,
+              vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd,
+              r: 6.5, energyBias: 0.6 + Math.random() * 0.85, cooldown: 0
+            });
+          }
+        }
+
+        this.updateStatsDOM();
+      },
+
+      // 判定每一顆固體是否為「外露表面粒子」（上下左右只要有一側空著即外露）
+      recalcSolidExposure() {
+        const aliveSet = new Set();
+        this.solidBlocks.forEach(b => {
+          if (b.alive) aliveSet.add(`${b.clusterId}_${b.r}_${b.c}`);
+        });
+        let exposedCnt = 0;
+        let aliveCnt = 0;
+        this.solidBlocks.forEach(b => {
+          if (!b.alive) { b.exposed = false; return; }
+          aliveCnt++;
+          const n1 = aliveSet.has(`${b.clusterId}_${b.r - 1}_${b.c}`);
+          const n2 = aliveSet.has(`${b.clusterId}_${b.r + 1}_${b.c}`);
+          const n3 = aliveSet.has(`${b.clusterId}_${b.r}_${b.c - 1}`);
+          const n4 = aliveSet.has(`${b.clusterId}_${b.r}_${b.c + 1}`);
+          b.exposed = !(n1 && n2 && n3 && n4);
+          if (b.exposed) exposedCnt++;
+        });
+        const pct = aliveCnt > 0 ? Math.round((exposedCnt / aliveCnt) * 100) : 0;
+        document.getElementById('m7aExposedInfo').textContent =
+          `目前外露可碰撞表面粒子：${exposedCnt} / ${aliveCnt} (${pct}%)`;
+      },
+
+      update(dt) {
+        const canvas = document.getElementById('canvas7aTank');
+        const w = (canvas && canvas.clientWidth > 60) ? canvas.clientWidth : 440;
+        const h = (canvas && canvas.clientHeight > 60) ? canvas.clientHeight : 400;
+
+        // 持續更新波紋與氣泡動畫
+        for (let i = this.ripples.length - 1; i >= 0; i--) {
+          const rp = this.ripples[i];
+          rp.r += 48 * dt;
+          rp.alpha -= 2.1 * dt;
+          if (rp.alpha <= 0) this.ripples.splice(i, 1);
+        }
+        for (let i = this.bubbles.length - 1; i >= 0; i--) {
+          const bb = this.bubbles[i];
+          bb.y -= bb.vy * dt;
+          bb.x += Math.sin(bb.y * 0.1) * 12 * dt;
+          bb.alpha -= 0.35 * dt;
+          if (bb.y < -10 || bb.alpha <= 0) this.bubbles.splice(i, 1);
+        }
+
+        // 移動所有自由粒子並反彈牆壁
+        this.particles.forEach(p => {
+          p.x += p.vx * dt;
+          p.y += p.vy * dt;
+          if (p.cooldown > 0) p.cooldown -= dt;
+          if (p.type === 'AB') p.ang += 1.4 * dt;
+          if (p.x < p.r + 4) { p.x = p.r + 4; p.vx = Math.abs(p.vx); }
+          if (p.x > w - p.r - 4) { p.x = w - p.r - 4; p.vx = -Math.abs(p.vx); }
+          if (p.y < p.r + 4) { p.y = p.r + 4; p.vy = Math.abs(p.vy); }
+          if (p.y > h - p.r - 4) { p.y = h - p.r - 4; p.vy = -Math.abs(p.vy); }
+        });
+
+        if (this.finished) return;
+
+        this.elapsed += dt;
+        const ea = this.getThresholdEnergy();
+        const maxRefSpd = this.getSpeedFactor(100);
+
+        if (this.mode === 'homo') {
+          // A 與 B 碰撞偵測
+          const toRemove = new Set();
+          const newAB = [];
+          for (let i = 0; i < this.particles.length; i++) {
+            if (toRemove.has(i)) continue;
+            const a = this.particles[i];
+            for (let j = i + 1; j < this.particles.length; j++) {
+              if (toRemove.has(j)) continue;
+              const b = this.particles[j];
+              const dx = b.x - a.x, dy = b.y - a.y;
+              const minD = a.r + b.r;
+              const d2 = dx * dx + dy * dy;
+              if (d2 < minD * minD && d2 > 0.01) {
+                const dist = Math.sqrt(d2);
+                const nx = dx / dist, ny = dy / dist;
+                // 分離重疊
+                const overlap = (minD - dist) * 0.52;
+                a.x -= nx * overlap; a.y -= ny * overlap;
+                b.x += nx * overlap; b.y += ny * overlap;
+
+                // 彈性反彈
+                const rvx = b.vx - a.vx, rvy = b.vy - a.vy;
+                const velAlongN = rvx * nx + rvy * ny;
+                if (velAlongN < 0) {
+                  a.vx += velAlongN * nx; a.vy += velAlongN * ny;
+                  b.vx -= velAlongN * nx; b.vy -= velAlongN * ny;
+                }
+
+                // 若為 A + B 異種碰撞，判定是否有效碰撞
+                if ((a.type === 'A' && b.type === 'B') || (a.type === 'B' && b.type === 'A')) {
+                  this.totalCollisions++;
+                  const relSpd = Math.hypot(rvx, rvy);
+                  const energy = (relSpd / (maxRefSpd * 1.45)) * ((a.energyBias + b.energyBias) * 0.5) * (0.65 + Math.random() * 0.65);
+                  const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+
+                  if (energy >= ea) {
+                    this.effectiveCollisions++;
+                    this.reactedCount++;
+                    toRemove.add(i);
+                    toRemove.add(j);
+                    newAB.push({
+                      type: 'AB', x: mx, y: my,
+                      vx: (a.vx + b.vx) * 0.55, vy: (a.vy + b.vy) * 0.55,
+                      r: 12, ang: Math.random() * Math.PI * 2, energyBias: 1
+                    });
+                    this.ripples.push({ x: mx, y: my, r: 6, color: '#F59E0B', alpha: 1.0 });
+                    break;
+                  } else {
+                    this.ripples.push({ x: mx, y: my, r: 4, color: '#94A3B8', alpha: 0.5 });
+                  }
+                }
+              }
+            }
+          }
+
+          if (toRemove.size > 0) {
+            this.particles = this.particles.filter((_, idx) => !toRemove.has(idx)).concat(newAB);
+          }
+        } else {
+          // 模式 B：酸粒子撞擊「外露表面」固體粒子
+          let exposureChanged = false;
+          for (let i = 0; i < this.particles.length; i++) {
+            const acid = this.particles[i];
+            if (acid.cooldown > 0) continue;
+            for (let j = 0; j < this.solidBlocks.length; j++) {
+              const blk = this.solidBlocks[j];
+              if (!blk.alive) continue;
+              const dx = acid.x - blk.x, dy = acid.y - blk.y;
+              const hitD = acid.r + blk.size * 0.56;
+              if (Math.abs(dx) < hitD && Math.abs(dy) < hitD) {
+                // 反彈酸粒子
+                if (Math.abs(dx) > Math.abs(dy)) acid.vx = Math.sign(dx || 1) * Math.abs(acid.vx);
+                else acid.vy = Math.sign(dy || 1) * Math.abs(acid.vy);
+                acid.cooldown = 0.09;
+
+                if (blk.exposed) {
+                  this.totalCollisions++;
+                  const spd = Math.hypot(acid.vx, acid.vy);
+                  const energy = (spd / (maxRefSpd * 1.1)) * acid.energyBias * (0.65 + Math.random() * 0.65);
+                  if (energy >= ea) {
+                    blk.alive = false;
+                    exposureChanged = true;
+                    this.effectiveCollisions++;
+                    this.reactedCount++;
+                    this.ripples.push({ x: blk.x, y: blk.y, r: 5, color: '#F59E0B', alpha: 0.95 });
+                    this.bubbles.push({ x: blk.x, y: blk.y, r: 4 + Math.random() * 3, vy: 45 + Math.random() * 25, alpha: 0.95 });
+                  } else {
+                    this.ripples.push({ x: blk.x, y: blk.y, r: 3, color: '#94A3B8', alpha: 0.45 });
+                  }
+                }
+                break;
+              }
+            }
+          }
+          if (exposureChanged) this.recalcSolidExposure();
+        }
+
+        // 紀錄時間序列（每 0.25 秒一筆）
+        const pct = (this.reactedCount / this.totalTarget) * 100;
+        const lastPt = this.series[this.series.length - 1];
+        if (!lastPt || this.elapsed - lastPt.t >= 0.22 || pct >= 100) {
+          this.series.push({ t: this.elapsed, pct });
+        }
+
+        if (this.reactedCount >= this.totalTarget || this.elapsed >= this.maxTime) {
+          this.finished = true;
+        }
+
+        this.updateStatsDOM();
+      },
+
+      updateStatsDOM() {
+        const pct = Math.round((this.reactedCount / this.totalTarget) * 100);
+        document.getElementById('m7aTimerBadge').textContent = `${this.elapsed.toFixed(1)} s`;
+        document.getElementById('m7aProgPct').textContent = `${pct}%`;
+        document.getElementById('m7aProgBar').style.width = `${pct}%`;
+        document.getElementById('m7aEffCount').textContent = this.effectiveCollisions;
+        document.getElementById('m7aTotCount').textContent = this.totalCollisions;
+      },
+
+      render() {
+        this.renderTank();
+        this.renderEnergyDiagram();
+        this.renderChart();
+      },
+
+      renderTank() {
+        const info = syncCanvas(document.getElementById('canvas7aTank'));
+        if (!info) return;
+        const { ctx, w, h } = info;
+        ctx.clearRect(0, 0, w, h);
+
+        // 淡背景溫度色調
+        const warmA = clamp((this.temp - 20) / 80, 0, 1);
+        ctx.fillStyle = `rgba(254, 243, 199, ${warmA * 0.28})`;
+        ctx.fillRect(0, 0, w, h);
+
+        // 催化劑背景淡綠光網格提示
+        if (this.catalyst) {
+          ctx.save();
+          ctx.strokeStyle = 'rgba(16, 185, 129, 0.14)';
+          ctx.lineWidth = 1.5;
+          for (let x = 24; x < w; x += 36) {
+            ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+          }
+          ctx.fillStyle = 'rgba(5, 150, 105, 0.78)';
+          ctx.font = '800 12px sans-serif';
+          ctx.textAlign = 'right';
+          ctx.fillText('⚡ 催化劑作用中（活化能門檻 -45%）', w - 12, 20);
+          ctx.restore();
+        }
+
+        // 固體模式：繪製晶格固體方塊（外露亮灰帶綠框 vs 內部深灰鎖定）
+        if (this.mode === 'solid') {
+          this.solidBlocks.forEach(b => {
+            if (!b.alive) return;
+            const hs = b.size / 2;
+            roundRectPath(ctx, b.x - hs, b.y - hs, b.size, b.size, 3);
+            ctx.fillStyle = b.exposed ? '#CBD5E1' : '#64748B';
+            ctx.fill();
+            ctx.strokeStyle = b.exposed ? '#0F766E' : '#334155';
+            ctx.lineWidth = b.exposed ? 1.8 : 1.2;
+            ctx.stroke();
+          });
+
+          // 上升 CO2 氣泡
+          this.bubbles.forEach(bb => {
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, bb.alpha);
+            ctx.beginPath();
+            ctx.arc(bb.x, bb.y, bb.r, 0, Math.PI * 2);
+            ctx.fillStyle = '#ECFDF5';
+            ctx.fill();
+            ctx.strokeStyle = '#10B981';
+            ctx.lineWidth = 1.6;
+            ctx.stroke();
+            ctx.restore();
+          });
+        }
+
+        // 碰撞波紋特效
+        this.ripples.forEach(rp => {
+          ctx.save();
+          ctx.globalAlpha = Math.max(0, rp.alpha);
+          ctx.beginPath();
+          ctx.arc(rp.x, rp.y, rp.r, 0, Math.PI * 2);
+          ctx.strokeStyle = rp.color;
+          ctx.lineWidth = rp.color === '#F59E0B' ? 3.2 : 1.6;
+          ctx.stroke();
+          ctx.restore();
+        });
+
+        // 自由粒子繪製
+        this.particles.forEach(p => {
+          if (p.type === 'A') {
+            drawGlossyBall(ctx, p.x, p.y, p.r, '#93C5FD', '#2563EB', '#1E3A8A', 'A');
+          } else if (p.type === 'B') {
+            drawGlossyBall(ctx, p.x, p.y, p.r, '#FDE68A', '#F59E0B', '#B45309', 'B');
+          } else if (p.type === 'AB') {
+            const dx = Math.cos(p.ang) * 7, dy = Math.sin(p.ang) * 7;
+            drawGlossyBall(ctx, p.x - dx, p.y - dy, 8.2, '#A7F3D0', '#10B981', '#065F46', 'A');
+            drawGlossyBall(ctx, p.x + dx, p.y + dy, 7.8, '#6EE7B7', '#059669', '#064E3B', 'B');
+          } else if (p.type === 'H') {
+            drawGlossyBall(ctx, p.x, p.y, p.r, '#FED7AA', '#EA580C', '#9A3412', 'H⁺');
+          }
+        });
+
+        if (this.finished) {
+          ctx.save();
+          roundRectPath(ctx, w / 2 - 125, h / 2 - 24, 250, 48, 14);
+          ctx.fillStyle = 'rgba(15, 118, 110, 0.92)';
+          ctx.fill();
+          ctx.fillStyle = '#FFFFFF';
+          ctx.font = '900 16px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('✅ 反應完成！可點左側保留曲線', w / 2, h / 2);
+          ctx.restore();
+        }
+      },
+
+      renderEnergyDiagram() {
+        const info = syncCanvas(document.getElementById('canvas7aEnergy'));
+        if (!info) return;
+        const { ctx, w, h } = info;
+        ctx.clearRect(0, 0, w, h);
+
+        const padL = 36, padR = 16, padT = 24, padB = 26;
+        const cw = w - padL - padR;
+        const ch = h - padT - padB;
+        const baseY = padT + ch * 0.72;
+        const prodY = padT + ch * 0.86;
+        const peakNoCat = padT + ch * 0.1;
+        const peakCat = padT + ch * 0.44;
+
+        // 座標軸
+        ctx.strokeStyle = '#94A3B8';
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.moveTo(padL, padT - 4);
+        ctx.lineTo(padL, padT + ch);
+        ctx.lineTo(padL + cw, padT + ch);
+        ctx.stroke();
+
+        ctx.fillStyle = '#475569';
+        ctx.font = '800 11px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText('位能 (能量)', 6, 13);
+        ctx.textAlign = 'right';
+        ctx.fillText('反應途徑 →', w - 10, h - 8);
+
+        // 反應物基準虛線
+        ctx.strokeStyle = '#CBD5E1';
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(padL, baseY);
+        ctx.lineTo(padL + cw * 0.65, baseY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // 無催化劑活化能山丘
+        ctx.beginPath();
+        ctx.moveTo(padL + 6, baseY);
+        ctx.lineTo(padL + cw * 0.2, baseY);
+        ctx.bezierCurveTo(padL + cw * 0.34, baseY, padL + cw * 0.38, peakNoCat, padL + cw * 0.5, peakNoCat);
+        ctx.bezierCurveTo(padL + cw * 0.62, peakNoCat, padL + cw * 0.66, prodY, padL + cw * 0.8, prodY);
+        ctx.lineTo(padL + cw - 6, prodY);
+        ctx.strokeStyle = this.catalyst ? '#94A3B8' : '#DC2626';
+        ctx.lineWidth = this.catalyst ? 2.2 : 3.5;
+        ctx.stroke();
+
+        // 催化劑捷徑山丘（翠綠虛線）
+        if (this.catalyst) {
+          ctx.beginPath();
+          ctx.moveTo(padL + cw * 0.2, baseY);
+          ctx.bezierCurveTo(padL + cw * 0.35, baseY, padL + cw * 0.39, peakCat, padL + cw * 0.5, peakCat);
+          ctx.bezierCurveTo(padL + cw * 0.61, peakCat, padL + cw * 0.65, prodY, padL + cw * 0.8, prodY);
+          ctx.strokeStyle = '#059669';
+          ctx.lineWidth = 3.5;
+          ctx.setLineDash([6, 4]);
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          ctx.fillStyle = '#059669';
+          ctx.font = '900 12px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('⚡ 催化劑低活化能捷徑', padL + cw * 0.5, peakCat - 9);
+        }
+
+        // Ea 高度箭頭
+        const curPeak = this.catalyst ? peakCat : peakNoCat;
+        const ax = padL + cw * 0.5;
+        ctx.strokeStyle = this.catalyst ? '#059669' : '#DC2626';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(ax, baseY);
+        ctx.lineTo(ax, curPeak + 3);
+        ctx.stroke();
+
+        ctx.fillStyle = '#334155';
+        ctx.font = '800 11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('反應物', padL + cw * 0.13, baseY - 8);
+        ctx.fillText('生成物', padL + cw * 0.89, prodY - 8);
+
+        // 右上角達標粒子比例徽章
+        const passPct = this.getPassRatioPercent();
+        roundRectPath(ctx, w - 134, 8, 124, 26, 8);
+        ctx.fillStyle = this.catalyst ? '#D1FAE5' : '#FEF3C7';
+        ctx.fill();
+        ctx.fillStyle = this.catalyst ? '#065F46' : '#92400E';
+        ctx.font = '900 12px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`達標粒子：${passPct}%`, w - 72, 24);
+      },
+
+      renderChart() {
+        const info = syncCanvas(document.getElementById('canvas7aChart'));
+        if (!info) return;
+        const { ctx, w, h } = info;
+        ctx.clearRect(0, 0, w, h);
+
+        const padL = 46, padR = 16, padT = 22, padB = 32;
+        const cw = w - padL - padR;
+        const ch = h - padT - padB;
+        const mapX = (t) => padL + (clamp(t, 0, this.maxTime) / this.maxTime) * cw;
+        const mapY = (p) => padT + (1 - clamp(p, 0, 100) / 100) * ch;
+
+        // 格線
+        ctx.font = '700 11px monospace';
+        ctx.fillStyle = '#64748B';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        [0, 25, 50, 75, 100].forEach(p => {
+          const y = mapY(p);
+          ctx.beginPath();
+          ctx.moveTo(padL, y);
+          ctx.lineTo(padL + cw, y);
+          ctx.strokeStyle = '#F1F5F9';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+          ctx.fillText(`${p}%`, padL - 5, y);
+        });
+
+        ctx.textAlign = 'center';
+        for (let s = 0; s <= this.maxTime; s += 5) {
+          ctx.fillText(`${s}s`, mapX(s), padT + ch + 14);
+        }
+
+        ctx.strokeStyle = '#64748B';
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.moveTo(padL, padT);
+        ctx.lineTo(padL, padT + ch);
+        ctx.lineTo(padL + cw, padT + ch);
+        ctx.stroke();
+
+        ctx.fillStyle = '#334155';
+        ctx.font = '800 11px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText('生成物累積量 (%) — 斜率越陡＝速率越快', padL, 12);
+
+        const plot = (pts, color, dashed) => {
+          if (!pts || pts.length < 2) return;
+          ctx.save();
+          ctx.beginPath();
+          pts.forEach((pt, idx) => {
+            const x = mapX(pt.t), y = mapY(pt.pct);
+            if (idx === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          });
+          ctx.strokeStyle = color;
+          ctx.lineWidth = dashed ? 2.4 : 3.4;
+          if (dashed) ctx.setLineDash([6, 4]);
+          ctx.stroke();
+          ctx.restore();
+        };
+
+        // 先畫歷史對照虛線
+        this.savedCurves.forEach(c => plot(c.points, c.color, true));
+        // 再畫目前實線
+        plot(this.series, '#0F766E', false);
+
+        const last = this.series[this.series.length - 1];
+        if (last) {
+          ctx.beginPath();
+          ctx.arc(mapX(last.t), mapY(last.pct), 5, 0, Math.PI * 2);
+          ctx.fillStyle = '#0F766E';
+          ctx.fill();
+          ctx.strokeStyle = '#FFFFFF';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+      }
+    };
+
+    /* ==========================================================================
+       五、模組 7B：可逆反應與平衡拉鋸戰（化學平衡與勒沙特列原理） (MOD7B)
+       ========================================================================== */
+    const MOD7B = {
+      system: 'chromate',   // 'chromate' | 'no2'
+      // 系統一變數（總鉻原子 = 48: nY + 2*nO = 48）
+      hConc: 1.0,           // 酸度 [H+]（0.25 ~ 2.6）
+      nY: 24.0,             // CrO4^2- 黃色
+      nO: 12.0,             // Cr2O7^2- 橘紅
+      // 系統二變數（總 N2 單位 = 24: nD + nM/2 = 24）
+      temp: 30,             // 5 ~ 80 °C
+      nD: 14.0,             // N2O4 無色雙體
+      nM: 20.0,             // NO2 紅棕單體
+
+      rf: 0.5,
+      rr: 0.5,
+      shiftState: 'eq',     // 'eq' | 'right' | 'left'
+      simTime: 0,
+      sampleAcc: 0,
+      history: [],          // [{t, rf, rr, c1, c2}]
+      events: [],           // [{t, label}]
+
+      // 巨觀特效與微觀粒子
+      droplets: [],         // 滴加酸鹼液滴動畫
+      microMols: [],        // 真實微觀粒子陣列
+      microFlashes: [],
+      exchangeAcc: 0,
+
+      init() {
+        document.querySelectorAll('#m7bSysBtns .pill-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            this.selectSystem(btn.dataset.sys);
+          });
+        });
+
+        // 系統一干擾按鈕
+        document.getElementById('m7bAddAcid').addEventListener('click', () => {
+          this.hConc = clamp(this.hConc + 0.78, 0.25, 2.6);
+          this.spawnDroplets('#EF4444');
+          this.recordEvent('加 H⁺');
+          this.setLeChat(
+            '施加干擾：滴加稀硫酸，溶液中 [H⁺] 濃度瞬間大幅上升！',
+            '平衡移動：R正 瞬間暴增 (R正 ＞ R逆)，平衡向「右」移動以消耗多餘 H⁺！',
+            '現象變化：黃色 CrO₄²⁻ 減少、橘紅色 Cr₂O₇²⁻ 增加，溶液由黃轉為深橘紅。'
+          );
+        });
+
+        document.getElementById('m7bAddBase').addEventListener('click', () => {
+          this.hConc = clamp(this.hConc - 0.52, 0.25, 2.6);
+          this.spawnDroplets('#2563EB');
+          this.recordEvent('加 OH⁻');
+          this.setLeChat(
+            '施加干擾：滴加氫氧化鈉，OH⁻ 與 H⁺ 中和，導致 [H⁺] 濃度瞬間驟降！',
+            '平衡移動：R正 瞬間下降 (R逆 ＞ R正)，平衡向「左」移動以補充 H⁺！',
+            '現象變化：橘紅色 Cr₂O₇²⁻ 拆解減少、黃色 CrO₄²⁻ 增加，溶液轉為亮黃色。'
+          );
+        });
+
+        document.getElementById('m7bResetChr').addEventListener('click', () => this.resetSystem());
+
+        // 系統二干擾按鈕與溫度滑桿
+        const tSlider = document.getElementById('m7bTempSlider');
+        const applyTemp = (newT, label) => {
+          const prevT = this.temp;
+          this.temp = clamp(newT, 5, 80);
+          tSlider.value = this.temp;
+          document.getElementById('m7bTempVal').textContent = `${this.temp} °C`;
+          if (label) this.recordEvent(label);
+
+          if (this.temp > prevT + 3) {
+            this.setLeChat(
+              `施加干擾：溫度升高至 ${this.temp}°C（吸熱方向受熱能大幅加速）。`,
+              '平衡移動：R正 與 R逆 皆上升，但吸熱的 R正 增幅更大 (R正 ＞ R逆)，平衡向「右」移動！',
+              '現象變化：無色 N₂O₄ 拆解、紅棕色 NO₂ 增加，氣體顏色明顯變深紅棕。'
+            );
+          } else if (this.temp < prevT - 3) {
+            this.setLeChat(
+              `施加干擾：溫度降低至 ${this.temp}°C（系統向放熱方向補償熱量）。`,
+              '平衡移動：R正 與 R逆 皆下降，但 R正 降幅更大 (R逆 ＞ R正)，平衡向「左」移動！',
+              '現象變化：紅棕色 NO₂ 結合成無色 N₂O₄，氣體顏色明顯變淡接近無色。'
+            );
+          }
+        };
+
+        tSlider.addEventListener('input', () => {
+          const val = parseInt(tSlider.value, 10);
+          const dir = val > this.temp ? '升溫' : '降溫';
+          applyTemp(val, Math.abs(val - this.temp) >= 6 ? dir : null);
+        });
+
+        document.getElementById('m7bHotBtn').addEventListener('click', () => applyTemp(75, '升溫75°C'));
+        document.getElementById('m7bColdBtn').addEventListener('click', () => applyTemp(5, '降溫5°C'));
+        document.getElementById('m7bRoomBtn').addEventListener('click', () => applyTemp(30, '回常溫'));
+
+        this.selectSystem('chromate');
+      },
+
+      selectSystem(sys) {
+        this.system = sys;
+        document.querySelectorAll('#m7bSysBtns .pill-btn').forEach(b => {
+          b.classList.toggle('active', b.dataset.sys === sys);
+        });
+
+        const isChr = sys === 'chromate';
+        document.getElementById('m7bCtrlChromate').style.display = isChr ? 'flex' : 'none';
+        document.getElementById('m7bCtrlNO2').style.display = isChr ? 'none' : 'flex';
+        document.getElementById('m7bMacroTitle').textContent =
+          isChr ? '🧪 巨觀試管溶液顏色實驗台' : '🌡️ 密閉氣體瓶水浴實驗台';
+
+        document.getElementById('m7bLeftEq').innerHTML = isChr
+          ? '2 CrO<sub>4</sub><sup>2−</sup> + 2 H<sup>+</sup><small>黃色溶液（反應物）</small>'
+          : 'N<sub>2</sub>O<sub>4</sub> + 熱量<small>無色氣體（吸熱反應物）</small>';
+        document.getElementById('m7bRightEq').innerHTML = isChr
+          ? 'Cr<sub>2</sub>O<sub>7</sub><sup>2−</sup> + H<sub>2</sub>O<small>橘紅色溶液（生成物）</small>'
+          : '2 NO<sub>2</sub><small>紅棕色氣體（生成物）</small>';
+
+        document.getElementById('m7bLeftEq').style.color = isChr ? '#CA8A04' : '#475569';
+        document.getElementById('m7bRightEq').style.color = isChr ? '#EA580C' : '#991B1B';
+
+        this.resetSystem();
+      },
+
+      resetSystem() {
+        this.simTime = 0;
+        this.sampleAcc = 0;
+        this.events = [];
+        this.droplets = [];
+        this.microFlashes = [];
+
+        if (this.system === 'chromate') {
+          this.hConc = 1.0;
+          this.nY = 24.0;
+          this.nO = 12.0;
+          this.setLeChat(
+            '目前狀態：初始中性平衡（24 顆黃球 CrO₄²⁻ 與 12 顆橘紅雙球 Cr₂O₇²⁻）。',
+            '平衡移動：正反應速率 ＝ 逆反應速率，兩側拉鋸力量完全相等。',
+            '觀念提醒：達平衡時是「速率相等」，但反應物與生成物顆數不必相等！'
+          );
+        } else {
+          this.temp = 30;
+          document.getElementById('m7bTempSlider').value = 30;
+          document.getElementById('m7bTempVal').textContent = '30 °C';
+          this.nD = 14.0;
+          this.nM = 20.0;
+          this.setLeChat(
+            '目前狀態：30°C 常溫密閉氣體瓶（14 顆無色 N₂O₄ 與 20 顆紅棕 NO₂）。',
+            '平衡移動：正反應速率 ＝ 逆反應速率，呈現淡紅棕色平衡態。',
+            '操作建議：點擊「熱水浴」或「冰水浴」，觀察兩條速率線如何同時跳動！'
+          );
+        }
+
+        this.computeRates();
+        // 預先填入 4 秒平穩的初始平衡線，讓干擾瞬間的垂直突變超清晰！
+        this.history = [];
+        for (let t = 0; t <= 4.0; t += 0.25) {
+          this.history.push(this.makeSnapshot(t));
+        }
+        this.simTime = 4.0;
+
+        this.rebuildMicroMols();
+        this.updateBoardsDOM();
+      },
+
+      setLeChat(s1, s2, s3) {
+        document.getElementById('m7bStep1').textContent = s1;
+        document.getElementById('m7bStep2').textContent = s2;
+        document.getElementById('m7bStep3').textContent = s3;
+      },
+
+      recordEvent(label) {
+        // 先寫入當前突變前一點，再計算新速率寫入突變後一點（造就經典垂直階梯）
+        this.history.push(this.makeSnapshot(this.simTime));
+        this.computeRates();
+        this.history.push(this.makeSnapshot(this.simTime + 0.02));
+        this.events.push({ t: this.simTime, label });
+      },
+
+      spawnDroplets(color) {
+        for (let i = 0; i < 4; i++) {
+          this.droplets.push({ y: 12 - i * 16, vy: 110, color });
+        }
+      },
+
+      computeRates() {
+        if (this.system === 'chromate') {
+          // R正 = kf * (nY/48) * [H+]^1.3, R逆 = kr * (nO/24)
+          this.rf = 1.0 * (this.nY / 48) * Math.pow(this.hConc, 1.3);
+          this.rr = 1.0 * (this.nO / 24);
+        } else {
+          // 溫度同時改變正逆速率常數，但吸熱正反應活化能較高故對溫度更敏感
+          const kf = 0.78 * Math.exp(0.032 * (this.temp - 30));
+          const kr = 0.78 * Math.exp(0.012 * (this.temp - 30)) * 1.41; // 校準 30°C 時 nD=14, nM=20 剛好平衡
+          this.rf = kf * (this.nD / 24);
+          this.rr = kr * Math.pow(this.nM / 48, 1.0);
+        }
+
+        const diff = this.rf - this.rr;
+        if (Math.abs(diff) < 0.028) this.shiftState = 'eq';
+        else if (diff > 0) this.shiftState = 'right';
+        else this.shiftState = 'left';
+      },
+
+      makeSnapshot(t) {
+        return {
+          t,
+          rf: this.rf,
+          rr: this.rr,
+          c1: this.system === 'chromate' ? this.nY : this.nD,
+          c2: this.system === 'chromate' ? this.nO : this.nM
+        };
+      },
+
+      rebuildMicroMols() {
+        this.microMols = [];
+        const add = (kind, count) => {
+          for (let i = 0; i < count; i++) {
+            const ang = Math.random() * Math.PI * 2;
+            const spd = 0.14 + Math.random() * 0.16;
+            this.microMols.push({
+              kind,
+              x: 0.08 + Math.random() * 0.84,
+              y: 0.08 + Math.random() * 0.84,
+              vx: Math.cos(ang) * spd,
+              vy: Math.sin(ang) * spd,
+              rot: Math.random() * Math.PI * 2
+            });
+          }
+        };
+
+        if (this.system === 'chromate') {
+          add('CrO4', Math.round(this.nY));
+          add('Cr2O7', Math.round(this.nO));
+          add('H', Math.round(clamp(this.hConc * 12, 3, 30)));
+        } else {
+          add('N2O4', Math.round(this.nD));
+          add('NO2', Math.round(this.nM));
+        }
+      },
+
+      update(dt) {
+        this.simTime += dt;
+
+        // 1. 動力學積分：推動濃度平滑收斂至新平衡
+        this.computeRates();
+        const netRate = this.rf - this.rr;
+        if (this.system === 'chromate') {
+          const dExtent = netRate * 6.5 * dt; // 每次正向反應消耗 2 CrO4，生成 1 Cr2O7
+          this.nO = clamp(this.nO + dExtent, 1.5, 22.5);
+          this.nY = 48 - 2 * this.nO;
+        } else {
+          const dExtent = netRate * 6.0 * dt; // 每次正向反應消耗 1 N2O4，生成 2 NO2
+          this.nD = clamp(this.nD - dExtent, 1.2, 22.8);
+          this.nM = (24 - this.nD) * 2;
+        }
+        this.computeRates();
+
+        // 2. 紀錄滾動時間視窗（保留最新 28 秒）
+        this.sampleAcc += dt;
+        if (this.sampleAcc >= 0.18) {
+          this.sampleAcc = 0;
+          this.history.push(this.makeSnapshot(this.simTime));
+          const minT = this.simTime - 28;
+          while (this.history.length > 2 && this.history[0].t < minT) this.history.shift();
+          while (this.events.length > 0 && this.events[0].t < minT) this.events.shift();
+        }
+
+        // 3. 更新巨觀液滴
+        for (let i = this.droplets.length - 1; i >= 0; i--) {
+          this.droplets[i].y += this.droplets[i].vy * dt;
+          if (this.droplets[i].y > 145) this.droplets.splice(i, 1);
+        }
+
+        // 4. 更新微觀粒子運動與同步真實整數個數
+        const spdScale = this.system === 'no2' ? (0.55 + (this.temp / 80) * 1.45) : 1.0;
+        this.microMols.forEach(m => {
+          m.x += m.vx * spdScale * dt;
+          m.y += m.vy * spdScale * dt;
+          m.rot += 1.2 * spdScale * dt;
+          if (m.x < 0.06) { m.x = 0.06; m.vx = Math.abs(m.vx); }
+          if (m.x > 0.94) { m.x = 0.94; m.vx = -Math.abs(m.vx); }
+          if (m.y < 0.06) { m.y = 0.06; m.vy = Math.abs(m.vy); }
+          if (m.y > 0.94) { m.y = 0.94; m.vy = -Math.abs(m.vy); }
+        });
+
+        this.syncMicroParticles(dt);
+
+        for (let i = this.microFlashes.length - 1; i >= 0; i--) {
+          const f = this.microFlashes[i];
+          f.r += 32 * dt;
+          f.alpha -= 1.8 * dt;
+          if (f.alpha <= 0) this.microFlashes.splice(i, 1);
+        }
+
+        this.updateBoardsDOM();
+      },
+
+      syncMicroParticles(dt) {
+        const makeMol = (kind, x, y) => {
+          const ang = Math.random() * Math.PI * 2;
+          const spd = 0.15 + Math.random() * 0.16;
+          return { kind, x, y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd, rot: Math.random() * Math.PI * 2 };
+        };
+
+        if (this.system === 'chromate') {
+          // 同步 H+ 粒子視覺數量
+          const targetH = Math.round(clamp(this.hConc * 12, 3, 30));
+          let curH = this.microMols.filter(m => m.kind === 'H').length;
+          while (curH < targetH) { this.microMols.push(makeMol('H', 0.1 + Math.random() * 0.8, 0.1 + Math.random() * 0.8)); curH++; }
+          while (curH > targetH) {
+            const idx = this.microMols.findIndex(m => m.kind === 'H');
+            if (idx >= 0) this.microMols.splice(idx, 1);
+            curH--;
+          }
+
+          // 同步 CrO4 與 Cr2O7 淨轉化
+          const targetO = Math.round(this.nO);
+          let curO = this.microMols.filter(m => m.kind === 'Cr2O7').length;
+          if (curO < targetO) {
+            // 2 CrO4 -> 1 Cr2O7
+            const i1 = this.microMols.findIndex(m => m.kind === 'CrO4');
+            if (i1 >= 0) {
+              const p1 = this.microMols.splice(i1, 1)[0];
+              const i2 = this.microMols.findIndex(m => m.kind === 'CrO4');
+              if (i2 >= 0) this.microMols.splice(i2, 1);
+              this.microMols.push(makeMol('Cr2O7', p1.x, p1.y));
+              this.microFlashes.push({ x: p1.x, y: p1.y, r: 5, color: '#EA580C', alpha: 0.95 });
+            }
+          } else if (curO > targetO) {
+            // 1 Cr2O7 -> 2 CrO4
+            const idx = this.microMols.findIndex(m => m.kind === 'Cr2O7');
+            if (idx >= 0) {
+              const p = this.microMols.splice(idx, 1)[0];
+              this.microMols.push(makeMol('CrO4', clamp(p.x - 0.03, 0.08, 0.92), p.y));
+              this.microMols.push(makeMol('CrO4', clamp(p.x + 0.03, 0.08, 0.92), p.y));
+              this.microFlashes.push({ x: p.x, y: p.y, r: 5, color: '#EAB308', alpha: 0.95 });
+            }
+          } else {
+            // 平衡狀態下仍依真實速率進行雙向閃光交換，展示「動態」平衡
+            this.exchangeAcc += dt * (this.rf + this.rr) * 1.1;
+            if (this.exchangeAcc >= 1.0) {
+              this.exchangeAcc = 0;
+              const oMol = this.microMols.find(m => m.kind === 'Cr2O7');
+              const yMol = this.microMols.find(m => m.kind === 'CrO4');
+              if (oMol && yMol) {
+                this.microFlashes.push({ x: oMol.x, y: oMol.y, r: 4, color: '#EAB308', alpha: 0.85 });
+                this.microFlashes.push({ x: yMol.x, y: yMol.y, r: 4, color: '#EA580C', alpha: 0.85 });
+              }
+            }
+          }
+        } else {
+          // NO2 / N2O4 同步
+          const targetD = Math.round(this.nD);
+          let curD = this.microMols.filter(m => m.kind === 'N2O4').length;
+          if (curD < targetD) {
+            // 2 NO2 -> 1 N2O4
+            const i1 = this.microMols.findIndex(m => m.kind === 'NO2');
+            if (i1 >= 0) {
+              const p1 = this.microMols.splice(i1, 1)[0];
+              const i2 = this.microMols.findIndex(m => m.kind === 'NO2');
+              if (i2 >= 0) this.microMols.splice(i2, 1);
+              this.microMols.push(makeMol('N2O4', p1.x, p1.y));
+              this.microFlashes.push({ x: p1.x, y: p1.y, r: 5, color: '#3B82F6', alpha: 0.9 });
+            }
+          } else if (curD > targetD) {
+            // 1 N2O4 -> 2 NO2
+            const idx = this.microMols.findIndex(m => m.kind === 'N2O4');
+            if (idx >= 0) {
+              const p = this.microMols.splice(idx, 1)[0];
+              this.microMols.push(makeMol('NO2', clamp(p.x - 0.03, 0.08, 0.92), p.y));
+              this.microMols.push(makeMol('NO2', clamp(p.x + 0.03, 0.08, 0.92), p.y));
+              this.microFlashes.push({ x: p.x, y: p.y, r: 5, color: '#B91C1C', alpha: 0.9 });
+            }
+          } else {
+            this.exchangeAcc += dt * (this.rf + this.rr) * 1.1;
+            if (this.exchangeAcc >= 1.0) {
+              this.exchangeAcc = 0;
+              const dMol = this.microMols.find(m => m.kind === 'N2O4');
+              const mMol = this.microMols.find(m => m.kind === 'NO2');
+              if (dMol && mMol) {
+                this.microFlashes.push({ x: dMol.x, y: dMol.y, r: 4, color: '#B91C1C', alpha: 0.8 });
+                this.microFlashes.push({ x: mMol.x, y: mMol.y, r: 4, color: '#3B82F6', alpha: 0.8 });
+              }
+            }
+          }
+        }
+      },
+
+      updateBoardsDOM() {
+        // 1. 動態伸縮雙向速率箭頭
+        const mapLen = (r) => clamp(32 + r * 68, 26, 132);
+        const mapW = (r) => clamp(3 + r * 3.2, 3, 8.5);
+        const fLen = mapLen(this.rf), rLen = mapLen(this.rr);
+
+        const fwdLine = document.getElementById('m7bFwdLine');
+        const fwdHead = document.getElementById('m7bFwdHead');
+        const fx2 = 10 + fLen;
+        fwdLine.setAttribute('x2', fx2.toFixed(1));
+        fwdLine.setAttribute('stroke-width', mapW(this.rf).toFixed(1));
+        fwdHead.setAttribute('points', `${fx2 - 2},3 ${fx2 + 15},11 ${fx2 - 2},19`);
+
+        const revLine = document.getElementById('m7bRevLine');
+        const revHead = document.getElementById('m7bRevHead');
+        const rx2 = 150 - rLen;
+        revLine.setAttribute('x2', rx2.toFixed(1));
+        revLine.setAttribute('stroke-width', mapW(this.rr).toFixed(1));
+        revHead.setAttribute('points', `${rx2 + 2},3 ${rx2 - 15},11 ${rx2 + 2},19`);
+
+        // 2. 狀態徽章
+        const pill = document.getElementById('m7bStatusPill');
+        if (this.shiftState === 'right') {
+          pill.className = 'tug-status-pill shiftR';
+          pill.textContent = '⚡ 平衡破壞！向右移動中 (R正 ＞ R逆) →';
+        } else if (this.shiftState === 'left') {
+          pill.className = 'tug-status-pill shiftL';
+          pill.textContent = '← ⚡ 平衡破壞！向左移動中 (R逆 ＞ R正)';
+        } else {
+          pill.className = 'tug-status-pill eq';
+          pill.textContent = '⚖️ 達成動態平衡 (R正 ＝ R逆)';
+        }
+
+        // 3. 條件徽章與微觀計數器
+        const condBadge = document.getElementById('m7bCondBadge');
+        const counters = document.getElementById('m7bCounters');
+        if (this.system === 'chromate') {
+          condBadge.textContent = this.hConc > 1.25 ? '酸性環境 (高 H⁺)' : (this.hConc < 0.75 ? '鹼性環境 (低 H⁺)' : '初始酸鹼平衡');
+          counters.innerHTML = `
+            <span style="color:#CA8A04;">🟡 CrO₄²⁻：${Math.round(this.nY)} 顆</span>
+            <span style="color:#64748B;">⚪ H⁺：${Math.round(clamp(this.hConc * 12, 3, 30))} 顆</span>
+            <span style="color:#EA580C;">🟠 Cr₂O₇²⁻：${Math.round(this.nO)} 顆</span>
+          `;
+        } else {
+          condBadge.textContent = this.temp >= 55 ? `🔥 熱水浴 (${this.temp}°C)` : (this.temp <= 15 ? `❄️ 冰水浴 (${this.temp}°C)` : `🌡️ 常溫 (${this.temp}°C)`);
+          counters.innerHTML = `
+            <span style="color:#475569;">⬜ N₂O₄ (無色)：${Math.round(this.nD)} 顆</span>
+            <span style="color:#991B1B;">🟤 NO₂ (紅棕)：${Math.round(this.nM)} 顆</span>
+          `;
+        }
+      },
+
+      render() {
+        this.renderMacro();
+        this.renderMicro();
+        this.renderRtChart();
+        this.renderCtChart();
+      },
+
+      renderMacro() {
+        const info = syncCanvas(document.getElementById('canvas7bMacro'));
+        if (!info) return;
+        const { ctx, w, h } = info;
+        ctx.clearRect(0, 0, w, h);
+
+        const cx = w / 2;
+        const tubeW = 78;
+        const tubeH = 195;
+        const tx = cx - tubeW / 2;
+        const ty = h - 34 - tubeH;
+
+        if (this.system === 'chromate') {
+          // 計算黃色 (#FACC15) 到深橘紅 (#EA580C) 的真實比例漸層
+          const orangeRatio = clamp((this.nO * 2) / 48, 0, 1);
+          const r = Math.round(250 + (220 - 250) * orangeRatio);
+          const g = Math.round(212 + (78 - 212) * orangeRatio);
+          const b = Math.round(24 + (14 - 24) * orangeRatio);
+
+          // 液滴落入動畫
+          this.droplets.forEach(d => {
+            ctx.beginPath();
+            ctx.arc(cx, d.y, 5, 0, Math.PI * 2);
+            ctx.fillStyle = d.color;
+            ctx.fill();
+          });
+
+          // 試管內溶液
+          ctx.save();
+          ctx.beginPath();
+          ctx.moveTo(tx + 4, ty + 54);
+          ctx.lineTo(tx + 4, ty + tubeH - tubeW / 2);
+          ctx.arc(cx, ty + tubeH - tubeW / 2, tubeW / 2 - 4, Math.PI, 0, true);
+          ctx.lineTo(tx + tubeW - 4, ty + 54);
+          ctx.closePath();
+          ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+          ctx.fill();
+          ctx.restore();
+
+          // 液面橢圓
+          ctx.beginPath();
+          ctx.ellipse(cx, ty + 54, tubeW / 2 - 4, 6, 0, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(${Math.min(255, r + 25)}, ${Math.min(255, g + 25)}, ${Math.min(255, b + 20)}, 0.9)`;
+          ctx.fill();
+
+          // 試管玻璃輪廓與高光
+          ctx.strokeStyle = '#475569';
+          ctx.lineWidth = 3.2;
+          ctx.beginPath();
+          ctx.moveTo(tx - 5, ty);
+          ctx.lineTo(tx, ty + 6);
+          ctx.lineTo(tx, ty + tubeH - tubeW / 2);
+          ctx.arc(cx, ty + tubeH - tubeW / 2, tubeW / 2, Math.PI, 0, true);
+          ctx.lineTo(tx + tubeW, ty + 6);
+          ctx.lineTo(tx + tubeW + 5, ty);
+          ctx.stroke();
+
+          ctx.fillStyle = '#334155';
+          ctx.font = '800 13px sans-serif';
+          ctx.textAlign = 'center';
+          const colLabel = orangeRatio > 0.65 ? '深橘紅色（偏 Cr₂O₇²⁻）' : (orangeRatio < 0.35 ? '亮黃色（偏 CrO₄²⁻）' : '黃橙中間色');
+          ctx.fillText(colLabel, cx, h - 10);
+        } else {
+          // 系統二：密閉玻璃氣體瓶 + 熱水浴 / 冰水浴特效
+          const brownRatio = clamp(this.nM / 48, 0, 1);
+
+          // 外部水浴槽（熱水浴紅橘蒸氣 / 冰水浴藍水與冰塊）
+          const bathW = Math.min(210, w - 36);
+          const bathH = 128;
+          const bx = cx - bathW / 2;
+          const by = h - 32 - bathH;
+          roundRectPath(ctx, bx, by, bathW, bathH, 12);
+          if (this.temp >= 50) {
+            ctx.fillStyle = 'rgba(254, 215, 170, 0.55)';
+            ctx.fill();
+            ctx.strokeStyle = '#EA580C';
+            ctx.lineWidth = 2.4;
+            ctx.stroke();
+            // 熱蒸氣波紋
+            ctx.strokeStyle = 'rgba(234, 88, 12, 0.45)';
+            ctx.lineWidth = 2;
+            [-68, 68].forEach(ox => {
+              ctx.beginPath();
+              ctx.moveTo(cx + ox, by - 4);
+              ctx.quadraticCurveTo(cx + ox - 8, by - 18, cx + ox + 4, by - 30);
+              ctx.stroke();
+            });
+          } else if (this.temp <= 18) {
+            ctx.fillStyle = 'rgba(191, 219, 254, 0.65)';
+            ctx.fill();
+            ctx.strokeStyle = '#2563EB';
+            ctx.lineWidth = 2.4;
+            ctx.stroke();
+            // 浮冰塊
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+            ctx.strokeStyle = '#60A5FA';
+            [bx + 14, bx + bathW - 34].forEach(ix => {
+              roundRectPath(ctx, ix, by + 14, 20, 18, 4);
+              ctx.fill(); ctx.stroke();
+            });
+          } else {
+            ctx.fillStyle = 'rgba(226, 232, 240, 0.45)';
+            ctx.fill();
+            ctx.strokeStyle = '#94A3B8';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+          }
+
+          // 中央密閉氣體圓底瓶
+          const flaskR = 46;
+          const fy = by + bathH - flaskR - 14;
+          const neckTop = ty + 14;
+
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(cx, fy, flaskR, 0, Math.PI * 2);
+          ctx.rect(cx - 15, neckTop, 30, fy - neckTop);
+          // 氣體顏色由幾乎無色透明平滑漸層到深紅棕色 (#7C2D12)
+          ctx.fillStyle = `rgba(154, 52, 18, ${0.06 + brownRatio * 0.86})`;
+          ctx.fill();
+          ctx.restore();
+
+          // 玻璃瓶輪廓
+          ctx.strokeStyle = '#334155';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(cx, fy, flaskR, -Math.PI * 0.38, Math.PI * 1.38);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(cx - 15, neckTop);
+          ctx.lineTo(cx - 15, fy - flaskR * 0.92);
+          ctx.moveTo(cx + 15, neckTop);
+          ctx.lineTo(cx + 15, fy - flaskR * 0.92);
+          ctx.stroke();
+
+          // 密閉橡皮塞
+          roundRectPath(ctx, cx - 18, neckTop - 14, 36, 18, 4);
+          ctx.fillStyle = '#475569';
+          ctx.fill();
+
+          ctx.fillStyle = '#334155';
+          ctx.font = '800 13px sans-serif';
+          ctx.textAlign = 'center';
+          const gLabel = brownRatio > 0.62 ? '深紅棕色（NO₂ 佔優勢）' : (brownRatio < 0.28 ? '極淡棕色（N₂O₄ 佔優勢）' : '淡紅棕色（平衡混合氣）');
+          ctx.fillText(gLabel, cx, h - 10);
+        }
+      },
+
+      renderMicro() {
+        const info = syncCanvas(document.getElementById('canvas7bMicro'));
+        if (!info) return;
+        const { ctx, w, h } = info;
+        ctx.clearRect(0, 0, w, h);
+
+        // 微調底色與巨觀呼應
+        if (this.system === 'chromate') {
+          const r = clamp((this.nO * 2) / 48, 0, 1);
+          ctx.fillStyle = `rgba(${254}, ${Math.round(249 - r * 35)}, ${Math.round(220 - r * 40)}, 0.55)`;
+        } else {
+          const r = clamp(this.nM / 48, 0, 1);
+          ctx.fillStyle = `rgba(180, 83, 9, ${0.03 + r * 0.14})`;
+        }
+        ctx.fillRect(0, 0, w, h);
+
+        // 繪製雙向反應閃光
+        this.microFlashes.forEach(f => {
+          ctx.save();
+          ctx.globalAlpha = Math.max(0, f.alpha);
+          ctx.beginPath();
+          ctx.arc(f.x * w, f.y * h, f.r, 0, Math.PI * 2);
+          ctx.strokeStyle = f.color;
+          ctx.lineWidth = 2.8;
+          ctx.stroke();
+          ctx.restore();
+        });
+
+        // 繪製微觀分子
+        this.microMols.forEach(m => {
+          const x = m.x * w, y = m.y * h;
+          if (m.kind === 'CrO4') {
+            drawGlossyBall(ctx, x, y, 9.5, '#FEF08A', '#EAB308', '#A16207');
+          } else if (m.kind === 'Cr2O7') {
+            const dx = Math.cos(m.rot) * 8, dy = Math.sin(m.rot) * 8;
+            drawGlossyBall(ctx, x - dx, y - dy, 9.5, '#FDBA74', '#EA580C', '#9A3412');
+            drawGlossyBall(ctx, x + dx, y + dy, 9.5, '#FDBA74', '#EA580C', '#9A3412');
+          } else if (m.kind === 'H') {
+            drawGlossyBall(ctx, x, y, 4.8, '#FFFFFF', '#E2E8F0', '#475569');
+          } else if (m.kind === 'NO2') {
+            drawGlossyBall(ctx, x, y, 8.8, '#FCA5A5', '#B91C1C', '#7F1D1D');
+          } else if (m.kind === 'N2O4') {
+            const dx = Math.cos(m.rot) * 8, dy = Math.sin(m.rot) * 8;
+            drawGlossyBall(ctx, x - dx, y - dy, 9, '#F8FAFC', '#CBD5E1', '#64748B');
+            drawGlossyBall(ctx, x + dx, y + dy, 9, '#F8FAFC', '#CBD5E1', '#64748B');
+          }
+        });
+      },
+
+      renderRtChart() {
+        const info = syncCanvas(document.getElementById('canvas7bRt'));
+        if (!info) return;
+        const { ctx, w, h } = info;
+        ctx.clearRect(0, 0, w, h);
+
+        const padL = 42, padR = 14, padT = 22, padB = 20;
+        const cw = w - padL - padR;
+        const ch = h - padT - padB;
+        const tMax = Math.max(28, this.simTime);
+        const tMin = tMax - 28;
+        const rMax = 2.4;
+
+        const mapX = (t) => padL + ((t - tMin) / 28) * cw;
+        const mapY = (r) => padT + (1 - clamp(r / rMax, 0, 1)) * ch;
+
+        // 座標軸與標題
+        ctx.strokeStyle = '#94A3B8';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(padL, padT);
+        ctx.lineTo(padL, padT + ch);
+        ctx.lineTo(padL + cw, padT + ch);
+        ctx.stroke();
+
+        ctx.fillStyle = '#1E293B';
+        ctx.font = '900 11px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText('R–t 速率圖（藍實線 R正｜橘虛線 R逆）', padL, 12);
+
+        // 事件垂直標記線
+        this.events.forEach(ev => {
+          const ex = mapX(ev.t);
+          if (ex < padL || ex > padL + cw) return;
+          ctx.save();
+          ctx.strokeStyle = 'rgba(220, 38, 38, 0.55)';
+          ctx.setLineDash([4, 3]);
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(ex, padT);
+          ctx.lineTo(ex, padT + ch);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.fillStyle = '#DC2626';
+          ctx.font = '800 10px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(ev.label, ex, padT + ch + 12);
+          ctx.restore();
+        });
+
+        const drawSeries = (key, color, dashed) => {
+          if (this.history.length < 2) return;
+          ctx.save();
+          ctx.beginPath();
+          this.history.forEach((pt, idx) => {
+            const x = mapX(pt.t), y = mapY(pt[key]);
+            if (idx === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          });
+          ctx.strokeStyle = color;
+          ctx.lineWidth = dashed ? 2.6 : 3.2;
+          if (dashed) ctx.setLineDash([6, 4]);
+          ctx.stroke();
+          ctx.restore();
+        };
+
+        drawSeries('rf', '#2563EB', false);
+        drawSeries('rr', '#EA580C', true);
+      },
+
+      renderCtChart() {
+        const info = syncCanvas(document.getElementById('canvas7bCt'));
+        if (!info) return;
+        const { ctx, w, h } = info;
+        ctx.clearRect(0, 0, w, h);
+
+        const padL = 42, padR = 14, padT = 22, padB = 20;
+        const cw = w - padL - padR;
+        const ch = h - padT - padB;
+        const tMax = Math.max(28, this.simTime);
+        const tMin = tMax - 28;
+        const cMax = 48;
+
+        const mapX = (t) => padL + ((t - tMin) / 28) * cw;
+        const mapY = (c) => padT + (1 - clamp(c / cMax, 0, 1)) * ch;
+
+        ctx.strokeStyle = '#94A3B8';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(padL, padT);
+        ctx.lineTo(padL, padT + ch);
+        ctx.lineTo(padL + cw, padT + ch);
+        ctx.stroke();
+
+        const isChr = this.system === 'chromate';
+        ctx.fillStyle = '#1E293B';
+        ctx.font = '900 11px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText(
+          isChr ? 'C–t 粒子數圖（黃 CrO₄²⁻｜橘紅 Cr₂O₇²⁻）' : 'C–t 粒子數圖（灰 N₂O₄｜紅棕 NO₂）',
+          padL, 12
+        );
+
+        // 事件垂直虛線
+        this.events.forEach(ev => {
+          const ex = mapX(ev.t);
+          if (ex < padL || ex > padL + cw) return;
+          ctx.save();
+          ctx.strokeStyle = 'rgba(148, 163, 184, 0.55)';
+          ctx.setLineDash([3, 3]);
+          ctx.beginPath();
+          ctx.moveTo(ex, padT);
+          ctx.lineTo(ex, padT + ch);
+          ctx.stroke();
+          ctx.restore();
+        });
+
+        const drawSeries = (key, color) => {
+          if (this.history.length < 2) return;
+          ctx.beginPath();
+          this.history.forEach((pt, idx) => {
+            const x = mapX(pt.t), y = mapY(pt[key]);
+            if (idx === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          });
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 3;
+          ctx.stroke();
+        };
+
+        drawSeries('c1', isChr ? '#CA8A04' : '#64748B');
+        drawSeries('c2', isChr ? '#EA580C' : '#B91C1C');
+      }
+    };
+
+    /* ==========================================================================
+       六、單一主動畫迴圈（防止分頁切換加速或記憶體洩漏）
+       ========================================================================== */
+    let lastTime = 0;
+
+    function masterLoop(ts) {
+      const dt = lastTime ? Math.min((ts - lastTime) / 1000, 0.05) : 0.016;
+      lastTime = ts;
+
+      if (APP.activeTab === 'mod1') {
+        if (!APP.paused) MOD1.update(dt);
+        MOD1.render();
+      } else if (APP.activeTab === 'mod7a') {
+        if (!APP.paused) MOD7A.update(dt);
+        MOD7A.render();
+      } else if (APP.activeTab === 'mod7b') {
+        if (!APP.paused) MOD7B.update(dt);
+        MOD7B.render();
+      }
+
+      requestAnimationFrame(masterLoop);
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      try {
+        MOD1.init();
+        MOD7A.init();
+        MOD7B.init();
+        requestAnimationFrame(masterLoop);
+      } catch (err) {
+        console.error('初始化錯誤：', err);
+        showToast('初始化時發生錯誤，請重新整理頁面');
+      }
+    });
+  </script>
+</body>
+</html>
